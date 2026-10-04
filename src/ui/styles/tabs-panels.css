@@ -1,4 +1,5 @@
-/* Tabs share the segmented control's sliding marker. */
+/* A page's tab bar is the segmented control at S2's L size: segmented.css draws its track, slider and items, and this
+   file sizes it to L and lets it scroll. */
 /* The panels share one grid row, so a kept panel hidden behind the shown one keeps its width and its top. */
 .rp-tabs {
   display: grid;
@@ -7,16 +8,11 @@
   min-width: 0;
 }
 .rp-tabbar {
-  position: relative;
-  display: inline-flex;
   /* A grid item: justify-self keeps the bar as wide as its tabs instead of the row. */
   justify-self: start;
-  max-width: 100%;
   /* More tabs than a phone is wide scroll within the bar, not the page; the slider scrolls with them. */
   overflow-x: auto;
   scrollbar-width: none;
-  border-radius: var(--rp-r-lg);
-  background: var(--rp-overlay);
 }
 /* While the bar scrolls, the end with more tabs fades out (useScrollStrip sets data-fade). */
 .rp-tabbar[data-fade] {
@@ -32,12 +28,6 @@
 }
 .rp-tabbar[data-fade~='end'] {
   --fade-end: 24px;
-}
-/* The slider fills the tab flush with the bar's edge, so it takes the bar's radius, as S2's does. */
-.rp-tabbar > .rp-slider {
-  top: 0;
-  bottom: 0;
-  border-radius: var(--rp-r-lg);
 }
 /* A tab row with controls at its end (Tabs' actions): they wrap under the tabs when the row is too narrow. */
 .rp-tabhead {
@@ -55,45 +45,35 @@
   display: inline-flex;
   gap: var(--rp-space-1);
   max-width: 100%;
-  /* A tab's height before any tab renders: React Aria commits the list empty and fills it on a second pass, and a
-     panel laid out against the empty bar (a table sizing itself to the window) would move and resize a frame later. */
-  min-height: var(--rp-control);
 }
+/* A tab is not a kit Button, so it lays out its label itself. */
 .rp-tab {
-  position: relative;
-  z-index: 1;
-  flex: none;
   white-space: nowrap;
-  min-height: var(--rp-control);
-  padding: 0 var(--rp-space-3);
-  /* The slider's radius: the tab fills the bar flush, so its box (the pressed fill, the focus ring) meets the bar's corners as the slider does. */
-  border-radius: var(--rp-r-lg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-align: center;
   font: inherit;
-  font-weight: 500;
-  /* Body text, as in the segmented control: the slider marks the selection, and a subdued label on the bar's
-     overlay falls under 4.5:1 in several palettes. */
-  color: var(--rp-text);
   cursor: pointer;
   outline: none;
-  transition:
-    background-color var(--rp-duration) var(--rp-ease),
-    transform var(--rp-duration) var(--rp-ease);
 }
-/* The selected tab's slider is its fill; another tab takes the pressed fill on its own box. */
-.rp-tab[data-pressed]:not([data-selected]) {
-  background-color: var(--rp-hl-high);
+/* S2's L control (style-utils controlSize, controlFont, controlBorderRadius): 40px tall, the ui-lg font (16px), the
+   edge-to-text inset (3/8 of the height, counted from the box edge, so less the item's 2px border) and the L corner
+   (9px), which the bar and the slider share since the slider fills the bar flush. */
+.rp-tabbar[data-size='L'],
+.rp-tabbar[data-size='L'] > .rp-slider {
+  border-radius: var(--rp-lg-radius);
 }
 .rp-tabbar[data-size='L'] .rp-tablist {
+  /* A tab's height before any tab renders: React Aria commits the list empty and fills it on a second pass, and a
+     panel laid out against the empty bar (a table sizing itself to the window) would move and resize a frame later. */
   min-height: var(--rp-control-lg);
 }
 .rp-tab[data-size='L'] {
   min-height: var(--rp-control-lg);
-  padding-inline: var(--rp-lg-inset-field);
+  padding-inline: calc(var(--rp-lg-inset-field) - 2px);
   font-size: var(--rp-lg-text);
+  border-radius: var(--rp-lg-radius);
 }
 /* Laid out, not display: none: a table or chart in a hidden panel keeps measuring the width it shows again, so the
    first frame back is already at it, even after a resize while hidden. React Aria marks the panel inert, which keeps

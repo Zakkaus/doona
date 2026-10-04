@@ -77,12 +77,15 @@
   background: color-mix(in srgb, var(--rp-accent) 76%, var(--rp-ink-mix));
 }
 
-.rp-seg .rp-btn[data-hovered] {
+.rp-seg .rp-btn[data-hovered],
+.rp-tab[data-hovered] {
   color: var(--rp-text);
   transition-delay: 0ms;
 }
-/* The selected segment's slider is its fill; another segment takes the pressed fill on its own box. */
-.rp-seg .rp-btn[data-pressed]:not([data-selected]) {
+/* The selected segment's slider is its fill; another segment takes the pressed fill on its own box. A page tab is drawn
+   as a segment (segmented.css). */
+.rp-seg .rp-btn[data-pressed]:not([data-selected]),
+.rp-tab[data-pressed]:not([data-selected]) {
   background-color: var(--rp-hl-high);
 }
 .rp-seg .rp-btn[data-selected] {

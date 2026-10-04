@@ -2,10 +2,10 @@ import {useDeferredValue, useState, type ReactNode} from 'react';
 import {Tabs as RTabs, TabList, Tab, TabPanel} from 'react-aria-components';
 import {TabShown} from './useTabShown';
 import {useSlider, useScrollStrip} from './hooks';
-import {useControlSize} from './controlSize';
 import {Toolbar} from './Toolbar';
 
-// Tabs: the selected key is the caller's (URL-backed); a panel mounts the first time it is selected.
+// Tabs: a page's navigation between its sections, drawn as S2's SegmentedControl at L (40px) while keeping the tab and
+// tabpanel roles. The selected key is the caller's (URL-backed); a panel mounts the first time it is selected.
 export function Tabs({
   label,
   items,
@@ -25,12 +25,11 @@ export function Tabs({
   // Controls at the end of the tab row, such as a filter for the panel shown; they wrap under the tabs on a phone.
   // Passing the prop, even as null, keeps the row, so the tab bar is not remounted when the controls come and go.
   actions?: ReactNode;
-  // A page's own tab row, measured as one of the page's toolbars. Its tabs are M, S2's compact Tabs height (32px).
+  // A page's own tab row, measured as one of the page's toolbars.
   page?: boolean;
 }) {
   // The marker sits beside the TabList: anything inside it joins the RAC collection and re-renders the tabs.
   const [ref, pos] = useSlider(value, '[data-selected]');
-  const controlSize = useControlSize();
   // On a phone the bar scrolls: the selected tab stays in view and a faded end shows there are more tabs.
   useScrollStrip(ref, value);
   // The selected tab and its marker answer the click in the urgent render; a panel opened for the first time (a
@@ -44,11 +43,11 @@ export function Tabs({
   if (keepMounted && !opened.has(shown)) setOpened(new Set([...opened, shown]));
   const visible = kept.has(value) ? value : shown;
   const bar = (
-    <div className="rp-tabbar" ref={ref} data-size={controlSize} data-page-tabrow={page || undefined}>
+    <div className="rp-tabbar" ref={ref} data-size="L" data-page-tabrow={page || undefined}>
       {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
       <TabList aria-label={label} className="rp-tablist">
         {items.map(item => (
-          <Tab key={item.id} id={item.id} className="rp-tab" data-size={controlSize}>
+          <Tab key={item.id} id={item.id} className="rp-tab" data-size="L">
             {item.label}
           </Tab>
         ))}
