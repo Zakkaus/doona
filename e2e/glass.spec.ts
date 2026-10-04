@@ -69,3 +69,42 @@ test.describe('floating widget panel', () => {
     expect(frosted.rim).toBe(floating.rim);
   });
 });
+
+// Router UIs such as LuCI embed doona in an iframe with rounded corners. Chrome then dropped the chrome sheet's concave
+// clip and blurred the whole content box away, while hit testing still found the page under it.
+test.describe('embedded in a rounded iframe', () => {
+  test.use({storage: {'doona-palette': 'glass/glass', 'doona-scheme': 'light'}});
+  test('glass leaves the page title painted', async ({page}) => {
+    await page.setViewportSize({width: 1240, height: 700});
+    await page.route('**/embed.html', route =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: '<!doctype html><style>body{margin:0}iframe{display:block;width:1180px;height:650px;border:1px solid #ccc;border-radius:4px}</style><iframe src="/#/activity"></iframe>'
+      })
+    );
+    await page.goto('/embed.html');
+    const title = page.frameLocator('iframe').getByRole('heading', {level: 1});
+    await expect(title).toHaveText('Activity');
+    // The darkest pixel of the title's box as the screen shows it, whatever covers the heading: ink when painted, the
+    // pale sheet when covered.
+    const shot = await title.screenshot();
+    const darkest = await page.evaluate(
+      async src => {
+        const image = new Image();
+        image.src = src;
+        await image.decode();
+        const canvas = document.createElement('canvas');
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext('2d')!;
+        context.drawImage(image, 0, 0);
+        const {data} = context.getImageData(0, 0, image.width, image.height);
+        let min = 255;
+        for (let i = 0; i < data.length; i += 4) min = Math.min(min, 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]);
+        return min;
+      },
+      `data:image/png;base64,${shot.toString('base64')}`
+    );
+    expect(darkest).toBeLessThan(100);
+  });
+});
