@@ -356,13 +356,11 @@ test('DNS summaries use their card height at 1024 px', async ({page}) => {
   }
 });
 
-// Cards that once left half their width, or a third of their height, empty: the outcomes waffle, the cache card beside
-// the taller ranking, a two-node group, and a large group filtered to one node.
+// Cards that once left half their width, or a third of their height, empty: the outcomes waffle and the cache card beside
+// the taller ranking. A short group's member tiles keep the page-wide columns instead (policies.spec.ts).
 const filledCards: Array<[string, string, string, (card: import('@playwright/test').Locator) => Promise<unknown>]> = [
   ['dns', 'Outcomes', '.rp-waffle .grid > span, .rp-waffle li', async () => {}],
-  ['dns', 'Cache', '.rp-form > *', async () => {}],
-  ['policies?group=gaming', 'gaming', '.rp-node', async () => {}],
-  ['policies', 'proxy', '.rp-node', card => card.getByRole('searchbox', {name: 'Filter nodes'}).fill('hk-01')]
+  ['dns', 'Cache', '.rp-form > *', async () => {}]
 ];
 for (const width of [1440, 390]) {
   test(`cards fill their width and height at ${width}px`, async ({page}) => {
@@ -376,7 +374,6 @@ for (const width of [1440, 390]) {
       await card.scrollIntoViewIfNeeded();
       await prepare(card);
       await expect(card.locator(content).first()).toBeVisible();
-      await expect(card.locator('.rp-node')).toHaveCount(name === 'gaming' ? 2 : name === 'proxy' ? 1 : 0);
       const fill = await card.evaluate((el, content) => {
         const c = el.getBoundingClientRect();
         const boxes = [...el.querySelectorAll(content)].map(x => x.getBoundingClientRect()).filter(b => b.width);

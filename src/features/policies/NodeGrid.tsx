@@ -8,11 +8,10 @@ import {useContentWidth} from '../../ui/hooks';
 // The tallest the scroll panel grows, as `.rp-nodegrid` sets it in nodes.css.
 const panelHeight = 376;
 
-// Columns for the tiles a filter leaves, never more than there are tiles, so a short result fills the row; the panel
-// keeps its scroll height only when the rows overflow it.
+// Columns as `.rp-nodes` lays them out, kept for a short filter result too, so its tiles line up with every other
+// group's; the panel keeps its scroll height only when the rows overflow it.
 export function nodeGridSize(width: number, gap: number, count: number) {
-  const fit = Math.max(1, Math.floor((width - gap) / (228 + gap)));
-  const columns = Math.max(1, Math.min(fit, count));
+  const columns = Math.max(1, Math.floor((width - gap) / (228 + gap)));
   const rows = Math.ceil(count / columns);
   return {columns, width: Math.max(228, (width - gap * (columns + 1)) / columns), overflows: gap + rows * (56 + gap) > panelHeight};
 }

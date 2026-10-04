@@ -623,10 +623,10 @@ test('the route trace says what it lacks until a destination and port are given'
   await expect(page.getByText('Ports must be integers from 1 to 65535.', {exact: true})).toHaveCount(0);
 });
 
-// A large group's tiles scroll in a panel and a small group's sit in a plain grid; both follow one column rule, span the
-// same row and fit the demo's names whole, a small group's two tiles sharing the row rather than leaving columns empty,
-// and the panel keeps the grid's 8px gap between its last column and the scrollbar, which on a phone is drawn over the
-// content.
+// A large group's tiles scroll in a panel and a small group's sit in a plain grid; both follow one column rule and fit the
+// demo's names whole, a small group's two tiles taking the large group's first two columns and leaving the rest of the
+// row empty, and the panel keeps the grid's 8px gap between its last column and the scrollbar, which on a phone is drawn
+// over the content.
 for (const [width, columns] of [
   [390, 1],
   [440, 1],
@@ -651,7 +651,13 @@ for (const [width, columns] of [
           const boxes = [...tiles].map(t => t.getBoundingClientRect());
           const top = Math.min(...boxes.map(b => b.top));
           const row = boxes.filter(b => b.top === top);
-          return {left: Math.min(...row.map(b => b.left)), right: Math.max(...row.map(b => b.right)), width: row[0].width, columns: row.length};
+          return {
+            left: Math.min(...row.map(b => b.left)),
+            right: Math.max(...row.map(b => b.right)),
+            width: row[0].width,
+            columns: row.length,
+            row: row.map(b => ({left: b.left}))
+          };
         };
         const range = document.createRange();
         const cut = [...document.querySelectorAll<HTMLElement>('.rp-node .n')].filter(n => {
@@ -669,9 +675,8 @@ for (const [width, columns] of [
       expect(m.inner - m.large.right).toBeGreaterThanOrEqual(8);
       expect(m.large.columns).toBe(columns);
       expect(m.small.columns).toBe(Math.min(columns, 2));
-      if (columns <= 2) expect(Math.abs(m.large.width - m.small.width)).toBeLessThanOrEqual(1);
-      expect(Math.abs(m.large.left - m.small.left)).toBeLessThanOrEqual(columns === 1 ? 0.5 : 3);
-      expect(Math.abs(m.large.right - m.small.right)).toBeLessThanOrEqual(columns === 1 ? 0.5 : 3);
+      expect(Math.abs(m.large.width - m.small.width)).toBeLessThanOrEqual(1);
+      for (const [index, tile] of m.small.row.entries()) expect(Math.abs(m.large.row[index].left - tile.left)).toBeLessThanOrEqual(columns === 1 ? 0.5 : 1);
       expect(m.cut).toEqual([]);
     });
   });

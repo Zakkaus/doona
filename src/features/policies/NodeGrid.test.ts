@@ -12,11 +12,11 @@ it('fits complete tiles and both outer gaps before adding a column', () => {
   expect(size.columns * size.width + (size.columns + 1) * 8).toBe(1190);
 });
 
-// A filtered result never keeps empty columns, and the panel scrolls only once the rows run past its 376px.
+// A filtered result keeps the empty columns, and the panel scrolls only once the rows run past its 376px.
 it.each([
-  [1070, 0, 1, 1054, false],
-  [1070, 1, 1, 1054, false],
-  [1070, 2, 2, 523, false],
+  [1070, 0, 4, 257.5, false],
+  [1070, 1, 4, 257.5, false],
+  [1070, 2, 4, 257.5, false],
   [1070, 12, 4, 257.5, false],
   [1070, 13, 4, 257.5, false],
   [1070, 125, 4, 257.5, true],
