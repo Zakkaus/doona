@@ -24,7 +24,7 @@
 
 任何頁面按 `Ctrl K` 可搜尋頁面、連線、節點、群組、規則與來源。各頁面需要的資源與 doona 自身設定的存放位置，見[功能](https://zakkaus.github.io/doona-docs/zh-TW/features.html#pages)一頁。不易理解的狀態與術語旁設有說明按鈕，按下即顯示說明。
 
-登入為獨立頁面，外觀按鈕會開啟設定頁的外觀區域，可在其中設定語言、配色與主題。視窗寬度不小於 1024 像素時，表單旁的面板顯示施工場景，按下後啟動 Flappy Duck 小遊戲。示範版預先填入使用者名稱 `demo` 與密碼 `demo`。
+登入為獨立頁面，右上角設有語言、配色與主題三個控制項。視窗寬度不小於 1024 像素時，表單旁的面板顯示停在 99% 的載入進度條，按下後啟動 Flappy Duck 小遊戲；啟用減少動態效果時，場景保持靜止且不回應按下操作。示範版預先填入使用者名稱 `demo` 與密碼 `demo`。
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/zh-TW/rules-light.webp" alt="規則頁" width="100%">
 
@@ -72,7 +72,9 @@
 
 組態頁顯示目前生效的組態版本。模組分頁為每個組態區塊顯示一行摘要，並連結到管理該區塊的頁面。後端支援時，全域設定編輯引擎的持久設定；設定檔分頁編輯選取的可寫入來源，並匯出顯示的內容，匯出檔案可能包含憑證。若寫入涉及必須重新啟動才能生效的設定，則整次寫入遭拒；提示會列出設定，並提供重新啟動指令及安裝指南連結。
 
-<!-- Screenshot publication: add config-source-light.webp and config-global-light.webp after the documentation deployment publishes them. -->
+![設定檔與來源編輯器](https://zakkaus.github.io/doona-docs/screenshots/zh-TW/config-source-light.webp)
+
+![全域設定表單](https://zakkaus.github.io/doona-docs/screenshots/zh-TW/config-global-light.webp)
 
 設定頁的地理資料卡片列出地理資料檔案，並在後端支援時顯示狀態與更新操作。重設為預設值經確認後移除所有地理資料覆寫及取自組態檔的值，恢復內建來源與預設值。重新載入、DNS 快取、訂閱與連線操作保留在各自頁面，不放在設定頁。錯誤通知與操作結果未知的提示提供複製錯誤；設定頁的關於卡片可複製記憶體中保留的最近 20 條錯誤，不含密鑰與請求內文。
 

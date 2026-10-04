@@ -6,7 +6,7 @@ English / [简体中文](themes.zh-CN.md) / [繁體中文](themes.zh-TW.md)
 
 Twelve palettes support light and dark modes. Rosé Pine has two flavours and Catppuccin has three; the other seven are Nord, Kary Pro Colors, Ant Design, Arco Design, Semi Design, Glass and China. China's modes are Day shift and Night shift.
 
-In the China palette, a healthy or running state reads Improving and an unavailable or degraded one Severe test. Use the palette picker in the top bar, or open Settings > Appearance from the sign-in page's appearance button.
+In the China palette, a healthy or running state reads Improving and an unavailable or degraded one Severe test. Use the palette picker in the top bar, or the sign-in page's Palette menu.
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
 
