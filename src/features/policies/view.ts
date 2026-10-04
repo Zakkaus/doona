@@ -124,9 +124,10 @@ export type MemberView = {
   region: string;
 };
 const purposes: Record<HealthObservation['purpose'], Key> = {data: 'policy.purpose.data', dns: 'policy.purpose.dns', shared: 'policy.purpose.shared'};
-// The tile's status slot: a group badge, a latency with its tone, or the state when there is no latency.
+// The tile's status slot: a latency with its tone, or the state when there is no latency. A group member adds its
+// badge and shows a status only when it has an observation.
 function memberStatus(member: {kind: string; health?: HealthObservation}, t: Translator): NodeStatus {
-  if (member.kind === 'group') return {text: t('ui.group'), badge: true};
+  if (member.kind === 'group') return {...(member.health ? healthStatus(member.health, t) : {text: ''}), badge: t('ui.group')};
   return healthStatus(member.health, t);
 }
 export function memberViews(members: Array<Group['members'][number] & {health?: HealthObservation}>, t: Translator): MemberView[] {

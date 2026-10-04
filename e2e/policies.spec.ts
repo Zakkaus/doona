@@ -656,6 +656,41 @@ test('a group remeasures across 12 and 13 members and viewport resizes', async (
   }
 });
 
+test('member tiles share one column track across groups and a group member shows its selection latency', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const [two, three] = await Promise.all([api.group('telegram'), api.group('ai')]);
+  const member = (id: string, kind: 'node' | 'group' = 'node') => ({id, name: id, kind});
+  // telegram selects the proxy group, whose own TCP selection is hk-01: that node's latency is the member's.
+  handlers['GET groups/telegram'] = async () => ({...two, members: [member('proxy', 'group'), member('hk-01')]});
+  handlers['GET groups/ai'] = async () => ({...three, members: [member('hk-01'), member('hk-02'), member('sg-01')]});
+  await page.setViewportSize({width: 1280, height: 1000});
+  await page.goto('/#/policies');
+  const cards = ['telegram', 'ai'].map(name => page.getByRole('region', {name, exact: true}));
+  const [short, full] = cards.map(card => card.locator('.rp-nodes .rp-node'));
+  // A card reads its group once it scrolls on screen.
+  for (const [index, count] of [2, 3].entries()) {
+    await cards[index].scrollIntoViewIfNeeded();
+    await expect(cards[index].locator('.rp-nodes .rp-node')).toHaveCount(count);
+  }
+  const group = short.filter({hasText: 'proxy'});
+  await expect(group.locator('.rp-badge')).toHaveText('Group');
+  await expect(group.locator('.ms')).toHaveText('84 ms');
+  await expect(group.locator('.ms')).toHaveClass(/\bok\b/);
+  const boxes = (tiles: Locator) => tiles.evaluateAll(els => els.map(el => el.getBoundingClientRect()).map(({left, width}) => ({left, width})));
+  for (const width of [1280, 1024, 390]) {
+    await page.setViewportSize({width, height: 1000});
+    await expect
+      .poll(async () => {
+        const [a, b] = await Promise.all([boxes(short), boxes(full)]);
+        return a.every((box, i) => Math.abs(box.left - b[i].left) <= 1 && Math.abs(box.width - b[i].width) <= 1);
+      })
+      .toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    // Names wrap inside their tile rather than cutting off.
+    expect(await short.locator('.n > *').evaluateAll(els => els.every(el => el.scrollWidth <= el.clientWidth))).toBe(true);
+  }
+});
+
 test('policy probe entries share the busy state', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   let release!: () => void;

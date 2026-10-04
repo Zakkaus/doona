@@ -115,7 +115,10 @@ export function memberSections(
     id: routeChoiceId(member.name),
     label: member.name,
     nodeName: member.nodeName,
-    desc: member.status.text,
+    desc:
+      member.status.badge && member.status.text
+        ? t('ui.valuePair', {label: member.status.badge, value: member.status.text})
+        : member.status.text || member.status.badge,
     tone: member.status.tone
   }));
   return [noneFirst(items, held, t), {id: 'members', title: t('policy.pickMembers'), items}].filter(section => section.items.length);
@@ -131,7 +134,7 @@ export function healthStatus(health: Pick<HealthObservation, 'state' | 'latency_
 export function draftMembers(filters: string[], nodes: Node[], t: Translator): Array<{name: string; nodeName: boolean; status: NodeStatus}> {
   const admits = compileFilters(filters);
   return [
-    ...nestedIn({filters}).map(name => ({name, nodeName: false, status: {text: t('ui.group'), badge: true}})),
+    ...nestedIn({filters}).map(name => ({name, nodeName: false, status: {text: '', badge: t('ui.group')}})),
     ...nodes.filter(admits).map(node => ({name: node.name, nodeName: true, status: healthStatus(preferredHealth(node), t)}))
   ];
 }

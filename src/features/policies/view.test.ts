@@ -52,9 +52,15 @@ it('projects nested, failed and unmeasured members without inventing latency', (
   expect(members.find(member => member.id === 'auto')).toMatchObject({
     healthy: false,
     description: ' ',
-    status: {text: t('ui.group'), badge: true}
+    status: {text: '', badge: t('ui.group')}
   });
   expect(members.find(member => member.id === 'hk-01')?.status).toEqual({text: '84 ms', tone: 'ok'});
+});
+it("shows a group member's latency beside its badge", () => {
+  const {groups} = nodeFixtures(0, true);
+  const health = {...groups[0].runtime.health[0], state: 'healthy' as const, latency_ms: 45};
+  const members = memberViews(memberHealth(groups[0], new Map([['auto', health]])), t);
+  expect(members.find(member => member.id === 'auto')).toMatchObject({healthy: true, tcp: 45, status: {text: '45 ms', tone: 'ok', badge: t('ui.group')}});
 });
 it('keeps split network selection unset for both and omits mutable interrupt configuration from readonly fields', () => {
   const g = nodeFixtures(0).groups[0];
@@ -462,7 +468,7 @@ it('sums an automatic group up in one line: the member in place, per network whe
 it('marks node names by member kind even when badge presentation changes', () => {
   const {groups} = nodeFixtures(0, true);
   const members = memberViews(memberHealth(groups[0], new Map()), t);
-  for (const member of members) member.status.badge = !member.status.badge;
+  for (const member of members) member.status.badge = member.status.badge ? undefined : t('ui.group');
   const sections = memberSections(members, [], t);
   expect(
     sections

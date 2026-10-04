@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {createMockApi} from '../../../mock';
-import {memberHealth, sameHealth} from './health';
+import {memberHealth, sameHealth, selectionHealth} from './health';
 
 it('prefers group TCP data observations by warmth, measurement and IP version before falling back to node health', async () => {
   const group = await createMockApi().group('proxy');
@@ -51,4 +51,16 @@ it('treats node polls that change only unseen observation fields as the same hea
   expect(sameHealth(a, new Map([...a, ['x', {...base, latency_ms: (base.latency_ms ?? 0) + 1}]]))).toBe(false);
   expect(sameHealth(a, new Map([['x', base]]))).toBe(false);
   expect(sameHealth(a, new Map([...a, ['y', base]]))).toBe(false);
+});
+
+it('gives each group the health of the node its TCP selection resolves to, through nested groups and past a cycle', async () => {
+  const [group] = await createMockApi().groups();
+  const fast = {...(await createMockApi().group('proxy')).runtime.health[0], latency_ms: 12};
+  const listed = (id: string, tcp: string | null) => ({...group, id, selection: {tcp_member_id: tcp, udp_member_id: null}});
+  const groups = [listed('outer', 'inner'), listed('inner', 'hk'), listed('loop', 'back'), listed('back', 'loop'), listed('idle', null)];
+  const map = selectionHealth(new Map([['hk', fast]]), groups);
+  expect(map.get('outer')).toBe(fast);
+  expect(map.get('inner')).toBe(fast);
+  expect(['loop', 'back', 'idle'].some(id => map.has(id))).toBe(false);
+  expect(map.get('hk')).toBe(fast);
 });
