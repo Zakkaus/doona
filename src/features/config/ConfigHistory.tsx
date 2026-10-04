@@ -11,7 +11,6 @@ import {
   ErrorMessage,
   InlineAlert,
   Kv,
-  Loading,
   ModalDialog,
   TimeCell
 } from '../../ui/ui';
@@ -46,43 +45,40 @@ export function ConfigHistory() {
       {h.management.revisions && (
         <>
           <ErrorMessage error={h.list.error} onRetry={h.list.refetch} />
-          {!h.list.data && h.list.loading ? (
-            <Loading />
-          ) : (
-            h.list.data && (
-              <>
-                {h.view.rows.length ? (
-                  <DataTable
-                    label={t('config.tabHistory')}
-                    rows={h.view.rows}
-                    fit
-                    loading={h.list.loading}
-                    selected={h.selected}
-                    onSelect={h.setSelected}
-                    rowDetail
-                    cols={[
-                      {
-                        id: 'revision',
-                        label: t('config.revisions.revision'),
-                        minWidth: 160,
-                        isRowHeader: true,
-                        render: row => (
-                          <span className="rp-cluster">
-                            {row.number}
-                            {row.head && <Badge>{t('config.revisions.head')}</Badge>}
-                          </span>
-                        )
-                      },
-                      {id: 'created', label: t('config.revisions.createdAt'), minWidth: 150, render: row => <TimeCell at={row.created_at} />},
-                      {id: 'origin', label: t('config.revisions.origin'), minWidth: 110, render: row => row.originText},
-                      {id: 'size', label: t('config.revisions.bytes'), minWidth: 100, render: row => row.size}
-                    ]}
-                  />
-                ) : (
-                  <Empty>{t('config.revisions.empty')}</Empty>
-                )}
-              </>
-            )
+          {/* The first read draws the table's own Skeleton rows. */}
+          {(h.list.data || h.list.loading) && (
+            <>
+              {h.view.rows.length || !h.list.data ? (
+                <DataTable
+                  label={t('config.tabHistory')}
+                  rows={h.view.rows}
+                  fit
+                  loading={h.list.loading}
+                  selected={h.selected}
+                  onSelect={h.setSelected}
+                  rowDetail
+                  cols={[
+                    {
+                      id: 'revision',
+                      label: t('config.revisions.revision'),
+                      minWidth: 160,
+                      isRowHeader: true,
+                      render: row => (
+                        <span className="rp-cluster">
+                          {row.number}
+                          {row.head && <Badge>{t('config.revisions.head')}</Badge>}
+                        </span>
+                      )
+                    },
+                    {id: 'created', label: t('config.revisions.createdAt'), minWidth: 150, render: row => <TimeCell at={row.created_at} />},
+                    {id: 'origin', label: t('config.revisions.origin'), minWidth: 110, render: row => row.originText},
+                    {id: 'size', label: t('config.revisions.bytes'), minWidth: 100, render: row => row.size}
+                  ]}
+                />
+              ) : (
+                <Empty>{t('config.revisions.empty')}</Empty>
+              )}
+            </>
           )}
         </>
       )}

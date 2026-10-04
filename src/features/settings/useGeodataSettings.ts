@@ -130,8 +130,18 @@ export function useGeodataSettings() {
   const saveLabel = t(canUpdate ? 'settings.geodataSaveUpdate' : 'settings.geodataSaveSources');
   const status = statusLine(geodata.data, geodata.busy || (canUpdate && !!pending?.geosite), now, locale, t, verify === true, checksum);
 
+  // From the capabilities, so the source settings' Skeleton draws the same help line before they arrive.
+  const checksumHelp = t(
+    checksum === 'sha256sum'
+      ? 'settings.geodataVerifyChecksumHelp'
+      : checksum === 'pinned'
+        ? 'settings.geodataVerifyChecksumPinnedHelp'
+        : 'settings.geodataVerifyChecksumNoneHelp'
+  );
+
   return {
     available,
+    checksumHelp,
     loading: configurable && settings.loading && !stored,
     error: configurable ? settings.error : null,
     retry: settings.refetch,
@@ -269,13 +279,7 @@ export function useGeodataSettings() {
     // A backend that predates the setting reports none and always verifies.
     checksum: verify !== undefined && {
       enabled: verify,
-      help: t(
-        checksum === 'sha256sum'
-          ? 'settings.geodataVerifyChecksumHelp'
-          : checksum === 'pinned'
-            ? 'settings.geodataVerifyChecksumPinnedHelp'
-            : 'settings.geodataVerifyChecksumNoneHelp'
-      ),
+      help: checksumHelp,
       toggle: (enabled: boolean) => void save({verify_checksum: enabled})
     },
     auto: {

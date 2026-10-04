@@ -3,7 +3,7 @@ import {lazy, Suspense, useCallback, useState, type ContextType} from 'react';
 import {WidgetDraftGuard} from './widgets/host';
 import {I18nProvider, RouterProvider} from 'react-aria-components';
 import {LangContext, LOCALE, RewordingContext, useT, type Lang} from '../i18n';
-import {Button, ConfirmDialog, Toasts, ErrorMessage, Loading, Empty} from '../ui/ui';
+import {Button, ConfirmDialog, Toasts, ErrorMessage, Loading, Empty, PageSkeleton, PageShapeContext} from '../ui/ui';
 import {PageActionsTarget} from '../ui/PageActions';
 import {DraftContext} from './draft';
 import {searchDialog} from './search/load';
@@ -195,22 +195,24 @@ function Frame({lang, pickLang, ap, route, query, go, openSearch, mac, view}: Fr
           <ErrorMessage error={view.error} onRetry={view.refresh} />
           <RefusalWait />
           <PageActionsTarget value={actions}>
-            <SettingsContext.Provider value={settingsValue}>
-              {view.content.kind === 'loading' ? (
-                <Loading />
-              ) : view.content.kind === 'unavailable' ? (
-                <Empty>
-                  {t('shell.notOffered')}
-                  <Button onPress={() => go('activity')}>{t('shell.toActivity')}</Button>
-                </Empty>
-              ) : (
-                <LoadBoundary key={view.current.id}>
-                  <Suspense fallback={<Loading />}>
-                    <Page go={go} query={query} />
-                  </Suspense>
-                </LoadBoundary>
-              )}
-            </SettingsContext.Provider>
+            <PageShapeContext value={view.current.skeleton}>
+              <SettingsContext.Provider value={settingsValue}>
+                {view.content.kind === 'loading' ? (
+                  <PageSkeleton />
+                ) : view.content.kind === 'unavailable' ? (
+                  <Empty>
+                    {t('shell.notOffered')}
+                    <Button onPress={() => go('activity')}>{t('shell.toActivity')}</Button>
+                  </Empty>
+                ) : (
+                  <LoadBoundary key={view.current.id}>
+                    <Suspense fallback={<PageSkeleton />}>
+                      <Page go={go} query={query} />
+                    </Suspense>
+                  </LoadBoundary>
+                )}
+              </SettingsContext.Provider>
+            </PageShapeContext>
           </PageActionsTarget>
         </div>
       </main>

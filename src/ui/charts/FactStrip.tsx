@@ -19,7 +19,7 @@ export type ChartFact = {
 // `lead`: the first value is a name whose end tells most, as a host's domain. Wide, its tile takes two shares of the
 // row; on a phone it takes the first row alone. At any width a name still too long for its tile gives way at its
 // start, and a hover, keyboard focus or tap shows it whole. `loading`: the first values are on their way, and each is
-// drawn as a Skeleton bar in its place under its label.
+// drawn as a Skeleton bar in its place under its label, with a caption's bar where the fact has one.
 export function FactStrip({facts, lead, loading}: {facts: ChartFact[]; lead?: boolean; loading?: boolean}) {
   const wait = useWaitAttr();
   if (!facts.length) return null;
@@ -38,9 +38,16 @@ export function FactStrip({facts, lead, loading}: {facts: ChartFact[]; lead?: bo
           </dt>
           <dd className="rp-tile-body">
             {loading ? (
-              <span className="rp-big" inert aria-hidden="true">
-                <span className="rp-skeleton-text" />
-              </span>
+              <>
+                <span className="rp-big" inert aria-hidden="true">
+                  <span className="rp-skeleton-text" />
+                </span>
+                {fact.caption && (
+                  <span className="rp-fact-caption" inert aria-hidden="true">
+                    <span className="rp-skeleton-text" />
+                  </span>
+                )}
+              </>
             ) : fact.nodeName ? (
               <NodeName name={fact.value} className="rp-big" cut={fact.valueRole === 'name' ? undefined : lead && i === 0 ? 'start' : undefined} />
             ) : fact.valueRole === 'name' ? (
@@ -50,7 +57,7 @@ export function FactStrip({facts, lead, loading}: {facts: ChartFact[]; lead?: bo
                 {fact.value}
               </TextTooltip>
             )}
-            {fact.caption && <TextTooltip className="rp-fact-caption">{fact.caption}</TextTooltip>}
+            {!loading && fact.caption && <TextTooltip className="rp-fact-caption">{fact.caption}</TextTooltip>}
           </dd>
         </div>
       ))}

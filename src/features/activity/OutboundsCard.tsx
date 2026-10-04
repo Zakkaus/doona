@@ -1,4 +1,4 @@
-import {DeferredLoading} from './DeferredLoading';
+import {DeferredChart} from './DeferredLoading';
 import {useT} from '../../i18n';
 import {Donut} from '../../ui/charts';
 import {Card, Empty, ErrorMessage, ChartWait} from '../../ui/ui';
@@ -22,9 +22,8 @@ export function OutboundsCard() {
           <Empty>{t('act.noOutbounds')}</Empty>
         </ChartWait>
       ) : state === 'loading' ? (
-        <ChartWait holds="tall">
-          <DeferredLoading>{t('ui.loading')}</DeferredLoading>
-        </ChartWait>
+        // The donut's box.
+        <DeferredChart parts={[{height: 136}]} />
       ) : state === 'empty' ? (
         <ChartWait holds="tall">
           <Empty>{t('ui.empty')}</Empty>

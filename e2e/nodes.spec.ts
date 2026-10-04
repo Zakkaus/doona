@@ -1,6 +1,6 @@
 import {freshBackend} from './getting-started';
 import type {Locator} from '@playwright/test';
-import {editorText, box} from './fixtures';
+import {editorText, box, loadingState} from './fixtures';
 import {expect, expectFittedGroupTags, fulfillStream, mockBackend, query, settle, test, moreAction, moreItem} from './fixtures';
 import {createMockApi} from '../mock';
 import {ApiError} from '../src/api/error';
@@ -312,7 +312,7 @@ test('a cold Nodes page finishes the first refresh after selecting a new subscri
   };
   await page.goto('/#/nodes?tab=list', {waitUntil: 'domcontentloaded'});
   await expect.poll(() => fetched).toBe(true);
-  await expect(page.locator('.rp-content .rp-empty[role="status"]')).toBeVisible();
+  await expect(page.locator(`.rp-content ${loadingState}`).first()).toBeVisible();
   release();
   await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
   const dialog = page.getByRole('dialog');
@@ -514,6 +514,8 @@ test('node sources list their nodes and a subscription can be refreshed', async 
 });
 
 test('source card facts keep one whole line in English and Traditional Chinese, in every clock and date order', async ({page}) => {
+  // Sixteen reloads, each waiting for the cards' first read, take close to the default 30 seconds on a loaded runner.
+  test.slow();
   const backend = await mockBackend(page);
   // 12:59:59 local, the widest clock in 12-hour time, on both cards whatever zone the browser runs in.
   const expires = new Date(2026, 1, 13, 12, 59, 59).toISOString();
@@ -679,7 +681,7 @@ test('without a node list the page shows providers alone, with no latency tab', 
   backend.capabilities.resources.nodes.available = false;
   await page.goto('/#/nodes?tab=latency');
   await expect(page.getByRole('tab')).toHaveCount(0);
-  await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+  await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
 });
 
 test('while a cancelled removal is still pending, no other node dialog can submit', async ({page}) => {

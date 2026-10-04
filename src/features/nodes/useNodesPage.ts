@@ -411,6 +411,7 @@ export function useNodesPage({go, query}: PageProps) {
     loading: nodes.loading && !nodes.data,
     label: provider ? t('nodes.of', {name: provider.displayName ?? provider.name}) : t('nav.nodes'),
     scope: provider && list.length > 1 ? t('nodes.scope', {name: provider.displayName ?? provider.name}) : null,
+    scopePending: providers.loading && !providers.data,
     multiple: list.length > 1,
     query: params.get('q'),
     groupQuery: params.get('group'),

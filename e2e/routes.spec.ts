@@ -1,4 +1,4 @@
-import {expect, isLive, offered, routes, test} from './fixtures';
+import {expect, isLive, loadingState, mockBackend, offered, routes, test} from './fixtures';
 import type {RoutePath} from '../src/shell/routes';
 
 for (const width of [1024, 1280, 1440]) {
@@ -9,7 +9,7 @@ for (const width of [1024, 1280, 1440]) {
       await page.goto(`/#/${route}${route === 'connections' ? '?tab=list' : ''}`);
       if (!(await offered(page, route))) continue;
       await expect(page.locator('.rp-content > .rp-page')).toBeVisible();
-      await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+      await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
       // Tables that sit behind a tab or a fold are opened first; the fit rule applies to all of them.
       if (route === 'dns') await page.getByRole('tab', {name: 'Cache', exact: true}).click();
       // A live backend may offer the rules page without the trace simulation.
@@ -79,7 +79,7 @@ for (const palette of ['glass/glass', 'rose-pine/moon', 'catppuccin/mocha']) {
       for (const route of routes) {
         await page.goto(`/#/${route}${tableTab[route] ? `?tab=${tableTab[route]}` : ''}`);
         await expect(page.locator('.rp-content').getByRole('heading').first()).toBeVisible();
-        await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'));
+        await page.waitForFunction(selector => !document.querySelector(selector), `.rp-content ${loadingState}`);
         const spurious = await page.evaluate(() =>
           [...document.querySelectorAll<HTMLElement>('.rp-content *')]
             .filter(el => {
@@ -110,3 +110,105 @@ test('an unknown history entry is replaced so Back can reach the preceding page'
   await page.goBack();
   await expect(page).toHaveURL(/#\/settings$/);
 });
+
+// A first load whose shape is known draws Skeletons, not the progress circle (CONTRIBUTING, Loading states), and
+// their shimmer stands still under reduced motion.
+test('first loads draw skeletons on every page', async ({page}) => {
+  test.skip(isLive, 'holds the mock backend');
+  await mockBackend(page);
+  let hold = true;
+  await page.route(/\/api\/v1\/(?!capabilities|version)/, async route => {
+    if (hold) await new Promise(resolve => setTimeout(resolve, 1500));
+    await route.fallback();
+  });
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  for (const route of ['activity', 'policies', 'nodes', 'dns?tab=stats', 'settings', 'config']) {
+    hold = true;
+    await page.goto(`/#/${route}`);
+    await page.reload();
+    const skeleton = page.locator(`.rp-content ${loadingState}`).first();
+    await expect(skeleton, route).toBeVisible();
+    await expect(page.locator('.rp-content .rp-empty[role=status]'), route).toHaveCount(0);
+    const shimmer = await page.evaluate(() => {
+      const bar = document.querySelector('.rp-content .rp-skeleton-text');
+      const card = document.querySelector('.rp-content .rp-skeleton-cards > .rp-card');
+      return bar ? getComputedStyle(bar).animationName : card && getComputedStyle(card, '::after').animationName;
+    });
+    expect(shimmer, route).toBe('none');
+    hold = false;
+    await expect(page.locator(`.rp-content ${loadingState}`), route).toHaveCount(0, {timeout: 10_000});
+  }
+});
+
+// The Skeletons take the boxes the content will: each box's top and height before the first reads arrive match
+// within 1px once they have. A box whose height follows the data it draws keeps its top only: the topology tree,
+// the source editor (the file's length), the node latency chart (one row per node), and on Activity the control row,
+// whose cards share the row by their text, and the latency list. DNS chart cards, whose height follows the records,
+// are left out.
+const steadyBoxes: Array<{route: string; before: string; after: string; heights: (i: number) => boolean}> = [
+  {route: 'activity', before: '.rp-dashboard-cell', after: '.rp-dashboard-cell', heights: i => i >= 3 && i <= 12},
+  {route: 'policies', before: '.rp-policy-list .rp-page-skeleton .rp-card', after: '.rp-policy-list > .rp-col > .rp-card', heights: () => true},
+  {route: 'nodes?tab=list', before: '.rp-tabpanel[data-shown] > *', after: '.rp-tabpanel[data-shown] > *', heights: () => true},
+  {
+    route: 'nodes?tab=latency',
+    before: '.rp-tabpanel[data-shown] .rp-chart-page > *',
+    after: '.rp-tabpanel[data-shown] .rp-chart-page > *',
+    heights: i => i === 0
+  },
+  {route: 'settings', before: '.rp-content section.rp-card', after: '.rp-content section.rp-card', heights: () => true},
+  {
+    route: 'config?tab=modules',
+    before: '.rp-content .rp-tabbar, .rp-tabpanel[data-shown] .rp-card',
+    after: '.rp-content .rp-tabbar, .rp-tabpanel[data-shown] .rp-card',
+    heights: () => true
+  },
+  {
+    route: 'config?tab=source',
+    before: '.rp-content .rp-tabbar, .rp-tabpanel[data-shown] .rp-skeleton-body',
+    after: '.rp-content .rp-tabbar, .rp-tabpanel[data-shown] .rp-card',
+    heights: i => i === 0
+  },
+  {
+    route: 'flows',
+    before: '.rp-content .rp-tabbar, .rp-tabpanel[data-shown] .rp-card',
+    after: '.rp-content .rp-tabbar, .rp-tabpanel[data-shown] .rp-card',
+    heights: i => i === 0
+  }
+];
+for (const {route, before, after, heights} of steadyBoxes)
+  test(`the first-load Skeletons of ${route} take the content's boxes`, async ({page}) => {
+    test.skip(isLive, 'holds the mock backend');
+    await mockBackend(page);
+    // Getting started settled, as for anyone past the first run, so Activity draws its cards at once.
+    await page.addInitScript(() => localStorage.setItem('doona-getting-started', 'complete'));
+    let release!: () => void;
+    const held = new Promise<void>(resolve => (release = resolve));
+    await page.route(/\/api\/v1\/(?!capabilities|version)/, async route => {
+      await held;
+      await route.fallback();
+    });
+    await page.setViewportSize({width: 1440, height: 920});
+    await page.goto(`/#/${route}`);
+    // The page's own Skeletons, once its code has arrived.
+    await expect(page.locator(before).first()).toBeVisible();
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
+    const boxes = (selector: string) =>
+      page.evaluate(
+        s =>
+          [...document.querySelectorAll(s)]
+            .map(element => element.getBoundingClientRect())
+            .filter(box => box.height > 0)
+            .map(box => ({top: box.top + scrollY, height: box.height})),
+        selector
+      );
+    const waiting = await boxes(before);
+    release();
+    await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0, {timeout: 10_000});
+    const loaded = (await boxes(after)).slice(0, waiting.length);
+    expect(loaded).toHaveLength(waiting.length);
+    waiting.forEach((box, i) => {
+      // Activity's control row is checked by height only below it: the rows after it move with it.
+      if (!(route === 'activity')) expect(Math.abs(loaded[i].top - box.top), `${route} box ${i} top`).toBeLessThanOrEqual(1);
+      if (heights(i)) expect(Math.abs(loaded[i].height - box.height), `${route} box ${i} height`).toBeLessThanOrEqual(1);
+    });
+  });

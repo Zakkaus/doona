@@ -9,7 +9,7 @@ import {
   DataTable,
   Disclosure,
   ErrorMessage,
-  Loading,
+  PageSkeleton,
   TextTooltip,
   Kv,
   LabeledSelect,
@@ -41,7 +41,7 @@ export function Rules(props: PageProps) {
     dns: <DnsRules {...props} />,
     trace: <Trace form={traceForm} go={props.go} />
   };
-  if (view.loading) return <Loading />;
+  if (view.loading) return <PageSkeleton />;
   if (view.error) return <ErrorMessage error={view.error} onRetry={view.retry} />;
   return (
     <div className="rp-page">

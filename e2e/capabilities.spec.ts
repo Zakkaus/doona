@@ -1,4 +1,4 @@
-import {expect, mockBackend, routes, test} from './fixtures';
+import {expect, mockBackend, routes, test, loadingState} from './fixtures';
 import {createMockApi} from '../mock';
 import {ApiError} from '../src/api/error';
 
@@ -109,7 +109,7 @@ test('a failed discovery is reported once, by the shell, on the activity, DNS an
     await page.goto('/#/' + route);
     await expect(page.locator('.rp-content > .rp-alert').first()).toContainText('Discovery failed');
     await expect(page.locator('.rp-alert', {hasText: 'Discovery failed'})).toHaveCount(1);
-    await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+    await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
   }
 });
 

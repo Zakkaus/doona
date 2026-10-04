@@ -1,7 +1,22 @@
 import {ProbeOptionsDialog} from '../shared/ProbeOptionsDialog';
 import {createContext, useContext, useMemo, type ComponentProps} from 'react';
 import {useT} from '../../i18n';
-import {Button, ChoiceMenu, DataTable, FitTags, LabeledSelect, LinkTag, Tags, TextField, TextTooltip, Kv, Card, type TableColumn, Toolbar} from '../../ui/ui';
+import {
+  Button,
+  ChoiceMenu,
+  DataTable,
+  FitTags,
+  LabeledSelect,
+  LinkTag,
+  Tags,
+  TextField,
+  TextTooltip,
+  Kv,
+  Card,
+  SkeletonBar,
+  type TableColumn,
+  Toolbar
+} from '../../ui/ui';
 import {NodeName, FlagEditingContext} from '../../ui/NodeName';
 import {flagKey} from '../../dae/flags';
 import {SettingsContext} from '../../shell/preferences';
@@ -149,7 +164,15 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
     <>
       {m.probeOptions && <ProbeOptionsDialog model={m.probeOptions} />}
       {m.writable && m.sourceTip && <p className="rp-note">{m.sourceTip}</p>}
-      {m.scope && <p className="rp-label">{m.scope}</p>}
+      {m.scope ? (
+        <p className="rp-label">{m.scope}</p>
+      ) : (
+        m.scopePending && (
+          <p className="rp-label">
+            <SkeletonBar line="caption" />
+          </p>
+        )
+      )}
       <Toolbar page>
         <TextField label={t('nodes.search')} search value={m.search} width={240} onChange={m.setSearch} />
         {m.groupSections ? (

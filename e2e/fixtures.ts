@@ -482,6 +482,10 @@ export function setupIncludedRouting({api, handlers}: Pick<Awaited<ReturnType<ty
     };
 }
 
+// Every first-load state, the progress circle's and the skeletons', so a test can wait for a page's data to arrive.
+export const loadingState =
+  ':is(.rp-empty[role=status], .rp-skeleton, .rp-skeleton-body, .rp-skeleton-cards, .rp-page-skeleton, .rp-skeleton-group, .rp-table-skeleton, .rp-facts:has(> [role=status]))';
+
 // The first table's header top and height, and the height of its first-load placeholder rows or else its first row.
 export async function tableGeometry(page: Page) {
   return page

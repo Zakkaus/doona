@@ -13,7 +13,7 @@ import {
   PopoverDialog,
   TextTooltip,
   ErrorMessage,
-  Loading,
+  SkeletonBody,
   Skeleton,
   Empty,
   VisuallyHidden
@@ -202,7 +202,7 @@ export function Overview({query}: PageProps) {
               ))}
             </div>
           ) : vm.resources.state === 'loading' ? (
-            <Loading />
+            <SkeletonBody shape="rows" />
           ) : vm.errors.capabilities ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}

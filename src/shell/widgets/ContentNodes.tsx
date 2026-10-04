@@ -43,7 +43,7 @@ export function Latency({item}: {item: Widget}) {
   // shows the rows the card will.
   const limit = useContext(ResourceSamples) && surface === 'panel' ? 3 : (item.rows ?? contentLimit(item.size, [3, 6, 12]));
   return (
-    <Reading state={{...nodes, error: nodes.error ?? groups.error, refetch: () => (nodes.refetch(), groups.refetch())}}>
+    <Reading state={{...nodes, error: nodes.error ?? groups.error, refetch: () => (nodes.refetch(), groups.refetch())}} rows={limit}>
       {!view.length ? (
         <Empty>{t('dashboard.noNodes')}</Empty>
       ) : item.form === 'dots' && item.size !== 'small' ? (

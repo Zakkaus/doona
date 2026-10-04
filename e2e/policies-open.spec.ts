@@ -13,8 +13,8 @@ function watchCards(count: number) {
   (window as unknown as {cards: typeof seen}).cards = seen;
   const channel = new MessageChannel();
   channel.port1.onmessage = () => {
-    // Cards laid out hidden behind the loading state are not on screen.
-    const cards = [...document.querySelectorAll('.rp-policy-list .rp-card')].filter(card => card.checkVisibility({visibilityProperty: true}));
+    // Cards laid out hidden behind the Skeleton cards are not on screen, and those are not the group cards.
+    const cards = [...document.querySelectorAll('.rp-policy-list > .rp-col .rp-card')].filter(card => card.checkVisibility({visibilityProperty: true}));
     if (cards.length && seen.frames.length < count) seen.frames.push(cards.map(card => Math.round(card.getBoundingClientRect().height)).join(' '));
   };
   const tick = () => {

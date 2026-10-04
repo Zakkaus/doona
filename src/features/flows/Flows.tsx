@@ -10,7 +10,8 @@ import {
   DataTable,
   DetailPanel,
   ErrorMessage,
-  Loading,
+  PageSkeleton,
+  SkeletonBody,
   TextTooltip,
   TimeCell,
   Kv,
@@ -39,7 +40,7 @@ export function Flows(props: PageProps) {
   const t = useT();
   const view = useFlowsPage(props);
   const content = {map: <RoutingMap {...props} />, records: <FlowRecords {...props} />};
-  if (view.loading) return <Loading />;
+  if (view.loading) return <PageSkeleton />;
   if (view.error) return <ErrorMessage error={view.error} onRetry={view.retry} />;
   return (
     <div className="rp-page">
@@ -77,7 +78,8 @@ function RoutingMap(props: PageProps) {
           />
         }
       >
-        {view.state === 'loading' && <Loading />}
+        {/* The tree's height follows the flows it draws, so its Skeleton is a block of a typical tree's. */}
+        {view.state === 'loading' && <SkeletonBody shape="block" height={480} />}
         {view.state === 'empty' && <Empty>{t('flow.mapEmpty')}</Empty>}
         {view.state === 'ready' && (
           <>
@@ -199,7 +201,7 @@ function FlowRecords(props: PageProps) {
         />
         <DetailPanel open={view.panelOpen} title={view.panelTitle} onClose={() => view.select(null)}>
           <ErrorMessage error={view.detailError} onRetry={view.detailRetry} />
-          {view.detailLoading && <Loading>{t('flow.detailLoading')}</Loading>}
+          {view.detailLoading && <SkeletonBody shape="rows" count={4} label={t('flow.detailLoading')} />}
           {detail && (
             <>
               <div className="rp-cluster">

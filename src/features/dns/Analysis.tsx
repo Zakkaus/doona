@@ -2,7 +2,7 @@ import {formatLatency} from '../../i18n/format';
 import {useMemo, useState, type ReactNode} from 'react';
 import {LOCALE, useLang, useT} from '../../i18n';
 import {useDnsCacheCard, useDnsStatsTab} from './useDns';
-import {Card, Bar, Empty, ErrorMessage, Link, Loading, Meter, Segmented, TextTooltip} from '../../ui/ui';
+import {Card, Bar, ChartWait, Empty, ErrorMessage, Link, Meter, Segmented, SkeletonBody, TextTooltip} from '../../ui/ui';
 import type {DnsLogRecord} from '../../api/model';
 import {usePalette, Beeswarm, FactStrip, LegendItem, Waffle, type ChartFact, type SwarmPoint} from '../../ui/charts';
 import {dnsAnalysis, dnsOutcomes, shortPage, type DnsAnalysis as Analysis, type DnsOutcome} from './stats';
@@ -30,7 +30,7 @@ export function DnsStats({enabled, links}: {enabled: boolean | undefined; links:
   // A failed log read shows once above the charts it feeds, which only say they have nothing; the cache card reads
   // on its own. A refresh that fails keeps the records read before and says so above them.
   const failed = log.error;
-  const pending = log.data ? null : failed ? <Empty>{t('dns.chart.noLog')}</Empty> : <Loading />;
+  const pending = log.data ? null : failed ? <Empty>{t('dns.chart.noLog')}</Empty> : true;
   const notice = failed ? (
     <ErrorMessage error={failed} onRetry={log.refetch} />
   ) : shortPage(log.data, log.limit) ? (
@@ -50,7 +50,8 @@ function DnsAnalysis({
   links
 }: {
   records: DnsLogRecord[];
-  pending: ReactNode;
+  // True while the first read is on its way.
+  pending: ReactNode | true;
   notice: ReactNode;
   cacheListed: boolean;
   links: StatsLinks & {config: string | null};
@@ -73,8 +74,22 @@ function DnsAnalysis({
     color: colors[sample.outcome],
     lines: [sample.name, formatLatency(sample.value, t), t(labels[sample.outcome])]
   });
-  // What stands in for each chart the log feeds while it has nothing to draw; the cache card does not depend on it.
-  const standIn = pending ?? (a.total < 5 ? <Empty>{t('dns.chart.tooFew')}</Empty> : null);
+  // What stands in for each chart the log feeds while it has nothing to draw: its Skeleton while the first read is on
+  // its way, or why it is empty. The cache card does not depend on it.
+  const loading = pending === true;
+  const standIn = (shape: 'block' | 'bars') =>
+    loading ? (
+      shape === 'bars' ? (
+        <SkeletonBody shape="bars" count={8} />
+      ) : (
+        <ChartWait holds="tall">
+          <SkeletonBody shape="block" />
+        </ChartWait>
+      )
+    ) : (
+      (pending ?? (a.total < 5 ? <Empty>{t('dns.chart.tooFew')}</Empty> : null))
+    );
+  const chartStandIn = standIn('block');
   const facts: ChartFact[] = [
     {label: t('dns.chart.median'), value: formatLatency(a.typical, t), icon: <SpeedFast />, tint: 'c1'},
     {label: t('dns.chart.p95'), value: formatLatency(a.slowest, t), icon: <Clock />, tint: 'c4'},
@@ -84,11 +99,11 @@ function DnsAnalysis({
   return (
     <div className="rp-chart-page">
       {notice}
-      {!standIn && <FactStrip facts={facts} />}
+      {(loading || !chartStandIn) && <FactStrip facts={facts} loading={loading} />}
       <div className="rp-g21">
         <Card
           title={t('dns.chart.speed', {n: a.samples.length})}
-          note={standIn ? undefined : t('dns.chart.sample', {n: a.total, uncached: a.uncached, upstream: a.samples.length})}
+          note={chartStandIn ? undefined : t('dns.chart.sample', {n: a.total, uncached: a.uncached, upstream: a.samples.length})}
           aside={
             links.config && (
               <Link appearance="link" href={links.config}>
@@ -97,7 +112,7 @@ function DnsAnalysis({
             )
           }
         >
-          {standIn ?? (
+          {chartStandIn ?? (
             <>
               <Beeswarm
                 label={t('dns.chart.speed', {n: a.samples.length})}
@@ -129,7 +144,7 @@ function DnsAnalysis({
           )}
         </Card>
         <Card title={t('dns.chart.outcomes')}>
-          {standIn ?? (
+          {chartStandIn ?? (
             <Waffle
               label={t('dns.chart.outcomes')}
               shares={dnsOutcomes.map(outcome => ({
@@ -144,7 +159,7 @@ function DnsAnalysis({
         </Card>
       </div>
       <div className="rp-g21">
-        <RankingCard analysis={a} standIn={standIn} logHref={links.log} />
+        <RankingCard analysis={a} standIn={standIn('bars')} logHref={links.log} />
         <CacheCard listed={cacheListed} href={links.cache} />
       </div>
     </div>
@@ -176,7 +191,7 @@ function CacheCard({listed, href}: {listed: boolean; href: string | null}) {
       ) : vm.state === 'error' ? (
         <ErrorMessage error={vm.error} onRetry={vm.retry} />
       ) : !vm.card ? (
-        <Loading />
+        <SkeletonBody shape="rows" />
       ) : (
         <>
           {vm.card.usage && (

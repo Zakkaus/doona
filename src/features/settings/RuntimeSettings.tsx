@@ -9,9 +9,11 @@ import {
   LabeledSelect,
   Light,
   Link,
-  Loading,
   NumberField,
   numberFromText,
+  SkeletonBar,
+  SkeletonBody,
+  SkeletonGroup,
   textFromNumber,
   Toolbar,
   ChartWait,
@@ -49,7 +51,7 @@ export function RuntimeSettingsCard() {
       )}
       {m.waiting && !m.capsError && (
         <ChartWait holds="form">
-          <Loading />
+          <SkeletonBody shape="fields" />
         </ChartWait>
       )}
       {!m.waiting && m.available && (
@@ -57,9 +59,44 @@ export function RuntimeSettingsCard() {
           <ErrorMessage error={m.error} onRetry={m.retry} />
           {m.conflict && <InlineAlert>{m.conflict}</InlineAlert>}
           {m.loading && (
-            <ChartWait holds="form">
-              <Loading />
-            </ChartWait>
+            // The settings' first read: the same fields and rows the form draws, from the same lists, under their real
+            // labels, each control a Skeleton bar.
+            <SkeletonGroup>
+              <Toolbar className="top rp-fieldgrid">
+                {m.hasLevel && (
+                  <div className="rp-field">
+                    <span className="rp-label">{t(runtimeFieldLabels['log.level'])}</span>
+                    <SkeletonBar />
+                  </div>
+                )}
+                {m.numeric.map(field => (
+                  <div key={field.id} className="rp-field" style={{width: 180}}>
+                    <span className="rp-label">{field.label}</span>
+                    <SkeletonBar />
+                    {field.description && <span className="rp-label">{field.description}</span>}
+                  </div>
+                ))}
+              </Toolbar>
+              {m.recorders.length > 0 && (
+                <Toolbar className="top rp-fieldgrid">
+                  {m.recorders.map(recorder => (
+                    <div key={recorder.id} className="rp-field">
+                      <span className="rp-label">{recorder.label}</span>
+                      <SkeletonBar />
+                      <SkeletonBar line="caption" />
+                    </div>
+                  ))}
+                  {/* The recording note follows the settings; the flow note is known already. */}
+                  <span className="rp-label">
+                    <SkeletonBar line="caption" />
+                  </span>
+                  {m.flowNote && <span className="rp-label">{m.flowNote}</span>}
+                </Toolbar>
+              )}
+              <Toolbar>
+                <SkeletonBar width={96} />
+              </Toolbar>
+            </SkeletonGroup>
           )}
           {m.hasBaseline && (
             // Enter in a field applies, as the button does.

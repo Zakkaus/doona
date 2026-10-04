@@ -102,14 +102,18 @@ button.rp-node {
   height: var(--rp-control);
 }
 /* The policy cards are laid out hidden until the reads their sizes depend on arrive (Policies.tsx); the loading state
-   stands over them meanwhile, so showing them moves nothing. */
+   stands over them meanwhile (generic Skeleton cards), so showing them moves nothing. */
 .rp-policy-list {
   position: relative;
 }
-.rp-policy-list[data-wait] > :not(.rp-empty) {
+.rp-policy-list[data-wait] > :not(.rp-page-skeleton) {
   visibility: hidden;
 }
-.rp-policy-list > .rp-empty {
+.rp-policy-list > .rp-page-skeleton {
   position: absolute;
   inset: 0 0 auto;
+}
+/* Before the groups list arrives there are no cards to lay out, and the Skeleton takes its place in the page. */
+.rp-policy-list:has(> .rp-col:empty) > .rp-page-skeleton {
+  position: static;
 }

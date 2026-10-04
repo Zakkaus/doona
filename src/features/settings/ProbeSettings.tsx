@@ -4,7 +4,7 @@ import {offered} from '../../api/capabilities';
 import {engineOf} from '../../api/engines';
 import {href} from '../../shell/route';
 import {latencyProbeChoice, probeChoices, saveProbeOptions, useProbeOptions, type ProbeFamily} from '../../store/probeOptions';
-import {Card, ErrorMessage, LabeledSelect, Link, Loading, Toolbar, ChartWait} from '../../ui/ui';
+import {Card, ErrorMessage, LabeledSelect, Link, SkeletonBody, Toolbar, ChartWait} from '../../ui/ui';
 import {settingsCard} from './nav';
 
 const card = settingsCard('probes');
@@ -27,7 +27,7 @@ export function ProbeSettingsCard() {
           <ErrorMessage error={caps.error} onRetry={caps.refetch} />
         ) : (
           <ChartWait holds="form">
-            <Loading />
+            <SkeletonBody shape="fields" />
           </ChartWait>
         )
       ) : !choices.length ? (

@@ -32,7 +32,7 @@ export function Notices({rows, total, error, retry, loading, empty}: NoticesMode
       {error && <ErrorMessage error={error} onRetry={retry} />}
       {loading ? (
         <ChartWait>
-          <DeferredLoading />
+          <DeferredLoading count={4} />
         </ChartWait>
       ) : rows.length === 0 ? (
         <ChartWait>
