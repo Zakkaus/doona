@@ -360,3 +360,25 @@ test('the memory card meters cgroup usage by its name and value text', async ({p
   expect(Number(await meter.getAttribute('aria-valuenow'))).toBeGreaterThan(0);
 });
 
+// The skeleton draws the loaded body's grid and caption line, so the card is as tall before its values as after.
+test('a loading card holds its loaded height with a skeleton', async ({page}) => {
+  const {handlers, api} = await mockBackend(page);
+  let release!: () => void;
+  const held = new Promise<void>(resolve => (release = resolve));
+  handlers['GET runtime'] = async () => {
+    await held;
+    return api.runtime();
+  };
+  await page.setViewportSize({width: 390, height: 1000});
+  await page.goto('/#/overview');
+  const card = page.getByRole('region', {name: 'Traffic counters', exact: true});
+  await expect(card.locator('.rp-skeleton')).toBeVisible();
+  await expect(card.locator('.rp-skeleton [role=status]')).toHaveText('Loading…');
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  const waiting = await card.evaluate(element => element.getBoundingClientRect().height);
+  release();
+  await expect(card.locator('.rp-skeleton')).toHaveCount(0);
+  await expect(card.locator('.rp-kv')).toBeVisible();
+  const loaded = await card.evaluate(element => element.getBoundingClientRect().height);
+  expect(Math.abs(loaded - waiting)).toBeLessThan(1);
+});

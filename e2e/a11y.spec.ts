@@ -27,9 +27,9 @@ for (const [palette, scheme] of looks)
         await expect(page.locator('html')).toHaveAttribute('data-scheme', scheme);
         await expect(page.locator('.rp-content')).toBeVisible();
         await expect(page.locator(`.rp-nav[href="#/${route}"]`)).toHaveAttribute('aria-current', 'page');
-        // A loading notice stays hidden for its first 150ms, and a role query skips hidden elements: select it by CSS so
-        // a fast machine does not scan the page before its data has arrived.
-        await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+        // A loading notice stays hidden for its first 150ms, and a role query skips hidden elements: select it and the
+        // skeletons by CSS so a fast machine does not scan the page before its data has arrived.
+        await expect(page.locator('.rp-content :is(.rp-empty[role=status], .rp-skeleton)')).toHaveCount(0);
         await page.evaluate(() => document.fonts.ready.then(() => undefined));
         const results = await new AxeBuilder({page}).withTags(['wcag2a', 'wcag2aa']).analyze();
         const findings = Object.fromEntries(

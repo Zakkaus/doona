@@ -1,8 +1,10 @@
-import {useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode} from 'react';
+import {useCallback, useContext, useEffect, useId, useRef, useState, type CSSProperties, type ReactNode} from 'react';
+import {VisuallyHidden} from 'react-aria';
 import {
   Button as RButton,
   Label,
   Meter as RMeter,
+  ProgressBar,
   UNSTABLE_Toast as RToast,
   UNSTABLE_ToastContent as ToastContent,
   UNSTABLE_ToastList as ToastList,
@@ -47,10 +49,61 @@ export function Loading({children}: {children?: ReactNode}) {
     const timer = setTimeout(() => setVisible(true), 150);
     return () => clearTimeout(timer);
   }, []);
+  const id = useId();
   return (
     <div className="rp-empty" role="status" data-wait={visible ? undefined : ''}>
-      <span className="rp-spinner" aria-hidden="true" />
-      {children ?? t('ui.loading')}
+      <ProgressCircle size="S" aria-labelledby={id} />
+      <span id={id}>{children ?? t('ui.loading')}</span>
+    </div>
+  );
+}
+
+// S2's ProgressCircle, indeterminate: a wait of unknown length. S (16px) sits beside text, M (32px) stands alone. Its
+// arc and track follow S2's geometry: a 2px stroke at S, 3px at M, the arc turning once a second as it grows and shrinks.
+export function ProgressCircle({size = 'M', ...label}: {size?: 'S' | 'M'} & ({'aria-label': string} | {'aria-labelledby': string})) {
+  const r = `calc(50% - ${size === 'S' ? 1 : 1.5}px)`;
+  return (
+    <ProgressBar {...label} isIndeterminate className="rp-progress-circle" data-size={size}>
+      <svg fill="none" width="100%" height="100%" aria-hidden="true">
+        <circle cx="50%" cy="50%" r={r} className="track" />
+        <circle cx="50%" cy="50%" r={r} className="fill" pathLength={100} strokeDasharray="100 200" strokeLinecap="round" />
+      </svg>
+    </ProgressBar>
+  );
+}
+
+// S2's Skeleton for a card body of facts while its data arrives: the facts' grid with each label and value drawn as a
+// shimmering block in its place, then what the body holds below them (a caption line, a body line, or a height in
+// pixels such as a table's), so the card keeps its height when the values replace it. `helped` lists the facts whose
+// label carries a help button, whose line takes the button's height. The placeholder is inert and hidden from
+// assistive technology, which reads a loading status instead.
+export function Skeleton({facts, helped, below}: {facts: number; helped?: number[]; below?: 'caption' | 'body' | number}) {
+  const t = useT();
+  return (
+    <div className="rp-skeleton">
+      <VisuallyHidden role="status">{t('ui.loading')}</VisuallyHidden>
+      <div className="rp-kv" inert aria-hidden="true">
+        {Array.from({length: facts}, (_, i) => (
+          <div key={i}>
+            <span className={cx('k', helped?.includes(i) && 'helped')}>
+              <span className="rp-skeleton-text" />
+            </span>
+            <span className="v">
+              <span className="rp-skeleton-text" />
+            </span>
+          </div>
+        ))}
+      </div>
+      {below !== undefined && (
+        <div
+          className={cx('rp-skeleton-below', typeof below === 'number' && 'block')}
+          style={{height: typeof below === 'number' ? below : `var(--rp-line-${below})`}}
+          inert
+          aria-hidden="true"
+        >
+          <span className="rp-skeleton-text" />
+        </div>
+      )}
     </div>
   );
 }

@@ -40,6 +40,8 @@ export {CardView, CardViewItem} from './CardView';
 export {
   Empty,
   Loading,
+  ProgressCircle,
+  Skeleton,
   ChartWait,
   ErrorMessage,
   InlineAlert,

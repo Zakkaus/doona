@@ -169,7 +169,46 @@ h3.rp-label {
   flex: none;
   vertical-align: middle;
 }
-.rp-empty > .rp-spinner {
+/* S2's ProgressCircle (Feedback.tsx): M is 32px with a 3px stroke, S 16px with 2px; the track is the meter track's fill
+   and the arc the accent. */
+.rp-progress-circle {
+  display: inline-block;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  vertical-align: middle;
+  --stroke: 3px;
+}
+.rp-progress-circle[data-size='S'] {
+  width: 16px;
+  height: 16px;
+  --stroke: 2px;
+}
+.rp-progress-circle svg {
+  display: block;
+}
+.rp-progress-circle circle {
+  stroke-width: var(--stroke);
+}
+.rp-progress-circle .track {
+  stroke: var(--rp-hl-high);
+}
+.rp-progress-circle .fill {
+  stroke: var(--rp-accent);
+  /* A quarter arc, the animation's rest, which reduced motion leaves still. */
+  stroke-dashoffset: 75;
+  rotate: -90deg;
+  transform-origin: center;
+  animation:
+    rp-progress-turn var(--rp-duration-refresh) cubic-bezier(0.6, 0.1, 0.3, 0.9) infinite,
+    rp-progress-arc var(--rp-duration-refresh) cubic-bezier(0.25, 0.1, 0.25, 1.3) infinite;
+}
+@media (forced-colors: active) {
+  .rp-progress-circle .fill {
+    stroke: ButtonText;
+  }
+}
+.rp-empty > .rp-progress-circle {
   margin-inline-end: 8px;
 }
 .rp-empty > .rp-btn,
