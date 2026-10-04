@@ -17,6 +17,7 @@ import {
   Form
 } from '../../ui/ui';
 import {SearchSelect} from '../../ui/SearchSelect';
+import {WallpaperSettings} from './WallpaperSettings';
 import type {DateFormat, PaletteId, Scheme, TimeFormat, ToastPlacement, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
@@ -280,6 +281,7 @@ export function Settings({query}: PageProps) {
             />
           </div>
         </Toolbar>
+        {ap.palette.startsWith('glass/') && <WallpaperSettings />}
         <div className="rp-field" data-setting="countryFlags">
           <Switch isSelected={ap.countryFlags} onChange={ap.pickCountryFlags} aria-describedby={countryFlagsHelpId}>
             {t('settings.countryFlags')}

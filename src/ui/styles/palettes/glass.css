@@ -298,5 +298,6 @@
     --rp-ctl-filter: none;
     --rp-table-head: var(--rp-solid-card);
     --rp-noise-wall: none;
+    --rp-wall-custom: initial;
   }
 }

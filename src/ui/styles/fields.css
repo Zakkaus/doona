@@ -57,6 +57,64 @@
 .rp-switch[data-selected] .track::after {
   transform: translateX(calc(16px * var(--rp-dir)));
 }
+/* S2 Slider: the label and value on one line over a 4px track, filled up to a round handle of 20px at M and 22px at
+   L. */
+.rp-range {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: var(--rp-space-2);
+  inline-size: min(100%, 240px);
+}
+.rp-range .lbl {
+  font-size: var(--rp-text-xs);
+  line-height: var(--rp-line-caption);
+  color: var(--rp-subtle);
+}
+.rp-range .track {
+  grid-column: 1 / -1;
+  position: relative;
+  block-size: var(--rp-control);
+}
+.rp-range[data-size='L'] .track {
+  block-size: var(--rp-control-lg);
+}
+.rp-range .track::before,
+.rp-range .fill {
+  content: '';
+  position: absolute;
+  inset-block-start: calc(50% - 2px);
+  block-size: 4px;
+  border-radius: 2px;
+}
+.rp-range .track::before {
+  inset-inline: 0;
+  background: var(--rp-hl-high);
+}
+.rp-range .fill {
+  inset-inline-start: 0;
+  background: var(--rp-text);
+}
+.rp-range .thumb {
+  --rp-thumb: 20px;
+  inset-block-start: calc(50% - var(--rp-thumb) / 2);
+  inline-size: var(--rp-thumb);
+  block-size: var(--rp-thumb);
+  box-sizing: border-box;
+  border: 2px solid var(--rp-text);
+  border-radius: 50%;
+  background: var(--rp-surface);
+  cursor: grab;
+}
+.rp-range[data-size='L'] .thumb {
+  --rp-thumb: 22px;
+}
+.rp-range .thumb[data-dragging] {
+  cursor: grabbing;
+}
+.rp-range .thumb[data-focus-visible] {
+  outline: var(--rp-focus-width) solid var(--rp-focus-color);
+  outline-offset: 2px;
+}
 .rp-switch[data-disabled],
 .rp-radio[data-disabled],
 .rp-selectbtn[data-disabled] {
