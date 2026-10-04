@@ -14,6 +14,17 @@ import {useMediaQuery, withCrossfade} from '../ui/hooks';
 import type {RoutePath} from './routes';
 import {setDateFormat, setTimeFormat} from '../i18n/format';
 
+// Glass's scroll edge shows while the root carries data-scrolled. The attribute changes only when the page leaves or
+// returns to the top, so the passive listener costs one comparison per scroll event.
+let watchingScroll = false;
+function watchScroll() {
+  if (watchingScroll) return;
+  watchingScroll = true;
+  const update = () => document.documentElement.toggleAttribute('data-scrolled', scrollY > 0);
+  addEventListener('scroll', update, {passive: true});
+  update();
+}
+
 export function applyAppearance(dark: boolean, palette: PaletteId, wordmark: Wordmark) {
   const [family, flavour] = palette.split('/');
   const d = document.documentElement.dataset;
@@ -26,6 +37,7 @@ export function applyAppearance(dark: boolean, palette: PaletteId, wordmark: Wor
     void import('../ui/lens').then(({installLens}) => {
       if (installLens()) d.lens = '';
     });
+  if (palette === 'glass/glass') watchScroll();
 }
 export function useAppearance(stored: Settings) {
   const [scheme, setScheme] = useState<Scheme>(stored.scheme);

@@ -19,7 +19,6 @@ export const palettes = [
   {id: 'semi/semi', group: 'palette.bytedance', label: 'palette.semi', desc: 'palette.lightDark'},
   {id: 'glass/glass', group: 'palette.glassName', label: 'palette.glassName', desc: 'palette.lightDark'},
   {id: 'glass/frosted', group: 'palette.glassName', label: 'palette.frosted', desc: 'palette.lightDark'},
-  {id: 'glass/float', group: 'palette.glassName', label: 'palette.float', desc: 'palette.lightDark'},
   {id: 'glass/tinted', group: 'palette.glassName', label: 'palette.tinted', desc: 'palette.lightDark'},
   {
     id: 'qiangguo/qiangguo',

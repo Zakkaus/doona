@@ -1,7 +1,10 @@
 import type {Page} from '@playwright/test';
 import {expect, test} from './fixtures';
 
-const flavours = ['glass', 'frosted', 'float', 'tinted'] as const;
+const flavours = ['glass', 'frosted', 'tinted'] as const;
+
+// The page's own cards: the startup screen and a loading page draw inert skeleton cards in the same classes.
+const pageCard = '.rp-card:not([inert] *)';
 
 // The opaque check reads rgb() as alpha 1 and rgba() by its last channel.
 const surface = (page: Page, selector: string, pseudo?: string) =>
@@ -14,12 +17,12 @@ const surface = (page: Page, selector: string, pseudo?: string) =>
       return {filter: style.backdropFilter, alpha};
     }, pseudo);
 
-test('the palette menu offers the four Glass materials, and Settings has no material switch', async ({page}) => {
+test('the palette menu offers the three Glass materials, and Settings has no material switch', async ({page}) => {
   await page.goto('/#/settings');
   await page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true}).click();
-  for (const name of ['Glass', 'Frosted', 'Float', 'Tinted']) await expect(page.getByRole('menuitemradio', {name: new RegExp(`^${name}`)})).toHaveCount(1);
-  await page.getByRole('menuitemradio', {name: /^Float/}).click();
-  await expect(page.locator('html')).toHaveAttribute('data-flavour', 'float');
+  for (const name of ['Glass', 'Frosted', 'Tinted']) await expect(page.getByRole('menuitemradio', {name: new RegExp(`^${name}`)})).toHaveCount(1);
+  await page.getByRole('menuitemradio', {name: /^Frosted/}).click();
+  await expect(page.locator('html')).toHaveAttribute('data-flavour', 'frosted');
   const card = page.getByRole('region', {name: 'Appearance', exact: true});
   await expect(card.getByRole('button', {name: /Palette/})).toBeVisible();
   await expect(card.getByRole('radiogroup', {name: /material/i})).toHaveCount(0);
@@ -49,9 +52,11 @@ for (const flavour of flavours)
   test(`${flavour} frosts the chrome, cards and menus as its material says`, async ({page}) => {
     await page.addInitScript(value => localStorage.setItem('doona-palette', `glass/${value}`), flavour);
     await page.goto('/#/nodes?provider=harbor');
-    await expect(page.locator('.rp-card').first()).toBeVisible();
-    const chrome = await surface(page, '.rp-shell', '::after');
-    const card = await surface(page, '.rp-card');
+    await expect(page.locator(pageCard).first()).toBeVisible();
+    // Glass draws the sidebar as glass of its own; the other materials share one chrome sheet.
+    const chrome = flavour === 'glass' ? await surface(page, '.rp-side', '::before') : await surface(page, '.rp-shell', '::after');
+    // A card's material is its ::before.
+    const card = await surface(page, '.rp-card', '::before');
     if (flavour === 'tinted') {
       expect(chrome.filter).toBe('none');
       expect(card.filter).toBe('none');
@@ -66,45 +71,87 @@ for (const flavour of flavours)
     expect((await surface(page, '.rp-popover')).filter === 'none').toBe(flavour === 'tinted');
   });
 
-// Float detaches the top bar: a rounded, blurred bar inset from the viewport, with the content starting below it.
-test('float draws an inset top bar and keeps the content clear of it', async ({page}) => {
-  await page.addInitScript(() => localStorage.setItem('doona-palette', 'glass/float'));
-  await page.goto('/#/activity');
-  const title = page.getByRole('heading', {level: 1});
-  await expect(title).toHaveText('Activity');
-  const bar = await page.locator('.rp-top').evaluate(element => {
-    const style = getComputedStyle(element, '::before');
-    const box = element.getBoundingClientRect();
-    return {
-      top: parseFloat(style.top),
-      left: parseFloat(style.left),
-      radius: parseFloat(style.borderTopLeftRadius),
-      filter: style.backdropFilter,
-      bottom: box.bottom
-    };
+// Nothing is drawn round a card's edge: no rim layer over the backdrop, and no border, inset shadow or gradient, any of
+// which would sit inside its overflow clip and read as a ring. In Chromium's Glass the lens bends the backdrop at the
+// edge; elsewhere the Glass card is blur and fill alone. Tinted has no backdrop-filter.
+for (const flavour of flavours)
+  test(`${flavour} draws no line round its card edge`, async ({page, browserName}) => {
+    await page.addInitScript(value => localStorage.setItem('doona-palette', `glass/${value}`), flavour);
+    await page.goto('/#/activity');
+    await expect(page.locator(pageCard).first()).toBeVisible();
+    const edge = await page
+      .locator('.rp-card')
+      .first()
+      .evaluate(element => {
+        const style = getComputedStyle(element);
+        const material = getComputedStyle(element, '::before');
+        return {
+          // The material reaches the border box, so no band of bare backdrop opens at the edge.
+          material: [material.top, material.left, material.right, material.bottom],
+          filter: material.backdropFilter,
+          after: getComputedStyle(element, '::after').backdropFilter,
+          shadow: style.boxShadow,
+          image: style.backgroundImage,
+          border: style.borderTopWidth
+        };
+      });
+    expect(edge.shadow).not.toContain('inset');
+    expect(edge.image).not.toMatch(/gradient\(/);
+    expect(edge.border).toBe('0px');
+    expect(edge.material).toEqual(['0px', '0px', '0px', '0px']);
+    expect(edge.after).toBe('none');
+    if (flavour === 'tinted') expect(edge.filter).toBe('none');
+    else expect(edge.filter).toContain('blur');
+    if (flavour === 'glass' && browserName === 'chromium') expect(edge.filter).toContain('url("#doona-lens")');
+    else expect(edge.filter).not.toContain('url(');
   });
-  expect(bar.top).toBeGreaterThan(0);
-  expect(bar.left).toBeGreaterThan(0);
-  expect(bar.radius).toBeGreaterThan(0);
-  expect(bar.filter).toContain('blur');
-  expect((await title.boundingBox())!.y).toBeGreaterThan(bar.bottom);
-});
 
-// Chromium refracts through the lens filters; the floating panel and menus reference them, and they exist once.
+// The phone's bottom bar takes the chrome's material: blurred where the material blurs, near solid where it does not.
+for (const flavour of flavours)
+  test(`${flavour} gives the phone's bottom bar the chrome's material`, async ({page}) => {
+    await page.setViewportSize({width: 393, height: 659});
+    await page.addInitScript(value => localStorage.setItem('doona-palette', `glass/${value}`), flavour);
+    await page.goto('/#/policies');
+    await expect(page.locator('.rp-hubbar')).toBeVisible();
+    const bar = await surface(page, '.rp-hubbar');
+    if (flavour === 'tinted') expect(bar.alpha).toBeGreaterThanOrEqual(0.9);
+    else expect(bar.filter).toContain('blur');
+    // The lower half thickens towards the solid chrome, where the blur fades at the viewport's edge.
+    expect(await page.locator('.rp-hubbar').evaluate(element => getComputedStyle(element).backgroundImage)).toContain('linear-gradient(');
+  });
+
+// Chromium refracts through the lens filters; cards, the floating panel and menus reference them, and they exist once.
 test.describe('glass lens', () => {
   test.skip(({browserName}) => browserName !== 'chromium', 'only Chromium applies an SVG filter in backdrop-filter');
   test.use({widgets: true, storage: {'doona-palette': 'glass/glass'}});
-  test('bends the floating panel and menus', async ({page}) => {
+  test('bends cards, the floating panel and menus', async ({page}) => {
     await page.goto('/#/nodes?provider=harbor');
     await expect(page.locator('html')).toHaveAttribute('data-lens', '');
     await expect(page.locator('svg filter#doona-lens feDisplacementMap')).toHaveCount(1);
     await expect(page.locator('svg filter#doona-lens-sm')).toHaveCount(1);
+    // The specular brightens the bent backdrop by arithmetic, not by laying an image of light over it.
+    await expect(page.locator('svg filter#doona-lens feComposite[operator="arithmetic"]')).toHaveCount(1);
+    await expect(page.locator('svg filter feComposite[operator="over"]')).toHaveCount(0);
     const panel = page.locator('.rp-floating-frame .rp-floating-panel');
     await expect(panel).toBeVisible();
     expect((await surface(page, '.rp-floating-frame .rp-floating-panel')).filter).toContain('url("#doona-lens")');
+    // Cards and the sidebar are the panel's glass; the top bar's small capsules keep a plain blur.
+    expect((await surface(page, '.rp-content .rp-card', '::before')).filter).toContain('url("#doona-lens")');
+    expect((await surface(page, '.rp-side', '::before')).filter).toContain('url("#doona-lens")');
+    for (const selector of ['.rp-search', '.rp-actions']) expect((await surface(page, selector, '::before')).filter).toMatch(/^blur\(/);
     await page.getByRole('button', {name: /Group$/}).click();
     await expect(page.locator('.rp-popover').first()).toBeVisible();
     expect((await surface(page, '.rp-popover')).filter).toContain('url("#doona-lens-sm")');
+  });
+  // At 32px the lens shows only as a bright rim, so controls on the wallpaper keep the cards' fill with a plain blur.
+  test('keeps controls on the wallpaper to a plain blur', async ({page}) => {
+    await page.goto('/#/logs');
+    await expect(page.locator('.rp-main .rp-selectbtn').first()).toBeVisible();
+    for (const selector of ['.rp-main .rp-selectbtn', '.rp-main .rp-input']) {
+      const {filter} = await surface(page, selector);
+      expect(filter, selector).toMatch(/^blur\(/);
+      expect(filter, selector).not.toContain('url(');
+    }
   });
 });
 test.describe('glass lens elsewhere', () => {
@@ -114,6 +161,58 @@ test.describe('glass lens elsewhere', () => {
     await expect(page.locator('.rp-floating-frame .rp-floating-panel')).toBeVisible();
     expect((await surface(page, '.rp-floating-frame .rp-floating-panel')).filter).not.toContain('url(');
   });
+});
+
+// Glass floats its chrome as the cards' glass, with no sheet behind the content, so cards float on the wallpaper; the
+// content keeps the boxes it has over Frosted's sheet. The top bar draws no material: the search field and the icon
+// group are capsules of the cards' fill and blur, and the sidebar is a card. Without the lens all of it is plain blur.
+test('glass floats the top bar capsules and the sidebar as the card glass', async ({page, browserName}) => {
+  const boxes = async (flavour: string) => {
+    await page.evaluate(value => localStorage.setItem('doona-palette', `glass/${value}`), flavour);
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-flavour', flavour);
+    await expect(page.locator(pageCard).first()).toBeVisible();
+    return page.locator(pageCard).evaluateAll(cards => cards.slice(0, 8).map(card => JSON.stringify(card.getBoundingClientRect())));
+  };
+  await page.goto('/#/activity');
+  const frosted = await boxes('frosted');
+  expect(await boxes('glass')).toEqual(frosted);
+  const main = await page.locator('.rp-main').evaluate(element => {
+    const style = getComputedStyle(element);
+    return {filter: style.backdropFilter, background: style.backgroundColor};
+  });
+  expect(main).toEqual({filter: 'none', background: 'rgba(0, 0, 0, 0)'});
+  const bar = await page
+    .locator('.rp-top')
+    .evaluate(element =>
+      [getComputedStyle(element), getComputedStyle(element, '::before')].map(style => ({filter: style.backdropFilter, background: style.backgroundColor}))
+    );
+  expect(bar).toEqual([
+    {filter: 'none', background: 'rgba(0, 0, 0, 0)'},
+    {filter: 'none', background: 'rgba(0, 0, 0, 0)'}
+  ]);
+  const fill = (selector: string) =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate(element => getComputedStyle(element, '::before').backgroundColor);
+  const card = await fill('.rp-content .rp-card');
+  const cardFilter = (await surface(page, '.rp-content .rp-card', '::before')).filter;
+  for (const selector of ['.rp-search', '.rp-actions']) {
+    expect(await fill(selector), selector).toBe(card);
+    expect((await surface(page, selector, '::before')).filter, selector).toMatch(/^blur\(/);
+  }
+  expect(await fill('.rp-side')).toBe(card);
+  expect((await surface(page, '.rp-side', '::before')).filter).toBe(cardFilter);
+  if (browserName !== 'chromium') expect(cardFilter).not.toContain('url(');
+  // The scroll edge under the bar shows only once the page has scrolled.
+  const edge = () => page.locator('.rp-shell').evaluate(element => getComputedStyle(element, '::after').visibility);
+  expect(await edge()).toBe('hidden');
+  expect((await surface(page, '.rp-shell', '::after')).filter).toMatch(/^blur\(/);
+  await page.evaluate(() => window.scrollTo(0, 300));
+  await expect.poll(edge).toBe('visible');
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect.poll(edge).toBe('hidden');
 });
 
 // Router UIs such as LuCI embed doona in an iframe with rounded corners. Chrome then dropped the chrome sheet's concave
@@ -166,11 +265,20 @@ test.describe('reduce transparency and increase contrast', () => {
         const cdp = await page.context().newCDPSession(page);
         await cdp.send('Emulation.setEmulatedMedia', {features: [{name: feature, value: feature === 'prefers-contrast' ? 'more' : 'reduce'}]});
         await page.goto('/#/nodes?provider=harbor');
-        await expect(page.locator('.rp-card').first()).toBeVisible();
+        await expect(page.locator(pageCard).first()).toBeVisible();
         const opaque = {filter: 'none', alpha: 1};
-        // The sidebar and top bar sit on the shell's chrome sheet.
-        expect(await surface(page, '.rp-shell', '::after')).toMatchObject(opaque);
-        expect(await surface(page, '.rp-card')).toMatchObject(opaque);
+        // The sidebar and top bar sit on the shell's chrome sheet; in Glass the sidebar and the bar's capsules are glass of their own.
+        if (flavour === 'glass')
+          for (const selector of ['.rp-side', '.rp-search', '.rp-actions']) expect(await surface(page, selector, '::before')).toMatchObject(opaque);
+        else expect(await surface(page, '.rp-shell', '::after')).toMatchObject(opaque);
+        expect(await surface(page, '.rp-card', '::before')).toMatchObject(opaque);
+        // The card's edge is a solid border.
+        expect(
+          await page
+            .locator('.rp-card')
+            .first()
+            .evaluate(element => getComputedStyle(element).borderTopWidth)
+        ).toBe('1px');
         await page.getByRole('button', {name: /Group$/}).click();
         await expect(page.locator('.rp-popover').first()).toBeVisible();
         expect(await surface(page, '.rp-popover')).toMatchObject(opaque);
