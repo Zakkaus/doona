@@ -113,6 +113,48 @@
   background: var(--rp-hl-med);
   overflow: hidden;
 }
+/* S2 Meter, size M: a 6px track; a long label wraps beside the value, which keeps one line at the inline end. */
+.rp-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  font-size: var(--rp-text-md);
+  line-height: 20px;
+}
+.rp-meter .top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 12px;
+}
+.rp-meter .l {
+  flex: 1 1 0;
+  overflow-wrap: anywhere;
+}
+.rp-meter .v {
+  margin-inline-start: auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.rp-meter .track {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--rp-hl-high);
+  overflow: hidden;
+}
+.rp-meter .fill {
+  display: block;
+  height: 100%;
+  background: var(--meter, var(--rp-accent));
+}
+.rp-meter.warn {
+  --meter: var(--rp-notice);
+}
+.rp-meter.err {
+  --meter: var(--rp-negative);
+}
 
 .rp-list {
   display: flex;

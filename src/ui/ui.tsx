@@ -52,7 +52,8 @@ export {
   type ToastPlacement,
   Light,
   Badge,
-  Bar
+  Bar,
+  Meter
 } from './Feedback';
 export {Kv, type KvItem} from './Kv';
 export {ContextualHelp, IconTip, HelpRow, type Help} from './ContextualHelp';

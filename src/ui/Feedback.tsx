@@ -1,6 +1,8 @@
 import {useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode} from 'react';
 import {
   Button as RButton,
+  Label,
+  Meter as RMeter,
   UNSTABLE_Toast as RToast,
   UNSTABLE_ToastContent as ToastContent,
   UNSTABLE_ToastList as ToastList,
@@ -129,6 +131,27 @@ export function Bar({label, value, pct, color}: {label: ReactNode; value: string
         <div className="fill" style={{width: `${Math.max(0, Math.min(100, pct))}%`, background: color}} />
       </div>
     </div>
+  );
+}
+
+// S2's Meter at its default size, M: a quantity within a known range, such as space used against a limit, with its
+// label and value above the track. The value's text is also what assistive technology reads. `tone` colours the fill as
+// the light's tones do: ok is S2's informative accent, warn its notice and err its negative variant.
+export function Meter({label, value, valueLabel, tone = 'ok'}: {label: string; value: number; valueLabel: string; tone?: 'ok' | 'warn' | 'err'}) {
+  return (
+    <RMeter className={cx('rp-meter', tone)} value={value} valueLabel={valueLabel}>
+      {({percentage}) => (
+        <>
+          <span className="top">
+            <Label className="l">{label}</Label>
+            <span className="v">{valueLabel}</span>
+          </span>
+          <span className="track">
+            <span className="fill" style={{width: `${percentage}%`}} />
+          </span>
+        </>
+      )}
+    </RMeter>
   );
 }
 
