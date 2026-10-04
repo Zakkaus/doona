@@ -98,8 +98,9 @@ async function screenshot(page, path, options = {}, lossy = false) {
   const png = await page.screenshot(options);
   execFileSync('cwebp', ['-quiet', ...(lossy ? ['-q', '78'] : ['-lossless', '-z', '9']), '-o', path + '.webp', '--', '-'], {input: png});
 }
-// `live` keeps the real clock, which the activity charts need to gather samples; `widgets` keeps the default panel.
-async function openPage(browser, lang, route, ready, options = {}, {live = false, widgets = false} = {}) {
+// `live` keeps the real clock, which the activity charts need to gather samples; `widgets` keeps the default panel;
+// `storage` sets further localStorage keys after those.
+async function openPage(browser, lang, route, ready, options = {}, {live = false, widgets = false, storage = {}} = {}) {
   const context = await browser.newContext({
     viewport: {width: 1280, height: 900},
     colorScheme: 'light',
@@ -111,13 +112,14 @@ async function openPage(browser, lang, route, ready, options = {}, {live = false
   if (!live) await context.clock.setFixedTime(fixedTime);
   await context.addInitScript(signInDemo);
   await context.addInitScript(
-    ([lang, widgets]) => {
+    ([lang, widgets, storage]) => {
       localStorage.setItem('doona-lang', lang);
       localStorage.setItem('doona-scheme', 'light');
       localStorage.setItem('doona-palette', 'rose-pine/moon');
       if (!widgets) localStorage.setItem('doona-widgets', JSON.stringify({version: 3, items: [], visible: false}));
+      for (const [key, value] of Object.entries(storage)) localStorage.setItem(key, value);
     },
-    [lang, widgets]
+    [lang, widgets, storage]
   );
   const page = await context.newPage();
   await page.goto(`${baseURL}/${route}`);
@@ -342,6 +344,40 @@ async function widgetEditor(browser, lang, t) {
   await page.locator('.rp-widget-preview .rp-sortable-row').first().waitFor();
   return page;
 }
+// An Activity dashboard of main's metric tiles, with `memory` among them when given, and the `extensions` cards
+// under them, so the cards a still is about sit in the first view.
+function dashboard(extensions, memory) {
+  const tile = id => ({id, form: id === 'latency' ? 'kv' : 'sparkline', size: 'medium'});
+  const metrics = ['download', 'upload', memory ? 'memory' : 'connections', 'latency', 'cpu'].map(tile);
+  return {
+    'doona-dashboard': JSON.stringify({
+      version: 3,
+      sections: [
+        {id: 'metrics', items: metrics},
+        {id: 'extensions', items: extensions}
+      ]
+    })
+  };
+}
+async function dashboardPage(browser, lang, storage, ready) {
+  const page = await openPage(browser, lang, '#/activity', '.rp-dashboard-cell[data-instance="cpu"]', desktop, {live: true, storage});
+  await samples(page);
+  await page.locator(ready).first().waitFor();
+  await page.waitForTimeout(600);
+  return page;
+}
+// The floating panel as a fresh profile has it, with `layout` over it, over the Activity page.
+async function panelPage(browser, lang, layout, options = desktop, palette = 'rose-pine/moon') {
+  const items = [
+    {id: 'speed', form: 'sparkline', size: 'medium'},
+    {id: 'memory', form: 'kv', size: 'medium'},
+    {id: 'mode', form: 'kv', size: 'medium'}
+  ];
+  const storage = {'doona-palette': palette, 'doona-widgets': JSON.stringify({version: 4, items, collapsed: false, pinned: false, visible: true, ...layout})};
+  const page = await openPage(browser, lang, '#/activity', '.rp-donut path', options, {live: true, storage});
+  await samples(page);
+  return page;
+}
 // Each capture returns its stills; one is saved as it is, more become a strip.
 const captures = [
   ['login-setup', async (browser, lang) => [await signIn(browser, lang, {mode: 'password', setup_required: true})]],
@@ -494,6 +530,120 @@ const captures = [
       await page.getByRole('menuitem', {name: t['nodes.addToGroup'], exact: true}).click();
       await page.getByRole('menu', {name: t['nodes.addToGroup'], exact: true}).waitFor();
       await page.waitForTimeout(300);
+      return [page];
+    }
+  ],
+  [
+    'dns-cache-expired',
+    async (browser, lang, t) => {
+      const page = await openPage(browser, lang, '#/dns?tab=cache', '.rp-table [role=row] >> nth=2', desktop);
+      await page.getByText(t['dns.includeExpired'], {exact: true}).click();
+      const expired = page.getByRole('rowheader', {name: 'github.com.', exact: true});
+      await expired.waitFor();
+      await expired.scrollIntoViewIfNeeded();
+      // The cache tab lists entries; the statistics tab's cache card holds the capacity meter beside them.
+      const stats = await openPage(browser, lang, '#/dns?tab=stats', '.rp-waffle', desktop);
+      await stats.getByRole('heading', {name: t['dns.chart.cache'], exact: true}).evaluate(node => node.scrollIntoView({block: 'center'}));
+      await stats.locator('.rp-main .track').first().waitFor();
+      await stats.waitForTimeout(300);
+      return [page, stats];
+    }
+  ],
+  [
+    'widgets-quota',
+    async (browser, lang) => [
+      await dashboardPage(
+        browser,
+        lang,
+        dashboard([
+          {id: 'providerBudget', form: 'kv', size: 'medium'},
+          {id: 'sourceHealth', form: 'kv', size: 'medium'}
+        ]),
+        '.rp-dashboard-cell[data-module="providerBudget"] .track'
+      )
+    ]
+  ],
+  [
+    'widgets-health',
+    async (browser, lang) => [
+      await dashboardPage(
+        browser,
+        lang,
+        dashboard([
+          {id: 'outboundErrors', form: 'ranked', size: 'medium'},
+          {id: 'nodeAvailability', form: 'kv', size: 'medium'},
+          {id: 'dnsLatency', form: 'dots', size: 'medium'}
+        ]),
+        '.rp-dashboard-cell[data-module="dnsLatency"] svg'
+      )
+    ]
+  ],
+  [
+    'widgets-edge',
+    async (browser, lang) => {
+      const page = await panelPage(browser, lang, {edge: true});
+      await page.mouse.move(760, 110);
+      const handle = page.locator('.rp-edge-handle');
+      await handle.waitFor();
+      await page.waitForFunction(() => document.querySelector('.rp-floating-panel')?.dataset.edge !== undefined);
+      await page.waitForTimeout(1500);
+      return [page];
+    }
+  ],
+  [
+    'widgets-glass',
+    async (browser, lang) => {
+      const page = await panelPage(browser, lang, {}, desktop, 'glass/glass');
+      await page.mouse.move(760, 110);
+      await page.waitForTimeout(400);
+      return [page];
+    }
+  ],
+  [
+    'settings-formats',
+    async (browser, lang) => {
+      const storage = {'doona-time-format': '12h'};
+      const settings = await openPage(browser, lang, '#/settings?card=appearance', '[data-setting="timeFormat"]', desktop, {storage});
+      await settings.waitForTimeout(400);
+      const logs = await openPage(browser, lang, '#/logs', '.rp-table [role=row] >> nth=2', desktop, {storage});
+      return [settings, logs];
+    }
+  ],
+  [
+    'system-status-meters',
+    async (browser, lang) => {
+      const page = await openPage(browser, lang, '#/overview', '.rp-main .track .fill', desktop);
+      await page.waitForTimeout(300);
+      return [page];
+    }
+  ],
+  [
+    'widgets-memory-wide',
+    async (browser, lang) => [
+      await dashboardPage(
+        browser,
+        lang,
+        dashboard([{id: 'memory', instance: 'memory-wide', form: 'kv', size: 'wide', width: 'full'}], true),
+        '.rp-dashboard-cell[data-instance="memory-wide"] .rp-kv'
+      )
+    ]
+  ],
+  [
+    'notices-light',
+    async (browser, lang) => {
+      // A read-only source refuses typing with an info toast; held under the pointer, it stays on the Activity page.
+      const page = await openPage(browser, lang, '#/config?tab=source&source=src-harbor', '.cm-content', desktop, {live: true});
+      await page.locator('.cm-content').click();
+      await page.keyboard.type('x');
+      const toast = page.locator('.rp-toast').first();
+      await toast.waitFor();
+      await page.mouse.move(...Object.values(await center(toast)));
+      await page.evaluate(() => (location.hash = '#/activity'));
+      await page.locator('.rp-donut path').first().waitFor();
+      await samples(page);
+      await page.locator('.rp-dashboard-cell[data-instance="notices"]').scrollIntoViewIfNeeded();
+      await page.mouse.move(...Object.values(await center(toast)));
+      await page.waitForTimeout(400);
       return [page];
     }
   ]
