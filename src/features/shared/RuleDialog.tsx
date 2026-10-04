@@ -1,8 +1,17 @@
 import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
+import AddCircle from '../../ui/icons/AddCircle';
 import {SearchSelect} from '../../ui/SearchSelect';
 import {Button, ErrorMessage, InlineAlert, LabeledSelect, Link, ModalDialog, StaticField, Switch, Toolbar} from '../../ui/ui';
 import type {QuickRuleDialog} from './useQuickRule';
+
+export function QuickRuleButton({label, disabled, tip, onPress}: {label: string; disabled: boolean; tip?: string; onPress: () => void}) {
+  return (
+    <Button quiet icon small label={label} tip={disabled ? tip : undefined} isDisabled={disabled} onPress={onPress}>
+      <AddCircle />
+    </Button>
+  );
+}
 
 export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
   const t = useT();

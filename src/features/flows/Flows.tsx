@@ -27,11 +27,10 @@ import {Coverage} from '../shared/Coverage';
 import type {PageProps} from '../../shell/routes';
 import {useT} from '../../i18n';
 import Close from '../../ui/icons/Close';
-import AddCircle from '../../ui/icons/AddCircle';
 import {useRoutingMap} from './useRoutingMap';
 import {useFlowRecords} from './useFlowRecords';
 import {ruleHref} from '../shared/link';
-import {RuleDialog} from '../shared/RuleDialog';
+import {QuickRuleButton, RuleDialog} from '../shared/RuleDialog';
 import {useFlowsPage} from './useFlowsPage';
 
 type FlowRow = ReturnType<typeof useFlowRecords>['rows'][number];
@@ -142,19 +141,7 @@ function FlowRecords(props: PageProps) {
         render: row => {
           const action = latest.current;
           const disabled = !action.canAdd(row.seed);
-          return (
-            <Button
-              quiet
-              icon
-              small
-              label={action.label(row.target)}
-              tip={disabled ? action.noTarget : undefined}
-              isDisabled={disabled}
-              onPress={() => latest.current.open(row.seed)}
-            >
-              <AddCircle />
-            </Button>
-          );
+          return <QuickRuleButton label={action.label(row.target)} disabled={disabled} tip={action.noTarget} onPress={() => latest.current.open(row.seed)} />;
         }
       }
     ],

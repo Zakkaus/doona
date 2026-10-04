@@ -1,6 +1,5 @@
 import {useMemo} from 'react';
 import {useT} from '../../i18n';
-import AddCircle from '../../ui/icons/AddCircle';
 import Delete from '../../ui/icons/Delete';
 import Download from '../../ui/icons/Download';
 import Refresh from '../../ui/icons/Refresh';
@@ -33,7 +32,7 @@ import type {PageProps} from '../../shell/routes';
 import {useDns, useDnsCacheTab, useDnsLogTab, type DnsRowRule} from './useDns';
 import {DnsStats} from './Analysis';
 import type {MatchKind} from './match';
-import {RuleDialog} from '../shared/RuleDialog';
+import {QuickRuleButton, RuleDialog} from '../shared/RuleDialog';
 import '../../ui/styles/impact.css';
 
 type DnsCacheRow = ReturnType<typeof useDnsCacheTab>['rows'][number];
@@ -157,9 +156,7 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
         grow: 0,
         render: entry => (
           <div className="rp-cluster nowrap">
-            <Button quiet icon small label={rule.label(entry.domain)} isDisabled={!rule.canAdd(entry.seed)} onPress={() => rule.open(entry.seed)}>
-              <AddCircle />
-            </Button>
+            <QuickRuleButton label={rule.label(entry.domain)} disabled={!rule.canAdd(entry.seed)} onPress={() => rule.open(entry.seed)} />
             <Button quiet icon small label={entry.deleteLabel} isPending={entry.pending} isDisabled={entry.disabled} onPress={() => remove(entry.id)}>
               <Delete />
             </Button>
@@ -303,11 +300,7 @@ function DnsLog({
         label: t('ui.actions'),
         minWidth: 88,
         grow: 0,
-        render: record => (
-          <Button quiet icon small label={rule.label(record.name)} isDisabled={!rule.canAdd(record.seed)} onPress={() => rule.open(record.seed)}>
-            <AddCircle />
-          </Button>
-        )
+        render: record => <QuickRuleButton label={rule.label(record.name)} disabled={!rule.canAdd(record.seed)} onPress={() => rule.open(record.seed)} />
       }
     ],
     [t, rule]
