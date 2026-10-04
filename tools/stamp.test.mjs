@@ -19,7 +19,7 @@ const prepaint = (stored, dark, intl, tags = []) => {
   const context = {
     document,
     navigator: {languages: tags, language: tags[0] ?? ''},
-    localStorage: {getItem: key => stored[key] ?? null},
+    localStorage: {getItem: key => stored[key] ?? null, setItem: (key, value) => (stored[key] = value), removeItem: key => delete stored[key]},
     matchMedia: () => ({matches: dark})
   };
   runInNewContext(stamp, intl ? {...context, Intl: intl} : context);
@@ -31,6 +31,21 @@ it('accepts every palette the app offers', () => {
     const [family, flavour] = id.split('/');
     expect(prepaint({'doona-palette': id}, false).dataset).toMatchObject({family, flavour});
   }
+});
+
+it('moves the old Glass material into its palette once', () => {
+  for (const [material, palette] of [
+    ['clear', 'glass/glass'],
+    ['frosted', 'glass/frosted'],
+    ['tinted', 'glass/tinted']
+  ]) {
+    const stored = {'doona-palette': 'glass/glass', 'doona-glass': material};
+    expect(prepaint(stored, false).dataset.flavour).toBe(palette.split('/')[1]);
+    expect(stored).toEqual({'doona-palette': palette});
+  }
+  const other = {'doona-palette': 'nord/nord', 'doona-glass': 'frosted'};
+  expect(prepaint(other, false).dataset.family).toBe('nord');
+  expect(other).toEqual({'doona-palette': 'nord/nord'});
 });
 
 it('falls back to the default palette for removed or malformed ids without losing dark mode', () => {

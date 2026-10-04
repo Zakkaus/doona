@@ -1,72 +1,118 @@
-import type {Locator} from '@playwright/test';
+import type {Page} from '@playwright/test';
 import {expect, test} from './fixtures';
 
-for (const scheme of ['light', 'dark']) {
-  test(`glass ${scheme} frosts sticky headers and floating surfaces`, async ({page}) => {
+const flavours = ['glass', 'frosted', 'float', 'tinted'] as const;
+
+// The opaque check reads rgb() as alpha 1 and rgba() by its last channel.
+const surface = (page: Page, selector: string, pseudo?: string) =>
+  page
+    .locator(selector)
+    .first()
+    .evaluate((element, pseudo) => {
+      const style = getComputedStyle(element, pseudo);
+      const alpha = style.backgroundColor.startsWith('rgba(') ? Number(style.backgroundColor.match(/,\s*([\d.]+)\)$/)?.[1]) : 1;
+      return {filter: style.backdropFilter, alpha};
+    }, pseudo);
+
+test('the palette menu offers the four Glass materials, and Settings has no material switch', async ({page}) => {
+  await page.goto('/#/settings');
+  await page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true}).click();
+  for (const name of ['Glass', 'Frosted', 'Float', 'Tinted']) await expect(page.getByRole('menuitemradio', {name: new RegExp(`^${name}`)})).toHaveCount(1);
+  await page.getByRole('menuitemradio', {name: /^Float/}).click();
+  await expect(page.locator('html')).toHaveAttribute('data-flavour', 'float');
+  const card = page.getByRole('region', {name: 'Appearance', exact: true});
+  await expect(card.getByRole('button', {name: /Palette/})).toBeVisible();
+  await expect(card.getByRole('radiogroup', {name: /material/i})).toHaveCount(0);
+});
+
+// Glass kept its material in doona-glass before each material was a palette; the first paint moves it once.
+for (const [material, flavour] of [
+  ['frosted', 'frosted'],
+  ['tinted', 'tinted'],
+  ['clear', 'glass']
+] as const)
+  test(`a stored ${material} Glass material becomes the ${flavour} palette`, async ({page}) => {
     await page.addInitScript(value => {
+      if (sessionStorage.getItem('migrated')) return;
+      sessionStorage.setItem('migrated', '1');
       localStorage.setItem('doona-palette', 'glass/glass');
-      localStorage.setItem('doona-scheme', value);
-      localStorage.setItem('doona-mock-big', '29');
-    }, scheme);
-    await page.goto('/#/nodes?provider=harbor');
-    const table = page.locator('.rp-table').first();
-    const header = table.getByRole('columnheader').first();
-    await expect(header).toBeVisible();
-    await table.evaluate(element => (element.scrollTop = 160));
-    const surface = await header.evaluate(element => {
-      const table = element.closest('.rp-table')!;
-      const style = getComputedStyle(element);
-      return {
-        scrolled: table.scrollTop > 0,
-        sticky: getComputedStyle(element).position === 'sticky',
-        filter: style.backdropFilter,
-        background: style.backgroundColor,
-        top: element.getBoundingClientRect().top - table.getBoundingClientRect().top
-      };
-    });
-    expect(surface.scrolled).toBe(true);
-    expect(surface.sticky).toBe(true);
-    expect(surface.top).toBeGreaterThanOrEqual(0);
-    const alpha = surface.background.startsWith('rgba(') ? Number(surface.background.match(/,\s*([\d.]+)\)$/)?.[1]) : 1;
-    expect(surface.filter !== 'none' || alpha === 1).toBe(true);
-
-    const chrome = await page.locator('.rp-shell').evaluate(element => getComputedStyle(element, '::after').backdropFilter);
-    expect(chrome).not.toBe('none');
-    await page.getByRole('button', {name: /Group$/}).click();
-    const menu = page.locator('.rp-popover').first();
-    await expect(menu).toBeVisible();
-    expect(await menu.evaluate(element => getComputedStyle(element).backdropFilter)).not.toBe('none');
-    await page.keyboard.press('Escape');
-
-    await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
-    const dialog = page.locator('.rp-modal');
-    await expect(dialog).toBeVisible();
-    expect(await dialog.evaluate(element => getComputedStyle(element).backdropFilter)).not.toBe('none');
+      localStorage.setItem('doona-glass', value);
+    }, material);
+    await page.goto('/#/activity');
+    await expect(page.locator('html')).toHaveAttribute('data-flavour', flavour);
+    expect(await page.evaluate(() => [localStorage.getItem('doona-palette'), localStorage.getItem('doona-glass')])).toEqual([`glass/${flavour}`, null]);
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-flavour', flavour);
   });
-}
 
-test.describe('floating widget panel', () => {
-  test.use({widgets: true, storage: {'doona-palette': 'glass/glass', 'doona-scheme': 'dark'}});
-  test('glass frosts it lighter than a popover, with the same rim', async ({page}) => {
+for (const flavour of flavours)
+  test(`${flavour} frosts the chrome, cards and menus as its material says`, async ({page}) => {
+    await page.addInitScript(value => localStorage.setItem('doona-palette', `glass/${value}`), flavour);
     await page.goto('/#/nodes?provider=harbor');
+    await expect(page.locator('.rp-card').first()).toBeVisible();
+    const chrome = await surface(page, '.rp-shell', '::after');
+    const card = await surface(page, '.rp-card');
+    if (flavour === 'tinted') {
+      expect(chrome.filter).toBe('none');
+      expect(card.filter).toBe('none');
+      expect(card.alpha).toBeGreaterThanOrEqual(0.85);
+    } else {
+      expect(chrome.filter).toContain('blur');
+      expect(card.filter).toContain('blur');
+      expect(card.alpha).toBeLessThan(0.7);
+    }
+    await page.getByRole('button', {name: /Group$/}).click();
+    await expect(page.locator('.rp-popover').first()).toBeVisible();
+    expect((await surface(page, '.rp-popover')).filter === 'none').toBe(flavour === 'tinted');
+  });
+
+// Float detaches the top bar: a rounded, blurred bar inset from the viewport, with the content starting below it.
+test('float draws an inset top bar and keeps the content clear of it', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('doona-palette', 'glass/float'));
+  await page.goto('/#/activity');
+  const title = page.getByRole('heading', {level: 1});
+  await expect(title).toHaveText('Activity');
+  const bar = await page.locator('.rp-top').evaluate(element => {
+    const style = getComputedStyle(element, '::before');
+    const box = element.getBoundingClientRect();
+    return {
+      top: parseFloat(style.top),
+      left: parseFloat(style.left),
+      radius: parseFloat(style.borderTopLeftRadius),
+      filter: style.backdropFilter,
+      bottom: box.bottom
+    };
+  });
+  expect(bar.top).toBeGreaterThan(0);
+  expect(bar.left).toBeGreaterThan(0);
+  expect(bar.radius).toBeGreaterThan(0);
+  expect(bar.filter).toContain('blur');
+  expect((await title.boundingBox())!.y).toBeGreaterThan(bar.bottom);
+});
+
+// Chromium refracts through the lens filters; the floating panel and menus reference them, and they exist once.
+test.describe('glass lens', () => {
+  test.skip(({browserName}) => browserName !== 'chromium', 'only Chromium applies an SVG filter in backdrop-filter');
+  test.use({widgets: true, storage: {'doona-palette': 'glass/glass'}});
+  test('bends the floating panel and menus', async ({page}) => {
+    await page.goto('/#/nodes?provider=harbor');
+    await expect(page.locator('html')).toHaveAttribute('data-lens', '');
+    await expect(page.locator('svg filter#doona-lens feDisplacementMap')).toHaveCount(1);
+    await expect(page.locator('svg filter#doona-lens-sm')).toHaveCount(1);
     const panel = page.locator('.rp-floating-frame .rp-floating-panel');
     await expect(panel).toBeVisible();
+    expect((await surface(page, '.rp-floating-frame .rp-floating-panel')).filter).toContain('url("#doona-lens")');
     await page.getByRole('button', {name: /Group$/}).click();
-    const popover = page.locator('.rp-popover').first();
-    await expect(popover).toBeVisible();
-    const material = (locator: Locator) =>
-      locator.evaluate(element => {
-        const style = getComputedStyle(element);
-        return {
-          filter: style.backdropFilter,
-          alpha: Number(style.backgroundColor.match(/,\s*([\d.]+)\)$/)?.[1] ?? 1),
-          rim: getComputedStyle(element, '::after').content
-        };
-      });
-    const [frosted, floating] = [await material(panel), await material(popover)];
-    expect(frosted.filter).not.toBe('none');
-    expect(frosted.alpha).toBeLessThan(floating.alpha);
-    expect(frosted.rim).toBe(floating.rim);
+    await expect(page.locator('.rp-popover').first()).toBeVisible();
+    expect((await surface(page, '.rp-popover')).filter).toContain('url("#doona-lens-sm")');
+  });
+});
+test.describe('glass lens elsewhere', () => {
+  test.use({widgets: true, storage: {'doona-palette': 'glass/frosted'}});
+  test('stays off in the other materials', async ({page}) => {
+    await page.goto('/#/activity');
+    await expect(page.locator('.rp-floating-frame .rp-floating-panel')).toBeVisible();
+    expect((await surface(page, '.rp-floating-frame .rp-floating-panel')).filter).not.toContain('url(');
   });
 });
 
@@ -107,4 +153,26 @@ test.describe('embedded in a rounded iframe', () => {
     );
     expect(darkest).toBeLessThan(100);
   });
+});
+
+// Reduce Transparency and Increase Contrast turn every material solid. Playwright cannot emulate the first media
+// feature, so the Chromium DevTools protocol sets both.
+test.describe('reduce transparency and increase contrast', () => {
+  test.skip(({browserName}) => browserName !== 'chromium', 'the media features are emulated through CDP');
+  for (const feature of ['prefers-reduced-transparency', 'prefers-contrast'])
+    for (const flavour of flavours)
+      test(`${feature} makes ${flavour} solid`, async ({page}) => {
+        await page.addInitScript(value => localStorage.setItem('doona-palette', `glass/${value}`), flavour);
+        const cdp = await page.context().newCDPSession(page);
+        await cdp.send('Emulation.setEmulatedMedia', {features: [{name: feature, value: feature === 'prefers-contrast' ? 'more' : 'reduce'}]});
+        await page.goto('/#/nodes?provider=harbor');
+        await expect(page.locator('.rp-card').first()).toBeVisible();
+        const opaque = {filter: 'none', alpha: 1};
+        // The sidebar and top bar sit on the shell's chrome sheet.
+        expect(await surface(page, '.rp-shell', '::after')).toMatchObject(opaque);
+        expect(await surface(page, '.rp-card')).toMatchObject(opaque);
+        await page.getByRole('button', {name: /Group$/}).click();
+        await expect(page.locator('.rp-popover').first()).toBeVisible();
+        expect(await surface(page, '.rp-popover')).toMatchObject(opaque);
+      });
 });
