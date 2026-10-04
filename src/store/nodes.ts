@@ -1,8 +1,8 @@
-import {useCallback} from 'react';
+import {useCallback, useState} from 'react';
 import {MAX_PAGE, poll} from './cadence';
 import {ApiError, LocalError} from '../api/error';
 import {getApi} from '../api/index';
-import type {Node, NodeCreate, OperationAccepted, ProviderCreate, ProviderList} from '../api/model';
+import type {HealthObservation, Node, NodeCreate, OperationAccepted, ProviderCreate, ProviderList} from '../api/model';
 import {gated, pageSize, useResource, walk} from './resource';
 import {activationError, finished, settle, useAction, type SucceededResult} from './action';
 import {optionsProbe, probeChoices, probeFallback, useProbeOptions} from './probeOptions';
@@ -25,6 +25,41 @@ export function useNodes(enabled = true) {
     },
     {enabled}
   );
+}
+// A node read again with only new probe times, as each poll is a new probe round: what memos and row caches compare is
+// whether its readings moved. The times matter only for finding each kind's latest reading, so their order stands in
+// for them.
+const readings = (node: Node) => {
+  const times = [...new Set(node.health.map(row => Date.parse(row.observed_at)))].sort((a, b) => a - b);
+  const health = node.health.map((row: HealthObservation) => ({...row, observed_at: times.indexOf(Date.parse(row.observed_at))}));
+  return JSON.stringify({...node, health});
+};
+// `next` with every node whose readings did not move kept as its object from `previous`, and `previous` itself when no
+// node moved, so a poll re-renders only what reads a node that changed.
+export function steadyNodes(previous: Node[], next: Node[]): Node[] {
+  const before = new Map(previous.map(node => [node.id, node]));
+  let same = previous.length === next.length;
+  const list = next.map((node, i) => {
+    const old = before.get(node.id);
+    const kept = old && old !== node && readings(old) === readings(node) ? old : node;
+    if (kept !== previous[i]) same = false;
+    return kept;
+  });
+  return same ? previous : list;
+}
+export function useSteadyNodes(data: Node[] | undefined): Node[] | undefined {
+  const [held, setHeld] = useState({from: data, nodes: data});
+  if (held.from === data) return held.nodes;
+  const nodes = data && held.nodes ? steadyNodes(held.nodes, data) : data;
+  setHeld({from: data, nodes});
+  return nodes;
+}
+// One lookup by id per node list, shared by every card that reads the same list.
+const indexes = new WeakMap<Node[], Map<string, Node>>();
+export function nodeIndex(nodes: Node[]): Map<string, Node> {
+  let index = indexes.get(nodes);
+  if (!index) indexes.set(nodes, (index = new Map(nodes.map(node => [node.id, node]))));
+  return index;
 }
 export function useProviders(enabled = true) {
   const api = getApi();

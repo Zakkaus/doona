@@ -1,14 +1,14 @@
 import {useCallback, useMemo} from 'react';
 import {poll} from './cadence';
 import {getApi} from '../api/index';
-import type {Capabilities, Group, GroupSelectionRequest, JsonPatch, ProbeRequest, ProbeResult} from '../api/model';
+import type {Capabilities, Group, Node, GroupSelectionRequest, JsonPatch, ProbeRequest, ProbeResult} from '../api/model';
 import type {Api} from '../api/api';
 import {ApiError, LocalError} from '../api/error';
 import {useResource} from './resource';
 import {activationError, etag, finished, settle, readBackUnconfirmed, useAction} from './action';
 import {useSharedControl} from './sharedControl';
 import {optionsProbe, probeChoices, probeFallback, useProbeOptions, type ProbeOptions} from './probeOptions';
-import {useNodes} from './nodes';
+import {nodeIndex, useNodes} from './nodes';
 import {useCapabilities} from './runtime';
 // A probe refused after some batches finished: the batches that did finish, and the error that stopped the rest.
 export type PartialProbeError = LocalError & {cause: unknown; partialResult: ProbeResult; completed: number; total: number};
@@ -102,11 +102,13 @@ export function useGroups(enabled = true, every: number = poll.inventory) {
   const api = getApi();
   return useResource({key: ['groups'], every, fetch: signal => api.groups(signal)}, {enabled});
 }
-export function useGroupControl(id: string, refetchGroups: () => unknown, refetchNodes: () => unknown, paused = false) {
+// `shared` carries the node list when the page already reads it, which spares each card a subscription of its own.
+export function useGroupControl(id: string, refetchGroups: () => unknown, refetchNodes: () => unknown, paused = false, shared?: {nodes: Node[] | undefined}) {
   const stored = useProbeOptions();
   const api = getApi();
   const capabilities = useCapabilities().data;
-  const nodes = useNodes().data;
+  const own = useNodes(!shared).data;
+  const nodes = shared ? shared.nodes : own;
   const resource = useResource({key: ['group', {id}], every: poll.inventory, fetch: signal => api.group(id, signal)}, {paused});
   const {refetch} = resource;
   const data = useMemo(() => resource.data && groupActions(resource.data, capabilities), [resource.data, capabilities]);
@@ -137,7 +139,7 @@ export function useGroupControl(id: string, refetchGroups: () => unknown, refetc
     () =>
       resource.data && nodes
         ? ((nested && leaves) || resource.data.members.filter(member => member.kind === 'node').map(member => member.id)).map(
-            id => nodes.find(node => node.id === id)?.protocol ?? null
+            id => nodeIndex(nodes).get(id)?.protocol ?? null
           )
         : [null],
     [resource.data, nodes, nested, leaves]

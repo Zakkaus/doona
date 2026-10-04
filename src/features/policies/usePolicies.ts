@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {poll, useCapabilities, useGroups, useNodes, useProviders} from '../../store';
+import {poll, useCapabilities, useGroups, useNodes, useProviders, useSteadyNodes} from '../../store';
 import {healthMillis, preferredHealth} from '../../api/selectors';
 import {useMainSourceEdit} from '../../store/mainSource';
 import {useCompleteness, useConfig} from '../../store/config';
@@ -25,6 +25,7 @@ export function usePolicies({go, query}: PageProps) {
   const groups = useGroups(offered(resources, 'groups', {whileLoading: true}), poll.live);
   const nodesOffered = offered(resources, 'nodes', {whileLoading: false});
   const nodes = useNodes(nodesOffered);
+  const roster = useSteadyNodes(nodes.data);
   const params = new URLSearchParams(query);
   const requestedGroup = params.get('group');
   const focus = groups.data?.find(group => group.id === requestedGroup || group.name === requestedGroup)?.id ?? requestedGroup;
@@ -152,7 +153,7 @@ export function usePolicies({go, query}: PageProps) {
     source,
     taken: new Set([...outbounds.groups, ...owners.keys()]),
     outbounds,
-    nodes: nodes.data ?? [],
+    nodes: roster ?? [],
     onCreated: name => (runtimeGroups ? openGroup(go, name) : go('policies', within('', {group: name})))
   });
   const openCreate = useEffectEvent(() => {
@@ -168,7 +169,7 @@ export function usePolicies({go, query}: PageProps) {
     declarations,
     cards: edited.gone ? [...kinds.shown, {...edited.gone, gone: true}] : kinds.shown,
     onEditing,
-    nodes: nodes.data ?? [],
+    nodes: roster,
     providers: providers.data?.providers ?? [],
     create,
     createDisabled: !source.writable || !source.main || source.busy,

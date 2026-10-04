@@ -1,3 +1,5 @@
+import {nodeFixtures} from '../../mock/fixtures/inventory';
+import type {Node} from '../api/model';
 import {vi} from 'vitest';
 
 export function stubVisibleDocument() {
@@ -67,3 +69,14 @@ export const hookHarness = {
     }
   }
 };
+
+// Nodes stamped with one probe round's time, and the edits a later poll can make to them.
+export const steadyBase = nodeFixtures(6).nodes.map(node => ({
+  ...node,
+  health: node.health.map(row => ({...row, observed_at: '2026-10-05T00:00:00.000Z'}))
+}));
+// A new poll: every node a new object, every reading stamped with the new round's time.
+export const poll = (nodes: Node[], time = '2026-10-05T00:00:30.000Z') =>
+  nodes.map(node => ({...node, health: node.health.map(row => ({...row, observed_at: time}))}));
+export const withLatency = (nodes: Node[], index: number, latency_ms: number) =>
+  nodes.map((node, i) => (i === index ? {...node, health: node.health.map((row, r) => (r === 0 ? {...row, latency_ms} : row))} : node));

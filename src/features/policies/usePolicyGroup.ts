@@ -48,7 +48,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   const t = useT();
   const lang = useLang();
   const [probeOptionsOpen, setProbeOptionsOpen] = useState(false);
-  const control = useGroupControl(id, refreshGroups, refreshNodes, paused && !focused);
+  const control = useGroupControl(id, refreshGroups, refreshNodes, paused && !focused, {nodes: input.nodes});
   // A language switch does not repeat the toast. The notice decides its kind, so an unknown outcome stays neutral; the
   // group's own summary already carries the error and adds no detail.
   const report = useEffectEvent((error: Error) => {
