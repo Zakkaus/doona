@@ -1,17 +1,17 @@
+# Contributor: Zakkaus <zakk@gentoozh.org>
 # Maintainer: Zakkaus <zakk@gentoozh.org>
 pkgname=doona
 pkgver=0.1.0_beta13
-_tag=v0.1.0-beta.13
-_upstream_ver=${_tag#v}
 pkgrel=0
+_pkgver=${pkgver/_beta/-beta.}
 pkgdesc="Web UI for the daeuniverse engines"
 url="https://github.com/Zakkaus/doona"
 arch="noarch"
 license="GPL-3.0-only AND 0BSD AND Apache-2.0 AND BSD-3-Clause AND ISC AND MIT AND CC-BY-3.0 AND CC-BY-4.0 AND CC-BY-SA-4.0 AND CC0-1.0 AND LicenseRef-GitHub-Logos"
-subpackages="$pkgname-doc $pkgname-fonts:fonts:noarch $pkgname-precompressed:precompressed:noarch"
-source="$pkgname-$_upstream_ver.tar.gz::$url/releases/download/$_tag/$pkgname-$_upstream_ver.tar.gz
-	$pkgname-fonts-$_upstream_ver.tar.gz::$url/releases/download/$_tag/$pkgname-fonts-$_upstream_ver.tar.gz
-	$pkgname-precompressed-$_upstream_ver.tar.gz::$url/releases/download/$_tag/$pkgname-precompressed-$_upstream_ver.tar.gz
+subpackages="$pkgname-doc $pkgname-fonts:_fonts $pkgname-precompressed:_precompressed"
+source="$url/releases/download/v$_pkgver/$pkgname-$_pkgver.tar.gz
+	$url/releases/download/v$_pkgver/$pkgname-fonts-$_pkgver.tar.gz
+	$url/releases/download/v$_pkgver/$pkgname-precompressed-$_pkgver.tar.gz
 	"
 options="!check" # static files
 builddir="$srcdir"
@@ -19,9 +19,9 @@ builddir="$srcdir"
 # The archives hold their files at the root: unpack each into its own directory.
 unpack() {
 	mkdir -p "$srcdir"/web "$srcdir"/fonts "$srcdir"/precompressed
-	tar -xzf "$srcdir"/$pkgname-$_upstream_ver.tar.gz -C "$srcdir"/web
-	tar -xzf "$srcdir"/$pkgname-fonts-$_upstream_ver.tar.gz -C "$srcdir"/fonts
-	tar -xzf "$srcdir"/$pkgname-precompressed-$_upstream_ver.tar.gz -C "$srcdir"/precompressed
+	tar -xzf "$srcdir"/$pkgname-$_pkgver.tar.gz -C "$srcdir"/web
+	tar -xzf "$srcdir"/$pkgname-fonts-$_pkgver.tar.gz -C "$srcdir"/fonts
+	tar -xzf "$srcdir"/$pkgname-precompressed-$_pkgver.tar.gz -C "$srcdir"/precompressed
 }
 
 package() {
@@ -31,17 +31,18 @@ package() {
 	install -Dm644 "$srcdir"/web/NOTICE -t "$pkgdir"/usr/share/doc/$pkgname/
 	install -Dm644 "$srcdir"/web/LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname/
 	install -Dm644 "$srcdir"/web/LICENSES/*.txt -t "$pkgdir"/usr/share/licenses/$pkgname/
+	cp -a "$srcdir"/fonts/fonts "$pkgdir"/usr/share/doona/
 }
 
-fonts() {
+_fonts() {
 	pkgdesc="Noto Sans TC/SC for doona"
 	license="OFL-1.1"
 	depends="$pkgname=$pkgver-r$pkgrel"
-	mkdir -p "$subpkgdir"/usr/share/doona
-	cp -a "$srcdir"/fonts/fonts "$subpkgdir"/usr/share/doona/
+	amove usr/share/doona/fonts
 }
 
-precompressed() {
+# amove cannot select the .br and .gz files across the tree, so they come from their own archive.
+_precompressed() {
 	pkgdesc="Brotli and gzip copies of doona's text assets"
 	depends="$pkgname=$pkgver-r$pkgrel"
 	mkdir -p "$subpkgdir"/usr/share/doona
