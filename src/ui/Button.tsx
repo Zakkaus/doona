@@ -12,10 +12,10 @@ export type ButtonStyle = {size?: ControlSize; quiet?: boolean; secondary?: bool
 // S2 splits everyday actions (ActionButton) from a flow's primary actions (Button). The kit draws ActionButton geometry
 // by default; accent and negative buttons, and every labelled button inside PrimaryActions, take Button's pill. A
 // dialog's footer and any row that commits, tests or discards a form or an edit (S2's ButtonGroup) wrap their buttons
-// in it; toolbar and per-item actions stay outside.
+// in it, so one row keeps one shape; toolbar and per-item actions stay outside. A dialog's body turns it off again.
 const PrimaryActionsContext = createContext(false);
-export function PrimaryActions({children}: {children: ReactNode}) {
-  return <PrimaryActionsContext value>{children}</PrimaryActionsContext>;
+export function PrimaryActions({children, active = true}: {children: ReactNode; active?: boolean}) {
+  return <PrimaryActionsContext value={active}>{children}</PrimaryActionsContext>;
 }
 
 // The classes for a style. Exported for a react-aria button the kit cannot wrap, such as a grid row's drag slot.
@@ -79,7 +79,7 @@ export function Button({
   const reason = useActionReason(disabled);
   const [tipOpen, setTipOpen] = useState(false);
   const controlSize = useControlSize(size);
-  const primary = useContext(PrimaryActionsContext) && !style.quiet && !style.icon;
+  const primary = useContext(PrimaryActionsContext) && !style.icon;
   // A disabled button's tip is why it cannot run; it describes the button even while the tooltip is closed.
   const tipId = useId();
   const tipReason = disabled && !reason && !!tip;

@@ -167,7 +167,7 @@ for (const width of [390, 768])
     test.describe(`${width}px ${lang} editor toolbar`, () => {
       test.use({viewport: {width, height: 900}, storage: {'doona-lang': lang}});
 
-      test('the actions occupy one row below the full-width note', async ({page}) => {
+      test('the commit actions and the editing tools each occupy one row below the full-width note', async ({page}) => {
         await page.goto('/#/config?tab=source');
         await expect(page.locator('.cm-content')).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
@@ -176,14 +176,19 @@ for (const width of [390, 768])
           card.evaluate(el => {
             const note = el.querySelector('.rp-source-note')!.getBoundingClientRect();
             const toolbar = (el.querySelector('.rp-editor-toolbar') ?? el.querySelector('.rp-toolbar'))!.getBoundingClientRect();
-            const controls = [...el.querySelectorAll('.rp-source-note button, .rp-toolbar button')]
-              .filter(button => getComputedStyle(button).visibility !== 'hidden')
-              .map(button => {
-                const box = button.getBoundingClientRect();
-                return {top: box.top, bottom: box.bottom, height: box.height};
-              });
+            // The commit row and the tools row, each with its visible buttons; the tools fold into a menu on a phone.
+            const rows = [...el.querySelectorAll('.rp-editor-toolbar .rp-toolbar, .rp-editor-overflow')]
+              .map(row =>
+                [...row.querySelectorAll('button')]
+                  .filter(button => button.checkVisibility({visibilityProperty: true}))
+                  .map(button => {
+                    const box = button.getBoundingClientRect();
+                    return {top: box.top, bottom: box.bottom, height: box.height};
+                  })
+              )
+              .filter(row => row.length > 0);
             const box = el.getBoundingClientRect();
-            return {note, toolbar, controls, left: toolbar.left - box.left, right: box.right - toolbar.right};
+            return {note, toolbar, rows, left: toolbar.left - box.left, right: box.right - toolbar.right};
           });
         const note = card.locator('.rp-source-note');
         const lines = await note.evaluate(el => el.getBoundingClientRect().height / parseFloat(getComputedStyle(el.querySelector('.rp-label')!).lineHeight));
@@ -195,9 +200,13 @@ for (const width of [390, 768])
         for (const dirty of [false, true]) {
           if (dirty) await page.locator('.cm-content').fill((await page.locator('.cm-content').innerText()) + '\n# draft');
           const boxes = await geometry();
-          expect(boxes.controls.length).toBeGreaterThanOrEqual(2);
-          expect(Math.max(...boxes.controls.map(box => box.top)) - Math.min(...boxes.controls.map(box => box.top))).toBeLessThanOrEqual(1);
-          expect(Math.max(...boxes.controls.map(box => box.height)) - Math.min(...boxes.controls.map(box => box.height))).toBeLessThanOrEqual(1);
+          expect(boxes.rows.length).toBe(2);
+          for (const controls of boxes.rows) {
+            expect(Math.max(...controls.map(box => box.top)) - Math.min(...controls.map(box => box.top))).toBeLessThanOrEqual(1);
+            expect(Math.max(...controls.map(box => box.height)) - Math.min(...controls.map(box => box.height))).toBeLessThanOrEqual(1);
+          }
+          // The commit row sits above the tools, which stay next to the text.
+          expect(boxes.rows[0][0].bottom).toBeLessThanOrEqual(boxes.rows[1][0].top);
           expect(boxes.note.bottom).toBeLessThanOrEqual(boxes.toolbar.top);
           expect(Math.abs(boxes.note.width - boxes.toolbar.width)).toBeLessThanOrEqual(1);
           expect(Math.abs(boxes.left - boxes.right)).toBeLessThanOrEqual(1);

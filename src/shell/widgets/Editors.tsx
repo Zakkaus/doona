@@ -170,8 +170,9 @@ export function DashboardActions({draft, saved, setDraft, onClose}: Draft & {sav
   const [confirm, setConfirm] = useState(false);
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved]);
   useDraftGuard(dirty, onClose);
+  // The editing page's row is one group of Buttons, the gallery included, so it keeps one shape.
   return (
-    <>
+    <PrimaryActions>
       <ModalDialog
         title={t('widgets.gallery')}
         size="wide"
@@ -183,19 +184,17 @@ export function DashboardActions({draft, saved, setDraft, onClose}: Draft & {sav
           <ModuleGallery items={dashboardItems(draft)} add={(id, preset) => setDraft(extend(draft, id, preset))} surface="dashboard" />
         </div>
       </ModalDialog>
-      <PrimaryActions>
-        <Button onPress={() => setDraft(dashboardDefaults())}>{t('widgets.reset')}</Button>
-        <Button onPress={() => (dirty ? setConfirm(true) : onClose())}>{t('ui.cancel')}</Button>
-        <Button
-          accent
-          onPress={() => {
-            saveDashboard(draft);
-            onClose();
-          }}
-        >
-          {t('ui.done')}
-        </Button>
-      </PrimaryActions>
+      <Button onPress={() => setDraft(dashboardDefaults())}>{t('widgets.reset')}</Button>
+      <Button onPress={() => (dirty ? setConfirm(true) : onClose())}>{t('ui.cancel')}</Button>
+      <Button
+        accent
+        onPress={() => {
+          saveDashboard(draft);
+          onClose();
+        }}
+      >
+        {t('ui.done')}
+      </Button>
       <ConfirmDialog
         title={t('config.discardTitle')}
         isOpen={confirm}
@@ -205,7 +204,7 @@ export function DashboardActions({draft, saved, setDraft, onClose}: Draft & {sav
       >
         <p>{t('widgets.discardHelp')}</p>
       </ConfirmDialog>
-    </>
+    </PrimaryActions>
   );
 }
 // The panel's editor: a dialog with the gallery, the panel's canvas and the selected widget's inspector.
