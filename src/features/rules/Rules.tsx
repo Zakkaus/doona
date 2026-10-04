@@ -19,7 +19,8 @@ import {
   Tabs,
   TextField,
   type TableColumn,
-  Toolbar
+  Toolbar,
+  Form
 } from '../../ui/ui';
 import {RuleList} from './RuleList';
 import {RuleDialog} from '../shared/RuleDialog';
@@ -82,7 +83,7 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
   );
   return (
     <>
-      <form
+      <Form
         className={cardClass()}
         onSubmit={event => {
           event.preventDefault();
@@ -135,7 +136,7 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
           </Toolbar>
         </Disclosure>
         {trace.ipOnly && <span className="rp-label">{t('rule.ipOnly')}</span>}
-      </form>
+      </Form>
       {trace.result && (
         <section className="rp-col" aria-label={t('rule.result')}>
           <Toolbar>

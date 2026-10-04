@@ -234,8 +234,9 @@ Set control sizes only with the kit component's `size` prop (`M` or `L`), never 
 | Tabs                              | `Tabs`                                                                                     |
 | RadioGroup, Radio                 | `RadioGroup`, `Radio`                                                                      |
 | Card                              | `Card`                                                                                     |
+| Form                              | `Form` (`DialogForm` in a dialog's sections)                                               |
 | Dialog and form sections          | `ModalDialog`, `DialogForm`, `DialogSection`                                               |
-| TextField, Switch                 | `TextField`, `Switch`                                                                      |
+| TextField, NumberField, Switch    | `TextField`, `NumberField`, `Switch`                                                       |
 | TableView                         | `DataTable`                                                                                |
 | InlineAlert, IllustratedMessage   | `InlineAlert`, `Empty`, `ErrorMessage`                                                     |
 | TagGroup                          | `Tags`, `Tag`                                                                              |

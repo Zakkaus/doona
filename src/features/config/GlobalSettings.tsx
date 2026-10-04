@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, PrimaryActions, Card, ErrorMessage, InlineAlert, LabeledSelect, TextField, Toolbar} from '../../ui/ui';
+import {Button, PrimaryActions, Card, ErrorMessage, InlineAlert, LabeledSelect, NumberField, TextField, Toolbar, Form} from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
 import {RestartNotice} from './RestartNotice';
 import {useGlobalSettings} from './useGlobalSettings';
@@ -9,7 +9,7 @@ export function GlobalSettings(props: PageProps) {
   const m = useGlobalSettings(props);
   if (!m.available) return null;
   return (
-    <form
+    <Form
       id="config-global-form"
       className="rp-page"
       onSubmit={event => {
@@ -41,6 +41,20 @@ export function GlobalSettings(props: PageProps) {
                     isDisabled={!m.writable || m.busy || field.duplicate}
                     onChange={field.change}
                     items={field.items}
+                  />
+                ) : field.number ? (
+                  <NumberField
+                    label={field.label}
+                    name={field.key}
+                    value={field.number.value}
+                    onChange={value => field.change(Number.isNaN(value) ? '' : String(value))}
+                    minValue={0}
+                    maxValue={field.number.max}
+                    step={1}
+                    isDisabled={!m.writable || m.busy || field.duplicate}
+                    placeholder={t('config.globalUnset')}
+                    error={field.invalid ? t('config.globalInvalid') : undefined}
+                    aria-describedby={field.hint ? `config-global-${field.key}` : undefined}
                   />
                 ) : (
                   <TextField
@@ -79,6 +93,6 @@ export function GlobalSettings(props: PageProps) {
           )}
         </PrimaryActions>
       </Toolbar>
-    </form>
+    </Form>
   );
 }

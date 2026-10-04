@@ -18,6 +18,7 @@ import {useT} from '../i18n';
 import {cx} from './cx';
 import {HelpRow, type Help} from './ContextualHelp';
 import {useControlSize, type ControlSize} from './controlSize';
+import {Necessity, useFormProps, type FormFieldProps} from './Form';
 
 // A switch in a labelled settings row has no text of its own, so it takes its name from `aria-label`.
 export function Switch({
@@ -41,13 +42,14 @@ export function Switch({
 }) {
   const id = useId();
   const controlSize = useControlSize(size);
+  const form = useFormProps({isDisabled});
   const control = (
     <RSwitch
       className="rp-switch"
       data-size={controlSize}
       isSelected={isSelected}
       onChange={onChange}
-      isDisabled={isDisabled}
+      isDisabled={form.isDisabled}
       aria-label={label}
       aria-describedby={[describedBy, description && id].filter(Boolean).join(' ') || undefined}
     >
@@ -66,30 +68,12 @@ export function Switch({
     control
   );
 }
-export function TextField({
-  label,
-  width,
-  search,
-  size,
-  side,
-  className,
-  placeholder,
-  description,
-  help,
-  error,
-  action,
-  reveal,
-  prefix,
-  suffix,
-  autoComplete,
-  spellCheck,
-  'aria-describedby': describedBy,
-  ...props
-}: Pick<
+type TextFieldProps = Pick<
   ComponentProps<typeof RTextField>,
   'value' | 'onChange' | 'defaultValue' | 'name' | 'type' | 'isInvalid' | 'validationBehavior' | 'autoFocus' | 'isDisabled' | 'isRequired' | 'aria-describedby'
 > &
-  Pick<ComponentProps<typeof RInput>, 'autoComplete' | 'spellCheck'> & {
+  Pick<ComponentProps<typeof RInput>, 'autoComplete' | 'spellCheck'> &
+  Pick<FormFieldProps, 'necessityIndicator'> & {
     label: string;
     width?: number;
     search?: boolean;
@@ -107,7 +91,29 @@ export function TextField({
     // Fixed text before and after the value, inside the field: the value is only the part between them.
     prefix?: string;
     suffix?: string;
-  }) {
+  };
+export function TextField(fieldProps: TextFieldProps) {
+  const {
+    label,
+    width,
+    search,
+    size,
+    side,
+    className,
+    placeholder,
+    description,
+    help,
+    error,
+    action,
+    reveal,
+    prefix,
+    suffix,
+    autoComplete,
+    spellCheck,
+    necessityIndicator,
+    'aria-describedby': describedBy,
+    ...props
+  } = useFormProps(fieldProps);
   const t = useT();
   const controlSize = useControlSize(size);
   const affixId = useId();
@@ -164,7 +170,7 @@ export function TextField({
   const name = (
     <Label className="rp-label">
       {label}
-      {props.isRequired && <span aria-hidden="true"> *</span>}
+      <Necessity isRequired={props.isRequired} necessityIndicator={necessityIndicator} />
     </Label>
   );
   return (

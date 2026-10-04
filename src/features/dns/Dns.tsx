@@ -26,7 +26,8 @@ import {
   HelpRow,
   type Action,
   type TableColumn,
-  Toolbar
+  Toolbar,
+  Form
 } from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
 import {useDns, useDnsCacheTab, useDnsLogTab, type DnsRowRule} from './useDns';
@@ -44,7 +45,7 @@ export function Dns(props: PageProps) {
   const queryTab = (
     <>
       {vm.queryError && <ErrorMessage error={vm.queryError} onRetry={vm.submit} message={error => t('dns.queryFailed', {error})} />}
-      <form
+      <Form
         className={cardClass()}
         onSubmit={event => {
           event.preventDefault();
@@ -64,7 +65,7 @@ export function Dns(props: PageProps) {
             </Button>
           </Toolbar>
         </ActionHelp>
-      </form>
+      </Form>
       {vm.cards.length > 0 && (
         <div className="rp-col">
           {vm.cards.map(card => (

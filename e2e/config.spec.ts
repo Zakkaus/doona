@@ -1072,6 +1072,65 @@ test('global setting fields keep one width across groups', async ({page}) => {
   expect(Math.max(...all) - Math.min(...all)).toBeLessThanOrEqual(1);
 });
 
+test('a port edits in a number field that lines up with text fields, and clearing it writes unset', async ({page}) => {
+  const {api} = await mockBackend(page);
+  await page.goto('/#/config?tab=global');
+  const panel = page.getByRole('tabpanel', {name: 'Global settings'});
+  const port = panel.getByRole('textbox', {name: 'Transparent proxy port', exact: true});
+  await expect(port).toHaveValue('12345');
+  // The number field's box matches a text field on its row: same height, same vertical centre.
+  const boxes = await panel.locator('[data-setting="tproxy_port"]').evaluate(cell => {
+    const top = (el: Element) => el.getBoundingClientRect().top;
+    const peer = [...cell.parentElement!.children].find(
+      other => other !== cell && Math.abs(top(other) - top(cell)) < 1 && other.querySelector('.rp-input:not(.stepped) input')
+    )!;
+    return [cell, peer].map(el => {
+      const box = el.querySelector('.rp-input')!.getBoundingClientRect();
+      return {height: box.height, centre: box.top + box.height / 2};
+    });
+  });
+  expect(Math.abs(boxes[0].height - boxes[1].height)).toBeLessThanOrEqual(1);
+  expect(Math.abs(boxes[0].centre - boxes[1].centre)).toBeLessThanOrEqual(1);
+  await port.press('ArrowUp');
+  await expect(port).toHaveValue('12346');
+  await panel
+    .locator('[data-setting="tproxy_port"]')
+    .getByRole('button', {name: /^Increase/})
+    .click();
+  await expect(port).toHaveValue('12347');
+  await port.fill('');
+  await port.press('Tab');
+  await expect(port).toHaveValue('');
+  await expect(port).toHaveAttribute('placeholder', 'Not set');
+  await panel.getByRole('button', {name: 'Write and reload'}).click();
+  await expect(page.locator('.rp-toast.positive')).toContainText('Global settings written');
+  expect((await api.config()).sources[0].content).not.toContain('tproxy_port');
+});
+
+test('a hex socket mark stays a text field, reads its stored hex and writes hex back', async ({page}) => {
+  const backend = await mockBackend(page);
+  // so_mark_from_dae is restart-only in honk, so the demo would refuse to store it: the read carries it instead, and the
+  // candidate sent with the new value is refused.
+  expectLoadFailures(page, /\/config\//);
+  backend.handlers['GET config'] = async () => {
+    const config = await backend.api.config();
+    const [main, ...rest] = config.sources;
+    const content = main.content!.replace('tproxy_port: 12345', 'tproxy_port: 12345\n  so_mark_from_dae: 0x10');
+    return {...config, sources: [{...main, content, content_sha256: await sha256(content)}, ...rest]};
+  };
+  await page.goto('/#/config?tab=global');
+  const panel = page.getByRole('tabpanel', {name: 'Global settings'});
+  const cell = panel.locator('[data-setting="so_mark_from_dae"]');
+  const mark = panel.getByRole('textbox', {name: 'Socket mark', exact: true});
+  await expect(mark).toHaveValue('16');
+  await expect(cell.locator('.rp-input')).not.toHaveClass(/stepped/);
+  await mark.fill('32');
+  await expect(cell).not.toContainText('Enter a value of the specified type and range.');
+  const write = page.waitForRequest(request => request.method() !== 'GET' && !!request.postData()?.includes('so_mark_from_dae'));
+  await panel.getByRole('button', {name: 'Write and reload'}).click();
+  expect((await write).postData()).toContain('so_mark_from_dae: 0x20');
+});
+
 test('source editing writes form-owned values in full', async ({page}) => {
   const {api} = await mockBackend(page);
   const original = (await api.config()).sources[0].content;
