@@ -98,23 +98,18 @@
 .rp-titled > .rp-help-row {
   min-height: var(--rp-space-6);
 }
-/* Sign-in takes the whole page. Below 1024px the form stands centred alone; from 1024px it is the left column on the
-   content surface, and the showcase panel on the page surface fills the rest behind a 1px rule. */
+/* Sign-in takes the whole page: one card centred both ways on the content background, the same at every width. The
+   padding clears the corner controls on both sides, so a card taller than the window scrolls and stays centred. On
+   Glass the page shows the wallpaper behind, as the shell's content does. */
 .rp-login-page {
   min-height: 100dvh;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
   background: var(--rp-surface);
   color: var(--rp-text);
 }
-.rp-login-pane {
-  position: relative;
-  display: grid;
-  place-items: center;
-  padding: 72px var(--rp-space-4) var(--rp-space-12);
-  min-width: 0;
+:root[data-family='glass'] .rp-login-page {
+  background: transparent;
 }
-/* The top bar's language and scheme controls, at the corner of the form's pane. */
+/* The top bar's language, palette and scheme controls, in the page's corner. */
 .rp-login-controls {
   position: absolute;
   top: 12px;
@@ -122,13 +117,19 @@
   display: flex;
   gap: var(--rp-space-1);
 }
-.rp-login-column {
-  width: min(400px, 100%);
-  display: flex;
-  flex-direction: column;
+.rp-login-main {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 72px var(--rp-space-4);
 }
-/* The column keeps one spacing step: 32 between its parts, 24 between fields, 8 or 16 between what belongs together.
-   The brand leads the page, so it stands larger than the top bar's. */
+/* The card keeps one spacing step: 32 between its parts, 24 between fields, 8 or 16 between what belongs together. */
+.rp-login-card {
+  width: min(400px, 100%);
+  gap: 0;
+  padding: var(--rp-space-8);
+  box-shadow: var(--rp-shadow);
+}
 .rp-login-brand {
   display: flex;
   align-items: center;
@@ -149,8 +150,8 @@
   color: var(--rp-subtle-text);
   overflow-wrap: anywhere;
 }
-.rp-login-column > .rp-alert,
-.rp-login-column > .rp-empty {
+.rp-login-card > .rp-alert,
+.rp-login-card > .rp-empty {
   margin-top: var(--rp-space-6);
 }
 .rp-login {
@@ -184,53 +185,9 @@
   width: 10px;
   height: 10px;
 }
-.rp-login-showcase {
-  /* The duck's own ink, paper and yellow, the logo's colours, for the duck and the props beside it on every palette. */
-  --rp-mark-ink: #0b0a09;
-  --rp-mark-paper: #fff;
-  --rp-mark-yellow: #fd0;
-  min-width: 0;
-  /* One viewport tall, whatever it draws. The game sizes its canvas from the box it is given (see loginGame.ts), so a
-     canvas allowed to size the page row would keep the page at its last height, and a step taller on every resize. */
-  height: 100dvh;
-  contain: size;
-  background: var(--rp-base);
-}
-/* The showcase is a game surface, not a link: the default cursor, and presses must not select text or zoom on double
-   tap. Its focus ring stays keyboard only (see loginGame.ts) and inside the panel edge. */
-.rp-login-game {
-  all: unset;
-  display: block;
-  width: 100%;
-  height: 100%;
-  font: inherit;
-  cursor: default;
-  touch-action: manipulation;
-  user-select: none;
-}
-.rp-login-game:focus-visible {
-  outline: 2px solid var(--rp-accent);
-  outline-offset: -8px;
-  border-radius: var(--rp-r-lg);
-}
-.rp-login-game canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-@media (min-width: 1024px) {
-  .rp-login-page {
-    grid-template-columns: minmax(520px, 5fr) minmax(0, 7fr);
-    background: var(--rp-base);
-  }
-  .rp-login-pane {
-    padding: var(--rp-space-12) 56px;
-    background: var(--rp-surface);
-    border-inline-end: 1px solid var(--rp-hl-med);
-  }
-  .rp-login-controls {
-    top: 16px;
-    inset-inline-end: 16px;
+@media (max-width: 639.98px) {
+  .rp-login-card {
+    padding: var(--rp-space-6);
   }
 }
 .rp-row {

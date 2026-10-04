@@ -24,7 +24,7 @@
 
 任何页面按 `Ctrl K` 可搜索页面、连接、节点、群组、规则与来源。各页面需要的资源与 doona 自身设置的存放位置，见[功能](https://zakkaus.github.io/doona-docs/zh-CN/features.html#pages)一页。不易理解的状态与术语旁设有帮助按钮，按下即显示说明。
 
-登录为独立页面，右上角设有语言、配色与主题三个控件。窗口宽度不小于 1024 像素时，表单旁的面板显示停在 99% 的加载进度条，按下后启动 Flappy Duck 小游戏；启用减少动态效果时，场景保持静止且不响应按下操作。演示版预填了用户名 `demo` 和密码 `demo`。
+登录为独立页面：登录卡片居中显示在主题背景上，右上角设有语言、配色与主题三个控件。演示版预填了用户名 `demo` 和密码 `demo`。
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/zh-CN/rules-light.webp" alt="规则页" width="100%">
 

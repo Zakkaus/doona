@@ -65,28 +65,6 @@ test.describe('the demo', () => {
     for (const button of await buttons.all()) await expect(button).toHaveAttribute('data-size', 'M');
   });
 
-  test.describe('in Chinese', () => {
-    test.use({storage: {...demoProfile, 'doona-lang': 'zh-TW'}, reducedMotion: 'no-preference'});
-
-    test('draws the link rate from the catalogue', async ({page}) => {
-      await page.setViewportSize({width: 1440, height: 900});
-      await page.addInitScript(() => {
-        const drawn: string[] = [];
-        (window as unknown as {drawnGameText: string[]}).drawnGameText = drawn;
-        const fillText = CanvasRenderingContext2D.prototype.fillText;
-        CanvasRenderingContext2D.prototype.fillText = function (text, x, y, maxWidth) {
-          drawn.push(text);
-          return fillText.call(this, text, x, y, maxWidth);
-        };
-      });
-      await page.goto('/#/activity');
-      await page.locator('.rp-login-showcase button').click();
-      await expect
-        .poll(() => page.evaluate(() => ['0.0 MB', '100 Mbps'].every(text => (window as unknown as {drawnGameText: string[]}).drawnGameText.includes(text))))
-        .toBe(true);
-    });
-  });
-
   test('picks a palette from the sign-in page, and the page keeps it after a reload', async ({page}) => {
     await page.goto('/#/activity');
     const controls = page.locator('.rp-login-controls');
@@ -103,129 +81,31 @@ test.describe('the demo', () => {
     await expect(page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true})).toBeVisible();
   });
 
-  test('fits a 360px screen without the showcase, and shows the showcase panel from 1024px', async ({page}) => {
-    await page.setViewportSize({width: 360, height: 740});
-    await page.goto('/#/activity');
-    const login = page.locator('.rp-login-page');
-    await expect(login.getByRole('button', {name: 'Sign in', exact: true})).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
-    await expect(page.locator('.rp-login-showcase')).toHaveCount(0);
-    // The column is centred on a phone.
-    const column = await box(login.locator('.rp-login-column'));
-    expect(Math.abs(column.x + column.width / 2 - 180)).toBeLessThanOrEqual(1);
-    await page.setViewportSize({width: 1280, height: 800});
-    const showcase = page.locator('.rp-login-showcase');
-    await expect(showcase.locator('canvas')).toBeVisible();
-    const pane = await box(page.locator('.rp-login-pane'));
-    expect((await box(showcase)).x).toBeGreaterThanOrEqual(pane.x + pane.width);
-  });
-
-  test('shows a still scene that takes no presses under reduced motion, and plays once motion is allowed', async ({page}) => {
-    await page.setViewportSize({width: 1440, height: 900});
-    await page.goto('/#/activity');
-    const showcase = page.locator('.rp-login-showcase');
-    const button = showcase.locator('button');
-    await expect(showcase.locator('canvas')).toBeVisible();
-    // A picture, not a control: out of the tab order and unnamed, so nothing offers a game that cannot be played.
-    await expect(button).toBeDisabled();
-    await expect(showcase).toHaveAttribute('aria-hidden', 'true');
-    await expect(page.getByRole('button', {name: 'Mini game: press to make the duck flap'})).toHaveCount(0);
-    // The preference is followed while the page stays open.
-    await page.emulateMedia({reducedMotion: 'no-preference'});
-    const game = page.getByRole('button', {name: 'Mini game: press to make the duck flap'});
-    await expect(game).toBeEnabled();
-    await game.click();
-    await expect(showcase.locator('[aria-live]')).toHaveText(/^Link down, /);
-    await page.emulateMedia({reducedMotion: 'reduce'});
-    await expect(button).toBeDisabled();
-    await expect(showcase).toHaveAttribute('aria-hidden', 'true');
-  });
-
-  test.describe('with motion allowed', () => {
-    test.use({reducedMotion: 'no-preference'});
-
-    test('plays the mini game beside the form on a wide screen, and leaves it out on a phone', async ({page}) => {
-      await page.setViewportSize({width: 1440, height: 900});
+  // One card, centred both ways on a desktop and a phone, with its fields and its action at one height.
+  for (const viewport of [
+    {width: 1440, height: 920},
+    {width: 390, height: 844}
+  ]) {
+    test(`centres the sign-in card at ${viewport.width}px`, async ({page}) => {
+      await page.setViewportSize(viewport);
       await page.goto('/#/activity');
-      const game = page.getByRole('button', {name: 'Mini game: press to make the duck flap'});
-      await expect(game.locator('canvas')).toBeVisible();
-      const result = page.locator('.rp-login-showcase [aria-live]');
-      await expect(result).toHaveText('');
-      // One flap and no more: the duck falls to the ground and the run ends with what it forwarded.
-      await game.click();
-      await expect(result).toHaveText(/^Link down, \d+\.\d MB forwarded, best \d+\.\d MB\. Click or press Space to restart\.$/);
-      // Typing in the form never reaches the game.
-      const username = page.getByLabel('Username', {exact: true});
-      await username.fill('');
-      await username.press('r');
-      await expect(username).toHaveValue('r');
-      await page.setViewportSize({width: 390, height: 844});
-      await expect(page.locator('.rp-login-showcase')).toHaveCount(0);
-      await expect(page.locator('canvas')).toHaveCount(0);
+      const card = page.locator('.rp-login-card');
+      const controls = card.locator('.rp-input, .rp-login-submit');
+      await expect(controls).toHaveCount(3);
+      const view = await page.evaluate(() => ({
+        width: document.documentElement.clientWidth,
+        height: innerHeight,
+        overflow: document.documentElement.scrollWidth - innerWidth
+      }));
+      expect(view.overflow).toBeLessThanOrEqual(0);
+      const {x, y, width, height} = await box(card);
+      expect(Math.abs(x + width / 2 - view.width / 2)).toBeLessThanOrEqual(2);
+      expect(Math.abs(y + height / 2 - view.height / 2)).toBeLessThanOrEqual(2);
+      const heights = await Promise.all((await controls.all()).map(async control => (await box(control)).height));
+      expect(new Set(heights).size).toBe(1);
+      for (const control of await controls.all()) await expect(control).toHaveAttribute('data-size', 'M');
     });
-
-    // The game sizes its canvas from its panel, so the panel takes the viewport's height and never the canvas's. At a
-    // fractional pixel ratio, through the game, focus, wheel gestures and resizes, the page stays one viewport tall and
-    // nothing on it scrolls, with the game loaded on a wide window and left out on a narrow one.
-    test.describe('at a fractional pixel ratio', () => {
-      test.use({deviceScaleFactor: 1.25});
-
-      test('keeps the page one viewport tall and unscrolled', async ({page}) => {
-        await page.clock.install();
-        await page.addInitScript(() => {
-          (window as {scrolls?: string[]}).scrolls = [];
-          document.addEventListener('scroll', event => (window as {scrolls?: string[]}).scrolls!.push(String((event.target as Element).nodeName)), true);
-        });
-        let viewport = {width: 1572, height: 790};
-        await page.setViewportSize(viewport);
-        await page.goto('/#/activity');
-        const game = page.getByRole('button', {name: 'Mini game: press to make the duck flap'});
-        await expect(game.locator('canvas')).toBeVisible();
-        const still = async (step: string) => {
-          await page.clock.runFor(1000);
-          const state = await page.evaluate(() => {
-            const root = document.scrollingElement!;
-            return {
-              y: window.scrollY,
-              top: root.scrollTop,
-              height: root.scrollHeight,
-              scrolled: [...document.querySelectorAll('*')].filter(element => element.scrollTop > 0).map(element => element.className),
-              scrolls: (window as {scrolls?: string[]}).scrolls!
-            };
-          });
-          expect(state, step).toEqual({y: 0, top: 0, height: viewport.height, scrolled: [], scrolls: []});
-        };
-        const wheel = async (x: number) => {
-          await page.mouse.move(x, viewport.height / 2);
-          for (let turn = 0; turn < 5; turn++) await page.mouse.wheel(0, 400);
-        };
-        await still('idle');
-        await game.click();
-        for (let second = 0; second < 5; second++) await still('playing');
-        for (const key of ['Space', 'ArrowDown', 'PageDown', 'End']) await game.press(key);
-        await still('keys on the game');
-        await wheel(viewport.width * 0.75);
-        await still('wheel over the game');
-        await page.getByLabel('Username', {exact: true}).focus();
-        await still('username focused');
-        await wheel(viewport.width * 0.2);
-        await still('wheel over the form');
-        for (const size of [
-          {width: 1572, height: 600},
-          {width: 1965, height: 600},
-          {width: 1965, height: 987},
-          {width: 1280, height: 987},
-          {width: 900, height: 987}
-        ]) {
-          viewport = size;
-          await page.setViewportSize(viewport);
-          await expect(page.locator('.rp-login-game canvas')).toHaveCount(viewport.width >= 1024 ? 1 : 0);
-          await wheel(viewport.width / 2);
-          await still(`resized to ${viewport.width}x${viewport.height}`);
-        }
-      });
-    });
-  });
+  }
 });
 
 test('a rejected saved token takes a new one on the sign-in page', async ({page}) => {

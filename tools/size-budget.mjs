@@ -1,5 +1,5 @@
 // Download budgets by user path. Sizes are gzip bytes; `size(file)` returns the size of one built file.
-export const loginKeys = ['src/shell/Login.tsx', 'src/shell/LoginShowcase.tsx'];
+export const loginKey = 'src/shell/Login.tsx';
 export const chartKeys = ['src/ui/charts/Donut.tsx', 'src/ui/charts/AreaChart.tsx', 'src/ui/charts/Sparkline.tsx'];
 export const configKey = 'src/features/config/Config.tsx';
 export const mockKey = 'mock/index.ts';
@@ -39,7 +39,7 @@ export function measure(manifest, size) {
   const locale = [...filesOf(manifest, locales)].reduce((best, file) => (size(file) > size(best) ? file : best));
   const shell = withClosure(manifest, [entryKey]);
   const activity = union(shell, withClosure(manifest, [activityKey, ...chartKeys]));
-  const login = union(shell, withClosure(manifest, loginKeys));
+  const login = union(shell, withClosure(manifest, [loginKey]));
   const result = [
     entry('startupLogin', 'login', union(login, [locale]), '.js', size),
     entry('startupActivity', 'activity', union(activity, [locale]), '.js', size),
