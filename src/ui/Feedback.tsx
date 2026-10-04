@@ -22,7 +22,7 @@ import ChevronDown from './icons/ChevronDown';
 import {useT, type Translator} from '../i18n';
 import {errorLines, errorText, failureNotice, requestIdOf} from '../api/error';
 import {recordDiagnostic, type Diagnostic} from '../api/diagnostics';
-import {cx} from './cx';
+import {columns as listColumns, cx} from './cx';
 import {Button} from './Button';
 import {ProgressCircle} from './ProgressCircle';
 
@@ -44,32 +44,49 @@ export function ChartWait({holds, children}: {holds?: 'tall' | 'bars' | 'form' |
   return <div className={cx('rp-chart-wait', holds)}>{children}</div>;
 }
 
-export function Loading({children}: {children?: ReactNode}) {
-  const t = useT();
+// A loading state holds its box at once and shows after 150ms, so a fast load does not flash it.
+export function useWaitAttr() {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setVisible(true), 150);
     return () => clearTimeout(timer);
   }, []);
+  return visible ? undefined : '';
+}
+
+export function Loading({children}: {children?: ReactNode}) {
+  const t = useT();
+  const wait = useWaitAttr();
   const id = useId();
   return (
-    <div className="rp-empty" role="status" data-wait={visible ? undefined : ''}>
+    <div className="rp-empty" role="status" data-wait={wait}>
       <ProgressCircle size="S" aria-labelledby={id} />
       <span id={id}>{children ?? t('ui.loading')}</span>
     </div>
   );
 }
 
+// The loading rule (CONTRIBUTING, Loading states): a first load whose content shape is known draws S2's Skeleton in
+// that shape and box, so nothing moves when the content replaces it; ProgressCircle (Loading) is for waits whose shape
+// is unknown or tiny. Every skeleton holds its box at once, shows after 150ms like Loading, reads one visually hidden
+// loading status, and keeps its drawing inert and hidden from assistive technology.
+// Bar widths that vary from row to row, so rows do not read as a grid of equal bars.
+const longBars = [72, 88, 64, 80, 58, 84];
+const shortBars = [56, 44, 64, 50, 60, 40];
+export function SkeletonStatus({label}: {label?: string}) {
+  const t = useT();
+  return <VisuallyHidden role="status">{label ?? t('ui.loading')}</VisuallyHidden>;
+}
+
 // S2's Skeleton for a card body of facts while its data arrives: the facts' grid with each label and value drawn as a
 // shimmering block in its place, then what the body holds below them (a caption line, a body line, or a height in
 // pixels such as a table's), so the card keeps its height when the values replace it. `helped` lists the facts whose
-// label carries a help button, whose line takes the button's height. The placeholder is inert and hidden from
-// assistive technology, which reads a loading status instead.
+// label carries a help button, whose line takes the button's height.
 export function Skeleton({facts, helped, below}: {facts: number; helped?: number[]; below?: 'caption' | 'body' | number}) {
-  const t = useT();
+  const wait = useWaitAttr();
   return (
-    <div className="rp-skeleton">
-      <VisuallyHidden role="status">{t('ui.loading')}</VisuallyHidden>
+    <div className="rp-skeleton" data-wait={wait}>
+      <SkeletonStatus />
       <div className="rp-kv" inert aria-hidden="true">
         {Array.from({length: facts}, (_, i) => (
           <div key={i}>
@@ -92,6 +109,105 @@ export function Skeleton({facts, helped, below}: {facts: number; helped?: number
           <span className="rp-skeleton-text" />
         </div>
       )}
+    </div>
+  );
+}
+
+// The Skeleton for a body of a known kind, drawn in the loaded body's own parts so it takes the same box: `block`, one
+// block filling its box (a chart, an editor), as inside a ChartWait, or `height` pixels tall; `rows`, list rows at the
+// control height; `bars`, ranking bars in the Bar's own label line and track, laid out as a wide card's list with
+// `columns`; `fields`, labelled fields in the field grid; `cards`, card surfaces `height` pixels tall, in a column or,
+// with `grid`, in a CardView's grid. `label` replaces the status text.
+export type SkeletonShape = 'block' | 'rows' | 'bars' | 'fields' | 'cards';
+export function SkeletonBody({
+  shape,
+  count = 3,
+  height,
+  grid,
+  columns,
+  label
+}: {
+  shape: SkeletonShape;
+  count?: number;
+  height?: number;
+  grid?: boolean;
+  columns?: boolean;
+  label?: string;
+}) {
+  const wait = useWaitAttr();
+  const n = shape === 'block' ? 1 : count;
+  if (shape === 'cards')
+    return (
+      <div className={cx('rp-skeleton-cards', grid && 'grid')} data-wait={wait}>
+        <SkeletonStatus label={label} />
+        {Array.from({length: n}, (_, i) => (
+          <div key={i} className="rp-card" style={{height: height ?? pageCard}} inert aria-hidden="true" />
+        ))}
+      </div>
+    );
+  const line = (i: number, bars = longBars) => <span className="rp-skeleton-text" style={{width: `${bars[i % 6]}%`}} />;
+  return (
+    <div
+      className={cx('rp-skeleton-body', shape, shape === 'bars' && 'rp-list', columns && 'rp-columns')}
+      style={columns ? listColumns(n) : height ? {height} : undefined}
+      data-wait={wait}
+    >
+      <SkeletonStatus label={label} />
+      {Array.from({length: n}, (_, i) =>
+        shape === 'block' ? (
+          <span key={i} className="rp-skeleton-text" inert aria-hidden="true" />
+        ) : shape === 'bars' ? (
+          <div key={i} className="rp-bar" inert aria-hidden="true">
+            <div className="top">
+              <span className="l">{line(i)}</span>
+              <span className="v">{line(i, shortBars)}</span>
+            </div>
+            <div className="track" />
+          </div>
+        ) : shape === 'fields' ? (
+          <div key={i} className="rp-skeleton-field" inert aria-hidden="true">
+            {line(i, shortBars)}
+            <span className="rp-skeleton-text" />
+          </div>
+        ) : (
+          <div key={i} className="rp-skeleton-row" inert aria-hidden="true">
+            {line(i)}
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+// A standard card: its title row and a ChartWait's body inside the card's padding and border.
+const pageCard = 260;
+
+// A page body whose code or first reads are on their way: generic cards at a standard card's size under the page's
+// own heading, which the shell draws.
+export function PageSkeleton() {
+  return <SkeletonBody shape="cards" count={2} />;
+}
+
+// The Skeleton for a table's first load: placeholder rows at the real row height under the real header, one bar per
+// cell in the columns' own proportions. The columns carry no kind, so their shape stands in for it: a row header, a
+// wrapping column or a wide one holds text and takes a long bar, a narrow one (a time, a number, a state) a short bar,
+// and an actions column none.
+type SkeletonColumn = {minWidth: number; grow?: number; isRowHeader?: boolean; actions?: boolean; text?: 'wrap'};
+export function TableSkeleton({cols, rows}: {cols: SkeletonColumn[]; rows: number}) {
+  const wait = useWaitAttr();
+  const template = cols.map(c => `minmax(${c.minWidth}px, ${c.minWidth * (c.grow ?? (c.isRowHeader ? 2 : 1))}fr)`).join(' ');
+  return (
+    <div className="rp-table-skeleton" data-wait={wait}>
+      <SkeletonStatus />
+      <div style={{gridTemplateColumns: template}} inert aria-hidden="true">
+        {Array.from({length: rows}, (_, row) =>
+          cols.map((c, col) => {
+            const bars = c.isRowHeader || c.text === 'wrap' || c.minWidth >= 200 ? longBars : shortBars;
+            return (
+              <span key={`${row}-${col}`}>{!c.actions && <span className="rp-skeleton-text" style={{width: `${bars[(row * 5 + col * 3) % 6]}%`}} />}</span>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

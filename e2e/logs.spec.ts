@@ -1,4 +1,4 @@
-import {downloadText, expect, expectLoadFailures, fulfillStream, mockBackend, scrollTableToEnd, test} from './fixtures';
+import {downloadText, expect, expectLoadFailures, fulfillStream, mockBackend, scrollTableToEnd, tableGeometry, test} from './fixtures';
 
 test('logs filter the stream, pause incoming rows, export and clear', async ({page}) => {
   const {api} = await mockBackend(page);
@@ -63,6 +63,34 @@ test('logs filter the stream, pause incoming rows, export and clear', async ({pa
   await page.getByRole('button', {name: 'Clear', exact: true}).filter({hasText: 'Clear'}).click();
   await expect(rows.filter({hasText: /DNS slow|Received after resume/})).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Export', exact: true})).toBeDisabled();
+});
+
+test('the log stream holds still placeholder rows under the header until it opens', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const runtime = await api.runtime();
+  let release = () => {};
+  const held = new Promise<void>(resolve => (release = resolve));
+  await page.route('**/api/v1/logs?*', async route => {
+    await held;
+    await fulfillStream(route, [
+      {id: 'ready:0', event: 'stream.ready', data: {instance_id: runtime.instance_id, observed_at: runtime.observed_at}},
+      {id: 'log:1', event: 'log', data: {ts: runtime.observed_at, level: 'info', target: 'dns', message: 'DNS answered', fields: null}},
+      {id: 'log:2', event: 'log', data: {ts: runtime.observed_at, level: 'warn', target: 'dns', message: 'DNS slow', fields: null}}
+    ]);
+  });
+  await page.goto('/#/logs');
+  const skeleton = page.locator('.rp-table-skeleton');
+  await expect(skeleton.getByRole('status')).toHaveText('Loading…');
+  // Reduced motion (the suite's default) keeps the bars still.
+  await expect(skeleton.locator('.rp-skeleton-text').first()).toHaveCSS('animation-name', 'none');
+  const before = await tableGeometry(page);
+  release();
+  // A flow table grows with its rows, so two records take the two placeholder rows' place.
+  await expect(page.getByRole('grid', {name: 'Logs'}).locator('[role=row][data-key]')).toHaveCount(2);
+  const after = await tableGeometry(page);
+  expect(Math.abs(after.row - before.row)).toBeLessThanOrEqual(1);
+  expect(Math.abs(after.header - before.header)).toBeLessThanOrEqual(1);
+  expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(1);
 });
 
 test('phone logs keep the message visible and reveal its full text and fields', async ({page}) => {

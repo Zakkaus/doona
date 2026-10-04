@@ -21,7 +21,7 @@ const outsideUi = [
   {
     // Any string under className counts, so `{'rp-card'}`, `cx('rp-card', …)` and template literals are caught too.
     selector:
-      'JSXAttribute[name.name="className"] :matches(Literal[value=/(^|\\s)(rp-(card|empty|alert|btn|chart-wait|tile-body|tile-val|spark)|quiet|sm)(\\s|$)/], TemplateElement[value.raw=/(^|\\s)(rp-(card|empty|alert|btn|chart-wait|tile-body|tile-val|spark)|quiet|sm)(\\s|$)/])',
+      'JSXAttribute[name.name="className"] :matches(Literal[value=/(^|\\s)(rp-(card|empty|alert|btn|chart-wait|tile-body|tile-val|spark|skeleton(-[a-z]+)?)|quiet|sm)(\\s|$)/], TemplateElement[value.raw=/(^|\\s)(rp-(card|empty|alert|btn|chart-wait|tile-body|tile-val|spark|skeleton(-[a-z]+)?)|quiet|sm)(\\s|$)/])',
     message: `This kit class ${kit}`
   },
   {selector: 'Literal[value=/#[0-9a-fA-F]{3,8}\\b|\\b(rgba?|hsla?|oklch)\\(/]', message: 'Colours come from tokens.'},

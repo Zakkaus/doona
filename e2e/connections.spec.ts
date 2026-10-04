@@ -1,5 +1,18 @@
 import type {Locator} from '@playwright/test';
-import {downloadText, expect, expectLoadFailures, manyDevices, mockBackend, query, test, moreAction, moreItem, box, settleFrames} from './fixtures';
+import {
+  downloadText,
+  expect,
+  expectLoadFailures,
+  manyDevices,
+  mockBackend,
+  query,
+  test,
+  moreAction,
+  moreItem,
+  box,
+  settleFrames,
+  tableGeometry
+} from './fixtures';
 import {createMockApi} from '../mock';
 import {ApiError} from '../src/api/error';
 
@@ -190,6 +203,35 @@ test('the traffic chart says kernel-forwarded direct traffic is not counted, onl
   await page.reload();
   await expect(card.getByRole('heading', {name: 'Traffic per connection', exact: true})).toBeVisible();
   await expect(card.getByRole('button', {name: 'About Traffic per connection'})).toHaveCount(0);
+});
+
+test('the first load holds placeholder rows at the row height, and the rows take their place without a jump', async ({page}) => {
+  await mockBackend(page);
+  let release = () => {};
+  const held = new Promise<void>(resolve => (release = resolve));
+  await page.route('**/api/v1/connections?*', async route => {
+    await held;
+    await route.fallback();
+  });
+  await page.emulateMedia({reducedMotion: 'no-preference'});
+  await page.goto('/#/connections?tab=list');
+  const skeleton = page.locator('.rp-table-skeleton');
+  await expect(skeleton.getByRole('status')).toHaveText('Loading…');
+  await expect(skeleton.locator('.rp-skeleton-text').first()).toHaveCSS('animation-name', 'rp-skeleton');
+  await expect(page.locator('.rp-table [role="columnheader"]').first()).toBeVisible();
+  const before = await tableGeometry(page);
+  // The placeholder fills the body: one row more would not fit.
+  const columns = await page.locator('.rp-table [role="columnheader"]').count();
+  const rows = (await skeleton.locator('[aria-hidden] > span').count()) / columns;
+  expect(before.header + 37 + rows * before.row).toBeLessThanOrEqual(before.height);
+  expect(before.header + 37 + (rows + 1) * before.row).toBeGreaterThan(before.height);
+  release();
+  await expect(page.locator('.rp-table [role="row"][data-key]').first()).toBeVisible();
+  await expect(skeleton).toHaveCount(0);
+  const after = await tableGeometry(page);
+  expect(Math.abs(after.row - before.row)).toBeLessThanOrEqual(1);
+  expect(Math.abs(after.top - before.top)).toBeLessThanOrEqual(1);
+  expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(1);
 });
 
 test('connection selection survives a runtime poll', async ({page}) => {

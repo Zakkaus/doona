@@ -42,6 +42,7 @@ export function createMockApi(options: MockOptions = {}): MockApi {
   let profile: string | null = null;
   // The default demo is a healthy honk; the faults scenario seeds the degraded states that specs need.
   let faults = options.faults ?? false;
+  let latency = 0;
   if (!options.isolated)
     try {
       // ?scenario=faults in the page address turns the scenario on for this browser, and an empty ?scenario= turns it
@@ -50,6 +51,10 @@ export function createMockApi(options: MockOptions = {}): MockApi {
       if (scenario === 'faults') localStorage.setItem('doona-mock-scenario', 'faults');
       else if (scenario === '') localStorage.removeItem('doona-mock-scenario');
       faults ||= localStorage.getItem('doona-mock-scenario') === 'faults';
+      // ?slow=<ms> (or ?slow alone, two seconds) holds every call for this page load, so a first load's placeholders
+      // can be seen in the demo.
+      const slow = new URLSearchParams(globalThis.location?.search).get('slow');
+      if (slow !== null) latency = Number(slow) || 2000;
       profile = localStorage.getItem('doona-mock-profile');
       if (profile === 'base') capabilities = capabilitiesBase;
       if (profile === 'm1') capabilities = capabilitiesM1;
@@ -112,7 +117,16 @@ export function createMockApi(options: MockOptions = {}): MockApi {
     faults,
     options.acceptWrites
   );
-  const api = {...runtime.api, ...lifecycle.api, ...network.api, ...inventory.api, ...configuration.api};
+  let api = {...runtime.api, ...lifecycle.api, ...network.api, ...inventory.api, ...configuration.api};
+  if (latency) api = withLatency(api, latency);
   if (!options.signIn) return api;
   return mockSessionValid(options.session) ? withPasswordAuth(api) : refuseWithoutSession(api);
+}
+
+// Every API call returns a promise, so each can start late.
+function withLatency<T extends object>(api: T, ms: number): T {
+  const wait = () => new Promise(resolve => setTimeout(resolve, ms));
+  return Object.fromEntries(
+    Object.entries(api).map(([key, call]) => [key, (...args: unknown[]) => wait().then(() => (call as (...args: unknown[]) => unknown)(...args))])
+  ) as T;
 }
