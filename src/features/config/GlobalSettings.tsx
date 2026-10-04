@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, Card, ErrorMessage, InlineAlert, LabeledSelect, TextField, Toolbar} from '../../ui/ui';
+import {Button, PrimaryActions, Card, ErrorMessage, InlineAlert, LabeledSelect, TextField, Toolbar} from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
 import {RestartNotice} from './RestartNotice';
 import {useGlobalSettings} from './useGlobalSettings';
@@ -68,14 +68,16 @@ export function GlobalSettings(props: PageProps) {
         </Card>
       ))}
       <Toolbar page>
-        <Button accent type="submit" isPending={m.busy} isDisabled={m.blocked}>
-          {t('config.globalSave')}
-        </Button>
-        {m.dirty && (
-          <Button onPress={m.cancel} isDisabled={m.busy}>
-            {t('config.discard')}
+        <PrimaryActions>
+          <Button accent type="submit" isPending={m.busy} isDisabled={m.blocked}>
+            {t('config.globalSave')}
           </Button>
-        )}
+          {m.dirty && (
+            <Button onPress={m.cancel} isDisabled={m.busy}>
+              {t('config.discard')}
+            </Button>
+          )}
+        </PrimaryActions>
       </Toolbar>
     </form>
   );

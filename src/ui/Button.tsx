@@ -10,8 +10,9 @@ import {Tip} from './Tooltip';
 export type ButtonStyle = {size?: ControlSize; quiet?: boolean; secondary?: boolean; small?: boolean; icon?: boolean; accent?: boolean; negative?: boolean};
 
 // S2 splits everyday actions (ActionButton) from a flow's primary actions (Button). The kit draws ActionButton geometry
-// by default; accent and negative buttons, and every labelled button inside PrimaryActions (a dialog's footer), take
-// Button's pill.
+// by default; accent and negative buttons, and every labelled button inside PrimaryActions, take Button's pill. A
+// dialog's footer and any row that commits, tests or discards a form or an edit (S2's ButtonGroup) wrap their buttons
+// in it; toolbar and per-item actions stay outside.
 const PrimaryActionsContext = createContext(false);
 export function PrimaryActions({children}: {children: ReactNode}) {
   return <PrimaryActionsContext value>{children}</PrimaryActionsContext>;
