@@ -1,6 +1,22 @@
 import {useId} from 'react';
 import {useT, type Key} from '../../i18n';
-import {Button, Card, Checkbox, ConfirmDialog, Diff, Disclosure, InlineAlert, Light, HelpRow, Radio, RadioGroup, Switch, Toolbar} from '../../ui/ui';
+import {
+  Button,
+  Card,
+  Checkbox,
+  ConfirmDialog,
+  DialogSection,
+  DialogSections,
+  Diff,
+  Disclosure,
+  InlineAlert,
+  Light,
+  HelpRow,
+  Radio,
+  RadioGroup,
+  Switch,
+  Toolbar
+} from '../../ui/ui';
 import type {RuleTemplate} from '../../dae/templates';
 import {templateOptionKeys, templateOptionText, type TemplateChoice} from './template';
 import type {RuleTemplatesModel} from './useRuleTemplates';
@@ -72,11 +88,13 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
         onConfirm={() => void model.confirm()}
       >
         {dialog && (
-          <>
-            <p>{t('rule.template.scope', {file: dialog.file})}</p>
-            {dialog.optionImpact.map(text => (
-              <p key={text}>{text}</p>
-            ))}
+          <DialogSections>
+            <DialogSection>
+              <p>{t('rule.template.scope', {file: dialog.file})}</p>
+              {dialog.optionImpact.map(text => (
+                <p key={text}>{text}</p>
+              ))}
+            </DialogSection>
             <ImpactList
               title={t('rule.template.created')}
               columns
@@ -90,6 +108,7 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
             {dialog.impact.reused.length > 0 && (
               <ImpactList
                 title={t('rule.template.reused')}
+                columns
                 rows={dialog.impact.reused.map(group => ({name: group.name, label: null, warning: group.pinned ? t('rule.template.pinnedHelp') : null}))}
               />
             )}
@@ -112,7 +131,7 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
             <Disclosure flush title={t('rule.template.changes', {file: dialog.file})}>
               <Diff rows={dialog.diff} label={t('rule.template.changes', {file: dialog.file})} />
             </Disclosure>
-          </>
+          </DialogSections>
         )}
       </ConfirmDialog>
     </div>

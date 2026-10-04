@@ -117,6 +117,12 @@ export function DialogForm({children, ...props}: Omit<ComponentProps<'form'>, 'c
   );
 }
 
+// A dialog's content in sections: a section's own lines sit closer together than the sections do, as in S2's dialogs,
+// so headings and spacing set them apart without dividers.
+export function DialogSections({children}: {children: ReactNode}) {
+  return <div className="rp-dialog-sections">{children}</div>;
+}
+
 export function DialogSection({title, children}: {title?: string | null; children: ReactNode}) {
   const id = useId();
   return (
