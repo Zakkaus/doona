@@ -195,7 +195,7 @@ export function PanelHeader({
           </Button>
         )
       }
-      summary={collapsed ? <SpeedSummary /> : undefined}
+      summary={collapsed ? <SpeedSummary reserveWidth={!docked} /> : undefined}
       actions={
         <>
           <MoreMenu

@@ -795,6 +795,37 @@ test('a pinned panel keeps its place and size; unpinned, it moves and resizes ag
   await expect.poll(async () => (await box(panel)).width).toBe(moved.width + 40);
 });
 
+test('a panel resized to its least width and collapsed shows both rates whole beside its buttons', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.handlers['GET runtime'] = async () => {
+    const runtime = await backend.api.runtime();
+    return {...runtime, traffic: {...runtime.traffic, rates: {upload_bytes_per_second: '999000000', download_bytes_per_second: '999000000'}}};
+  };
+  await page.goto('/#/settings');
+  const panel = floating(page);
+  await panel.getByRole('button', {name: 'Resize widgets panel', exact: true}).focus();
+  for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowRight');
+  await expect.poll(async () => (await box(panel)).width).toBe(200);
+  await panel.getByRole('button', {name: 'Collapse widgets', exact: true}).click();
+  const values = panel.locator('.rp-widget-speed-value');
+  await expect(values).toHaveText(['999 MB/s', '999 MB/s']);
+  const fit = await panel.evaluate(el => {
+    const actions = el.querySelector('.rp-widget-actions')!.getBoundingClientRect();
+    const frame = el.getBoundingClientRect();
+    return [...el.querySelectorAll('.rp-widget-speed-value')].map(value => {
+      const rect = value.getBoundingClientRect();
+      return {whole: value.scrollWidth <= value.clientWidth, clear: rect.right <= actions.left, inside: actions.right <= frame.right};
+    });
+  });
+  expect(fit).toEqual([
+    {whole: true, clear: true, inside: true},
+    {whole: true, clear: true, inside: true}
+  ]);
+  // Expanded again, the panel keeps the width the reader set.
+  await panel.getByRole('button', {name: 'Expand widgets', exact: true}).click();
+  await expect.poll(async () => (await box(panel)).width).toBe(200);
+});
+
 test('the default panel draws both rates in one chart without scrolling', async ({page}) => {
   await page.goto('/#/settings');
   const chart = floating(page).locator('.rp-compact-chart');

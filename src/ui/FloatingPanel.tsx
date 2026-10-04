@@ -308,8 +308,8 @@ function useEdgeHide(edge: EdgeHide | undefined, settled: boolean, laidOut: stri
 // by arrow keys. The handles draw nothing but their cursor and, from the keyboard, a focus ring. A panel left in the
 // frame's upper half keeps its top edge and one in the lower half its bottom edge, so expanding or resizing grows it
 // towards the room; the frame keeps it inside the viewport. Dropping the header over `dockTarget` docks the panel
-// instead of moving it. A collapsed panel is its header alone and keeps only its width; expanding restores the stored
-// height. A `locked` panel keeps its place and size: it renders no move or resize handles, so neither pointer nor
+// instead of moving it. A collapsed panel is its header alone and keeps only its width, or the header's whole content
+// where that is wider; expanding restores the stored height. A `locked` panel keeps its place and size: it renders no move or resize handles, so neither pointer nor
 // keyboard moves it, while the frame still keeps it inside the viewport. With `edge` the panel hides at the screen edge
 // nearest to it behind a handle, as useEdgeHide describes.
 export function FloatingPanel({
@@ -441,6 +441,7 @@ export function FloatingPanel({
         ref={panel}
         className="rp-floating-panel"
         aria-label={label}
+        data-collapsed={collapsed || undefined}
         {...hiding.panelProps}
         style={
           {
