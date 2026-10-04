@@ -22,15 +22,15 @@ A release has 38 files. Most people need two: the program file for their system 
 
 Choose one, for a manual install or for your system's package manager.
 
-| File                                  | What it is                                         | Choose for                              |
-| ------------------------------------- | -------------------------------------------------- | --------------------------------------- |
-| `doona-0.1.0-beta.14.tar.gz`          | The built UI, licences and changelog, no installer | Manual installation with any web server |
-| `doona-web_0.1.0-beta.14-1_all.deb`   | Debian package                                     | Debian or Ubuntu                        |
-| `doona-0.1.0-beta.14-1.noarch.rpm`    | RPM package                                        | Fedora or openSUSE                      |
-| `doona-0.1.0beta14-1-any.pkg.tar.zst` | pacman package                                     | Arch Linux                              |
-| `doona_0.1.0-beta.14-1_all.ipk`       | opkg package                                       | OpenWrt 24.10 and earlier               |
-| `doona-0.1.0_beta14-r1.apk`           | apk-tools 3 package                                | OpenWrt 25.12                           |
-| `doona-0.1.0-beta.14-r0.alpine.apk`   | Alpine package                                     | Alpine Linux                            |
+| File                                  | What it is                              | Choose for                              |
+| ------------------------------------- | --------------------------------------- | --------------------------------------- |
+| `doona-0.1.0-beta.14.tar.gz`          | The built UI and licences, no installer | Manual installation with any web server |
+| `doona-web_0.1.0-beta.14-1_all.deb`   | Debian package                          | Debian or Ubuntu                        |
+| `doona-0.1.0-beta.14-1.noarch.rpm`    | RPM package                             | Fedora or openSUSE                      |
+| `doona-0.1.0beta14-1-any.pkg.tar.zst` | pacman package                          | Arch Linux                              |
+| `doona_0.1.0-beta.14-1_all.ipk`       | opkg package                            | OpenWrt 24.10 and earlier               |
+| `doona-0.1.0_beta14-r1.apk`           | apk-tools 3 package                     | OpenWrt 25.12                           |
+| `doona-0.1.0-beta.14-r0.alpine.apk`   | Alpine package                          | Alpine Linux                            |
 
 Debian and Ubuntu ship an unrelated `doona` package, so their deb is named `doona-web` and installs into `/usr/share/doona-web`; set honk's `ui` to that path. The other package formats keep the name `doona` and install into `/usr/share/doona`. Alpine and OpenWrt apk files are not interchangeable.
 

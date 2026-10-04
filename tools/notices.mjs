@@ -6,9 +6,10 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 
 export const ROOT = fileURLToPath(new URL('..', import.meta.url));
 export const NOTICES = 'THIRD-PARTY-NOTICES.txt';
-// Licences of files compiled into dist/, besides GPL-3.0-only in LICENSE. OFL-1.1 also travels in the font archive
-// as fonts/OFL.txt; GPL-2.0-only covers repository files that are never shipped.
-export const PROGRAM_LICENSES = ['OFL-1.1', 'Apache-2.0', 'CC-BY-4.0', 'CC-BY-3.0', 'CC-BY-SA-4.0', 'CC0-1.0', 'LicenseRef-GitHub-Logos'];
+// Licence texts the program archive ships, besides GPL-3.0-only in LICENSE. OFL-1.1 also travels in the font archive
+// as fonts/OFL.txt. NOTICE cites the Creative Commons licences of the palette images and flag artwork by URI, which
+// the licences allow, and CC0-1.0 requires no notice; their texts and GPL-2.0-only stay in the repository for REUSE.
+export const PROGRAM_LICENSES = ['OFL-1.1', 'Apache-2.0', 'LicenseRef-GitHub-Logos'];
 
 // Build tools that write code of their own into dist/. Include only the shipped helpers' licence texts,
 // not the tools' build-only dependency closure.
@@ -140,8 +141,49 @@ export function buildRuntimeLicenses(root = ROOT) {
   });
 }
 
+// A line that opens a copyright statement: "Copyright" followed by (c), © or a year, or (c) or © followed by a year.
+// "copyright license", "Copyright Holder(s)" and Apache's "Copyright [yyyy]" template are licence text.
+const COPYRIGHT = /^\s*(?:copyright\s*(?:\(c\)|©|\d)|(?:\(c\)|©)\s*\d)/i;
+
+// Splits a licence text into its copyright statements, each running from a copyright line to the end of its
+// paragraph, and the remaining text. `key` compares the remaining text regardless of wrapping and indentation.
+export function splitCopyright(text) {
+  const copyright = [];
+  const rest = [];
+  let statement = false;
+  for (const line of text.split('\n')) {
+    if (COPYRIGHT.test(line)) statement = true;
+    else if (!line.trim()) statement = false;
+    (statement ? copyright : rest).push(line);
+  }
+  const remaining = rest
+    .join('\n')
+    .replace(/\n\s*\n(\s*\n)+/g, '\n\n')
+    .trim();
+  const key = remaining
+    .split(/\n\s*\n/)
+    .map(paragraph => paragraph.trim().replace(/\s+/g, ' '))
+    .join('\n\n');
+  return {copyright: copyright.map(line => line.trim()), text: remaining, key};
+}
+
+// Packages whose licence texts match apart from their copyright statements share one entry: every package with its
+// copyright statements, then the text once. A package whose text matches no other keeps its text unchanged.
 export function formatNotices({packages, skipped}) {
-  const entries = packages.map(({name, version, license, file, text}) => `${name} ${version} (${license}) — ${file}\n${'='.repeat(72)}\n${text}`);
+  const rule = '='.repeat(72);
+  const heading = ({name, version, license, file}) => `${name} ${version} (${license}) — ${file}`;
+  const groups = new Map();
+  for (const pkg of packages) {
+    const {copyright, text, key} = splitCopyright(pkg.text);
+    if (!groups.has(key)) groups.set(key, {text, members: []});
+    groups.get(key).members.push({...pkg, copyright});
+  }
+  const entries = [...groups.values()].map(({text, members}) => {
+    if (members.length === 1) return `${heading(members[0])}\n${rule}\n${members[0].text}`;
+    const licenses = [...new Set(members.map(({license}) => license))].join(', ');
+    const list = members.map(member => [heading(member), ...member.copyright.map(line => `    ${line}`)].join('\n')).join('\n');
+    return `Licence text shared by ${members.length} packages (${licenses})\n${rule}\n${list}\n\n${text}\n`;
+  });
   if (skipped.length) {
     const list = skipped.map(({name, version, license}) => `${name} ${version} (${license})\n`).join('');
     entries.push(`Packages without a licence file\n${'='.repeat(72)}\n${list}`);

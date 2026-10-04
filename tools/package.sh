@@ -66,7 +66,7 @@ sort -z "$stage/assets" > "$stage/sorted-assets"
     done
     rm -f "$sibling"
 ' sh "$stage/precompressed" "$stage/sibling" < "$stage/sorted-assets")
-cp LICENSE NOTICE CHANGELOG.md README.md "$stage/program/"
+cp LICENSE NOTICE README.md "$stage/program/"
 # Adds LICENSES/ and THIRD-PARTY-NOTICES.txt, and fails if NOTICE cites a licence file left out.
 node tools/notices.mjs "$stage/program"
 cp -R dist/fonts "$stage/font-package/"

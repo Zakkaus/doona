@@ -22,15 +22,15 @@ doona 需要 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 手動安裝或透過系統的套件管理員安裝，選擇其中一個。
 
-| 檔案                                  | 內容                                          | 適用系統或方式                  |
-| ------------------------------------- | --------------------------------------------- | ------------------------------- |
-| `doona-0.1.0-beta.14.tar.gz`          | 建置好的 UI、授權條款與變更日誌，不含安裝程式 | 手動安裝，由任一 Web 伺服器提供 |
-| `doona-web_0.1.0-beta.14-1_all.deb`   | Debian 套件                                   | Debian 或 Ubuntu                |
-| `doona-0.1.0-beta.14-1.noarch.rpm`    | RPM 套件                                      | Fedora 或 openSUSE              |
-| `doona-0.1.0beta14-1-any.pkg.tar.zst` | pacman 套件                                   | Arch Linux                      |
-| `doona_0.1.0-beta.14-1_all.ipk`       | opkg 套件                                     | OpenWrt 24.10 及更早版本        |
-| `doona-0.1.0_beta14-r1.apk`           | apk-tools 3 套件                              | OpenWrt 25.12                   |
-| `doona-0.1.0-beta.14-r0.alpine.apk`   | Alpine 套件                                   | Alpine Linux                    |
+| 檔案                                  | 內容                                 | 適用系統或方式                  |
+| ------------------------------------- | ------------------------------------ | ------------------------------- |
+| `doona-0.1.0-beta.14.tar.gz`          | 建置好的 UI 與授權條款，不含安裝程式 | 手動安裝，由任一 Web 伺服器提供 |
+| `doona-web_0.1.0-beta.14-1_all.deb`   | Debian 套件                          | Debian 或 Ubuntu                |
+| `doona-0.1.0-beta.14-1.noarch.rpm`    | RPM 套件                             | Fedora 或 openSUSE              |
+| `doona-0.1.0beta14-1-any.pkg.tar.zst` | pacman 套件                          | Arch Linux                      |
+| `doona_0.1.0-beta.14-1_all.ipk`       | opkg 套件                            | OpenWrt 24.10 及更早版本        |
+| `doona-0.1.0_beta14-r1.apk`           | apk-tools 3 套件                     | OpenWrt 25.12                   |
+| `doona-0.1.0-beta.14-r0.alpine.apk`   | Alpine 套件                          | Alpine Linux                    |
 
 Debian 與 Ubuntu 內建一個無關的 `doona` 套件，因此 deb 名稱為 `doona-web`，安裝至 `/usr/share/doona-web`；請將 honk 的 `ui` 設為該路徑。其他套件格式保留 `doona` 名稱，安裝至 `/usr/share/doona`。Alpine 與 OpenWrt 的 apk 檔案不能混用。
 
