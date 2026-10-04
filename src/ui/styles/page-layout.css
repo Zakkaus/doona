@@ -274,10 +274,11 @@
   opacity: 0.6;
 }
 /* A large group's scroll panel follows the same column rule (NodeGrid.tsx). 228px holds a flag and a long name such as
-   "土耳其 04 流媒體" beside a three-digit latency without cutting it. A short group's tiles share the whole row. */
+   "土耳其 04 流媒體" beside a three-digit latency without cutting it. A short group keeps the empty columns, so tiles
+   line up across every group on the page. */
 .rp-nodes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 228px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 228px), 1fr));
   gap: var(--rp-space-2);
   padding-inline: var(--rp-space-2);
 }

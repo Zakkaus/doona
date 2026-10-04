@@ -21,6 +21,16 @@ button.rp-node {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Outside the scroll panel, whose rows keep one fixed height, a long name wraps and its row of tiles grows with it. */
+.rp-nodes > .rp-node {
+  height: auto;
+  min-height: 56px;
+}
+.rp-nodes .n,
+.rp-nodes .n .rp-truncate {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .rp-node .ms {
   flex: none;
   font-weight: 700;
