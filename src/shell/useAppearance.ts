@@ -21,6 +21,11 @@ export function applyAppearance(dark: boolean, palette: PaletteId, wordmark: Wor
   d.family = family;
   d.flavour = flavour;
   d.wordmark = wordmark;
+  // Glass's lens filters load with the palette, once; the stylesheet uses them while the root carries data-lens.
+  if (palette === 'glass/glass' && d.lens === undefined)
+    void import('../ui/lens').then(({installLens}) => {
+      if (installLens()) d.lens = '';
+    });
 }
 export function useAppearance(stored: Settings) {
   const [scheme, setScheme] = useState<Scheme>(stored.scheme);
