@@ -154,7 +154,7 @@ for (const width of [390, 768]) {
     await page.getByRole('link', {name: 'View enabling requirements'}).click();
     const limits = page.locator('section').filter({has: page.locator('#overview-limits')});
     await expect(limits).toBeFocused();
-    await expect(page.locator('.rp-body-wait')).toHaveCount(0);
+    await expect(page.locator('.rp-skeleton')).toHaveCount(0);
     await page.evaluate(() => document.fonts.ready);
     const help = limits.getByRole('button', {name: 'How to turn on'});
     await expect

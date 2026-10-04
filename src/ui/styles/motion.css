@@ -222,3 +222,29 @@
     rotate: 360deg;
   }
 }
+@keyframes rp-skeleton {
+  from {
+    background-position: 100%;
+  }
+  to {
+    background-position: 0%;
+  }
+}
+/* S2's indeterminate ProgressCircle: the arc turns once a second while its length swings. */
+@keyframes rp-progress-turn {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes rp-progress-arc {
+  0%,
+  100% {
+    stroke-dashoffset: 75;
+  }
+  30% {
+    stroke-dashoffset: 20;
+  }
+}

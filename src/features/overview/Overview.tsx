@@ -14,6 +14,7 @@ import {
   TextTooltip,
   ErrorMessage,
   Loading,
+  Skeleton,
   Empty,
   VisuallyHidden
 } from '../../ui/ui';
@@ -25,24 +26,6 @@ import {ReloadConfirm} from '../shared/ReloadConfirm';
 import {DaeCode} from '../../ui/DaeCode';
 import type {PageProps} from '../../shell/routes';
 
-// While a section loads, invisible cells in the loaded body's grid wrap into the same rows at any width, so the
-// card keeps its height when the values arrive; `extra` holds the lines below the grid.
-function BodyWait({cells, extra}: {cells: number; extra?: 'caption' | 'body' | number}) {
-  return (
-    <div className="rp-body-wait">
-      <div className="rp-kv" aria-hidden="true">
-        {Array.from({length: cells}, (_, i) => (
-          <div key={i}>
-            <span className="k">{'\u00a0'}</span>
-            <span className="v">{'\u00a0'}</span>
-          </div>
-        ))}
-      </div>
-      {extra && <div aria-hidden="true" style={{height: extra === 'caption' ? 'var(--rp-line-caption)' : extra === 'body' ? 'var(--rp-line-body)' : extra}} />}
-      <Loading />
-    </div>
-  );
-}
 // A limit's link; one that leaves the app ends with an arrow.
 function LimitLink({link}: {link: NonNullable<LimitGroup['link']>}) {
   return (
@@ -122,7 +105,7 @@ export function Overview({query}: PageProps) {
               )}
             </>
           ) : vm.engine.state === 'loading' ? (
-            <BodyWait cells={6} extra={vm.engine.profiles.length > 0 ? 'body' : undefined} />
+            <Skeleton facts={6} below={vm.engine.profiles.length > 0 ? 'body' : undefined} />
           ) : vm.errors.version ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
@@ -135,7 +118,7 @@ export function Overview({query}: PageProps) {
               <span className="rp-label">{vm.counters.since}</span>
             </>
           ) : vm.counters.state === 'loading' ? (
-            <BodyWait cells={6} extra="caption" />
+            <Skeleton facts={6} helped={[5]} below="caption" />
           ) : vm.errors.runtime ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
@@ -145,7 +128,7 @@ export function Overview({query}: PageProps) {
           {vm.memory.state === 'ready' ? (
             <Kv items={vm.memory.fields} />
           ) : vm.memory.state === 'loading' ? (
-            <BodyWait cells={8} />
+            <Skeleton facts={8} />
           ) : vm.errors.memory ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}
@@ -173,7 +156,7 @@ export function Overview({query}: PageProps) {
               )}
             </>
           ) : vm.datapath.state === 'loading' ? (
-            <BodyWait cells={10} extra={attachmentsFloor} />
+            <Skeleton facts={10} below={attachmentsFloor} />
           ) : vm.errors.datapath ? null : (
             <Empty>{t('ov.unavailable')}</Empty>
           )}

@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ChartWait, Meter, ProblemAlert} from './Feedback';
+import {ChartWait, Meter, ProblemAlert, ProgressCircle, Skeleton} from './Feedback';
 
 it.each([
   [undefined, 'negative', 'alert'],
@@ -31,4 +31,24 @@ it('reads a meter as its value text, filled to its share', () => {
 
 it('marks a small meter for its own label and track sizes', () => {
   expect(renderToStaticMarkup(<Meter size="S" label="Usage" value={42} valueLabel="420 GB / 1 TB" />)).toContain('data-size="S"');
+});
+
+it.each([
+  ['S', 'calc(50% - 1px)'],
+  ['M', 'calc(50% - 1.5px)']
+] as const)('draws an indeterminate %s progress circle with its own stroke', (size, r) => {
+  const markup = renderToStaticMarkup(<ProgressCircle size={size} aria-label="Loading" />);
+  expect(markup).toContain('role="progressbar"');
+  expect(markup).not.toContain('aria-valuenow');
+  expect(markup).toContain(`data-size="${size}"`);
+  expect(markup).toContain(`r="${r}"`);
+});
+
+it('holds a body of facts with inert placeholders and a loading status', () => {
+  const markup = renderToStaticMarkup(<Skeleton facts={3} helped={[2]} below={40} />);
+  expect(markup.match(/class="rp-skeleton-text"/g)).toHaveLength(7);
+  expect(markup.match(/class="k helped"/g)).toHaveLength(1);
+  expect(markup).toContain('role="status"');
+  expect(markup).toContain('height:40px');
+  expect(markup.match(/inert=""/g)).toHaveLength(2);
 });
