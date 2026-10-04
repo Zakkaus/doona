@@ -158,17 +158,6 @@ h3.rp-label {
   font-size: var(--rp-text-sm);
   color: color-mix(in srgb, currentColor 82%, transparent);
 }
-.rp-spinner {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid var(--rp-hl-high);
-  border-top-color: var(--rp-accent);
-  animation: rp-spin var(--rp-duration-spin) linear infinite;
-  display: inline-block;
-  flex: none;
-  vertical-align: middle;
-}
 /* S2's ProgressCircle (Feedback.tsx): M is 32px with a 3px stroke, S 16px with 2px; the track is the meter track's fill
    and the arc the accent. */
 .rp-progress-circle {
@@ -225,14 +214,43 @@ h3.rp-label {
 .rp-btn[data-pending] {
   cursor: progress;
 }
-/* On an accent button the arc would be the button's own colour; it takes the text colour instead. */
-.rp-btn.accent > .rp-spinner {
-  border-color: color-mix(in srgb, currentColor 35%, transparent);
-  border-top-color: currentColor;
+/* A pending button keeps its colour and its size. After a second (Button.tsx) S2's ProgressCircle takes the place of
+   the label and icon, which keep their room but hide; its arc and track take the label's colour, so it reads on any
+   fill. A refresh button's arrows turn instead (Button.tsx) and keep it in view, so it shows no circle. */
+:where(.rp-btn[data-pending]) {
+  position: relative;
 }
-/* The refresh arrows keep turning in place of the spinner (motion.css). */
-.rp-btn.icon[data-pending] > svg:not(.rp-refresh) {
-  display: none;
+.rp-btn-progress {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  visibility: hidden;
+}
+.rp-btn[data-progress]:not(:has(.rp-spin-on-press)) {
+  -webkit-text-fill-color: transparent;
+}
+.rp-btn[data-progress]:not(:has(.rp-spin-on-press)) > :not(.rp-btn-progress) {
+  visibility: hidden;
+}
+.rp-btn[data-progress]:not(:has(.rp-spin-on-press)) > .rp-btn-progress {
+  visibility: visible;
+}
+/* S2 sizes the circle with the button: 18px at M, 20px at L, with S's 2px stroke. */
+.rp-btn-progress > .rp-progress-circle {
+  width: 18px;
+  height: 18px;
+}
+.rp-btn[data-size='L'] > .rp-btn-progress > .rp-progress-circle {
+  width: 20px;
+  height: 20px;
+}
+.rp-btn-progress .track {
+  stroke: color-mix(in srgb, currentColor 30%, transparent);
+}
+.rp-btn-progress .fill {
+  stroke: currentColor;
 }
 :where(.rp-btn, .rp-select, .rp-selectbtn, .rp-search, .rp-version, .rp-nav, .rp-brand, .rp-link, .rp-input .clear)[data-hovered] {
   background-color: var(--rp-hl-med);

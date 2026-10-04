@@ -124,7 +124,6 @@
   --rp-duration-hop: 360ms;
   --rp-duration-pop: 240ms;
   --rp-duration-view: 300ms;
-  --rp-duration-spin: 800ms;
   /* One turn of the refresh and reload arrows, as long as one turn of S2's indeterminate ProgressCircle. */
   --rp-duration-refresh: 1000ms;
   /* One sweep of S2's Skeleton shimmer. */

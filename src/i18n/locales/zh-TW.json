@@ -1873,6 +1873,7 @@
   "ui.operationUnknown": "無法確認操作結果，已重新載入資料",
   "ui.outbound": "出站",
   "ui.palette": "配色",
+  "ui.pending": "處理中",
   "ui.percent": "{n}%",
   "ui.probeUnsupported": "此後端不提供該目標的 TCP 探測",
   "ui.process": "行程名稱",

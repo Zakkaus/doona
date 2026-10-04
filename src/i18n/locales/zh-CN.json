@@ -1873,6 +1873,7 @@
   "ui.operationUnknown": "无法确认操作结果，已重新加载数据",
   "ui.outbound": "出站",
   "ui.palette": "配色",
+  "ui.pending": "处理中",
   "ui.percent": "{n}%",
   "ui.probeUnsupported": "此后端不提供该目标的 TCP 探测",
   "ui.process": "进程名称",

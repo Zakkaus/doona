@@ -173,7 +173,7 @@ test('a confirmation stays open while its action is pending', async ({page}) => 
   await page.getByRole('button', {name: 'Clear all cache', exact: true}).click();
   const dialog = page.getByRole('alertdialog', {name: 'Clear all cache', exact: true});
   await dialog.getByRole('button', {name: 'Clear all cache', exact: true}).click();
-  await expect(dialog.locator('.rp-spinner')).toBeVisible();
+  await expect(dialog.locator('.rp-btn-progress [role=progressbar]')).toBeVisible();
   release();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('.rp-toast.positive')).toContainText('Cache cleared, matched: ');

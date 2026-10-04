@@ -2080,6 +2080,7 @@
   "ui.operationUnknown": "Could not confirm the result of the operation; the data was reloaded",
   "ui.outbound": "Outbound",
   "ui.palette": "Palette",
+  "ui.pending": "Pending",
   "ui.percent": "{n}%",
   "ui.probeUnsupported": "This backend does not provide a TCP probe for this target",
   "ui.process": "Process name",

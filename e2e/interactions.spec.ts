@@ -36,10 +36,19 @@ test('connection test stays pending and suppresses repeated activation until dis
   await page.goto('/#/settings');
   await page.locator('[name=api]').fill(new URL(page.url()).origin + '/pending-backend');
   const control = page.getByRole('button', {name: 'Test connection', exact: true});
+  const before = await control.boundingBox();
   await control.click();
   await expect(control).toHaveAttribute('data-pending');
   await expect(control).toHaveAttribute('aria-disabled', 'true');
-  await expect(control.locator('.rp-spinner')).toBeVisible();
+  // As in S2, the progress circle waits a second before it replaces the label, and the button keeps its size.
+  const progress = control.locator('.rp-btn-progress [role=progressbar]');
+  const pendingSince = Date.now();
+  await expect(progress).toBeHidden();
+  await expect(progress).toBeVisible();
+  expect(Date.now() - pendingSince).toBeGreaterThanOrEqual(900);
+  const after = await control.boundingBox();
+  expect(after!.width).toBe(before!.width);
+  expect(after!.height).toBe(before!.height);
   await control.evaluate(button => {
     (button as HTMLButtonElement).click();
     (button as HTMLButtonElement).click();
