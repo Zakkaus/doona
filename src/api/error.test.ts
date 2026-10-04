@@ -1,6 +1,19 @@
-import {expect, it} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {LANGS, translate} from '../i18n';
-import {ApiError, LocalError, errorLines, errorText, failureNotice, isSnapshotRefusal, noticeText, parseRetryAfter, requestIdOf, responseError} from './error';
+import {
+  ApiError,
+  LocalError,
+  errorLines,
+  errorText,
+  failureNotice,
+  isSnapshotRefusal,
+  leavePage,
+  noticeText,
+  parseRetryAfter,
+  requestIdOf,
+  responseError,
+  send
+} from './error';
 
 it('joins a local error and its detail with the colon of the active language', () => {
   const error = new LocalError('ui.operationFailed', 'member refused');
@@ -173,4 +186,127 @@ it('takes only a 503 snapshot_unavailable that carries a Retry-After as a refusa
   expect(isSnapshotRefusal(new ApiError(503, 'temporarily_unavailable', 'busy', null, null, 2))).toBe(false);
   expect(isSnapshotRefusal(new ApiError(429, 'snapshot_unavailable', 'busy', null, null, 2))).toBe(false);
   expect(isSnapshotRefusal(new Error('snapshot_unavailable'))).toBe(false);
+});
+
+// A fetch that answers only when told to, and rejects with its signal's reason when cancelled, as browsers do.
+function heldFetch() {
+  const calls: {method: string; signal: AbortSignal; resolve: (response: Response) => void}[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((resolve, reject) => {
+          const signal = init!.signal!;
+          calls.push({method: init?.method ?? 'GET', signal, resolve});
+          signal.addEventListener('abort', () => reject(signal.reason), {once: true});
+        })
+    )
+  );
+  return calls;
+}
+// A leave whose prompt, if any, is asked for by a listener that runs before doona's or after it.
+const leave = (prompt?: 'before' | 'after') => {
+  const event = new Event('beforeunload', {cancelable: true});
+  if (prompt === 'before') event.preventDefault();
+  leavePage(event);
+  if (prompt === 'after') event.preventDefault();
+};
+const settled = (promise: Promise<unknown>) => {
+  const state = {done: false, error: undefined as unknown};
+  promise.then(
+    () => (state.done = true),
+    error => {
+      state.done = true;
+      state.error = error;
+    }
+  );
+  return state;
+};
+describe('a page leave', () => {
+  beforeEach(() => void vi.useFakeTimers());
+  afterEach(async () => {
+    await vi.advanceTimersByTimeAsync(5000);
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    ['GET', true],
+    ['POST', false],
+    ['PUT', false],
+    ['PATCH', false],
+    ['DELETE', false]
+  ])('a page leave cancels a %s waiting for its headers: %s', async (method, cancelled) => {
+    const calls = heldFetch();
+    const request = settled(send('http://doona.test/api/v1/rules', {method}));
+    leave();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(calls[0].signal.aborted).toBe(cancelled);
+    if (cancelled) expect(calls[0].signal.reason).toMatchObject({name: 'AbortError'});
+    expect(request).toEqual({done: false, error: undefined});
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(calls).toHaveLength(cancelled ? 2 : 1);
+    calls.at(-1)!.resolve(new Response(null, {status: 204}));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(request).toEqual({done: true, error: undefined});
+  });
+
+  it.each([
+    ['a declined leave prompt asked before', 'before', 0],
+    ['a declined leave prompt asked after', 'after', 0],
+    ['no prompt, after the grace period', undefined, 3000]
+  ] as const)('a cancelled read stays silent and is sent again once the page stays: %s', async (_, prompt, delay) => {
+    const calls = heldFetch();
+    const request = settled(send('http://doona.test/api/v1/capabilities'));
+    leave(prompt);
+    // A read started while the page is being left waits as well.
+    const later = settled(send('http://doona.test/api/v1/version'));
+    if (delay) await vi.advanceTimersByTimeAsync(delay - 1);
+    expect(calls).toHaveLength(1);
+    expect(request.done).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(calls.map(call => call.signal.aborted)).toEqual([true, false, false]);
+    for (const call of calls.slice(1)) call.resolve(new Response('{}'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect([request, later]).toEqual([
+      {done: true, error: undefined},
+      {done: true, error: undefined}
+    ]);
+  });
+
+  it('keeps real failures and a caller cancel as they were across a page leave', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Load failed')));
+    await expect(send('http://doona.test/api/v1/capabilities')).rejects.toMatchObject({code: 'network_error'});
+    heldFetch();
+    leave();
+    const caller = new AbortController();
+    const parked = send('http://doona.test/api/v1/version', {signal: caller.signal});
+    caller.abort(new DOMException('Resource unsubscribed', 'AbortError'));
+    await expect(parked).rejects.toMatchObject({message: 'Resource unsubscribed'});
+  });
+
+  it('keeps one header deadline for a read across a leave near it', async () => {
+    const calls = heldFetch();
+    const request = settled(send('http://doona.test/api/v1/capabilities'));
+    await vi.advanceTimersByTimeAsync(14000);
+    leave();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(calls).toHaveLength(1);
+    expect(request).toMatchObject({done: true, error: {code: 'timeout', request: {method: 'GET', path: '/api/v1/capabilities'}}});
+  });
+
+  it('keeps one header deadline for a read across repeated declined leaves', async () => {
+    const calls = heldFetch();
+    const request = settled(send('http://doona.test/api/v1/capabilities'));
+    for (let elapsed = 0; elapsed < 14000; elapsed += 2000) {
+      await vi.advanceTimersByTimeAsync(2000);
+      leave('after');
+    }
+    await vi.advanceTimersByTimeAsync(999);
+    expect(calls).toHaveLength(8);
+    expect(request.done).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(request).toMatchObject({done: true, error: {code: 'timeout'}});
+    expect(calls.every(call => call.signal.aborted)).toBe(true);
+  });
 });
