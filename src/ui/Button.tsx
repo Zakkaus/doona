@@ -5,6 +5,8 @@ import {cx} from './cx';
 import {motionEase, motionMs} from './motion';
 import {useControlSize, type ControlSize} from './controlSize';
 import {Tip} from './Tooltip';
+import {ProgressCircle} from './ProgressCircle';
+import {useT} from '../i18n';
 
 // Button and LinkButton treatments: secondary is outlined, accent / negative use colour, and the default is filled.
 export type ButtonStyle = {size?: ControlSize; quiet?: boolean; secondary?: boolean; small?: boolean; icon?: boolean; accent?: boolean; negative?: boolean};
@@ -21,6 +23,24 @@ export function PrimaryActions({children, active = true}: {children: ReactNode; 
 // The classes for a style. Exported for a react-aria button the kit cannot wrap, such as a grid row's drag slot.
 export function buttonClass({quiet, secondary, small, icon, accent, negative}: Omit<ButtonStyle, 'size'>, base = 'rp-btn') {
   return cx(base, quiet && 'quiet', secondary && 'secondary', small && 'sm', icon && 'icon', accent && 'accent', negative && 'negative');
+}
+
+// S2's pending state: the button stays focusable but takes no presses, and only a wait over a second shows its progress,
+// so a quick request flickers nothing.
+function useProgressVisible(isPending?: boolean) {
+  const [visible, setVisible] = useState(false);
+  const [pending, setPending] = useState(isPending);
+  // The end of a wait hides the circle in the same render.
+  if (pending !== isPending) {
+    setPending(isPending);
+    if (!isPending) setVisible(false);
+  }
+  useEffect(() => {
+    if (!isPending) return;
+    const timer = setTimeout(() => setVisible(true), 1000);
+    return () => clearTimeout(timer);
+  }, [isPending]);
+  return visible;
 }
 
 const ActionReason = createContext<{id: string; text: string} | undefined>(undefined);
@@ -79,6 +99,8 @@ export function Button({
   const reason = useActionReason(disabled);
   const [tipOpen, setTipOpen] = useState(false);
   const controlSize = useControlSize(size);
+  const t = useT();
+  const progress = useProgressVisible(isPending);
   const primary = useContext(PrimaryActionsContext) && !style.icon;
   // A disabled button's tip is why it cannot run; it describes the button even while the tooltip is closed.
   const tipId = useId();
@@ -130,6 +152,7 @@ export function Button({
       onPress={press}
       aria-label={label}
       data-toggle-selected={isSelected || undefined}
+      data-progress={progress || undefined}
       aria-pressed={isSelected}
       aria-expanded={expanded}
       aria-describedby={reason?.id ?? (tipReason ? tipId : undefined)}
@@ -138,8 +161,14 @@ export function Button({
       type={type}
       form={form}
     >
-      {isPending ? <span className="rp-spinner" aria-hidden="true" /> : null}
       {children}
+      {/* Present while pending, so React Aria names the button with it and announces the wait to a focused reader;
+          shown over the hidden label after a second. A refresh button's own arrows turn instead (motion.css). */}
+      {isPending && (
+        <span className="rp-btn-progress">
+          <ProgressCircle size="S" aria-label={t('ui.pending')} />
+        </span>
+      )}
     </RButton>
   );
   // A disabled reason takes precedence over the action label.

@@ -92,18 +92,6 @@
 .rp-btn[aria-expanded='true'][aria-haspopup] {
   background-color: var(--rp-hl-high);
 }
-/* A pending button keeps its colour and shows its spinner at once, with the label dimmed behind it; the refresh
-   icon's own rotation (Button.tsx) stands in for the spinner. */
-.rp-btn[data-pending] > .rp-spinner:has(+ .rp-refresh) {
-  display: none;
-}
-.rp-btn[data-pending] > :not(.rp-spinner) {
-  opacity: 0.55;
-  transition: opacity var(--rp-duration) var(--rp-ease);
-}
-.rp-btn[data-pending] > .rp-refresh {
-  opacity: 1;
-}
 /* A radio's ring thickens and recolours as it is selected. */
 .rp-radio-mark,
 .rp-checkbox-mark {
@@ -216,11 +204,6 @@
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: var(--rp-duration-view);
-}
-@keyframes rp-spin {
-  to {
-    rotate: 360deg;
-  }
 }
 @keyframes rp-skeleton {
   from {

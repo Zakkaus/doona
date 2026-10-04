@@ -119,7 +119,7 @@ export const TopBar = memo(function TopBar({
         <span className="rp-wide-only">
           {commands.reload && (
             <Button quiet icon label={commands.reload.label} isPending={commands.reload.busy} isDisabled={commands.reload.blocked} onPress={askReload}>
-              <Refresh className="rp-refresh rp-spin-on-press" />
+              <Refresh className="rp-spin-on-press" />
             </Button>
           )}
           <Divider />
