@@ -100,6 +100,8 @@
   --rp-scrollbar: 6px;
   --rp-control: 32px;
   --rp-control-lg: 40px;
+  /* A Button's inline padding, S2's pill inset of half the height; phones take 12px (below), as they do at L. */
+  --rp-inset-btn: calc(var(--rp-control) / 2);
   /* L's inline padding; phones take M's (below), so a row of L controls fits as a row of M controls does. */
   --rp-lg-inset-btn: calc(var(--rp-control-lg) / 2);
   --rp-lg-inset-field: calc(var(--rp-control-lg) * 3 / 8);
@@ -149,6 +151,7 @@
 @media (max-width: 599.98px) {
   :root {
     --rp-control: 36px;
+    --rp-inset-btn: var(--rp-space-3);
     --rp-lg-inset-btn: var(--rp-space-3);
     --rp-lg-inset-field: var(--rp-space-3);
     --rp-inset-compact: var(--rp-space-2);

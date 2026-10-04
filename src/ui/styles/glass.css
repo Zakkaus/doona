@@ -198,8 +198,8 @@
 :root[data-family='glass'] .rp-btn.quiet[data-pressed] {
   background: var(--rp-hl-high);
 }
-/* Elsewhere a negative button is outlined. Glass draws no border and red text is faint over its gradient, so the
-   button is filled with the increased-contrast red, as the accent one is with the increased-contrast blue. */
+/* Glass fills a negative button, the quiet one included, with the increased-contrast red, as the accent one is with the
+   increased-contrast blue: red text is faint over its gradient. */
 :root[data-family='glass'] .rp-btn.negative {
   background: var(--rp-negative-fill);
   color: var(--rp-on-negative-fill);

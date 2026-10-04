@@ -93,7 +93,7 @@ export function MenuButton({
     >
       {children}
       {badge}
-      {chevron && <ChevronDown />}
+      {chevron && <ChevronDown className="rp-chev" />}
     </RButton>
   );
   return (
