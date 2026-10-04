@@ -258,24 +258,18 @@
   background: color-mix(in srgb, var(--rp-negative) 76%, var(--rp-ink-mix));
 }
 /* A quiet negative button (ConfirmButton's trigger, whose dialog holds the filled one) stays outlined in the tone, with
-   S2's 2px outline. The label reads --rp-negative-text; the border keeps the tone where that falls back to body text. */
+   S2's 2px outline and ActionButton geometry. The label reads --rp-negative-text; the border keeps the tone where that falls back to body text. */
 .rp-btn.negative.quiet {
   background: transparent;
   border-width: 2px;
   border-color: var(--rp-negative);
   color: var(--rp-negative-text);
-  font-weight: 700;
-  padding-inline: var(--rp-inset-btn);
-  border-radius: var(--rp-r-pill);
 }
 .rp-btn.negative.quiet:is([data-hovered], [data-focus-visible]) {
   background: color-mix(in srgb, var(--rp-negative) 12%, transparent);
 }
 .rp-btn.negative.quiet[data-pressed] {
   background: color-mix(in srgb, var(--rp-negative) 20%, transparent);
-}
-.rp-btn.negative.quiet[data-size='L'] {
-  padding-inline: var(--rp-lg-inset-btn);
 }
 
 /* S2's disabled look: a fill keeps the gray-100 fill, an outline keeps a gray-300 border, and the label takes gray-400

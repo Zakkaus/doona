@@ -9,6 +9,14 @@ import {Tip} from './Tooltip';
 // Button and LinkButton treatments: secondary is outlined, accent / negative use colour, and the default is filled.
 export type ButtonStyle = {size?: ControlSize; quiet?: boolean; secondary?: boolean; small?: boolean; icon?: boolean; accent?: boolean; negative?: boolean};
 
+// S2 splits everyday actions (ActionButton) from a flow's primary actions (Button). The kit draws ActionButton geometry
+// by default; accent and negative buttons, and every labelled button inside PrimaryActions (a dialog's footer), take
+// Button's pill.
+const PrimaryActionsContext = createContext(false);
+export function PrimaryActions({children}: {children: ReactNode}) {
+  return <PrimaryActionsContext value>{children}</PrimaryActionsContext>;
+}
+
 // The classes for a style. Exported for a react-aria button the kit cannot wrap, such as a grid row's drag slot.
 export function buttonClass({quiet, secondary, small, icon, accent, negative}: Omit<ButtonStyle, 'size'>, base = 'rp-btn') {
   return cx(base, quiet && 'quiet', secondary && 'secondary', small && 'sm', icon && 'icon', accent && 'accent', negative && 'negative');
@@ -70,6 +78,7 @@ export function Button({
   const reason = useActionReason(disabled);
   const [tipOpen, setTipOpen] = useState(false);
   const controlSize = useControlSize(size);
+  const primary = useContext(PrimaryActionsContext) && !style.quiet && !style.icon;
   // A disabled button's tip is why it cannot run; it describes the button even while the tooltip is closed.
   const tipId = useId();
   const tipReason = disabled && !reason && !!tip;
@@ -115,7 +124,7 @@ export function Button({
   const btn = (
     <RButton
       ref={ref}
-      className={cx(buttonClass(style, appearance === 'plain' ? '' : appearance ? `rp-${appearance}` : 'rp-btn'), className)}
+      className={cx(buttonClass(style, appearance === 'plain' ? '' : appearance ? `rp-${appearance}` : 'rp-btn'), primary && 'primary', className)}
       data-size={controlSize}
       onPress={press}
       aria-label={label}

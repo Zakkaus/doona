@@ -1,3 +1,3 @@
 Changed
 
-- Buttons follow Spectrum 2: pill-shaped with bold labels, a 2px outline on secondary buttons, filled negative buttons, larger leading icons, and the hover colour on keyboard focus; quiet buttons keep the action-button corner.
+- Buttons follow Spectrum 2's split: everyday actions use the action-button shape (8px corner, medium weight), while dialog footer actions and accent and negative buttons are bold pills; secondary buttons have a 2px outline, negative buttons are filled, leading icons are larger, and keyboard focus shows the hover colour.
