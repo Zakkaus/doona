@@ -2,7 +2,6 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeSettings, useVersion} from '../../store';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName} from '../../ui/ui';
-import {usePalette} from '../../ui/charts';
 import {overviewExport, overviewView} from './view';
 import {useLifecycle} from '../shared/useLifecycle';
 import {offered} from '../../api/capabilities';
@@ -66,12 +65,8 @@ export function useOverview(query = '') {
       ),
     [data, limits, capabilities.loading, runtime.loading, version.loading, memory.loading, datapath.loading, locale, t]
   );
-  const palette = usePalette();
-  const tones = {err: palette.love, warn: palette.gold, ok: palette.cat[0]};
-  const memoryView = {...view.memory, bar: view.memory.bar ? {...view.memory.bar, color: tones[view.memory.bar.tone]} : null};
   return {
     ...view,
-    memory: memoryView,
     errors: {capabilities: capabilities.error, runtime: runtime.error, version: version.error, memory: memory.error, datapath: datapath.error},
     retry: {
       capabilities: capabilities.refetch,

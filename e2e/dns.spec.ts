@@ -621,3 +621,11 @@ test('kit pickers keep symmetric insets', async ({page}) => {
     )
   ).toBe(true);
 });
+
+test('the cache card meters its usage against the entry capacity', async ({page}) => {
+  await page.goto('/#/dns');
+  const meter = page.getByRole('region', {name: 'Cache', exact: true}).getByRole('meter', {name: 'Usage', exact: true});
+  await expect(meter).toBeVisible();
+  await expect(meter).toHaveAttribute('aria-valuetext', /^<?\d+%$/);
+  await expect(meter.locator('.v')).toHaveText((await meter.getAttribute('aria-valuetext'))!);
+});

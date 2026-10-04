@@ -174,8 +174,8 @@ test('overview cards keep readable summaries and fill their rows at 1024 px', as
         expect(columns, `${lang} ${scheme} ${width}px capability columns`).toBeGreaterThanOrEqual(2);
         if (width !== 1024) continue;
         const memory = page.locator('.rp-g3 > .rp-card:nth-child(3)');
-        const memoryBar = memory.locator('.rp-bar .top .l > :is(.rp-link, .rp-truncate)');
-        expect(await memoryBar.evaluate(label => label.scrollWidth <= label.clientWidth), 'memory label is not clipped').toBe(true);
+        const memoryLabel = memory.locator('.rp-kv-meter .k');
+        expect(await memoryLabel.evaluate(label => label.scrollWidth <= label.clientWidth), 'memory label is not clipped').toBe(true);
         const memoryWidth = await memory.evaluate(card => card.getBoundingClientRect().width);
         const gridWidth = await page.locator('.rp-g3').evaluate(grid => grid.getBoundingClientRect().width);
         expect(Math.abs(memoryWidth - gridWidth)).toBeLessThan(2);
@@ -350,3 +350,13 @@ test('QUIC degradation wraps within the phone content column', async ({page}) =>
   expect(bounds.text).toBeLessThanOrEqual(bounds.edge + 1);
   expect(bounds.whiteSpace).not.toBe('nowrap');
 });
+
+test('the memory card meters cgroup usage by its name and value text', async ({page}) => {
+  await page.goto('/#/overview');
+  const meter = page.getByRole('region', {name: 'Memory', exact: true}).getByRole('meter', {name: 'cgroup usage', exact: true});
+  await expect(meter).toBeVisible();
+  await expect(meter).toHaveAttribute('aria-valuetext', /^\S+ \S+ \/ \S+ \S+$/);
+  await expect(meter.locator('.v')).toHaveText((await meter.getAttribute('aria-valuetext'))!);
+  expect(Number(await meter.getAttribute('aria-valuenow'))).toBeGreaterThan(0);
+});
+

@@ -162,7 +162,9 @@ export function overviewView(
   const state = runtime?.lifecycle.state;
   const revision = runtime?.generation.config_revision ?? '—';
   const reload = runtime?.last_reload;
-  const percent = pctU64(memory?.cgroup?.current_bytes ?? null, memory?.cgroup?.limit_bytes ?? null);
+  // A zero limit is nothing to measure against: the meter is left out, and the current and limit stay among the facts.
+  const limit = memory?.cgroup?.limit_bytes ?? null;
+  const percent = parseU64(limit) ? pctU64(memory?.cgroup?.current_bytes ?? null, limit) : null;
   const count = (value: number | null) => (value === null ? '—' : formatNumber(value, locale));
   const section = (present: boolean, busy: boolean) => (present ? ('ready' as const) : busy ? ('loading' as const) : ('unavailable' as const));
   return {
@@ -220,27 +222,30 @@ export function overviewView(
     },
     memory: {
       state: section(!!memory, loading.capabilities || loading.memory),
+      // The cgroup usage leads the facts as a metered fact: its label over its value, the track under the value.
       fields: memory
-        ? memoryFields(
-            memory,
-            t,
-            locale,
-            percent === null ? [] : ['ov.f.cgroupCurrent', 'ov.f.cgroupLimit'],
-            !!capabilities?.resources.runtime_memory.metrics?.includes('cgroup.limit_bytes')
-          )
-        : [],
-      bar:
-        percent === null
-          ? null
-          : {
-              label: t('ov.f.cgroupPercent'),
-              value: t('ui.fraction', {
-                part: formatBytes(memory?.cgroup?.current_bytes ?? null, locale),
-                whole: formatBytes(memory?.cgroup?.limit_bytes ?? null, locale)
-              }),
-              pct: percent,
-              tone: memoryTone(percent)
-            }
+        ? [
+            ...(percent === null
+              ? []
+              : [
+                  {
+                    label: t('ov.f.cgroupPercent'),
+                    value: t('ui.fraction', {
+                      part: formatBytes(memory.cgroup?.current_bytes ?? null, locale),
+                      whole: formatBytes(limit, locale)
+                    }),
+                    meter: {value: percent, tone: memoryTone(percent)}
+                  }
+                ]),
+            ...memoryFields(
+              memory,
+              t,
+              locale,
+              percent === null ? [] : ['ov.f.cgroupCurrent', 'ov.f.cgroupLimit'],
+              !!capabilities?.resources.runtime_memory.metrics?.includes('cgroup.limit_bytes')
+            )
+          ]
+        : []
     },
     datapath: {
       state: section(!!datapath, loading.capabilities || loading.datapath),

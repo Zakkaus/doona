@@ -20,9 +20,14 @@ export function cacheCard(list: DnsCacheList | undefined, locale: string, t: Tra
     usage:
       usage && capacity !== null && pct !== null
         ? {
-            pct,
-            // A cache in use never reads as 0%.
-            value: pct > 0 && pct < 0.5 ? '<' + t('ui.percent', {n: 1}) : t('ui.percent', {n: Math.round(pct)}),
+            // A zero capacity is nothing to measure against: the facts stay, without a meter.
+            meter: parseU64(capacity)
+              ? {
+                  value: pct,
+                  // A cache in use never reads as 0%.
+                  valueLabel: pct > 0 && pct < 0.5 ? '<' + t('ui.percent', {n: 1}) : t('ui.percent', {n: Math.round(pct)})
+                }
+              : null,
             facts: [
               {label: t('dns.chart.entries'), value: count(usage.entries)},
               {label: t('dns.chart.capacity'), value: count(capacity)}
