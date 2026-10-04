@@ -137,15 +137,27 @@ export function ProblemAlert({problem}: {problem: Problem}) {
 
 // Retry refetches the failed resource rather than reloading the page.
 // `message` words the error for a failed action instead of as a load failure; the backend's detail goes below it.
-export function ErrorMessage({error, onRetry, message}: {error: Error | null | undefined; onRetry?: () => void; message?: (error: string) => string}) {
+export function ErrorMessage({error, onRetry, message}: {error: Error | null | undefined; onRetry?: () => unknown; message?: (error: string) => string}) {
   const t = useT();
+  // A retry is a refetch: Retry stays pending until it settles, whatever it returns.
+  const [retrying, setRetrying] = useState(false);
   if (!error) return null;
+  const retry = async () => {
+    setRetrying(true);
+    try {
+      await onRetry?.();
+    } catch {
+      // The refetch reports its own failure through the error this alert shows.
+    } finally {
+      setRetrying(false);
+    }
+  };
   const {summary, detail} = errorLines(error, t);
   return (
     <InlineAlert
       action={
         onRetry && (
-          <Button small quiet onPress={onRetry}>
+          <Button small quiet isPending={retrying} onPress={() => void retry()}>
             {t('ui.retry')}
           </Button>
         )
