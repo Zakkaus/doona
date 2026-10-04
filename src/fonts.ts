@@ -12,8 +12,7 @@ const fontsInstalled = () =>
         .then(response => response.arrayBuffer().then(() => response.ok && !response.headers.get('content-type')?.includes('html')))
         .catch(() => false));
 // The faces every language uses, with their Latin slice loaded: with `optional`, text laid out before a face arrives
-// keeps the system font, and the Latin slice used to load from the first paint, while the faces were in the page's own
-// stylesheet.
+// keeps the system font.
 let common: Promise<unknown> | undefined;
 const commonFaces = () => (common ??= import('./fonts.css').then(() => globalThis.document?.fonts?.load("1em 'Noto Sans TC'", 'doona')));
 // The faces every language uses, then the ideograph faces of the named src/fonts-<name>.css; resolves once both are

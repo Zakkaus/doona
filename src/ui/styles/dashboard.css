@@ -39,8 +39,7 @@
   flex-direction: column;
   gap: var(--rp-space-4);
 }
-/* A section's profile is its whole layout: tracks per width, and spans from each card's own size and footprint. The
-   four main profiles reproduce origin/main's Activity grids; a card's footprint replaces main's position rules. */
+/* A section's profile is its whole layout: tracks per width, and spans from each card's own size and footprint. */
 .rp-dash-section {
   --rp-dash-gap: var(--rp-space-3);
   display: grid;
@@ -48,8 +47,8 @@
   gap: var(--rp-dash-gap);
   align-items: stretch;
 }
-/* Each cell is a tile container, as main's strip children are, so a narrow tile stacks its value and sparkline; its
-   row then stacks every tile in it (see packSection). */
+/* Each cell is a tile container, so a narrow tile stacks its value and sparkline; its row then stacks every tile in it
+   (see packSection). */
 .rp-dash-section > * {
   container: rp-tile / inline-size;
 }
@@ -120,8 +119,7 @@
     grid-column: span 2;
   }
   /* Traffic, details and extensions share twelve tracks, so a card lines up with the cards in the sections above and
-     below it: a third is four tracks, which is exactly main's three details columns. Traffic keeps main's wide and
-     narrow pair, eight and four tracks. */
+     below it: a third is four tracks, and the traffic pair is eight and four. */
   .rp-dash-section:is([data-profile='traffic'], [data-profile='details'], [data-profile='extensions']) {
     grid-template-columns: repeat(12, minmax(0, 1fr));
   }
@@ -438,10 +436,9 @@
   align-self: stretch;
 }
 
-/* Edit mode keeps every box: the tools sit in the card's header row at its inline end, over the header's own actions,
-   the indicator is a line in the gap, and the drop indicator element itself takes no grid cell. The tools show over
-   the card a pointer is on, the card focus is in (a tap focuses it) and the card whose popover is open, so at rest
-   every title reads in full. */
+/* Edit mode keeps every box: the indicator is a line in the gap, and the drop indicator element itself takes no grid
+   cell. The tools show over the card a pointer is on, the card focus is in (a tap focuses it) and the card whose
+   popover is open, so at rest every title reads in full. */
 .rp-dashboard-cell {
   position: relative;
 }

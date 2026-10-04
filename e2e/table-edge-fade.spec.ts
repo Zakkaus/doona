@@ -1,7 +1,6 @@
 import type {Locator} from '@playwright/test';
 import {expect, scrollTableToEnd, test, box} from './fixtures';
 
-// Removing the phone wrapper/gradient or its scroll observer must fail these rendered-edge assertions.
 const edges = (table: Locator) =>
   table.evaluate(el => {
     const frame = el.parentElement!;

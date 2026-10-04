@@ -70,7 +70,6 @@ test('a generated source names why it is read-only and offers no validation', as
   await expect(toolbar.getByRole('button', {name: 'About Generated', exact: true})).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toHaveCount(0);
   await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
-  // What the file is and what can be done with it is said under the text.
   await expect(page.locator('.rp-card').first()).toContainText('The engine generates this file and overwrites it when it regenerates');
   await expect(page.getByRole('region', {name: '/var/lib/honk/generated/backup.dae'}).getByRole('heading')).toHaveText('Editor');
   await page.goto('/#/config?tab=source&source=src-main');

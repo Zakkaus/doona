@@ -64,7 +64,7 @@ async function switchBack(page: Page, path: string, resize?: {width: number; hei
   expect(frames[0], 'first frame after the switch').toBe(frames.at(-1));
 }
 
-// The owner's screen, and a laptop's at 125%.
+// A full-HD desktop, and a laptop at 125% scale.
 for (const view of [
   {width: 1920, height: 1080, deviceScaleFactor: 1},
   {width: 1536, height: 864, deviceScaleFactor: 1.25}

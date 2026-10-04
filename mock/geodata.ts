@@ -25,7 +25,6 @@ const presetAt = (kind: GeoAssetKind, url: string) => geodataPresets.find(preset
 // The stored geodata settings and update status: the backend keeps them across reloads, unlike the other runtime settings.
 export function createGeodataState(capabilities: Capabilities, groupIds: () => Set<string>, faults = false) {
   const configurable = capabilities.resources.geodata.configurable_sources === true;
-  // The patch bounds the capabilities advertise.
   const maxUrls = capabilities.resources.geodata.max_urls ?? 0;
   const intervals = capabilities.resources.geodata.interval_hours ?? {min: 1, max: 168, default: 24};
   let stored: Record<GeoAssetKind, string[]> | null = null;

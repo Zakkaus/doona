@@ -54,7 +54,7 @@ export function templateGroups(rules: RuleTemplate, defined: string[]): string[]
   return wanted.length || defined.length ? wanted : [defaultGroup];
 }
 type Edit = {from: number; to: number; text: string};
-// Adds the group lines to the file's last group section, or a new section at the end.
+// Adds the group lines to the file's first group section, or a new section at the end.
 function addGroups(current: string, blocks: TextBlock[], missing: string[], edits: Edit[], appended: string[]) {
   const groupSection = blocks.find(block => block.name === 'group');
   if (!groupSection && missing.length) appended.push(['group {', ...missing, '}'].join('\n'));

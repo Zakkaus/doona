@@ -7,13 +7,11 @@ import {Button, ConfirmDialog, DialogForm, LabeledSelect, Segmented, StaticField
 import type {RuleConditionKind} from '../../dae/groups';
 import type {DictionaryModel} from './useRuleList';
 
-// The add, edit and remove dialogs of one rule list.
 export function RuleDialogs({view}: {view: DictionaryModel}) {
   const t = useT();
   const {form, setForm, draft, dialog} = view;
   const {target} = view.copy;
   const mustHelpId = useId();
-  // What the rule routes to, which both adding and editing a rule set.
   const targetFields = (
     <>
       <Toolbar className="end">

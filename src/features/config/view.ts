@@ -80,7 +80,6 @@ function sectionSummary(kind: SectionKind, text: string, block: TextBlock, token
     case 'dns': {
       const upstreams = block.children.filter(child => child.name === 'upstream');
       const routing = block.children.filter(child => child.name === 'routing').flatMap(child => child.children);
-      // Three counts, each with its own plural form.
       return [
         t('config.moduleDnsUpstreams', {n: upstreams.reduce((n, child) => n + blockFields(text, child, tokens).length, 0)}),
         t('config.moduleDnsRequests', {n: routing.filter(child => child.name === 'request').reduce((n, child) => n + ruleCount(text, child, tokens), 0)}),
@@ -136,7 +135,6 @@ export function sectionSummaries(sources: ConfigSource[], engine: Engine, t: Tra
         block: null,
         href,
         range: main ? fileName(main) : '',
-        // Only a writable main file is offered as the place to add the section.
         summary: main?.writable ? t('config.moduleAbsent', {file: fileName(main)}) : t('config.moduleAbsentReadOnly'),
         note: null
       }

@@ -5,7 +5,7 @@ const profiles = ['quick', 'metrics', 'traffic', 'details', 'extensions'] as con
 export type Profile = (typeof profiles)[number];
 type Section = {id: Profile; items: Widget[]};
 export type DashboardLayout = {version: 3; sections: Section[]};
-// origin/main's Activity page, card for card; the extensions section only adds cards after it.
+// The default Activity cards; the extensions section only adds cards after them.
 const mainSections: Record<Exclude<Profile, 'extensions'>, WidgetId[]> = {
   quick: ['mode', 'global', 'status'],
   metrics: ['download', 'upload', 'connections', 'latency', 'cpu'],

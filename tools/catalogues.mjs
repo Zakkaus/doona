@@ -16,7 +16,6 @@ const pluralCategories = locale => {
   const reported = new Intl.PluralRules(locale).resolvedOptions().pluralCategories;
   return cldrOrder.filter(category => reported.includes(category));
 };
-// The placeholders one string fills.
 const placeholders = text => [...new Set([...text.matchAll(/\{(\w+)\}/g)].map(match => match[1]))].sort().join(',');
 // The arguments a CodeMirror phrase (a cm.* key) fills, read as EditorState.phrase reads them: `$` is `$1`, `$$` is a
 // literal `$`, and `$0` fills nothing.

@@ -1,11 +1,6 @@
-// Measured on origin/main 7b1061a11ba0fd90a0c42cf7709e05c6fdffcc14 with the current demo; 1280 and 768 on origin/main
-// 3a5a8ccf. One deliberate change at
-// 1280px and wider: the traffic pair sits on the twelve tracks the details row uses, so its narrow card lines up with
-// the details column below it; main's 2fr/1fr split put it 4px off (history 728 to 732 wide, outbounds 4px narrower).
-// Another in zh-TW at 1440, 1024 and 768px and in en at 1024 and 768px: the control cards' row gives each card its one
-// line first and shares the rest by the footprints (see fitSpans), so those boxes are this branch's.
-// And one more in en at 1024 and 768px and zh-TW at 1440 to 768px: the mode and global lines are narrower at the default M
-// size, so those cards' share of the row moves (card 1 and 2, and card 0 in zh-TW at 1280px, which now fits one line).
+// Expected card bounds by language and viewport, measured against the demo. From 1280px the traffic pair sits on the
+// twelve tracks the details row uses, so its narrow card lines up with the details column below it. The control cards'
+// row gives each card its one line first and shares the rest by the footprints (see fitSpans).
 export const cardBounds: Record<string, readonly (readonly [x: number, y: number, width: number, height: number])[]> = {
   'en-1440': [
     [280, 156, 462.84375, 110],

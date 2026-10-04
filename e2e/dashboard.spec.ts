@@ -1317,7 +1317,7 @@ test('a chart set tall, by settings or by its edge, fills the card it grew', asy
   await check();
 });
 
-// The editor's controls take the library's sizes: the page row is L, a card's tools and every overlay are M.
+// The editor's controls take the library's default size M: the page row, a card's tools and every overlay.
 test('the editor page row, card tools, settings and gallery are all M, segmented controls included', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 1000});
   await page.goto('/#/activity');

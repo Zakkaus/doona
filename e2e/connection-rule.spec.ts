@@ -147,7 +147,6 @@ test('held rules wait for one apply from the top bar, which writes them in one r
   expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
   const apply = top(page).getByRole('button', {name: 'Apply 2 rules', exact: true});
   await expect(apply.locator('.rp-held-count')).toHaveText('2');
-  // Refresh stays a plain re-read beside it.
   await expect(top(page).getByRole('button', {name: 'Refresh', exact: true}).locator('.rp-held-count')).toHaveCount(0);
   // The rule list shows what is held, and a held rule can be discarded there.
   await page.goto('/#/rules?tab=list&view=advanced');

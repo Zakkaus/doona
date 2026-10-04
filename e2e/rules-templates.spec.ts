@@ -240,7 +240,6 @@ test('a template replaces the routing of the one file that holds it', async ({pa
   // The impact: nothing new, the file's first group kept, and only the changed stretch of the file.
   await expect(dialog.getByRole('region', {name: 'Groups to create'})).toContainText('No new groups.');
   await expect(dialog.getByRole('region', {name: 'Existing groups used'})).toContainText('proxy');
-  // The changes are folded away until asked for.
   const diff = dialog.getByRole('region', {name: 'Changes to config.dae'});
   await expect(diff).toBeHidden();
   // Content that fits needs no dividers.
@@ -262,7 +261,6 @@ test('a template replaces the routing of the one file that holds it', async ({pa
   // DNS routing is nested and stays.
   expect(saved).toContain('qname(geosite: cn) -> alidns');
   expect(saved).not.toContain('domain(geosite:telegram) -> proxy');
-  // The applied mode is now the detected one: selected, with nothing left to apply.
   await expect(modes(page).getByRole('radio', {name: 'Bypass mainland China'})).toBeChecked();
   await expect(applyButton(page)).toBeDisabled();
   // The rules are read again with the file, so the table holds them at once though no event stream announces them.
