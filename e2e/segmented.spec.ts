@@ -154,7 +154,7 @@ test.describe('1440px', () => {
 });
 
 for (const width of [1440, 768, 390]) {
-  test(`kit tabs and segmented controls share the control height at ${width}px`, async ({page}) => {
+  test(`kit tabs are the segmented control at L and segmented controls M at ${width}px`, async ({page}) => {
     await page.setViewportSize({width, height: 1000});
     await page.goto('/#/connections?tab=list');
     await expect(page.getByRole('tab').first()).toBeVisible();
@@ -162,10 +162,11 @@ for (const width of [1440, 768, 390]) {
       const tabs = el.querySelector('.rp-tabbar')!;
       return {
         tabs: tabs.getBoundingClientRect().height,
-        control: parseFloat(getComputedStyle(el).getPropertyValue('--rp-control'))
+        control: parseFloat(getComputedStyle(el).getPropertyValue('--rp-control')),
+        large: parseFloat(getComputedStyle(el).getPropertyValue('--rp-control-lg'))
       };
     });
-    expect(geometry.tabs).toBe(geometry.control);
+    expect(geometry.tabs).toBe(geometry.large);
     const tab = page.getByRole('tab').first();
     await tab.focus();
     await page.keyboard.press('ArrowRight');

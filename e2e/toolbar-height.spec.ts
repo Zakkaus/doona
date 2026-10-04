@@ -4,7 +4,8 @@ import type {Page} from '@playwright/test';
 for (const width of [1280, 390]) {
   test.describe(`uniform page controls ${width}`, () => {
     test.use({viewport: {width, height: 900}, storage: {'doona-lang': 'zh-TW'}});
-    test('every route and tab keeps M page rows and uniform geometry', async ({page}) => {
+    // Page rows are M; a page's tab row is the segmented control at L (40px).
+    test('every route and tab keeps M page rows, L tab rows and uniform geometry', async ({page}) => {
       test.setTimeout(120000);
       for (const route of routes) {
         await page.goto(`/#/${route}`);
@@ -21,7 +22,7 @@ for (const width of [1280, 390]) {
               const failures: string[] = [];
               for (const row of await toolbarGeometry(page)) {
                 const {controls} = row;
-                if (row.pageRow && controls.some(control => Math.abs(control.height - row.control) > 0.5))
+                if (row.pageRow && controls.some(control => Math.abs(control.height - control.expected) > 0.5))
                   failures.push(`${route}/${index}: ${row.row}: not M ${JSON.stringify(controls)}`);
                 if (row.pageRow && Math.max(...controls.map(control => control.height)) - Math.min(...controls.map(control => control.height)) > 0.5)
                   failures.push(`${route}/${index}: unequal heights`);
@@ -124,12 +125,15 @@ async function lineCount(page: Page, scope: string, items: string) {
   );
 }
 
-// Each visible control row's lines of controls, and whether the row is a page row (toolbar, tab row, page actions).
+// Each visible control row's lines of controls, and whether the row is a page row (toolbar, tab row, page actions). A
+// control's expected page-row height is M, or L for a tab.
 async function toolbarGeometry(page: Page) {
   return page.locator('body').evaluate(root => {
     const rows = '.rp-toolbar, .rp-tabhead, .rp-tabbar, .rp-page-actions, .rp-page-links';
     const localRows = '.rp-row, .rp-cluster, .rp-field-row';
-    const control = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rp-control'));
+    const sizes = getComputedStyle(document.documentElement);
+    const mHeight = parseFloat(sizes.getPropertyValue('--rp-control'));
+    const lHeight = parseFloat(sizes.getPropertyValue('--rp-control-lg'));
     const controls = '.rp-btn, .rp-input, .rp-selectbtn, .rp-select, .rp-seg, .rp-switch, .rp-tab, .rp-tabbar';
     return [...root.querySelectorAll<HTMLElement>(`${rows}, ${localRows}`)]
       .filter(row => row.checkVisibility({visibilityProperty: true}))
@@ -146,6 +150,7 @@ async function toolbarGeometry(page: Page) {
           .map(control => {
             const box = control.getBoundingClientRect();
             return {
+              expected: control.matches('.rp-tab, .rp-tabbar') ? lHeight : mHeight,
               name: control.getAttribute('aria-label') ?? control.textContent?.trim() ?? control.className,
               height: box.height,
               top: box.top,
@@ -168,7 +173,7 @@ async function toolbarGeometry(page: Page) {
           row.matches('[data-page-toolbar], [data-page-tabrow], .rp-page-actions, .rp-page-links') ||
           !!row.closest('[data-page-toolbar], .rp-page-actions, .rp-page-links') ||
           (!localSurface && !!row.closest(rows));
-        return lines.map(line => ({row: row.className, pageRow, control, controls: line}));
+        return lines.map(line => ({row: row.className, pageRow, controls: line}));
       });
   });
 }

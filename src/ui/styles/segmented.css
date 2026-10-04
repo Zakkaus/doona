@@ -1,15 +1,19 @@
-/* Segmented control: the selection slides between items (200ms, ease-out). */
-.rp-seg {
+/* Segmented control: the selection slides between items (200ms, ease-out). A page's tab bar (tabs-panels.css) is drawn
+   as the same control at L, so the track, the slider and the item rules here name both. */
+.rp-seg,
+.rp-tabbar {
   display: inline-flex;
   /* Counts in segment labels tick without the neighbouring segments shifting. */
   font-variant-numeric: tabular-nums;
   gap: var(--rp-space-1);
   max-width: 100%;
   background: var(--rp-overlay);
-  /* S2's default: the items sit flush in the track, which takes their height and radius. */
-  min-block-size: var(--rp-control);
   border-radius: var(--rp-r-md);
   position: relative;
+}
+/* S2's default: the items sit flush in the track, which takes their height and radius. */
+.rp-seg {
+  min-block-size: var(--rp-control);
 }
 /* Too narrow for its items, the track stays as a hidden placeholder and a picker sits over it at the same height. The
    track hugs its items in a column or a grid too, where a flex or grid item would otherwise stretch. */
@@ -72,10 +76,14 @@
 .rp-slider[data-still] {
   transition: none;
 }
+/* M's inset; the button keeps M's height from the kit Button. A tab's L size is in tabs-panels.css. */
 .rp-seg .rp-btn {
-  flex: none;
   padding: 0 var(--rp-inset-compact);
   min-height: 0;
+}
+.rp-seg .rp-btn,
+.rp-tab {
+  flex: none;
   background: transparent;
   color: var(--rp-text);
   /* Regular labels keep small ideograph counters open at 1x rasterisation. */
@@ -84,7 +92,7 @@
   border: 2px solid transparent;
   position: relative;
   z-index: 1;
-  /* Like a tab: the label recolours as the slider arrives. */
+  /* The label recolours as the slider arrives. */
   transition:
     color var(--rp-duration-tab) var(--rp-ease) var(--rp-delay-tab),
     background-color var(--rp-duration) var(--rp-ease),
