@@ -1,5 +1,5 @@
 import {useChartDescription} from './description';
-import type {ReactNode} from 'react';
+import {useLayoutEffect, useRef, useState, type ReactNode} from 'react';
 import {heatTone} from './layout';
 import {ChartTip, useChartTip} from './tip';
 
@@ -10,6 +10,22 @@ type HeatRow = {id: string; label: ReactNode; color: string; counts: number[]; t
 export function Heatmap({label, rows, columns}: {label: string; rows: HeatRow[]; columns: string[]}) {
   const describedBy = useChartDescription();
   const {ref: tipRef, tip: tipState, show: showTip, hide: hideTip} = useChartTip();
+  // Three marks keep 16px between them; where a longer time, such as one with AM or PM, leaves less, the middle mark
+  // gives way, and every cell's title still tells its time.
+  const ends = useRef<HTMLDivElement>(null);
+  const [crowded, setCrowded] = useState(false);
+  useLayoutEffect(() => {
+    const element = ends.current;
+    if (!element) return;
+    const measure = () => {
+      const [first, middle, last] = [...element.children].map(mark => mark.getBoundingClientRect());
+      setCrowded(last !== undefined && (middle!.left - first!.right < 16 || last.left - middle!.right < 16));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [columns]);
   return (
     <div
       className="rp-heatmap rp-chart-hover"
@@ -43,9 +59,9 @@ export function Heatmap({label, rows, columns}: {label: string; rows: HeatRow[];
       {columns.length > 0 && (
         <div className="row times" aria-hidden="true">
           <div className="head" />
-          <div className="ends">
+          <div className="ends" ref={ends}>
             <span>{columns[0]}</span>
-            {columns.length > 2 && <span>{columns[Math.floor(columns.length / 2)]}</span>}
+            {columns.length > 2 && <span className={crowded ? 'gone' : undefined}>{columns[Math.floor(columns.length / 2)]}</span>}
             {columns.length > 1 && <span>{columns[columns.length - 1]}</span>}
           </div>
         </div>

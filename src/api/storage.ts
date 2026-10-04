@@ -15,6 +15,7 @@ export const storageKeys = {
   toastPlacement: 'doona-toast-placement',
   startPage: 'doona-start-page',
   dateFormat: 'doona-date-format',
+  timeFormat: 'doona-time-format',
   latencyProbe: 'doona-latency-probe',
   profiles: 'doona-profiles',
   profile: 'doona-profile',

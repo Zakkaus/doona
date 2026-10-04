@@ -55,12 +55,8 @@ let dateFormat: DateFormat | undefined;
 export function setDateFormat(value: DateFormat) {
   dateFormat = value;
 }
-// The locale whose date order the helpers below write, or null for Year-Month-Day; `locale`, the interface's, when
-// the browser offers no valid tag.
-function dateLocale(locale: string): string | null {
-  dateFormat ??= readDateFormat();
-  if (dateFormat === 'ymd') return null;
-  if (dateFormat !== 'automatic') return orderLocales[dateFormat];
+// The browser's first language tag, or `locale`, the interface's, when the browser offers no valid one.
+function regionLocale(locale: string): string {
   const region = typeof navigator === 'undefined' ? undefined : (navigator.languages?.[0] ?? navigator.language);
   try {
     return (region && Intl.getCanonicalLocales(region)[0]) || locale;
@@ -68,13 +64,50 @@ function dateLocale(locale: string): string | null {
     return locale;
   }
 }
+// The locale whose date order the helpers below write, or null for Year-Month-Day.
+function dateLocale(locale: string): string | null {
+  dateFormat ??= readDateFormat();
+  if (dateFormat === 'ymd') return null;
+  return dateFormat === 'automatic' ? regionLocale(locale) : orderLocales[dateFormat];
+}
+// The reader's clock. 24-hour is the default; Automatic follows the clock of the browser's region, as Intl reports it
+// for that region's locale; 12-hour writes the locale's own day-period words.
+export const TIME_FORMATS = ['24h', '12h', 'automatic'] as const;
+export type TimeFormat = (typeof TIME_FORMATS)[number];
+export function readTimeFormat(storage?: Pick<Storage, 'getItem'>): TimeFormat {
+  try {
+    const value = (storage ?? localStorage).getItem(storageKeys.timeFormat);
+    return TIME_FORMATS.find(format => format === value) ?? '24h';
+  } catch {
+    return '24h';
+  }
+}
+let timeFormat: TimeFormat | undefined;
+// The shell calls this when the reader picks a clock; until then the stored one applies.
+export function setTimeFormat(value: TimeFormat) {
+  timeFormat = value;
+}
+type HourCycle = 'h23' | 'h12';
+const regionCycles = new Map<string, HourCycle>();
+function hourCycle(locale: string): HourCycle {
+  timeFormat ??= readTimeFormat();
+  if (timeFormat !== 'automatic') return timeFormat === '12h' ? 'h12' : 'h23';
+  const region = regionLocale(locale);
+  let cycle = regionCycles.get(region);
+  if (!cycle) {
+    const resolved = new Intl.DateTimeFormat(region, {hour: 'numeric'}).resolvedOptions();
+    const written = resolved.hourCycle ?? (resolved.hour12 ? 'h12' : 'h23');
+    regionCycles.set(region, (cycle = written === 'h12' || written === 'h11' ? 'h12' : 'h23'));
+  }
+  return cycle;
+}
 // The Gregorian calendar and Latin digits whatever the region, as the interface languages write them.
 const calendar = {calendar: 'gregory', numberingSystem: 'latn'} as const;
 type DateKind = 'time' | 'minute' | 'monthDay';
 type Formatter = Pick<Intl.DateTimeFormat, 'format'>;
 // No locale is promised to write the ISO order (en-CA does not in every engine), so the digits come from the parts of
-// one formatter, joined with '-'; the time of day stays Intl's, on a 24-hour clock, after a space.
-function isoFormat(kind: DateKind): Formatter {
+// one formatter, joined with '-'; the time of day stays Intl's, in the interface's language, after a space.
+function isoFormat(kind: DateKind, locale: string, cycle: HourCycle): Formatter {
   const dates = new Intl.DateTimeFormat('en-US', {
     ...(kind === 'monthDay' ? {} : {year: 'numeric'}),
     month: '2-digit',
@@ -82,7 +115,7 @@ function isoFormat(kind: DateKind): Formatter {
     ...calendar
   });
   const times =
-    kind === 'monthDay' ? undefined : new Intl.DateTimeFormat('en-US', {timeStyle: kind === 'time' ? 'medium' : 'short', hourCycle: 'h23', ...calendar});
+    kind === 'monthDay' ? undefined : new Intl.DateTimeFormat(locale, {timeStyle: kind === 'time' ? 'medium' : 'short', hourCycle: cycle, ...calendar});
   return {
     format(value) {
       const parts = new Map(dates.formatToParts(value).map((part): [string, string] => [part.type, part.value]));
@@ -97,16 +130,38 @@ function isoFormat(kind: DateKind): Formatter {
 const dateTimes = new Map<string, Formatter>();
 function dateTimeFormat(locale: string, kind: DateKind): Formatter {
   const resolved = dateLocale(locale);
-  const key = kind + '/' + resolved;
+  const cycle = hourCycle(locale);
+  // Year-Month-Day has no locale of its own, so its clock takes the interface's.
+  const key = [kind, resolved ?? locale, resolved === null, cycle].join('/');
   let formatter = dateTimes.get(key);
   if (!formatter) {
     const style: Intl.DateTimeFormatOptions =
-      kind === 'monthDay' ? {month: 'numeric', day: 'numeric'} : {dateStyle: 'short', timeStyle: kind === 'time' ? 'medium' : 'short', hourCycle: 'h23'};
-    dateTimes.set(key, (formatter = resolved === null ? isoFormat(kind) : new Intl.DateTimeFormat(resolved, {...style, ...calendar})));
+      kind === 'monthDay' ? {month: 'numeric', day: 'numeric'} : {dateStyle: 'short', timeStyle: kind === 'time' ? 'medium' : 'short', hourCycle: cycle};
+    dateTimes.set(key, (formatter = resolved === null ? isoFormat(kind, locale, cycle) : new Intl.DateTimeFormat(resolved, {...style, ...calendar})));
   }
   return formatter;
 }
-// A date and time in the reader's date order, on a 24-hour clock in every language.
+const clocks = new Map<string, Formatter>();
+// The time of day alone to the minute, or the second, in the interface's language and the reader's clock; the
+// charts' axes and the log heatmap write it.
+export function localClockFormat(locale: string, withSeconds = false): Formatter {
+  const cycle = hourCycle(locale);
+  const key = [locale, withSeconds, cycle].join('/');
+  let formatter = clocks.get(key);
+  if (!formatter) {
+    clocks.set(
+      key,
+      (formatter = new Intl.DateTimeFormat(locale, {
+        hour: cycle === 'h12' ? 'numeric' : '2-digit',
+        minute: '2-digit',
+        ...(withSeconds ? {second: '2-digit'} : {}),
+        hourCycle: cycle
+      }))
+    );
+  }
+  return formatter;
+}
+// A date and time in the reader's date order and clock.
 export function localTimeFormat(locale: string) {
   return dateTimeFormat(locale, 'time');
 }
@@ -120,7 +175,7 @@ export function localTime(iso: string | null, locale: string): string {
   if (!Number.isFinite(t)) return iso;
   return localTimeFormat(locale).format(t);
 }
-// A date and time to the minute on a 24-hour clock, in the reader's date order, where the seconds would not fit.
+// A date and time to the minute in the reader's date order and clock, where the seconds would not fit.
 export function localMinute(iso: string | null, locale: string): string {
   if (!iso) return '—';
   const t = Date.parse(iso);

@@ -67,7 +67,7 @@ export function ProviderCards({model: m}: {model: ProviderTableView}) {
             [t('nodes.count'), row.count],
             [t('nodes.updated'), <TimeCell key="updated" at={row.updatedAt} />],
             [t('nodes.interval'), row.interval],
-            {label: t('nodes.expires'), value: row.expiresShort, full: row.expiresShort === '—' ? undefined : row.expires},
+            {label: t('nodes.expires'), value: row.expiresShort, fit: true, full: row.expiresShort === '—' ? undefined : row.expires},
             {label: t('nodes.usage'), value: row.usage, wide: true, meter: row.quota ? {value: row.quota.pct, tone: row.quota.tone} : undefined}
           ]}
         />

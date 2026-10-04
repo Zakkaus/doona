@@ -354,13 +354,17 @@
 .rp-heatmap .cell.t5 {
   background: var(--tone);
 }
-/* Three HH:MM marks at 12px leave at least 40px between them on a 320px screen, in every language. */
+/* Three HH:MM marks at 12px leave at least 40px between them on a 320px screen, in every language; the middle one is
+   hidden, in place, where a longer time leaves less than 16px. */
 .rp-heatmap .times .ends {
   display: flex;
   justify-content: space-between;
   font-size: var(--rp-text-xs);
   color: var(--rp-subtle);
   white-space: nowrap;
+}
+.rp-heatmap .times .gone {
+  visibility: hidden;
 }
 .rp-heatmap .head .rp-btn {
   width: 100%;

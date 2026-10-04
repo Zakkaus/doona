@@ -1,7 +1,7 @@
 import {freshBackend} from './getting-started';
 import type {Locator} from '@playwright/test';
 import {editorText, box} from './fixtures';
-import {expect, expectFittedGroupTags, mockBackend, query, settle, test, moreAction, moreItem} from './fixtures';
+import {expect, expectFittedGroupTags, fulfillStream, mockBackend, query, settle, test, moreAction, moreItem} from './fixtures';
 import {createMockApi} from '../mock';
 import {ApiError} from '../src/api/error';
 import {sha256} from '../src/api/hash';
@@ -513,29 +513,60 @@ test('node sources list their nodes and a subscription can be refreshed', async 
   await expect(page.locator('.rp-toast.positive')).toContainText('harbor updated, 120 nodes');
 });
 
-test('source card facts keep one whole line in English and Traditional Chinese', async ({page}) => {
+test('source card facts keep one whole line in English and Traditional Chinese, in every clock and date order', async ({page}) => {
+  const backend = await mockBackend(page);
+  // 12:59:59 local, the widest clock in 12-hour time, on both cards whatever zone the browser runs in.
+  const expires = new Date(2026, 1, 13, 12, 59, 59).toISOString();
+  backend.handlers['GET providers'] = async () => {
+    const list = await backend.api.providers();
+    return {...list, providers: list.providers.map(provider => ({...provider, expires_at: expires}))};
+  };
   await page.goto('/#/nodes?tab=list');
-  for (const lang of ['en', 'zh-TW']) {
-    await page.evaluate(value => localStorage.setItem('doona-lang', value), lang);
-    for (const width of [1280, 1024]) {
-      await page.setViewportSize({width, height: 900});
-      await page.reload();
-      await expect(sourceCards(page)).toHaveCount(2);
-      await page.evaluate(() => document.fonts.ready.then(() => undefined));
-      const lines = await sourceGrid(page)
-        .locator('.rp-kv > * > :is(.k, .v)')
-        .evaluateAll(els =>
-          els.map(el => [
-            el.textContent,
-            Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)),
-            [el, ...el.querySelectorAll('*')].some(e => e.scrollWidth > e.clientWidth)
-          ])
-        );
-      // One line each, and none cut short with an ellipsis.
-      expect(
-        lines.filter(([, n, cut]) => n !== 1 || cut),
-        `${lang} ${width}`
-      ).toEqual([]);
+  // [time format, date format]: Year-Month-Day with 12 hours writes the longest time.
+  for (const [time, date] of [
+    ['24h', 'automatic'],
+    ['12h', 'automatic'],
+    ['12h', 'dmy'],
+    ['12h', 'ymd']
+  ]) {
+    await page.evaluate(
+      ([clock, order]) => {
+        localStorage.setItem('doona-time-format', clock);
+        localStorage.setItem('doona-date-format', order);
+      },
+      [time, date]
+    );
+    for (const lang of ['en', 'zh-TW']) {
+      await page.evaluate(value => localStorage.setItem('doona-lang', value), lang);
+      for (const width of [1280, 1024]) {
+        await page.setViewportSize({width, height: 900});
+        await page.reload();
+        await expect(sourceCards(page)).toHaveCount(2);
+        await page.evaluate(() => document.fonts.ready.then(() => undefined));
+        const lines = await sourceGrid(page)
+          .locator('.rp-kv > * > :is(.k, .v)')
+          .evaluateAll(els =>
+            els.map(el => [
+              el.textContent,
+              Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)),
+              [el, ...el.querySelectorAll('*')].some(e => e.scrollWidth > e.clientWidth)
+            ])
+          );
+        // One line each, and none cut short with an ellipsis.
+        expect(
+          lines.filter(([, n, cut]) => n !== 1 || cut),
+          `${time} ${date} ${lang} ${width}`
+        ).toEqual([]);
+        // The card writes the expiry to the minute, and its tooltip keeps the full time.
+        const expiry = sourceCards(page)
+          .first()
+          .locator('.rp-kv > div')
+          .filter({hasText: /Expires|到期/})
+          .locator('.v');
+        await expect(expiry).toContainText(/12:59/);
+        if (time === '12h') await expect(expiry).toContainText(/PM|pm|[上中下]午/);
+        else await expect(expiry).not.toContainText(/PM|pm|[上中下]午/);
+      }
     }
   }
 });
@@ -806,6 +837,55 @@ test('the date format setting reorders a source expiry and the overview times at
   await pick('Automatic (browser region)');
   await page.goto('/#/overview');
   await expect(started).toHaveText(/^\d{1,2}\/\d{1,2}\/\d{2}, \d{2}:\d{2}:\d{2}$/);
+});
+
+test('the time format setting switches a source expiry and the log clock between 24 and 12 hours at once, and is kept', async ({page}) => {
+  const backend = await mockBackend(page);
+  // 15:04 local, whatever zone the browser runs in.
+  const expires = new Date(2026, 1, 13, 15, 4, 5).toISOString();
+  backend.handlers['GET providers'] = async () => {
+    const list = await backend.api.providers();
+    return {...list, providers: list.providers.map(provider => (provider.id === 'harbor' ? {...provider, expires_at: expires} : provider))};
+  };
+  const runtime = await backend.api.runtime();
+  const data = {instance_id: runtime.instance_id, observed_at: runtime.observed_at};
+  await page.route('**/api/v1/logs?*', route =>
+    fulfillStream(route, [
+      {id: 'ready:0', event: 'stream.ready', data},
+      {id: 'log:1', event: 'log', data: {ts: runtime.observed_at, level: 'info', target: 'honk::dns', message: 'DNS answered', fields: null}}
+    ])
+  );
+  const expiry = () => sourceCards(page).first().locator('.rp-kv > div').filter({hasText: 'Expires'}).locator('.v');
+  const marks = page.locator('.rp-heatmap .times .ends span');
+  const pick = async (name: string) => {
+    await page.goto('/#/settings');
+    await page.getByRole('button', {name: /Time format$/}).click();
+    await page.getByRole('option', {name, exact: true}).click();
+    await expect(page.getByRole('button', {name: /Time format$/})).toContainText(name);
+  };
+  // 24-hour is the default.
+  await page.goto('/#/nodes?tab=list');
+  await expect(expiry()).toHaveText(/^2\/13\/26, 15:04$/);
+  await page.goto('/#/logs');
+  await expect(marks.first()).toHaveText(/^\d{2}:\d{2}$/);
+  await pick('12-hour');
+  expect(await page.evaluate(() => localStorage.getItem('doona-time-format'))).toBe('12h');
+  // A hash change keeps the page loaded, so the new clock applies without a reload.
+  await page.goto('/#/nodes?tab=list');
+  await expect(expiry()).toHaveText(/^2\/13\/26, 3:04\sPM$/);
+  await page.goto('/#/logs');
+  await expect(marks.first()).toHaveText(/^\d{1,2}:\d{2}\s[AP]M$/);
+  await page.reload();
+  await expect(marks.first()).toHaveText(/^\d{1,2}:\d{2}\s[AP]M$/);
+  // Automatic follows the browser, which Playwright's Desktop Chrome sets to en-US: a 12-hour clock.
+  await pick('Automatic (browser region)');
+  await page.goto('/#/nodes?tab=list');
+  await expect(expiry()).toHaveText(/^2\/13\/26, 3:04\sPM$/);
+  await pick('24-hour');
+  await page.goto('/#/nodes?tab=list');
+  await expect(expiry()).toHaveText(/^2\/13\/26, 15:04$/);
+  await page.goto('/#/logs');
+  await expect(marks.first()).toHaveText(/^\d{2}:\d{2}$/);
 });
 
 test('short tables fit their rows, the protocol column shows whole names, and a long address stays inside its table', async ({page}) => {

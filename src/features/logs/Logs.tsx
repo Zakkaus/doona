@@ -17,7 +17,7 @@ export function Logs({go}: PageProps) {
       {
         id: 'ts',
         label: t('ui.time'),
-        minWidth: 200,
+        minWidth: 212,
         grow: 0,
         drop: 2,
         render: record =>

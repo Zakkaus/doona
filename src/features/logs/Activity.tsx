@@ -1,5 +1,6 @@
 import {useCallback, useMemo} from 'react';
 import {LOCALE, useLang, useT} from '../../i18n';
+import {localClockFormat} from '../../i18n/format';
 import type {LogLevel, LogRecord} from '../../api/model';
 import {usePalette, FactStrip, Heatmap, type ChartFact} from '../../ui/charts';
 import {Card, Button} from '../../ui/ui';
@@ -26,7 +27,7 @@ export function LogActivity({
   const locale = LOCALE[useLang()];
   const p = usePalette();
   const map = useMemo(() => levelHeatmap(records, offered, minimum as LogLevel | ''), [records, offered, minimum]);
-  const clock = useMemo(() => new Intl.DateTimeFormat(locale, {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'}), [locale]);
+  const clock = useMemo(() => localClockFormat(locale), [locale]);
   const span = useCallback((start: number) => `${clock.format(start)}–${clock.format(start + map.width)}`, [clock, map.width]);
   // A row header per level: it changes with the minimum, not with every published batch.
   const heads = useMemo(() => {
