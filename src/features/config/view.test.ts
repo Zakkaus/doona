@@ -354,11 +354,11 @@ it('says why Validate is disabled: the main file is not whole, or the file on sh
 it('shows one row, the config version, and never the generation id', () => {
   const rows = configMetadata('rev-7', t);
   expect(rows).toHaveLength(1);
-  expect(rows[0]).toMatchObject({label: t('config.revision'), value: 'rev-7'});
-  expect(t('config.revision')).toBe('Config version');
+  expect(rows[0]).toMatchObject({label: t('ov.config'), value: 'rev-7'});
+  expect(t('ov.config')).toBe('Config version');
   for (const locale of ['zh-TW', 'zh-CN'] as const) {
-    expect(translate(locale, 'config.revision')).toBe(translate(locale, 'ov.config'));
-    expect(translate(locale, 'config.revision')).not.toBe(translate(locale, 'ui.generation'));
+    expect(translate(locale, 'ov.config')).toBe(translate(locale, 'ov.config'));
+    expect(translate(locale, 'ov.config')).not.toBe(translate(locale, 'ui.generation'));
   }
   expect(translate('en', 'config.acceptedDiagnostics', {generation: 'gen-3'})).toContain('generation gen-3');
 });

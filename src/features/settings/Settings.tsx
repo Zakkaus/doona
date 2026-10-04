@@ -143,7 +143,7 @@ export function Settings({query}: PageProps) {
           ) : (
             <div className="rp-contents" data-setting="token">
               <TextField
-                label={t('settings.token')}
+                label={t('login.token')}
                 autoComplete="off"
                 spellCheck={false}
                 reveal={{shown: tokenType === 'text', label: tokenToggleText, onToggle: toggleToken}}

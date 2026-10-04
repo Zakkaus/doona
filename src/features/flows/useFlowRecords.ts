@@ -72,7 +72,7 @@ export function useFlowRecords({go, query}: PageProps) {
     select: (value: string | null) => go('flows', within(query, {id: value}), {replace: id !== null}),
     pinLabel: pinned
       ? t('flow.mapFilter', {
-          label: pinnedLabel(pinned, rules.data?.rules ?? [], names, name => (name === null ? t('flow.mapUnknown') : outboundLabel(name, t)))
+          label: pinnedLabel(pinned, rules.data?.rules ?? [], names, name => (name === null ? t('ui.unknown') : outboundLabel(name, t)))
         })
       : null,
     clearPin: () => go('flows', within(query, {path: null})),

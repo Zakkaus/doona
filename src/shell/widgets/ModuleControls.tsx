@@ -181,8 +181,8 @@ export function ModuleInspector({
             value={active.by ?? 'dev'}
             onChange={by => update({...active, by: by === 'domain' ? 'domain' : 'dev'})}
             items={[
-              ['dev', t('widgets.devices')],
-              ['domain', t('widgets.domains')]
+              ['dev', t('act.devices')],
+              ['domain', t('act.domains')]
             ]}
           />
         </EditorOption>

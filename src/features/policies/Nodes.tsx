@@ -22,13 +22,13 @@ export function NodeGrid({
 }) {
   const t = useT();
   const m = useNodeGrid(nodes);
-  if (!nodes.length) return <Empty>{t('policy.none')}</Empty>;
+  if (!nodes.length) return <Empty>{t('nodes.noMatch')}</Empty>;
   const grid = (
     <TileGrid
       nodes={m.big ? m.shown : nodes}
       virtual={m.big}
       label={t('policy.filter')}
-      empty={t('policy.none')}
+      empty={t('nodes.noMatch')}
       selected={selected}
       current={cur}
       marks={marks}

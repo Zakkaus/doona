@@ -42,6 +42,6 @@ export const restartRequired = (diagnostics: ConfigDiagnostic[]) => restartSetti
 export const sourceKinds: Record<ConfigSource['kind'], Key> = {
   main: 'config.kind.main',
   include: 'config.kind.include',
-  subscription: 'config.kind.subscription',
+  subscription: 'nodes.kind.subscription',
   generated: 'config.kind.generated'
 };

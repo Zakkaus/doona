@@ -25,7 +25,7 @@ export const palettes = [
     desc: 'palette.qiangguoModes',
     words: {
       'lifecycle.running': 'palette.qiangguoGood',
-      'act.unavailable': 'palette.qiangguoBad',
+      'ui.unavailable': 'palette.qiangguoBad',
       'lifecycle.degraded': 'palette.qiangguoBad',
       'theme.light': 'palette.qiangguoLight',
       'theme.dark': 'palette.qiangguoDark'

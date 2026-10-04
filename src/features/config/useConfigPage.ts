@@ -337,7 +337,7 @@ export function useSourceCard({
       level: filtered.level,
       setLevel: (value: string) => setLevel(value as DiagnosticLevel),
       levels: [
-        ['all', t('config.levelAll', {n: summary.errors + summary.warnings + summary.infos})],
+        ['all', t('ui.allCount', {n: summary.errors + summary.warnings + summary.infos})],
         ['error', t('config.levelErrors', {n: summary.errors})],
         ['warning', t('config.levelWarnings', {n: summary.warnings})],
         ['info', t('config.levelInfo', {n: summary.infos})]

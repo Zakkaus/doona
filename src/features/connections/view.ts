@@ -11,7 +11,7 @@ import {ruleHref, traceQuery} from '../shared/link';
 import {within} from '../../shell/route';
 import type {connectionsView} from './tableRows';
 
-const observers: Record<Connection['observed_by'], Key> = {userspace: 'conn.observed.userspace', ebpf: 'conn.observed.ebpf', mixed: 'conn.observed.mixed'};
+const observers: Record<Connection['observed_by'], Key> = {userspace: 'ov.v.userspace', ebpf: 'ov.v.ebpf', mixed: 'conn.observed.mixed'};
 // Where the chain came from: captured when the connection was routed, rebuilt from retained records, or not known.
 const chainSources: Record<Connection['chain_source'], Key> = {
   evaluation: 'conn.chainSource.evaluation',

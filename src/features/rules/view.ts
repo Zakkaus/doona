@@ -61,10 +61,10 @@ const kindHints: Record<RuleConditionKind, string> = {
   answerGeoip: 'cn, private'
 };
 const sources: Record<FlowSummary['rule_source'], Key> = {
-  kernel: 'rule.sourceKernel',
-  userspace: 'rule.sourceUserspace',
+  kernel: 'flow.v.kernel',
+  userspace: 'ov.v.userspace',
   recomputed: 'rule.sourceRecomputed',
-  unknown: 'rule.sourceUnknown'
+  unknown: 'ui.unknown'
 };
 const sourceHelp: Record<FlowSummary['rule_source'], Key> = {
   kernel: 'rule.sourceHelp.kernel',
@@ -444,7 +444,7 @@ export function evaluationView(
       ...(evaluation.missing_inputs.length ? [[t('rule.missing'), formatList(lang, evaluation.missing_inputs)] as [string, string]] : []),
       ...(selected
         ? [
-            [t('rule.node'), [...selected.groups.map(group => group.name), ...(node ? [node.name] : [])].join(' → ')] as [string, string],
+            [t('nodes.node'), [...selected.groups.map(group => group.name), ...(node ? [node.name] : [])].join(' → ')] as [string, string],
             [t('rule.reach'), reach] as [string, string]
           ]
         : [])

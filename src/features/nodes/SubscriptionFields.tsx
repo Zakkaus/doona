@@ -47,7 +47,7 @@ export function SubscriptionFields({
     <>
       <TextField
         isDisabled={isDisabled}
-        label={t('nodes.name')}
+        label={t('ui.name')}
         value={value.name}
         placeholder="sub-a"
         spellCheck={false}

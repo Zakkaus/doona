@@ -78,7 +78,7 @@ export function DashboardEditor({draft, setDraft, render}: Draft & {render: (ite
     // Each removal is its own toast, so removing two cards of one module keeps both Undo buttons.
     const key = toast('neutral', t('widgets.removed', {name: t(registry[item.id].label)}), {
       id: `removed:${instanceId(item)}`,
-      action: {label: t('widgets.undo'), onAction: () => setDraft(current => current && restore(current)), closeOnAction: true}
+      action: {label: t('ui.undo'), onAction: () => setDraft(current => current && restore(current)), closeOnAction: true}
     });
     undos.current.push({key, restorable});
   };

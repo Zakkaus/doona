@@ -79,10 +79,10 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
             }
           ]
         : []),
-      {id: 'protocol', label: t('nodes.protocol'), minWidth: 144, grow: 0, drop: 2, sortable: true, render: row => row.protocol},
+      {id: 'protocol', label: t('ui.protocol'), minWidth: 144, grow: 0, drop: 2, sortable: true, render: row => row.protocol},
       {
         id: 'latency',
-        label: t('nodes.latency'),
+        label: t('act.latency'),
         // Fits the longest value, English "Unavailable" after its dot, with the cell's padding.
         minWidth: 128,
         grow: 0,
@@ -153,11 +153,11 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
       <Toolbar page>
         <TextField label={t('nodes.search')} search value={m.search} width={240} onChange={m.setSearch} />
         {m.groupSections ? (
-          <SearchSelect side label={t('nodes.group')} searchLabel={t('ui.filterGroups')} value={m.group} onChange={m.setGroup} sections={m.groupSections} />
+          <SearchSelect side label={t('ui.group')} searchLabel={t('ui.filterGroups')} value={m.group} onChange={m.setGroup} sections={m.groupSections} />
         ) : (
-          <LabeledSelect label={t('nodes.group')} side value={m.group} onChange={m.setGroup} items={m.groups} />
+          <LabeledSelect label={t('ui.group')} side value={m.group} onChange={m.setGroup} items={m.groups} />
         )}
-        <LabeledSelect label={t('nodes.protocol')} side value={m.protocol} onChange={m.setProtocol} items={m.protocols} />
+        <LabeledSelect label={t('ui.protocol')} side value={m.protocol} onChange={m.setProtocol} items={m.protocols} />
         <span className="rp-label">{m.shown}</span>
         {m.clearNodes && <Button onPress={m.clearNodes}>{t('ui.clearFilters')}</Button>}
         <span className="rp-grow" />
@@ -182,8 +182,8 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
                       <Kv
                         items={[
                           [t('nodes.provider'), row.source],
-                          [t('nodes.protocol'), row.protocol],
-                          [t('nodes.latency'), row.latency],
+                          [t('ui.protocol'), row.protocol],
+                          [t('act.latency'), row.latency],
                           [
                             t('nodes.groups'),
                             row.groupLinks.length ? (

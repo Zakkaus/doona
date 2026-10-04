@@ -43,8 +43,8 @@ it('prepares flow targets, sorted trace steps and rule seeds without losing IPv6
   expect(view.detail!.steps.find(step => step.stage === t('flow.stage.input'))?.fields).toContainEqual([t('conn.f.dst'), inputStep.data.values.dst]);
   // The drawer repeats the node path and the rule that the list cuts short.
   const fields = flowDetailView(detail, t, 'en', {node: 'hk-01', path: 'Proxy → hk-01', expression: 'domain(geosite:cn)'})!.fields;
-  expect(fields).toContainEqual([t('conn.node'), 'Proxy → hk-01']);
-  expect(fields).toContainEqual([t('conn.rule'), 'domain(geosite:cn)']);
+  expect(fields).toContainEqual([t('nodes.node'), 'Proxy → hk-01']);
+  expect(fields).toContainEqual([t('ui.rule'), 'domain(geosite:cn)']);
   expect(flowDetailView(undefined, t, 'en')).toBeNull();
   // A match the backend did not record is not vouched for.
   expect(flowRecordsView([{...detail, rule_id: 'r5', rule_source: 'unknown'}], list, undefined, new Map(), t, 'en').rows[0].seed.matched).toBeNull();

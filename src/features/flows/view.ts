@@ -52,7 +52,7 @@ function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | Messa
         });
     case 'route':
       return [
-        ['flow.f.chain', step.data.chain],
+        ['conn.chain', step.data.chain],
         ['flow.f.plane', word(step.data.plane)],
         [
           'ui.rule',
@@ -72,8 +72,8 @@ function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | Messa
     case 'dns':
       return [
         ['ui.name', step.data.name],
-        ['flow.f.source', word(step.data.source)],
-        ['flow.f.cache', word(step.data.cache)],
+        ['ui.source', word(step.data.source)],
+        ['ui.cache', word(step.data.cache)],
         ['ui.upstream', text(step.data.upstream)],
         ['flow.f.selectedIp', text(step.data.selected_ip)]
       ];
@@ -119,7 +119,7 @@ export type TileView = {
   label: string;
 };
 export function tileViews(tree: RoutingTree, t: Translator, lang: Lang): TileView[] {
-  const unknown = (item: TreeItem, name: string) => (item.unknown ? t('flow.mapUnknown') : name);
+  const unknown = (item: TreeItem, name: string) => (item.unknown ? t('ui.unknown') : name);
   type Bare = Omit<TileView, 'label' | 'countText'>;
   const tiles: Bare[] = [
     ...tree.leaves.map<Bare>(leaf => ({
@@ -180,10 +180,10 @@ const stages: Record<string, Key> = {
   input: 'flow.stage.input',
   route: 'flow.stage.route',
   dial_mode: 'flow.stage.dialMode',
-  dns: 'flow.stage.dns',
-  outbound: 'flow.stage.outbound',
+  dns: 'nav.dns',
+  outbound: 'ui.outbound',
   connection: 'flow.stage.connection',
-  datapath: 'flow.stage.datapath',
+  datapath: 'ov.datapath',
   reroute: 'flow.stage.reroute'
 };
 const traceStates: Record<string, Key> = {complete: 'flow.status.complete', partial: 'flow.status.partial', disabled: 'flow.status.disabled'};
@@ -263,8 +263,8 @@ export function flowDetailView(
     revision: t('flow.revision', {n: detail.revision}),
     fields: [
       [t('ui.state'), enumLabel(connectionStates, detail.state, t)],
-      ...(row ? [[t('conn.node'), row.path ?? row.node] as [string, string]] : []),
-      ...(row?.expression ? [[t('conn.rule'), row.expression] as [string, string]] : []),
+      ...(row ? [[t('nodes.node'), row.path ?? row.node] as [string, string]] : []),
+      ...(row?.expression ? [[t('ui.rule'), row.expression] as [string, string]] : []),
       ...(detail.trace.missing.length
         ? [
             [
@@ -347,9 +347,9 @@ export function treeGeometry(tree: RoutingTree, measured: number | null, t: Tran
     width,
     height: layout.rows * PITCH - (PITCH - TILE),
     captions: [
-      {stage: tree.by, label: t(tree.by === 'rule' ? 'flow.mapRule' : 'flow.stageClient'), style: column(tree.by)},
-      {stage: 'outbound', label: t('flow.mapOutbound'), style: column('outbound')},
-      {stage: 'node', label: t('flow.mapNode'), style: column('node')}
+      {stage: tree.by, label: t(tree.by === 'rule' ? 'ui.rule' : 'ui.device'), style: column(tree.by)},
+      {stage: 'outbound', label: t('ui.outbound'), style: column('outbound')},
+      {stage: 'node', label: t('nodes.node'), style: column('node')}
     ],
     placed,
     geometry

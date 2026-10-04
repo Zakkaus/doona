@@ -52,7 +52,7 @@ export function GroupDialog({model: m, details}: {model: GroupDialogView; detail
         m.editing ? (
           <>
             <Button quiet onPress={m.undo} isDisabled={!m.canUndo || m.busy}>
-              {t('policy.undo')}
+              {t('ui.undo')}
             </Button>
             <Button secondary onPress={close}>
               {t('ui.cancel')}

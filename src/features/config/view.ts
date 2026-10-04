@@ -172,7 +172,7 @@ export type ReadOnlyReason = 'generated' | 'subscription' | 'disabled' | 'secret
 // the badge is kept only for what the line has no room for: how to turn configuration writes on.
 const readOnlyText: Record<ReadOnlyReason, {label: Key; note: Key; help?: Key}> = {
   generated: {label: 'config.kind.generated', note: 'config.generatedNote'},
-  subscription: {label: 'config.kind.subscription', note: 'config.subscriptionNote'},
+  subscription: {label: 'nodes.kind.subscription', note: 'config.subscriptionNote'},
   disabled: {label: 'config.readOnly', note: 'config.readOnlyNote', help: 'config.readOnlyHelp'},
   secret: {label: 'config.secretSource', note: 'config.secretNote'},
   refused: {label: 'config.readOnly', note: 'config.refusedNote'},
@@ -348,5 +348,5 @@ export function validateReason(
 
 // The version of the active configuration. The generation id is a technical field and is not shown here.
 export function configMetadata(revision: string, t: Translator): KvItem[] {
-  return [{label: t('config.revision'), value: revision, help: {title: t('config.revision'), text: t('config.revisionHelp')}}];
+  return [{label: t('ov.config'), value: revision, help: {title: t('ov.config'), text: t('config.revisionHelp')}}];
 }

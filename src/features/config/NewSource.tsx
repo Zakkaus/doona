@@ -42,7 +42,7 @@ export function NewSource(props: NewSourceProps) {
           {vm.choice ? (
             <TextField
               isDisabled={vm.busy}
-              label={t('config.newSourceName')}
+              label={t('ui.name')}
               value={vm.text}
               prefix={vm.choice.prefix}
               suffix={vm.choice.suffix}

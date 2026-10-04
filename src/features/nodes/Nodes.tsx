@@ -149,7 +149,7 @@ export function Nodes(props: PageProps) {
             <TextField
               error={nodeNameError ?? undefined}
               isDisabled={pending}
-              label={t('nodes.name')}
+              label={t('ui.name')}
               value={form.name}
               placeholder="hk-03"
               onChange={name => setForm({...form, name})}

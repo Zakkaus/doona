@@ -29,7 +29,7 @@ export const hubs = [
   {id: 'activity', titleKey: 'nav.activity', pages: ['activity', 'overview']},
   {id: 'traffic', titleKey: 'hub.traffic', pages: ['connections', 'flows', 'dns', 'logs', 'events']},
   {id: 'routing', titleKey: 'hub.routing', pages: ['policies', 'nodes', 'rules']},
-  {id: 'settings', titleKey: 'hub.settings', pages: ['config', 'settings']}
+  {id: 'settings', titleKey: 'nav.settings', pages: ['config', 'settings']}
 ] as const satisfies ReadonlyArray<{id: string; titleKey: Key; pages: readonly RoutePath[]}>;
 
 export function isRoutePath(path: string): path is RoutePath {

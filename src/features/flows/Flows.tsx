@@ -72,7 +72,7 @@ function RoutingMap(props: PageProps) {
             onChange={view.changeBy}
             items={[
               ['rule', t('flow.byRule')],
-              ['client', t('flow.byClient')]
+              ['client', t('conn.byClient')]
             ]}
           />
         }
@@ -104,7 +104,7 @@ function FlowRecords(props: PageProps) {
       {id: 'target', label: t('ui.target'), minWidth: 128, grow: 2, isRowHeader: true, render: row => <TextTooltip>{row.target}</TextTooltip>},
       {
         id: 'node',
-        label: t('conn.node'),
+        label: t('nodes.node'),
         minWidth: 96,
         drop: 2,
         render: row =>
@@ -118,7 +118,7 @@ function FlowRecords(props: PageProps) {
       },
       {
         id: 'rule',
-        label: t('conn.rule'),
+        label: t('ui.rule'),
         minWidth: 152,
         grow: 2,
         drop: 1,

@@ -264,10 +264,10 @@ it('tells an empty distribution apart by the recorder, then by the source filter
   expect(view.choices.map(([id]) => id)).toEqual(['all', 'kernel', 'userspace', 'recomputed', 'unknown']);
   expect(t('rule.sourceRecomputed')).toBe('Recomputed');
   expect(view.sourceHelp.text).toEqual([
-    t('ui.valuePair', {label: t('rule.sourceKernel'), value: t('rule.sourceHelp.kernel')}),
-    t('ui.valuePair', {label: t('rule.sourceUserspace'), value: t('rule.sourceHelp.userspace')}),
+    t('ui.valuePair', {label: t('flow.v.kernel'), value: t('rule.sourceHelp.kernel')}),
+    t('ui.valuePair', {label: t('ov.v.userspace'), value: t('rule.sourceHelp.userspace')}),
     t('ui.valuePair', {label: t('rule.sourceRecomputed'), value: t('rule.sourceHelp.recomputed')}),
-    t('ui.valuePair', {label: t('rule.sourceUnknown'), value: t('rule.sourceHelp.unknown')})
+    t('ui.valuePair', {label: t('ui.unknown'), value: t('rule.sourceHelp.unknown')})
   ]);
 });
 

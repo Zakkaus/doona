@@ -9,7 +9,7 @@ export function nodesTabs(resources: Capabilities['resources'] | undefined): Arr
   if (!offered(resources, 'nodes', {whileLoading: true})) return [];
   return [
     {id: 'list', titleKey: 'nodes.tab.list'},
-    {id: 'latency', titleKey: 'nodes.tab.latency'}
+    {id: 'latency', titleKey: 'act.latency'}
   ];
 }
 
@@ -21,11 +21,11 @@ export function nodesTargets(resources: Capabilities['resources'] | undefined): 
       ? [
           {
             id: 'nodes:sources',
-            titleKey: 'search.providers',
+            titleKey: 'nodes.providers',
             parentKey: 'nav.nodes',
             route: 'nodes',
             aliases: ['subscription', 'subscriptions'],
-            aliasKeys: ['config.kind.subscription']
+            aliasKeys: ['nodes.kind.subscription']
           } as const
         ]
       : []),

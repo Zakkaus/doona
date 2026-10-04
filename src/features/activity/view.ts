@@ -99,7 +99,7 @@ export function nodeView(nodes: Node[], chosen: string, t: LabelFn) {
     latencyClass: alive && tcp !== undefined ? `rp-big ms ${latencyTone(tcp)}` : 'rp-big',
     tone: alive ? ('ok' as const) : unavailable ? ('err' as const) : ('muted' as const),
     // A healthy node's latency says so; the light names only what the value cannot, an unavailable or unknown node.
-    status: alive ? null : t(unavailable ? 'act.unavailable' : 'act.unknown'),
+    status: alive ? null : t(unavailable ? 'ui.unavailable' : 'ui.unknown'),
     healthError: health?.error ? backendCode(health.error, t) : undefined
   };
 }

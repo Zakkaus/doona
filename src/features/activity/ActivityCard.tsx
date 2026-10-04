@@ -107,22 +107,22 @@ function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useAc
       break;
     case 'download':
       content = (
-        <CardLink href={href('connections', {tab: 'traffic'})} label={t('act.download')} tile={{icon: <Download />, tint: 1}}>
+        <CardLink href={href('connections', {tab: 'traffic'})} label={t('ui.download')} tile={{icon: <Download />, tint: 1}}>
           <ValueTile
             value={<span className={big}>{vm.download}</span>}
             spark={sparklines && <Spark values={spark.down} timestamps={spark.timestamps} color={p.cat[0]} floor={100} fmt={chartRate} locale={locale} />}
-            facts={stats(t('act.download'), spark.down, chartRate)}
+            facts={stats(t('ui.download'), spark.down, chartRate)}
           />
         </CardLink>
       );
       break;
     case 'upload':
       content = (
-        <CardLink href={href('connections', {tab: 'traffic'})} label={t('act.upload')} tile={{icon: <Upload />, tint: 4}}>
+        <CardLink href={href('connections', {tab: 'traffic'})} label={t('ui.upload')} tile={{icon: <Upload />, tint: 4}}>
           <ValueTile
             value={<span className={big}>{vm.upload}</span>}
             spark={sparklines && <Spark values={spark.up} timestamps={spark.timestamps} color={p.cat[3]} floor={100} fmt={chartRate} locale={locale} />}
-            facts={stats(t('act.upload'), spark.up, chartRate)}
+            facts={stats(t('ui.upload'), spark.up, chartRate)}
           />
         </CardLink>
       );
