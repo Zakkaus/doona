@@ -6,6 +6,109 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Entries live in [changes/](changes/) until release.
 
+## [0.1.0-beta.14] - 2026-10-04
+
+### Added
+
+- The DNS cache can list expired entries, and the geodata details show when the files were last checked and when the next automatic check is due. (#430)
+- A date format setting next to the language. Automatic, the default, writes dates in the order of the browser's region, so an English interface in an Australian browser shows 27/10/26; Day/Month/Year, Month/Day/Year and Year-Month-Day override it. (#450)
+- The optional `doona-precompressed` package and archive install `.br` and `.gz` copies of the text assets next to doona's files, so servers can send compressed responses; the main package stays the same size. (#449)
+- Releases include Alpine and OpenWrt 25.12 apk packages for doona, doona-fonts and doona-precompressed, with the public signing key of each release. (#449)
+- A time format setting next to the date format. 24-hour is the default; 12-hour writes AM or PM in the interface language's own words (4:27 PM, 下午4:27); Automatic follows the clock of the browser's region. It applies to every time on a page, including the chart axes and the log heatmap, and composes with each date format. Source cards, the log and event time columns and the log heatmap give a 12-hour time the room it needs instead of cutting it short. (#453)
+- Activity's traffic chart and the Connections traffic view explain, beside their titles, that direct connections the kernel forwards on its own are not counted, when the backend reports only userspace traffic on an eBPF datapath. (#442)
+- A meter in the widget kit, following S2's Meter: it reads as its value text to assistive technology. (#444)
+- Source health shows a meter under each source whose provider reports a traffic allowance. (#444)
+- A Subscription quota widget lists each subscription with its quota meter, or its usage when no allowance is reported, and its expiry. It is offered in the dashboard and panel galleries and is not in the default layout. (#444)
+- The memory widget's key-value form meters cgroup usage against the limit when one is set, and names OOM kills once there were some. (#444)
+- Outbound failures, node availability and DNS latency widgets for the dashboard and the panel, offered in the widget gallery. (#440)
+
+### Changed
+
+- The READMEs are shorter: installation, package choices, pages and themes moved to pages under `docs/`, in English, Simplified and Traditional Chinese. (#461)
+- System status meters the cgroup memory usage, and the DNS cache card its usage against the entry capacity, as S2 meters with a name and a value text that assistive technology reads. A zero limit or capacity shows no meter. (#455)
+- System status cards hold their place with S2 skeletons while their data loads, and loading notices turn an S2 progress circle instead of the spinner. (#455)
+- The node sources are cards instead of a table: each card lists its kind, state, node count, update times and expiry, and closes with its usage, metered under the value when the source has an allowance. The arrow keys move between the cards and select the source whose nodes are listed below. (#447)
+- Dates and times default to a 24-hour clock in every language, with the date in the language's own order. A source card shows its expiry to the minute, with the seconds in its tooltip. (#447)
+- Page tabs are drawn as the segmented control at the large size: 40px tabs with 16px labels in the same filled track and sliding selection, so they stand apart from the medium controls in the page below them. (#457)
+- A wide list widget with four rows or more lays its rows out in two columns, and the notices card grows with its notices instead of taking a row count. (#432)
+- List widgets wrap a long name onto its own line instead of cutting it off. (#432)
+- Donut widgets from two thirds of the dashboard draw a larger ring with a narrower legend, node latency puts its lowest and highest values on the legend line from half width, and the narrowest panel keeps every name whole. (#436)
+- The speed widget sets its own choice of one chart or two in its widget settings, per instance, instead of the panel menu; speed widgets and dashboard cards saved split still open split. (#441)
+- A chart card two thirds of a row or wider, value tiles included, lists each series' peak and average beside its chart. (#437)
+- A sparkline waiting for its second sample draws its baseline, and the speed widget's legend keeps one height while its rates change. (#437)
+- A chart card two thirds of its row or wider, including the default traffic card at Auto width, lists each series' peak and average beside the chart, one compact line each, so the figures never stand taller than the chart. (#454)
+- Key-value metric cards two thirds of a row or wider list the same statistics beside their readings. (#454)
+- Memory can also be a value tile like the download and upload cards, in its sparkline form, from a fifth of a row to full width, with its peak and average on wide cards; its chart stays the default. (#454)
+- The panel's medium memory widget shows resident memory and the cgroup's use against its limit; its chart starts at the large size. (#454)
+- Memory widgets draw no meter when the cgroup limit is zero or absent, and say the limit is not reported, or that there is none when the backend reports it unset. (#454)
+- An open group editor stays open when the group is removed elsewhere, and says the changes were not saved. (#414)
+- Light themes write notice badges and warning and info toasts in white. (#451)
+- Panel widgets shown as a list of values no longer offer a large size that looked the same as medium. (#417)
+- The sign-in page no longer downloads the other pages before you sign in. (#420)
+- Node flags are worked out faster when Activity opens. (#410)
+- Installing an update no longer downloads files the page already has. (#412)
+- Interface strings that name the same thing now share one catalogue entry. (#462)
+
+### Fixed
+
+- One Activity tab no longer reads the capabilities on every runtime heartbeat; they are read once and again only after a generation change, a reconnect or a sign-in. (#426)
+- A segmented control, tab bar or side navigation marker slides again to the item a pointer picks, instead of jumping there when the press is released. (#419)
+- Reads that come back with an empty body or no response are sent once more before an error is shown. (#421)
+- Error details name the failed request and the key response headers. (#421)
+- Without the optional font archive, the UI no longer requests the Noto Sans TC and SC files and logs no 404s for them; it checks for the archive once per page load and declares the faces only when it is installed. (#424)
+- The Logs and Events pages no longer stutter while records stream in or while scrolling: each update renders the visible rows once instead of twice, and scrolling no longer forces a layout on every scroll event. (#408)
+- The sidebar section chevrons and the docked widgets header's menu and collapse icons are drawn at S2's small icon size, the chevrons at the weight of S2's side navigation chevron, so they no longer read faint. (#460)
+- An unconfirmed New file result and the normal read-only hint in Global settings are shown as information, not as errors. (#431)
+- The Activity notices card folds identical notices into one row with the total count, wherever they fall in the feed; the badge counts distinct notices. (#406)
+- A flow gap that names no record reads "Flow records lost: recording changed" instead of repeating the reason label. (#406)
+- Stream ready events stay on the Events page and no longer appear on the notices card. (#406)
+- Paragraphs in a dialog are spaced by the dialog alone, so the routing template dialog no longer leaves wide gaps between its sentences. (#456)
+- The Nodes page puts its lead line beside the source actions instead of leaving an empty toolbar row above the cards. (#456)
+- The floating widget panel can be resized down to 200 pixels wide; an unsized panel stays 280 pixels wide. (#405)
+- Narrowing the floating widget panel from a side or by keyboard lets it grow as tall as its content needs, up to the window, so the mode switch and Apply are no longer cut off. (#405)
+- In the Glass theme the floating widget panel is frosted with the regular glass fill and blur, so the page behind it no longer shows through readably. (#405)
+- Dragging a floating widget panel's top or bottom edge no longer makes the panel jump to its tallest height when the pointer drifts sideways. (#429)
+- A pinned widgets panel stays in place: it can no longer be dragged, moved by arrow keys, dragged onto the sidebar or resized until it is unpinned. (#459)
+- The widgets panel now starts unpinned. (#459)
+- The docked panel drops its title and has an Undock button where the floating panel has its pin; the menu no longer offers Undock. (#459)
+- A byte fraction writes a unit both sides share once, as in 70／268 MB, so the docked memory meter, now labelled cgroup used, fits on one row. (#459)
+- A narrow collapsed panel shows both rates whole beside its buttons. (#459)
+- The handle of a panel hidden at an edge keeps the header's spacing and the control's padding around its rates. (#459)
+- Member tiles on the Policies page share one column width across groups: a group with fewer members leaves the rest of the row empty instead of stretching its tiles, and long member names wrap instead of being cut off. (#439)
+- A member that is itself a group shows a latency on the Policies page: the parent group's own sample for it, or else the latency of the node its current selection resolves to. (#439)
+- Controls are back to their S2 sizes: segmented controls, page toolbars, tab rows and the mode card are M (32px) again instead of a forced 40px, icon buttons in table rows lose the stray side padding, and any control that asks for L gets L text and corners. (#427)
+- A waffle chart stacked above its legend is centred in its card instead of leaving the space beside it empty. (#458)
+- The widget editor's preview scrolls on its own beside the library and the settings, so a long preview no longer runs past the dialog. (#399)
+- Donut legends on narrow cards and in the floating panel keep each name on the line of its value and share, and the large panel size shows every entry without scrolling. (#416)
+- The small notices widget in the floating panel takes the whole row, and the small node latency widget lists names and values instead of a plot too narrow to read. (#416)
+- Node latency names in the floating panel are no longer cut off. (#416)
+- Area charts on the narrowest cards drop time labels that would overlap. (#416)
+- Dashboard cards offer only the widths and heights their content fills: cumulative traffic and the DNS answer and network splits go up to half width, the group switch up to two thirds, and the two splits list every category instead of offering a row count; a stored width or row count no longer offered reads as the nearest one. The group switch no longer repeats its title. (#428)
+- At exactly 600px wide, pages use the same layout as at 601px instead of mixing the phone padding and wrapping with the wider layout. (#418)
+- A segmented control that collapses into a picker and expands again gives focus back to its selected option in WebKit. (#452)
+
+### Internal
+
+- Contributors add per-PR changelog fragments; release tooling resolves PR numbers and collects entries without conflicts in the shared changelog. (#364)
+- CI exempts test- and documentation-only changes from fragment requirements without changing check lanes, validates committed fragments with the release parser, and release tooling preserves literal replacement tokens in entries. (#364)
+- Drop comments that restate the code or narrate history, and correct a few that no longer match it. (#448)
+- Caption line heights and the switch gap read the existing spacing tokens, and overridden or repeated stylesheet declarations are merged. (#445)
+- `pnpm check:size` budgets the login and Activity startup paths, startup CSS, one language catalogue, one font stylesheet, each page, the config editor and the mock, instead of capping the total, which is now only printed. (#409)
+- Drop unused exports, restating comments and duplicate test setup. (#433)
+- The screenshot generator captures the beta.13 sign-in, search, dashboard, widget, config, geodata, rules and node views for the docs, and waits for the CPU and latency trends before the activity stills. (#401)
+- The API client shares one Retry-After parser and one snapshot refusal check instead of repeating them per call site. (#396)
+- Media queries in stylesheets and components use one named breakpoint list in `ui/hooks.ts`, written in a single form and held to the list by a unit test. (#418)
+- Each stylesheet is imported by the module that renders its rules: the page header rules join the global page layout, and the widget content and impact list rules get their own files, so a page opened first is styled without another page's chunk; the UI is unchanged. (#403)
+- Modules used by a single feature move into that feature's folder; behaviour is unchanged. (#397)
+- The design tokens live in foundations.css and the Segmented control styles in their own segmented.css, moved verbatim from motion.css. (#411)
+- The group dialog's retry merge is a pure function with its own tests; behaviour is unchanged. (#404)
+- The Nodes page dialogs track their late request results with the shared dialog session hook; behaviour is unchanged. (#402)
+- The quick add-rule button in the connection, flow and DNS tables is one shared component. (#438)
+- The sortable editors share their base and resize grip from sortable.css, and the wide-to-large cell size is mapped in one place. (#413)
+- Value tiles and chart placeholders use the `ValueTile` and `ChartWait` kit components, dashboard packing reads `data-pack` marks instead of feature class names, and kit files are named after what they hold. (#425)
+- The widget card renderer moves out of the Activity page entry into its own module, and lint keeps the shell from importing that page entry; the UI is unchanged. (#400)
+- Widget traits live in one registry entry per widget, and widgets read their surface from a context instead of a flag passed down. (#422)
+
 ## [0.1.0-beta.13] - 2026-10-03
 
 ### Added
@@ -564,7 +667,8 @@ Entries live in [changes/](changes/) until release.
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
-[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.13...HEAD
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.14...HEAD
+[0.1.0-beta.14]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.13...v0.1.0-beta.14
 [0.1.0-beta.13]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.12...v0.1.0-beta.13
 [0.1.0-beta.12]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.11...v0.1.0-beta.12
 [0.1.0-beta.11]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.10...v0.1.0-beta.11

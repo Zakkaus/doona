@@ -1,6 +1,6 @@
 #!/bin/sh
 # Builds the Alpine packages from install/alpine/APKBUILD and the archives in release/, as root in an Alpine container:
-#   docker run --rm -v "$PWD:/src" -w /src alpine:3.24 sh tools/package-alpine.sh 0.1.0-beta.13
+#   docker run --rm -v "$PWD:/src" -w /src alpine:3.24 sh tools/package-alpine.sh 0.1.0-beta.14
 # abuild signs each package with a key generated for this run; release/alpine/ receives the packages and the public
 # key as doona-alpine.rsa.pub, and release/alpine-recipe/ the APKBUILD with this version and its checksums.
 set -eu
