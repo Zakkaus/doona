@@ -1,0 +1,4 @@
+Added
+
+- The palette menu offers four Glass materials over a wallpaper with colour and shapes behind it. Glass follows Apple's Liquid Glass: in Chrome and Edge the floating panel, dialogs, menus and toasts bend the page at their edges and catch light on their rim. Frosted follows Microsoft's Acrylic, with a heavy blur, a fine grain and only colour showing through. Float puts the top bar on an inset, rounded layer, with one even blur on every surface. Tinted follows Microsoft's Mica, with nearly opaque surfaces and no blur.
+- Every Glass material has a one-pixel rim lit from the top left and a soft shadow in place of the dark outline, and Reduce Transparency, Increase Contrast and forced colours turn each one solid with clear edges. A Glass material chosen with the earlier Settings switch carries over to its palette.
