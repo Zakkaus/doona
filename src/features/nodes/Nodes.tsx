@@ -45,11 +45,14 @@ export function Nodes(props: PageProps) {
     updateGroups,
     setUpdateGroups
   } = useNodesPage(props);
+  const intro = (
+    <HelpRow help={{title: t('nav.nodes'), text: t('nodes.sourceHelp')}}>
+      <span className="rp-note">{t('nodes.note')}</span>
+    </HelpRow>
+  );
   const list = (
     <>
-      <HelpRow help={{title: t('nav.nodes'), text: t('nodes.sourceHelp')}}>
-        <span className="rp-note">{t('nodes.note')}</span>
-      </HelpRow>
+      {noSources && intro}
       <ErrorMessage error={error} onRetry={reload} />
       {noSources ? (
         <Empty>
@@ -67,7 +70,7 @@ export function Nodes(props: PageProps) {
         </Empty>
       ) : (
         <>
-          <ProviderCards model={providerTable} />
+          <ProviderCards model={providerTable} intro={intro} />
           <NodeTable model={nodeTable} />
         </>
       )}

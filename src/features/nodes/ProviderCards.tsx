@@ -1,4 +1,4 @@
-import {useCallback} from 'react';
+import {useCallback, type ReactNode} from 'react';
 import {useT} from '../../i18n';
 import {ActionGroup, ActionHelp, Badge, Button, CardView, CardViewItem, Kv, Light, MoreMenu, TextTooltip, TimeCell, Toolbar} from '../../ui/ui';
 import Refresh from '../../ui/icons/Refresh';
@@ -8,7 +8,8 @@ type Row = ProviderTableView['rows'][number];
 
 // The node sources as cards: the selected one chooses the nodes listed below. Every card lists the same facts, so the
 // cards of a row line up; usage closes the facts on a row of its own, metered under its value when there is a quota.
-export function ProviderCards({model: m}: {model: ProviderTableView}) {
+// `intro` is the page's lead line, which shares the toolbar row with the actions so the row is not left empty beside them.
+export function ProviderCards({model: m, intro}: {model: ProviderTableView; intro: ReactNode}) {
   const t = useT();
   const {busy, editBusy} = m;
   const card = useCallback(
@@ -77,9 +78,10 @@ export function ProviderCards({model: m}: {model: ProviderTableView}) {
   );
   return (
     <>
-      {(m.canManage || m.refreshAll) && (
+      {m.canManage || m.refreshAll ? (
         <ActionHelp reason={m.refreshAll?.reason}>
           <Toolbar page>
+            {intro}
             <span className="rp-grow" />
             <ActionGroup
               actions={[
@@ -99,6 +101,8 @@ export function ProviderCards({model: m}: {model: ProviderTableView}) {
             />
           </Toolbar>
         </ActionHelp>
+      ) : (
+        intro
       )}
       <CardView label={t('nodes.providers')} items={m.rows} selected={m.selected} onSelect={m.onSelect} loading={m.loading} empty={t('nodes.noProviders')}>
         {card}

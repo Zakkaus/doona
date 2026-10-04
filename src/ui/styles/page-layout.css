@@ -25,6 +25,10 @@
   .rp-toolbar .rp-filter {
     width: 100%;
   }
+  /* A lead line takes its own row on phones, so the actions after it keep their full labels on the next. */
+  .rp-toolbar > .rp-help-row {
+    flex: 1 1 100%;
+  }
 }
 /* A phone's filter row: the field takes what the button beside it leaves. */
 .rp-filter-row {
