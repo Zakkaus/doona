@@ -135,10 +135,15 @@ test('trace query mode validates ports and shows evaluations for both DNS addres
   await page.goto('/#/rules?tab=trace');
   await expect(page.getByLabel('Domain', {exact: true})).toHaveValue('');
   await expect(page.getByRole('textbox', {name: 'Destination port', exact: true})).toHaveValue('');
-  await expect(page.getByRole('button', {name: 'Run trace', exact: true})).toBeDisabled();
+  const run = page.getByRole('button', {name: 'Run trace', exact: true});
+  // A disabled button sits in its tooltip wrapper and still lines up with the input boxes beside it.
+  await page.setViewportSize({width: 1600, height: 900});
+  await expect(run).toBeDisabled();
+  const [button, input] = [await box(run), await box(page.locator('.rp-input', {has: page.getByLabel('Domain', {exact: true})}))];
+  expect(Math.abs(button.y - input.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(button.y + button.height - (input.y + input.height))).toBeLessThanOrEqual(1);
   expect(requested).toEqual([]);
   await page.getByLabel('Domain', {exact: true}).fill('trace.example');
-  const run = page.getByRole('button', {name: 'Run trace', exact: true});
   // The number field keeps a port above its maximum while it is typed and snaps it into range on leaving.
   await page.getByRole('textbox', {name: 'Destination port', exact: true}).fill('65536');
   await page.getByRole('textbox', {name: 'Destination port', exact: true}).blur();

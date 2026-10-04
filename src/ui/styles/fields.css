@@ -157,8 +157,10 @@
   gap: var(--rp-space-1);
   min-width: 0;
 }
-/* A control beside stacked fields in a top-aligned toolbar sits level with their inputs, under the label row. */
-.rp-toolbar.top > .rp-field-row {
+/* A control beside stacked fields in a top-aligned toolbar sits level with their inputs, under the label row. A disabled
+   button sits in its tooltip wrapper, which then takes the offset; a passive wrapper has no box, so its button does. */
+.rp-toolbar.top > :is(.rp-field-row, .rp-tipwrap:has(> .rp-field-row)),
+.rp-toolbar.top > .rp-tipwrap[data-passive] > .rp-field-row {
   margin-top: var(--rp-space-5);
 }
 /* S2 help text: an error reads in the negative tone at the hint's size, and the field it names takes a negative edge.
