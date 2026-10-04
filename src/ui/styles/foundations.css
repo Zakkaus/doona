@@ -12,6 +12,8 @@
   --rp-on-positive: var(--rp-on-accent);
   --rp-on-negative: var(--rp-on-accent);
   --rp-on-notice: var(--rp-on-accent);
+  /* Text on a solid info or warning toast. */
+  --rp-on-toast: var(--rp-on-accent);
   --rp-on-text: var(--rp-surface);
   --rp-accent: var(--rp-pine);
   /* The accent as text. Where a palette's accent is under 4.5:1 on its base or surface, the palette sets body text. */
@@ -150,6 +152,12 @@
     --rp-inset-compact: var(--rp-space-2);
     --rp-lg-text-compact: var(--rp-text-xs);
   }
+}
+:root:not([data-scheme='dark']) {
+  /* Solid notice and toast fills carry white text in every light palette, as Adobe S2's do. This sits after the palettes
+     at the same specificity, so it replaces the on-notice each of them sets. */
+  --rp-on-notice: #ffffff;
+  --rp-on-toast: #ffffff;
 }
 :root[data-scheme='dark'] {
   color-scheme: dark;

@@ -32,7 +32,6 @@
 :root[data-family='rose-pine'] {
   --rp-negative-text: var(--rp-text);
   --rp-notice-text: var(--rp-text);
-  --rp-on-notice: var(--rp-text);
   --rp-positive-text: var(--rp-text);
   --rp-accent-tile-text: var(--rp-text);
   --rp-info-tile-text: var(--rp-text);
