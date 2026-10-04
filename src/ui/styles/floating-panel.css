@@ -42,6 +42,10 @@
   flex-direction: column;
   gap: var(--rp-space-3);
 }
+/* A collapsed panel is never narrower than its header, so the rates keep their reserved width beside the buttons. */
+.rp-floating-panel[data-collapsed] {
+  min-inline-size: max-content;
+}
 /* The collapse chevron points the way the panel grows or shrinks: down from a panel kept by its top edge. */
 .rp-floating-frame[data-anchor='top'] .rp-widget-collapse > svg {
   rotate: 180deg;
@@ -193,8 +197,8 @@
   box-shadow: var(--rp-elevated);
   pointer-events: auto;
 }
-/* The widest rate after its icon, so the handle keeps one width as the rates change. */
-.rp-edge-handle .rp-widget-speed::before {
+/* The widest rate after its icon, so a summary with a reserved width keeps it as the rates change. */
+.rp-widget-speed[data-reserve]::before {
   content: attr(data-reserve);
   block-size: 0;
   padding-inline-start: calc(var(--rp-line-caption) + var(--rp-space-1));
