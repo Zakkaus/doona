@@ -98,10 +98,18 @@ function VirtualNodeGrid({
   const [gap] = useState(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rp-space-2')));
   const [gridRef, width] = useContentWidth<HTMLDivElement>();
   const size = nodeGridSize(width ?? 228 + gap * 2, gap, nodes.length);
+  // Every tile is 56px tall, as `.rp-node` sets it, so rows keep that height (`preserveAspectRatio`) instead of the
+  // virtualizer measuring each visible tile on every render.
   return (
     <Virtualizer
       layout={GridLayout}
-      layoutOptions={{minItemSize: new Size(228, 56), maxItemSize: new Size(size.width, 56), minSpace: new Size(gap, gap), maxColumns: size.columns}}
+      layoutOptions={{
+        minItemSize: new Size(228, 56),
+        maxItemSize: new Size(size.width, 56),
+        minSpace: new Size(gap, gap),
+        maxColumns: size.columns,
+        preserveAspectRatio: true
+      }}
     >
       <GridList
         ref={gridRef}
