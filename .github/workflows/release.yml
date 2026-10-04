@@ -96,6 +96,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           node tools/fetch-honk.mjs release
+      # The sums job copies every intermediate artifact into release-assets, so they keep one day; release-assets
+      # and the recipes keep the repository's default retention.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: archives
@@ -217,6 +219,11 @@ jobs:
           path: release/alpine/
           if-no-files-found: error
           retention-days: 1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: alpine-recipe
+          path: release/alpine-recipe/
+          if-no-files-found: error
 
   openwrt-apk:
     needs: [build]
@@ -235,8 +242,8 @@ jobs:
       # The SDK image builds as its own unprivileged user, which needs to write the output directory.
       - name: Build the OpenWrt apk packages
         run: |
-          mkdir -p release/openwrt
-          chmod 777 release/openwrt
+          mkdir -p release/openwrt release/openwrt-recipe
+          chmod 777 release/openwrt release/openwrt-recipe
           docker run --rm -v "$PWD:/src" -w /src "$OPENWRT_SDK_IMAGE" sh tools/package-openwrt.sh "$NPM"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -244,6 +251,11 @@ jobs:
           path: release/openwrt/
           if-no-files-found: error
           retention-days: 1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: openwrt-recipe
+          path: release/openwrt-recipe/
+          if-no-files-found: error
 
   # Collects every package next to the archives and sums them, so the release job only uploads.
   sums:
@@ -267,7 +279,6 @@ jobs:
           name: release-assets
           path: release/
           if-no-files-found: error
-          retention-days: 1
 
   release:
     needs: [build, nfpm, alpine, openwrt-apk, sums]

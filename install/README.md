@@ -3,23 +3,31 @@
 Each file follows a package that already exists in the target repository; keep them in step with that model
 rather than with each other.
 
-| File                                                                        | Modelled on                                                                                                                                                                                                          |
-| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `nfpm/doona.yaml`, `nfpm/doona-fonts.yaml`, `nfpm/doona-precompressed.yaml` | the nfpm configs in [daeuniverse/repo-for-linux](https://github.com/daeuniverse/repo-for-linux/tree/main/nfpm) (`dae.yaml`, `v2ray-rules-dat.yaml`)                                                                  |
-| `openwrt/doona/Makefile`                                                    | [openwrt/packages](https://github.com/openwrt/packages) `net/v2ray-geodata` (data-only, `PKGARCH:=all`, `Download/` blocks) and `net/v2raya` (unpacking a release tarball in `Build/Prepare`)                        |
-| `alpine/APKBUILD`                                                           | [aports](https://gitlab.alpinelinux.org/alpine/aports) `community/font-noto-cjk` (noarch, subpackage)                                                                                                                |
-| `gentoo/net-proxy/doona`                                                    | the [gentoo-zh overlay](https://github.com/gentoo-zh/overlay)'s dashboards (`net-proxy/zashboard`, `net-proxy/daed` with its upstream `web.zip`): release archives in `SRC_URI`, `doins -r`, fonts behind a USE flag |
-| `nix/package.nix`                                                           | [nixpkgs](https://github.com/NixOS/nixpkgs) prebuilt web packages using `fetchurl` and `stdenvNoCC`                                                                                                                  |
-| the AUR `doona-bin` (separate repository)                                   | v2rayA's `install/aur/v2raya-bin/PKGBUILD`                                                                                                                                                                           |
+| File                                                                        | Modelled on                                                                                                                                                                                                                                                                              |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `nfpm/doona.yaml`, `nfpm/doona-fonts.yaml`, `nfpm/doona-precompressed.yaml` | the nfpm configs in [daeuniverse/repo-for-linux](https://github.com/daeuniverse/repo-for-linux/tree/main/nfpm) (`dae.yaml`, `v2ray-rules-dat.yaml`)                                                                                                                                      |
+| `openwrt/doona/Makefile`                                                    | [openwrt/packages](https://github.com/openwrt/packages) `net/v2ray-geodata` (data-only, `PKGARCH:=all`, `Download/` blocks), `net/v2raya` (unpacking a release tarball in `Build/Prepare`), `utils/vim` (`EXTRA_DEPENDS` on the same version) and `net/netdiscover` (`PKG_REAL_VERSION`) |
+| `alpine/APKBUILD`                                                           | [aports](https://gitlab.alpinelinux.org/alpine/aports) `community/font-noto-cjk` (noarch, `_extra` split function) and its `CODINGSTYLE.md`                                                                                                                                              |
+| `gentoo/net-proxy/doona`                                                    | the [gentoo-zh overlay](https://github.com/gentoo-zh/overlay)'s dashboards (`net-proxy/zashboard`, `net-proxy/daed` with its upstream `web.zip`): release archives in `SRC_URI`, `doins -r`, fonts behind a USE flag                                                                     |
+| `nix/package.nix`                                                           | [nixpkgs](https://github.com/NixOS/nixpkgs) prebuilt web packages using `fetchurl` and `stdenvNoCC`                                                                                                                                                                                      |
+| the AUR `doona-bin` (separate repository)                                   | v2rayA's `install/aur/v2raya-bin/PKGBUILD`                                                                                                                                                                                                                                               |
 
 The OpenWrt, Alpine, Gentoo and Nix recipes are not yet submitted to their repositories.
 All four consume the prebuilt program archive, with the font archive where enabled; the OpenWrt and Alpine recipes
 also package the precompressed archive.
-Before submission, replace the marked OpenWrt and Nix hashes using `SHA256SUMS`, generate Alpine checksums with
-`abuild checksum`, and generate the Gentoo `Manifest` with `ebuild … manifest`.
-The release workflow generates and attaches `SHA256SUMS`; it does not replace recipe placeholders.
-After publishing the assets, fill the three OpenWrt hashes, run `abuild checksum`, generate the Gentoo `Manifest`
-with `ebuild doona-0.1.0_beta13.ebuild manifest`, and replace both Nix `lib.fakeHash` values.
+The OpenWrt and Alpine recipes hold the hashes of the last published archives. Neither repository has a
+placeholder for an archive that is not published yet: maintainers run `make package/doona/check FIXUP=1` and
+`abuild checksum` after a version bump. `tools/package-openwrt.sh` and `tools/package-alpine.sh` run those commands
+against the archives they package, and the release workflow keeps the results as the `openwrt-recipe` and
+`alpine-recipe` artifacts. After publishing a release, copy both from its run into the repository:
+
+```sh
+gh run download <run-id> -n openwrt-recipe -D install/openwrt/doona
+gh run download <run-id> -n alpine-recipe -D install/alpine
+```
+
+Before submitting the Gentoo and Nix recipes, generate the Gentoo `Manifest` with
+`ebuild doona-0.1.0_beta13.ebuild manifest` and replace both Nix `lib.fakeHash` values using `SHA256SUMS`.
 
 The release workflow builds Alpine and OpenWrt 25.12 apk packages from the APKBUILD and the OpenWrt Makefile, using the
 archives of the same run instead of the download URLs: `tools/package-alpine.sh` runs `abuild` in an Alpine 3.24

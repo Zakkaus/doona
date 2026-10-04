@@ -2,7 +2,7 @@
 # Builds the Alpine packages from install/alpine/APKBUILD and the archives in release/, as root in an Alpine container:
 #   docker run --rm -v "$PWD:/src" -w /src alpine:3.24 sh tools/package-alpine.sh 0.1.0-beta.13
 # abuild signs each package with a key generated for this run; release/alpine/ receives the packages and the public
-# key as doona-alpine.rsa.pub.
+# key as doona-alpine.rsa.pub, and release/alpine-recipe/ the APKBUILD with this version and its checksums.
 set -eu
 
 cd "$(dirname "$0")/.."
@@ -20,7 +20,7 @@ trap 'exit 1' HUP INT TERM
 # abuild names the repository after the APKBUILD's grandparent directory.
 mkdir -p "$work/alpine/doona" "$work/distfiles"
 cp "release/doona-$NPM.tar.gz" "release/doona-fonts-$NPM.tar.gz" "release/doona-precompressed-$NPM.tar.gz" "$work/distfiles/"
-sed -e "s/^pkgver=.*/pkgver=$pkgver/" -e "s/^_tag=.*/_tag=v$NPM/" install/alpine/APKBUILD > "$work/alpine/doona/APKBUILD"
+sed "s/^pkgver=.*/pkgver=$pkgver/" install/alpine/APKBUILD > "$work/alpine/doona/APKBUILD"
 
 # apk finds the key by the file name abuild records in each signature, so it takes a fixed name.
 export PACKAGER='Zakkaus <zakk@gentoozh.org>'
@@ -42,4 +42,6 @@ for package in "$REPODEST"/alpine/*/*.apk; do
     cp "$package" "release/alpine/$name-$NPM-r$pkgrel.alpine.apk"
 done
 cp "$work/doona-alpine.rsa.pub" release/alpine/
+mkdir -p release/alpine-recipe
+cp "$work/alpine/doona/APKBUILD" release/alpine-recipe/
 ls -l release/alpine
