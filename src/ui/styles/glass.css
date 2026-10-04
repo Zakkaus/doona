@@ -21,9 +21,18 @@
   z-index: -1;
   background: var(--rp-scrim);
 }
-/* One fixed, clipped layer prevents blur seams and keeps the chrome stationary above scrolling content. */
+/* One fixed layer prevents blur seams and keeps the chrome stationary above scrolling content. A mask cuts the content
+   box out of it, from the shell's own sizes: the top bar, the sidebar, the content's end margin and its rounded top
+   corners. A clip-path polygon would do the same, but Chrome stops applying a concave clip to the blur when an
+   ancestor clips with rounded corners, such as a rounded iframe, and the sheet then covers the content. */
 :root[data-family='glass'] .rp-shell::after {
-  --rp-shell-inset: max(0px, (100% - 1600px) / 2);
+  --rp-sheet-corner: var(--rp-r-xl);
+  /* The sheet's width beside the content on each side; on narrow screens the content spans the viewport. */
+  --rp-sheet-left: 0px;
+  --rp-sheet-right: 0px;
+  --rp-sheet-solid: linear-gradient(#000 0 0);
+  /* A one-pixel ramp at the corner's radius antialiases its edge as the clip did. */
+  --rp-sheet-arc: #0000 calc(var(--rp-sheet-corner) - 0.5px), #000 calc(var(--rp-sheet-corner) + 0.5px);
   content: '';
   position: fixed;
   inset: 0;
@@ -31,64 +40,29 @@
   pointer-events: none;
   background: var(--rp-sheet);
   backdrop-filter: blur(28px) saturate(1.6);
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    calc(100% - 0px) 80px,
-    calc(100% - 1.22px) 73.88px,
-    calc(100% - 4.69px) 68.69px,
-    calc(100% - 9.88px) 65.22px,
-    calc(100% - 16px) 64px,
-    16px 64px,
-    9.88px 65.22px,
-    4.69px 68.69px,
-    1.22px 73.88px,
-    0px 80px
-  );
+  /* Each corner layer is opaque outside a circle centred on the content's corner, so it fills the gap beside it. */
+  mask:
+    var(--rp-sheet-solid) left top / 100% var(--rp-topbar),
+    var(--rp-sheet-solid) left top / var(--rp-sheet-left) 100%,
+    var(--rp-sheet-solid) right top / var(--rp-sheet-right) 100%,
+    radial-gradient(circle var(--rp-sheet-corner) at 100% 100%, var(--rp-sheet-arc)) left 0 top var(--rp-topbar) /
+      calc(var(--rp-sheet-left) + var(--rp-sheet-corner)) var(--rp-sheet-corner),
+    radial-gradient(circle var(--rp-sheet-corner) at 0 100%, var(--rp-sheet-arc)) right 0 top var(--rp-topbar) /
+      calc(var(--rp-sheet-right) + var(--rp-sheet-corner)) var(--rp-sheet-corner);
+  mask-repeat: no-repeat;
 }
+/* From 1024px the sidebar holds one side and the content keeps an end margin, inside the shell's centred maximum width.
+   Percentages here are of the viewport, which the layer covers. */
 @media (min-width: 1024px) {
   :root[data-family='glass'] .rp-shell::after {
-    clip-path: polygon(
-      0 0,
-      100% 0,
-      100% 100%,
-      calc(100% - var(--rp-shell-inset) - 16px) 100%,
-      calc(100% - var(--rp-shell-inset) - 16px) 80px,
-      calc(100% - var(--rp-shell-inset) - 17.22px) 73.88px,
-      calc(100% - var(--rp-shell-inset) - 20.69px) 68.69px,
-      calc(100% - var(--rp-shell-inset) - 25.88px) 65.22px,
-      calc(100% - var(--rp-shell-inset) - 32px) 64px,
-      calc(var(--rp-shell-inset) + 256px) 64px,
-      calc(var(--rp-shell-inset) + 249.88px) 65.22px,
-      calc(var(--rp-shell-inset) + 244.69px) 68.69px,
-      calc(var(--rp-shell-inset) + 241.22px) 73.88px,
-      calc(var(--rp-shell-inset) + var(--rp-sidebar-width)) 80px,
-      calc(var(--rp-shell-inset) + var(--rp-sidebar-width)) 100%,
-      0 100%
-    );
+    --rp-shell-inset: max(0px, (100% - 1600px) / 2);
+    --rp-sheet-left: calc(var(--rp-shell-inset) + var(--rp-sidebar-width));
+    --rp-sheet-right: calc(var(--rp-shell-inset) + var(--rp-space-4));
   }
-}
-/* Right to left, the sidebar is on the right, so the clip is the same shape mirrored. */
-@media (min-width: 1024px) {
+  /* Right to left, the sidebar is on the right. */
   :root[data-family='glass'][dir='rtl'] .rp-shell::after {
-    clip-path: polygon(
-      100% 0,
-      0 0,
-      0 100%,
-      calc(var(--rp-shell-inset) + 16px) 100%,
-      calc(var(--rp-shell-inset) + 16px) 80px,
-      calc(var(--rp-shell-inset) + 17.22px) 73.88px,
-      calc(var(--rp-shell-inset) + 20.69px) 68.69px,
-      calc(var(--rp-shell-inset) + 25.88px) 65.22px,
-      calc(var(--rp-shell-inset) + 32px) 64px,
-      calc(100% - var(--rp-shell-inset) - 256px) 64px,
-      calc(100% - var(--rp-shell-inset) - 249.88px) 65.22px,
-      calc(100% - var(--rp-shell-inset) - 244.69px) 68.69px,
-      calc(100% - var(--rp-shell-inset) - 241.22px) 73.88px,
-      calc(100% - var(--rp-shell-inset) - var(--rp-sidebar-width)) 80px,
-      calc(100% - var(--rp-shell-inset) - var(--rp-sidebar-width)) 100%,
-      100% 100%
-    );
+    --rp-sheet-left: calc(var(--rp-shell-inset) + var(--rp-space-4));
+    --rp-sheet-right: calc(var(--rp-shell-inset) + var(--rp-sidebar-width));
   }
 }
 :root[data-family='glass'] .rp-top,
