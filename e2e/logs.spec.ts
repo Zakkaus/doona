@@ -175,3 +175,22 @@ test('the log toolbar opens the recording settings', async ({page}) => {
   await page.goBack();
   await expect(page).toHaveURL(/#\/logs$/);
 });
+
+test('a log row copies its record as the export writes it without opening the detail', async ({page, context}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const {api} = await mockBackend(page);
+  const runtime = await api.runtime();
+  await page.route('**/api/v1/logs?*', route =>
+    fulfillStream(route, [
+      {id: 'ready:0', event: 'stream.ready', data: {instance_id: runtime.instance_id, observed_at: runtime.observed_at}},
+      {id: 'log:1', event: 'log', data: {ts: runtime.observed_at, level: 'warn', target: 'honk::dns', message: 'DNS slow', fields: {attempts: 2}}}
+    ])
+  );
+  await page.goto('/#/logs');
+  const grid = page.getByRole('grid', {name: 'Logs', exact: true});
+  await expect(grid.getByRole('rowheader')).toHaveText(['DNS slow attempts=2']);
+  await grid.getByRole('button', {name: 'Copy record', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Record copied'})).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`${runtime.observed_at} WARN  honk::dns DNS slow {"attempts":2}`);
+  await expect(page.locator('.rp-table-detail')).toBeEmpty();
+});

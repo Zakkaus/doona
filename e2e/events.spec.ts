@@ -141,3 +141,20 @@ test('an event row links the flow it names, the configuration and the recording 
   await page.getByRole('link', {name: 'Recording settings', exact: true}).click();
   await expect(page).toHaveURL(/#\/settings\?card=runtime$/);
 });
+
+test('an event row copies its record as the export writes it without opening the detail', async ({page, context}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const {api, capabilities} = await mockBackend(page);
+  capabilities.resources.events.available = true;
+  capabilities.resources.events.kinds = ['stream.ready', 'runtime.updated'];
+  const runtime = await api.runtime();
+  const data = {instance_id: runtime.instance_id, observed_at: runtime.observed_at};
+  const ready = {id: 'events:1', event: 'stream.ready', data};
+  await page.route('**/api/v1/events', route => fulfillStream(route, [ready]));
+  await page.goto('/#/events');
+  const grid = page.getByRole('grid', {name: 'Events', exact: true});
+  await grid.getByRole('button', {name: 'Copy record', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Record copied'})).toBeVisible();
+  expect(JSON.parse(await page.evaluate(() => navigator.clipboard.readText()))).toEqual(ready);
+  await expect(page.locator('.rp-table-detail')).toBeEmpty();
+});

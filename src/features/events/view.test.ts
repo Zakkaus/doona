@@ -2,7 +2,7 @@ import {expect, it} from 'vitest';
 import type {ApiEvent} from '../../api/model';
 import {localTime} from '../../i18n/format';
 import {translate, type Translator} from '../../i18n';
-import {eventHelp, eventLinks, eventsExport, eventsView} from './view';
+import {eventHelp, eventLinks, eventsExport, eventsView, eventText} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('exports only the selected event kind while preserving raw data', () => {
@@ -13,6 +13,7 @@ it('exports only the selected event kind while preserving raw data', () => {
   const view = eventsView(events, 'stream.ready', false, false, 200, 'en-US', t, ['stream.ready', 'runtime.updated']);
   expect(view.rows.map(row => row.id)).toEqual(['ready']);
   expect(JSON.parse(eventsExport(view.shown))).toEqual([events[0]]);
+  expect(eventText(view.rows[0].event)).toBe(JSON.stringify(events[0], null, 2));
   expect(view.rows[0].timestamp).toBe(localTime(events[0].data.observed_at, 'en-US'));
   expect(view.status.text).toBe(t('event.unavailable'));
   expect(eventsView(events, 'all', true, true, 200, 'en-US', t, ['stream.ready', 'runtime.updated']).rows.map(row => row.id)).toEqual(['ready', 'runtime']);

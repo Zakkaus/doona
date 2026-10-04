@@ -1,8 +1,11 @@
 import {useCallback, useMemo} from 'react';
 import {LogActivity} from './Activity';
 import {useT} from '../../i18n';
-import {ActionGroup, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Switch, TextField, TextTooltip, type TableColumn, Toolbar} from '../../ui/ui';
+import {ActionGroup, Button, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Switch, TextField, TextTooltip, type TableColumn, Toolbar} from '../../ui/ui';
 import {useLogs} from './useLogs';
+import {logRowText} from './view';
+import {useCopyRecord} from '../shared/useCopyRecord';
+import Copy from '../../ui/icons/Copy';
 import Download from '../../ui/icons/Download';
 import type {PageProps} from '../../shell/routes';
 
@@ -11,6 +14,7 @@ type LogRow = ReturnType<typeof useLogs>['rows'][number];
 export function Logs({go}: PageProps) {
   const t = useT();
   const vm = useLogs({go});
+  const copy = useCopyRecord();
   // Stable column definitions: a new array on every stream tick would re-render every visible row.
   const columns = useMemo(
     (): TableColumn<LogRow>[] => [
@@ -48,9 +52,22 @@ export function Logs({go}: PageProps) {
         grow: 3,
         isRowHeader: true,
         render: record => <TextTooltip>{record.message}</TextTooltip>
+      },
+      {
+        id: 'actions',
+        actions: true,
+        label: t('ui.actions'),
+        hideLabel: true,
+        minWidth: 64,
+        grow: 0,
+        render: record => (
+          <Button small quiet icon label={t('ui.copyRecord')} onPress={() => void copy(logRowText(record))}>
+            <Copy />
+          </Button>
+        )
       }
     ],
-    [t]
+    [t, copy]
   );
   // The message column cuts a long message; a pressed row shows the whole record.
   const detail = useCallback(
