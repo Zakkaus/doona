@@ -28,7 +28,7 @@ export {LabeledSelect} from './Picker';
 export {ItemLabel} from './ItemText';
 export {WidestLabel} from './WidestLabel';
 export {MenuButton, MenuChoice, ChoiceMenu, pickMenuKey, type ChoiceSection, type ChoiceSubmenu} from './Menu';
-export {DialogForm, DialogSection, ModalDialog, PopoverDialog, ConfirmDialog, ConfirmButton, DetailPanel} from './Dialog';
+export {DialogForm, DialogSection, DialogSections, ModalDialog, PopoverDialog, ConfirmDialog, ConfirmButton, DetailPanel} from './Dialog';
 export {Disclosure} from './Disclosure';
 export {Tabs} from './Tabs';
 export {Toolbar} from './Toolbar';
