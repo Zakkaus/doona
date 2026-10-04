@@ -7,6 +7,7 @@ export const storageKeys = {
   navGroups: 'doona-nav-groups',
   scheme: 'doona-scheme',
   palette: 'doona-palette',
+  blur: 'doona-blur',
   wordmark: 'doona-wordmark',
   mirror: 'doona-mirror',
   countryFlags: 'doona-country-flags',

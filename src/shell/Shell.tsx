@@ -28,9 +28,9 @@ const Login = lazy(() => import('./Login').then(module => ({default: module.Logi
 
 // The startup entry calls this before mounting React to avoid a palette flash.
 export function stampAppearance() {
-  const {scheme, palette, wordmark} = readSettings();
+  const {scheme, palette, wordmark, blur} = readSettings();
   const dark = scheme === 'dark' || (scheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  applyAppearance(dark, palette, wordmark);
+  applyAppearance(dark, palette, wordmark, blur);
 }
 
 export function Shell({lang: initial}: {lang: Lang}) {

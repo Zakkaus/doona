@@ -87,6 +87,11 @@
   .rp-switch[data-pressed] .track::after {
     scale: 0.9;
   }
+  /* The slider thumb's position is an inline transform, so its 2px sink under S2's 24px perspective is the scale it
+     amounts to: 24 / 26. */
+  .rp-range .thumb[data-dragging] {
+    scale: calc(24 / 26);
+  }
 }
 /* A button whose menu is open keeps the pressed colour until it closes, as an S2 picker does. */
 .rp-btn[aria-expanded='true'][aria-haspopup] {

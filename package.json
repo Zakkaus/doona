@@ -42,8 +42,8 @@
   },
   "sizeBudget": {
     "startupLogin": 242000,
-    "startupActivity": 340000,
-    "startupCss": 34000,
+    "startupActivity": 341500,
+    "startupCss": 34500,
     "locale": 38000,
     "fontCss": 36000,
     "route": 79500,

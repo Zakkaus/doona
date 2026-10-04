@@ -1682,6 +1682,7 @@
   "settings.appearance": "Appearance",
   "settings.apply": "Apply",
   "settings.backend": "Backend",
+  "settings.blur": "Blur",
   "settings.copyErrors": "Copy recent errors",
   "settings.copyErrorsNone": "No errors to copy",
   "settings.cors": "Network or CORS request failed. Check that the backend is reachable and allows this origin.",

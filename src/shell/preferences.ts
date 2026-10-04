@@ -11,6 +11,13 @@ export type Scheme = 'system' | 'light' | 'dark';
 export type Wordmark = 'gradient' | 'plain';
 export type {DateFormat, PaletteId, TimeFormat, ToastPlacement};
 const TOAST_PLACEMENTS: ToastPlacement[] = ['top', 'top end', 'bottom', 'bottom end'];
+// The Glass palettes' blur strength: a multiplier of each material's own radii, from none to half as much again.
+export const DEFAULT_BLUR = 1;
+export const MAX_BLUR = 1.5;
+export function readBlur(value: string | null): number {
+  const scale = value === null || value.trim() === '' ? NaN : Number(value);
+  return Number.isFinite(scale) ? Math.min(MAX_BLUR, Math.max(0, scale)) : DEFAULT_BLUR;
+}
 
 export type Settings = {
   api: string | null;
@@ -22,6 +29,7 @@ export type Settings = {
   timeFormat: TimeFormat;
   scheme: Scheme;
   palette: PaletteId;
+  blur: number;
   wordmark: Wordmark;
   mirrored: boolean;
   countryFlags: boolean;
@@ -39,6 +47,7 @@ export function writeSetting(
     | 'timeFormat'
     | 'scheme'
     | 'palette'
+    | 'blur'
     | 'wordmark'
     | 'mirror'
     | 'countryFlags'
@@ -77,6 +86,7 @@ export function readSettings(storage?: StoragePort): Settings {
     timeFormat: readTimeFormat(storage),
     scheme: scheme === 'light' || scheme === 'dark' ? scheme : 'system',
     palette: isPaletteId(palette) ? palette : DEFAULT_PALETTE,
+    blur: readBlur(read(storageKeys.blur)),
     wordmark: read(storageKeys.wordmark) === 'plain' ? 'plain' : 'gradient',
     mirrored: read(storageKeys.mirror) === 'on',
     startPage: startPage !== null && isRoutePath(startPage) ? startPage : defaultRoute,
@@ -98,6 +108,8 @@ type Appearance = {
   pickScheme: (value: Scheme) => void;
   palette: PaletteId;
   pickPalette: (value: PaletteId) => void;
+  blur: number;
+  pickBlur: (value: number) => void;
   wordmark: Wordmark;
   pickWordmark: (value: Wordmark) => void;
   mirrored: boolean;

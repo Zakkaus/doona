@@ -167,3 +167,48 @@ test('the default veil keeps label and secondary text at 4.5:1 over a white and 
   });
   expect(failures).toEqual([]);
 });
+
+const blurRow = (page: Page) => appearance(page).locator('[data-setting="blur"]');
+const cardBlur = (page: Page) => page.evaluate(() => getComputedStyle(document.querySelector('.rp-card')!, '::before').backdropFilter);
+const radius = (filter: string) => Number(/blur\(([\d.]+)px\)/.exec(filter)?.[1] ?? 0);
+
+test('the blur slider shows for the blurred Glass palettes and scales every card blur', async ({page}) => {
+  await page.goto('/#/settings');
+  const slider = blurRow(page).getByRole('slider', {name: 'Blur'});
+  await expect(slider).toHaveValue('1');
+  const normal = radius(await cardBlur(page));
+  expect(normal).toBeGreaterThan(0);
+  await slider.fill('0');
+  await expect.poll(async () => radius(await cardBlur(page))).toBe(0);
+  await slider.fill('1.5');
+  await expect.poll(async () => radius(await cardBlur(page))).toBeCloseTo(normal * 1.5);
+  await page.reload();
+  await expect(slider).toHaveValue('1.5');
+  expect(radius(await cardBlur(page))).toBeCloseTo(normal * 1.5);
+  for (const palette of ['glass/tinted', 'rose-pine/moon']) {
+    await page.evaluate(palette => localStorage.setItem('doona-palette', palette), palette);
+    await page.reload();
+    await expect(appearance(page).getByRole('button', {name: /Palette/})).toBeVisible();
+    await expect(blurRow(page)).toHaveCount(0);
+  }
+});
+
+test('the slider keeps S2 geometry: a 4px track in a 32px box and a 20px thumb with a 2px ring', async ({page}) => {
+  await page.goto('/#/settings');
+  const range = blurRow(page).locator('.rp-range');
+  const sizes = await range.evaluate(range => {
+    const track = range.querySelector('.track')!;
+    const thumb = range.querySelector<HTMLElement>('.thumb')!;
+    const line = getComputedStyle(track, '::before');
+    const t = track.getBoundingClientRect();
+    const k = thumb.getBoundingClientRect();
+    return {
+      box: t.height,
+      line: line.height,
+      thumb: [k.width, k.height],
+      ring: getComputedStyle(thumb).borderTopWidth,
+      centred: Math.abs(k.top + k.height / 2 - (t.top + t.height / 2))
+    };
+  });
+  expect(sizes).toEqual({box: 32, line: '4px', thumb: [20, 20], ring: '2px', centred: 0});
+});

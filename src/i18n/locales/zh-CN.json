@@ -1481,6 +1481,7 @@
   "settings.appearance": "外观",
   "settings.apply": "应用",
   "settings.backend": "后端",
+  "settings.blur": "模糊程度",
   "settings.copyErrors": "复制最近错误",
   "settings.copyErrorsNone": "没有可复制的错误",
   "settings.cors": "网络或跨域请求失败：请确认后端可连接并允许此来源。",
