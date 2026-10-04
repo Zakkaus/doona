@@ -309,7 +309,9 @@ function useEdgeHide(edge: EdgeHide | undefined, settled: boolean, laidOut: stri
 // frame's upper half keeps its top edge and one in the lower half its bottom edge, so expanding or resizing grows it
 // towards the room; the frame keeps it inside the viewport. Dropping the header over `dockTarget` docks the panel
 // instead of moving it. A collapsed panel is its header alone and keeps only its width; expanding restores the stored
-// height. With `edge` the panel hides at the screen edge nearest to it behind a handle, as useEdgeHide describes.
+// height. A `locked` panel keeps its place and size: it renders no move or resize handles, so neither pointer nor
+// keyboard moves it, while the frame still keeps it inside the viewport. With `edge` the panel hides at the screen edge
+// nearest to it behind a handle, as useEdgeHide describes.
 export function FloatingPanel({
   label,
   resizeLabel,
@@ -321,6 +323,7 @@ export function FloatingPanel({
   onMove,
   header,
   collapsed = false,
+  locked = false,
   children,
   dockTarget,
   onDock,
@@ -336,6 +339,7 @@ export function FloatingPanel({
   onMove: (offset: PanelOffset) => void;
   header: ReactNode;
   collapsed?: boolean;
+  locked?: boolean;
   children?: ReactNode;
   dockTarget?: () => HTMLElement | null;
   onDock?: () => void;
@@ -447,6 +451,7 @@ export function FloatingPanel({
         }
       >
         {!collapsed &&
+          !locked &&
           edges.map((side, index) => (
             <ResizeHandle
               key={index}
@@ -463,8 +468,8 @@ export function FloatingPanel({
               }}
             />
           ))}
-        <div className="rp-panel-head" onPointerDown={onPointerDown}>
-          <button type="button" {...move.props} onPointerDown={onPointerDown} className="rp-panel-move" aria-label={moveLabel} />
+        <div className="rp-panel-head" onPointerDown={locked ? undefined : onPointerDown}>
+          {!locked && <button type="button" {...move.props} onPointerDown={onPointerDown} className="rp-panel-move" aria-label={moveLabel} />}
           {header}
         </div>
         {children}

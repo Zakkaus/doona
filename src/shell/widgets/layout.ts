@@ -157,7 +157,8 @@ export type Layout = {
   // How far the reader moved the panel from its corner; absent until moved.
   offset?: PanelOffset;
   collapsed: boolean;
-  // A pinned panel stays as the reader left it on every page; otherwise it collapses when the page changes.
+  // A pinned panel stays as the reader left it on every page and can be neither moved nor resized; otherwise it
+  // collapses when the page changes.
   pinned: boolean;
   // The panel shows each widget's title above it; absent while hidden, when the title stays the widget's accessible name.
   titles?: true;
@@ -173,7 +174,7 @@ export const defaults = (): Layout => ({
   version: 4,
   items: [defaultWidget('speed'), {id: 'memory', form: 'text', size: 'medium'}, defaultWidget('mode')],
   collapsed: false,
-  pinned: true,
+  pinned: false,
   visible: true
 });
 // Restore defaults puts the panel where a fresh profile has it: floating at its corner, at its own size.
@@ -247,9 +248,7 @@ export function parseLayout(value: unknown): Layout {
       ? {offset: clampPanelOffset({x: value.offset.x, y: value.offset.y, ...(value.offset.top === true && {top: true as const})})}
       : {}),
     collapsed: value.collapsed === true,
-    // Before version 4 a panel was unpinned by default, which a stored false cannot tell from a choice: it reads as
-    // pinned, the default since.
-    pinned: value.version !== 4 || value.pinned === true,
+    pinned: value.pinned === true,
     ...(value.titles === true ? {titles: true} : {}),
     ...(value.docked === true ? {docked: true} : {}),
     ...(finite(value.dockHeight) && value.dockHeight > 0 ? {dockHeight: Math.round(value.dockHeight)} : {}),

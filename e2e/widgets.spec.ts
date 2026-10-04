@@ -1,4 +1,4 @@
-import {test, expect, mockBackend, moreAction, settle, box} from './fixtures';
+import {test, expect, mockBackend, moreAction, settle, settleFrames, box} from './fixtures';
 import {ApiError} from '../src/api/error';
 import {defaults, defaultWidget, type Layout, type WidgetId} from '../src/shell/widgets/layout';
 import type {Locator, Page} from '@playwright/test';
@@ -733,19 +733,57 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
   expect(await page.evaluate(() => String(getSelection()))).toBe('');
 });
 
-test('the panel starts pinned and open; unpinned, it collapses on another page and stays unpinned', async ({page}) => {
+test('the panel starts unpinned and open and collapses on another page; pinned, it stays open and stays pinned', async ({page}) => {
   await page.goto('/#/settings');
-  const unpin = floating(page).getByRole('button', {name: 'Unpin panel', exact: true});
-  await expect(unpin).toHaveAttribute('aria-pressed', 'true');
+  const pin = floating(page).getByRole('button', {name: 'Pin panel', exact: true});
+  await expect(pin).toHaveAttribute('aria-pressed', 'false');
   await page.goto('/#/connections');
-  await expect(floating(page).getByRole('button', {name: 'Collapse widgets', exact: true})).toBeVisible();
-  await unpin.click();
-  await expect(floating(page).getByRole('button', {name: 'Pin panel', exact: true})).toHaveAttribute('aria-pressed', 'false');
+  await floating(page).getByRole('button', {name: 'Expand widgets', exact: true}).click();
+  await pin.click();
+  await expect(floating(page).getByRole('button', {name: 'Unpin panel', exact: true})).toHaveAttribute('aria-pressed', 'true');
   await settle(page);
   await page.reload();
-  await expect(floating(page).getByRole('button', {name: 'Pin panel', exact: true})).toHaveAttribute('aria-pressed', 'false');
+  await expect(floating(page).getByRole('button', {name: 'Unpin panel', exact: true})).toHaveAttribute('aria-pressed', 'true');
   await page.goto('/#/settings');
-  await expect(floating(page).getByRole('button', {name: 'Expand widgets', exact: true})).toBeVisible();
+  await expect(floating(page).getByRole('button', {name: 'Collapse widgets', exact: true})).toBeVisible();
+});
+
+test('a pinned panel keeps its place and size; unpinned, it moves and resizes again', async ({page}) => {
+  await save(page, {...defaults(), pinned: true});
+  await page.goto('/#/settings');
+  const panel = floating(page);
+  const start = await box(panel);
+  const drag = async (from: {x: number; y: number}, dx: number, dy: number) => {
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + dx, from.y + dy, {steps: 4});
+    await page.mouse.up();
+  };
+  const name = await box(panel.locator('.rp-widget-backend'));
+  const actions = await box(panel.locator('.rp-widget-actions'));
+  const grip = {x: (name.x + name.width + actions.x) / 2, y: actions.y + actions.height / 2};
+  // Pinned, the panel has no move or resize handle to drag or focus, and the header and corner stay put.
+  await expect(panel.locator('.rp-panel-move, .rp-panel-resize')).toHaveCount(0);
+  await drag(grip, -60, -40);
+  await drag({x: start.x + 1, y: start.y + 1}, -40, -40);
+  await panel.getByRole('button', {name: 'Unpin panel', exact: true}).focus();
+  for (const key of ['ArrowLeft', 'ArrowUp']) await page.keyboard.press(key);
+  await settleFrames(page);
+  expect(await box(panel)).toEqual(start);
+  // Unpinned, the same size and place come back with the handles.
+  await panel.getByRole('button', {name: 'Unpin panel', exact: true}).click();
+  await expect(panel.getByRole('button', {name: 'Move panel', exact: true})).toBeVisible();
+  expect(await box(panel)).toEqual(start);
+  await drag(grip, -60, -40);
+  await expect.poll(async () => (await box(panel)).x).toBe(start.x - 60);
+  expect((await box(panel)).y).toBe(start.y - 40);
+  await panel.getByRole('button', {name: 'Move panel', exact: true}).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(async () => (await box(panel)).x).toBe(start.x - 44);
+  const moved = await box(panel);
+  const corner = await box(panel.getByRole('button', {name: 'Resize widgets panel', exact: true}));
+  await drag({x: corner.x + corner.width / 2, y: corner.y + corner.height / 2}, -40, 0);
+  await expect.poll(async () => (await box(panel)).width).toBe(moved.width + 40);
 });
 
 test('the default panel draws both rates in one chart without scrolling', async ({page}) => {
@@ -849,7 +887,7 @@ test.describe('header and edge at 1440', () => {
     const order = await header
       .locator('.rp-widget-actions button')
       .evaluateAll(items => items.map(item => [item.getBoundingClientRect().left, item.getAttribute('aria-label')]));
-    expect(order.map(([, name]) => name)).toEqual(['Panel options', 'Unpin panel', 'Collapse widgets']);
+    expect(order.map(([, name]) => name)).toEqual(['Panel options', 'Pin panel', 'Collapse widgets']);
     expect(order.map(([left]) => left)).toEqual(order.map(([left]) => left).sort((a, b) => Number(a) - Number(b)));
     await openEditor(page);
     await editor(page).getByRole('button', {name: 'Cancel', exact: true}).click();
@@ -859,8 +897,7 @@ test.describe('header and edge at 1440', () => {
     await expect(speeds).toHaveText(['999 MB/s', '3.5 MB/s']);
     await expect(header.locator('.rp-widget-speed')).toContainText('Download');
     for (const speed of await speeds.all()) expect(await speed.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
-    // Hiding at an edge applies to an unpinned panel.
-    await header.getByRole('button', {name: 'Unpin panel', exact: true}).click();
+    // Hiding at an edge applies to an unpinned panel, as the panel starts.
     await options(page).click();
     await expect(page.getByRole('menuitem', {name: 'Edit widgets'})).toBeVisible();
     const edge = page.getByRole('menuitemcheckbox', {name: 'Hide at edge', exact: true});
