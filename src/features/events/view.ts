@@ -8,7 +8,17 @@ import {href} from '../../shell/route';
 import {recordingSettingsHref} from '../shared/link';
 
 type EventLink = {id: string; label: string; href: string};
-type EventRow = {id: string; timestamp: string; iso: string; kind: ApiEvent['event']; kindText: string; summary: string; help?: Help; links: EventLink[]};
+type EventRow = {
+  id: string;
+  timestamp: string;
+  iso: string;
+  kind: ApiEvent['event'];
+  kindText: string;
+  summary: string;
+  help?: Help;
+  links: EventLink[];
+  event: ApiEvent;
+};
 // The gaps that lose flow records under load are explained: whether anything needs doing depends on the reason.
 const gapHelp: Record<string, [Key, Key]> = {
   buffer_overflow: ['event.gap.overflow', 'event.gapHelp.overflow'],
@@ -47,7 +57,8 @@ function eventRow(event: ApiEvent, locale: string, t: LabelFn, lost: boolean): E
     kindText: enumLabel(eventKindLabels, event.event, t),
     summary: t(summary.key, summary.params),
     help: eventHelp(event, t),
-    links: eventLinks(event, t)
+    links: eventLinks(event, t),
+    event
   };
   rows.set(event, {locale, row});
   return row;
@@ -94,3 +105,5 @@ export function eventsView(
 export function eventsExport(events: ApiEvent[]) {
   return JSON.stringify(events, null, 2) + '\n';
 }
+// One event as the export writes it, without the array around it.
+export const eventText = (event: ApiEvent) => JSON.stringify(event, null, 2);

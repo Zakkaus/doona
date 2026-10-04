@@ -14,6 +14,8 @@ type LogRow = {
   tone: (typeof tones)[LogLevel];
   target: string | null;
   message: string;
+  // The record itself, for the text a copy puts on the clipboard.
+  record: LogRecord;
   // Marks the records the stream lost between the rows around it.
   gap: boolean;
 };
@@ -30,6 +32,7 @@ function logRow(record: LogRecord & {id: string}, locale: string, t: LabelFn): L
     tone: tones[record.level],
     target: record.target,
     gap: false,
+    record,
     message:
       record.message +
       (record.fields
@@ -88,15 +91,16 @@ export function logLevel(level: LogLevel, levels: LogLevel[] = []): LogLevel | u
   return levels.includes(level) ? level : levels.includes('info') ? 'info' : levels[0];
 }
 
+const logLine = (r: LogRecord) => `${r.ts} ${r.level.toUpperCase().padEnd(5)} ${r.target ?? '—'} ${r.message}${r.fields ? ' ' + JSON.stringify(r.fields) : ''}`;
+// One row as the export writes it; a gap marker is its message.
+export const logRowText = (row: LogRow) => (row.gap ? row.message : logLine(row.record));
+
 // Oldest first. The gap marker the list shows gets its own line after the last record before the loss.
 export function logsExport(records: LogRecord[], gaps: ReadonlySet<LogRecord>, t: LabelFn) {
   return (
     [...records]
       .reverse()
-      .flatMap(r => {
-        const line = `${r.ts} ${r.level.toUpperCase().padEnd(5)} ${r.target ?? '—'} ${r.message}${r.fields ? ' ' + JSON.stringify(r.fields) : ''}`;
-        return gaps.has(r) ? [line, t('log.gap')] : [line];
-      })
+      .flatMap(r => (gaps.has(r) ? [logLine(r), t('log.gap')] : [logLine(r)]))
       .join('\n') + '\n'
   );
 }

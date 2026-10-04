@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {translate, type Translator} from '../../i18n';
-import {logEmpty, logLevel, logStatus, logsExport, logView} from './view';
+import {logEmpty, logLevel, logRowText, logStatus, logsExport, logView} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('keeps structured fields readable in rows and lossless in chronological exports', () => {
@@ -61,6 +61,8 @@ it('marks where the stream lost records between older and newer rows', () => {
   expect(new Set(view.rows.map(row => row.id)).size).toBe(3);
   // The export keeps the marker, oldest first.
   expect(logsExport(records, new Set([records[1]]), t).split('\n')).toEqual([expect.stringMatching(/ old$/), t('log.gap'), expect.stringMatching(/ new$/), '']);
+  // A copied row is the export's line for it; a gap marker copies its message.
+  expect(view.rows.map(logRowText)).toEqual(['2026-01-01T00:00:00Z INFO  dns new', t('log.gap'), '2026-01-01T00:00:00Z INFO  dns old']);
 });
 
 it('marks the levels the engine does not record and states the level it records', () => {

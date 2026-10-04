@@ -2,6 +2,9 @@ import {useCallback, useMemo} from 'react';
 import {useT} from '../../i18n';
 import {Button, DataTable, HelpRow, LabeledSelect, Light, Link, ErrorMessage, TextTooltip, type TableColumn, Kv, Toolbar} from '../../ui/ui';
 import {useEventsPage} from './useEventsPage';
+import {eventText} from './view';
+import {useCopyRecord} from '../shared/useCopyRecord';
+import Copy from '../../ui/icons/Copy';
 import Download from '../../ui/icons/Download';
 
 type EventRow = ReturnType<typeof useEventsPage>['rows'][number];
@@ -9,6 +12,7 @@ type EventRow = ReturnType<typeof useEventsPage>['rows'][number];
 export function Events() {
   const t = useT();
   const vm = useEventsPage();
+  const copy = useCopyRecord();
   // Stable column definitions: a new array on every stream tick would re-render every visible row.
   const columns = useMemo(
     (): TableColumn<EventRow>[] => [
@@ -28,16 +32,29 @@ export function Events() {
       {
         id: 'm',
         label: t('event.summary'),
-        minWidth: 240,
+        minWidth: 176,
         isRowHeader: true,
         render: event => (
           <HelpRow fill help={event.help}>
             <TextTooltip>{event.summary}</TextTooltip>
           </HelpRow>
         )
+      },
+      {
+        id: 'actions',
+        actions: true,
+        label: t('ui.actions'),
+        hideLabel: true,
+        minWidth: 64,
+        grow: 0,
+        render: event => (
+          <Button small quiet icon label={t('ui.copyRecord')} onPress={() => void copy(eventText(event.event))}>
+            <Copy />
+          </Button>
+        )
       }
     ],
-    [t]
+    [t, copy]
   );
   // The summary column cuts a long summary; a pressed row shows the whole event and links what it names.
   const detail = useCallback(
