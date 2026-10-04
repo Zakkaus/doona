@@ -275,10 +275,14 @@ test('a subscription is added with its refresh interval, User-Agent and cache se
   await dialog.getByText('Cache the subscription').click();
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'sub-o added and updated'})).toBeVisible();
+  await expect(dialog).toHaveCount(0);
   await page.goto('/#/config?tab=source');
-  await expect(page.locator('.cm-content')).toContainText(
-    "sub-o: {\n    url: 'https://example.org/sub?token=abc'\n    ua: 'clash.meta'\n    interval: '21600s'\n    cache: false\n  }"
-  );
+  // The editor is a lazy chunk and a refetch after the generation change waits at least two seconds. The whole
+  // document is read, not the lines CodeMirror has rendered so far.
+  await expect(page.locator('.cm-content')).toBeVisible({timeout: 15_000});
+  await expect
+    .poll(() => editorText(page), {timeout: 15_000})
+    .toContain("sub-o: {\n    url: 'https://example.org/sub?token=abc'\n    ua: 'clash.meta'\n    interval: '21600s'\n    cache: false\n  }");
 });
 
 test('a cold Nodes page finishes the first refresh after selecting a new subscription', async ({page}) => {
@@ -939,14 +943,19 @@ for (const width of [1440, 390])
     await join.focus();
     await page.keyboard.press('ArrowRight');
     const submenu = page.getByRole('menu', {name: 'Add to group', exact: true});
+    // The existing groups and New group… become available on separate renders (each digest check finishes on its own),
+    // so End goes to the last item only once New group… is there.
+    const create = submenu.getByRole('menuitem', {name: 'New group…', exact: true});
+    await expect(create).toBeVisible();
     await expect(submenu.getByRole('menuitem').first()).toBeFocused();
     await page.keyboard.press('ArrowLeft');
     await expect(submenu).toHaveCount(0);
     await expect(join).toBeFocused();
     await page.keyboard.press('Enter');
+    await expect(create).toBeVisible();
     await expect(submenu.getByRole('menuitem').first()).toBeFocused();
     await page.keyboard.press('End');
-    await expect(submenu.getByRole('menuitem', {name: 'New group…', exact: true})).toBeFocused();
+    await expect(create).toBeFocused();
     await page.keyboard.press('Enter');
     const dialog = page.getByRole('dialog', {name: 'New group', exact: true});
     await expect(dialog.getByRole('button', {name: 'Remove hk-01', exact: true})).toBeVisible();

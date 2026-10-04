@@ -37,7 +37,12 @@ export function Segmented({
   }, []);
   useLayoutEffect(() => {
     if (collapsed && ref.current?.contains(document.activeElement)) pick.current?.querySelector('button')?.focus();
-    if (!collapsed && refocus.current) ref.current?.querySelector<HTMLElement>('[data-selected]')?.focus();
+    if (!collapsed && refocus.current && ref.current) {
+      // The track is still hidden in the style WebKit last computed, and it refuses focus to an element it takes for
+      // hidden; reading the style brings it up to date first, as Chromium's focus() does itself.
+      void getComputedStyle(ref.current).visibility;
+      ref.current.querySelector<HTMLElement>('[data-selected]')?.focus();
+    }
     refocus.current = false;
   }, [ref, collapsed]);
   return (
