@@ -250,7 +250,7 @@
 }
 .rp-label {
   font-size: var(--rp-text-xs);
-  line-height: 16px;
+  line-height: var(--rp-line-caption);
   color: var(--rp-subtle);
 }
 .rp-strip {
@@ -357,7 +357,7 @@
   min-height: var(--rp-control);
   flex-wrap: wrap;
   font-size: var(--rp-text-xs);
-  line-height: 16px;
+  line-height: var(--rp-line-caption);
   min-width: 0;
   color: var(--rp-subtle);
   white-space: nowrap;

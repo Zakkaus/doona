@@ -338,7 +338,8 @@
   color: var(--rp-subtle);
   margin: 0 0 var(--rp-space-1);
 }
-.rp-side > div + div {
+.rp-side > div + div,
+.rp-side-links > div + div {
   margin-top: var(--rp-space-4);
 }
 .rp-side-links .rp-nav-slider {
@@ -618,7 +619,4 @@
   outline-style: solid;
   background: var(--rp-selected);
   color: var(--rp-text);
-}
-.rp-side-links > div + div {
-  margin-top: var(--rp-space-4);
 }

@@ -28,7 +28,7 @@
 .rp-switch {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--rp-space-2);
   cursor: pointer;
   min-height: var(--rp-control);
 }
@@ -57,7 +57,9 @@
 .rp-switch[data-selected] .track::after {
   transform: translateX(calc(16px * var(--rp-dir)));
 }
-.rp-switch[data-disabled] {
+.rp-switch[data-disabled],
+.rp-radio[data-disabled],
+.rp-selectbtn[data-disabled] {
   opacity: 0.4;
   cursor: default;
 }
@@ -100,10 +102,6 @@
 .rp-radio[data-focus-visible] .rp-radio-mark {
   outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
-}
-.rp-radio[data-disabled] {
-  opacity: 0.4;
-  cursor: default;
 }
 .rp-radio-text {
   display: flex;
@@ -169,7 +167,7 @@
   display: flex;
   gap: var(--rp-space-1);
   font-size: var(--rp-text-xs);
-  line-height: 16px;
+  line-height: var(--rp-line-caption);
   font-weight: 500;
   color: var(--rp-negative-text);
 }
@@ -208,7 +206,7 @@
 .rp-field > label:not(.rp-switch),
 .rp-field .lbl {
   font-size: var(--rp-text-xs);
-  line-height: 16px;
+  line-height: var(--rp-line-caption);
   color: var(--rp-subtle);
 }
 .rp-selectbtn {
@@ -238,10 +236,6 @@
 }
 .rp-selectbtn[data-hovered] {
   background: var(--rp-hl-med);
-}
-.rp-selectbtn[data-disabled] {
-  opacity: 0.4;
-  cursor: default;
 }
 /* Settings controls share one column width across groups (auto-fill keeps empty tracks), including fields with nested status or help text. */
 .rp-toolbar.rp-fieldgrid {
