@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ChartWait, Meter, ProblemAlert, ProgressCircle, Skeleton} from './Feedback';
+import {ChartWait, Meter, ProblemAlert, ProgressCircle, Skeleton, TableSkeleton} from './Feedback';
 
 it.each([
   [undefined, 'negative', 'alert'],
@@ -52,4 +52,20 @@ it('holds a body of facts with inert placeholders and a loading status', () => {
   expect(markup).toContain('role="status"');
   expect(markup).toContain('height:40px');
   expect(markup.match(/inert=""/g)).toHaveLength(2);
+});
+
+it('holds a table body with a bar per cell but none in the actions column, waiting before it shows', () => {
+  const cols = [
+    {minWidth: 200, isRowHeader: true},
+    {minWidth: 96, grow: 0},
+    {minWidth: 48, actions: true}
+  ];
+  const markup = renderToStaticMarkup(<TableSkeleton cols={cols} rows={4} />);
+  expect(markup).toContain('grid-template-columns:minmax(200px, 400fr) minmax(96px, 0fr) minmax(48px, 48fr)');
+  expect(markup.match(/<span><span class="rp-skeleton-text"/g)).toHaveLength(8);
+  expect(markup.match(/<span><\/span>/g)).toHaveLength(4);
+  expect(new Set(markup.match(/width:\d+%/g)).size).toBeGreaterThan(2);
+  expect(markup).toContain('data-wait=""');
+  expect(markup).toContain('role="status"');
+  expect(markup).toContain('aria-hidden="true"');
 });

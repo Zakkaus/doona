@@ -217,10 +217,10 @@
 }
 /* A loading notice holds its box at once and shows after 150ms, fading in rather than popping; an empty result
    appears at once, since live filtering can reach and leave it on every keystroke. Reduced motion zeroes the fade. */
-.rp-empty[role='status'][data-wait] {
+:is(.rp-empty[role='status'], .rp-table-skeleton, .rp-skeleton, .rp-skeleton-body, .rp-skeleton-cards, .rp-facts)[data-wait] {
   visibility: hidden;
 }
-.rp-empty[role='status']:not([data-wait]) {
+:is(.rp-empty[role='status'], .rp-table-skeleton, .rp-skeleton, .rp-skeleton-body, .rp-skeleton-cards, .rp-facts:has(> [role='status'])):not([data-wait]) {
   animation: rp-fade-in var(--rp-duration) var(--rp-ease);
 }
 html,

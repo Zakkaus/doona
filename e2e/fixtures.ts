@@ -481,3 +481,15 @@ export function setupIncludedRouting({api, handlers}: Pick<Awaited<ReturnType<ty
       });
     };
 }
+
+// The first table's header top and height, and the height of its first-load placeholder rows or else its first row.
+export async function tableGeometry(page: Page) {
+  return page
+    .locator('.rp-table')
+    .first()
+    .evaluate(table => {
+      const header = table.querySelector('[role="columnheader"]')!.getBoundingClientRect();
+      const row = table.querySelector('.rp-table-skeleton [aria-hidden] > span, [role="row"][data-key]')!.getBoundingClientRect();
+      return {header: header.top - table.getBoundingClientRect().top, top: header.top + scrollY, height: table.getBoundingClientRect().height, row: row.height};
+    });
+}

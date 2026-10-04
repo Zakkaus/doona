@@ -34,10 +34,13 @@
   height: 1em;
   vertical-align: middle;
   border-radius: 4px;
+}
+.rp-skeleton-text,
+.rp-skeleton-cards > .rp-card::after {
   background-image: linear-gradient(to right, var(--rp-hl-med) 33%, var(--rp-hl-low), var(--rp-hl-med) 66%);
   background-size: 300%;
 }
-:root[data-scheme='dark'] .rp-skeleton-text {
+:root[data-scheme='dark'] :is(.rp-skeleton-text, .rp-skeleton-cards > .rp-card::after) {
   background-image: linear-gradient(to right, var(--rp-hl-med) 33%, var(--rp-hl-high), var(--rp-hl-med) 66%);
 }
 /* A label with a help button: its line is the button's height (buttons-menus.css), as the loaded label's is. */
@@ -62,7 +65,62 @@
   height: 100%;
   border-radius: var(--rp-lg-radius);
 }
+/* A body of a known kind (SkeletonBody): in a ChartWait it fills the held box. */
+.rp-chart-wait > .rp-skeleton-body {
+  flex: 1 1 auto;
+  align-self: stretch;
+}
+.rp-skeleton-body:is(.block, .rows) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-2);
+}
+.rp-skeleton-body.block > .rp-skeleton-text {
+  flex: 1 1 auto;
+  width: 100%;
+  border-radius: var(--rp-lg-radius);
+}
+.rp-skeleton-row {
+  display: flex;
+  align-items: center;
+  height: var(--rp-control);
+}
+/* Fields as the settings grid lays them out (fields.css): a label line over a control. */
+.rp-skeleton-body.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  align-content: start;
+  gap: var(--rp-space-3);
+}
+.rp-skeleton-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-1);
+  font-size: var(--rp-text-sm);
+  line-height: var(--rp-line-caption);
+}
+.rp-skeleton-field > .rp-skeleton-text:last-child {
+  width: 100%;
+  height: var(--rp-control);
+  border-radius: var(--rp-lg-radius);
+}
+/* Card surfaces (SkeletonBody cards), each with one block inside its padding. */
+.rp-skeleton-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-4);
+}
+.rp-skeleton-cards > .rp-card {
+  position: relative;
+}
+.rp-skeleton-cards > .rp-card::after {
+  content: '';
+  position: absolute;
+  inset: var(--rp-space-4);
+  border-radius: var(--rp-lg-radius);
+}
 @media (prefers-reduced-motion: no-preference) {
+  .rp-skeleton-cards > .rp-card::after,
   .rp-skeleton-text {
     animation: rp-skeleton var(--rp-duration-skeleton) ease-in-out infinite;
   }
@@ -542,14 +600,16 @@
 /* S2 CardView at size M, regular density: every card is 256px wide, inside the size's 200-280px range and wide enough
    for a date and time to the minute on one line, with 16px between them; as many columns as fit, and one full-width
    column on a phone. A row's cards share its height, and the regular M card pads by 16px, the card's own padding. */
-.rp-cardview {
+.rp-cardview,
+.rp-skeleton-cards.grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 256px), 256px));
   gap: var(--rp-space-4);
   outline: none;
 }
 @media (max-width: 599.98px) {
-  .rp-cardview {
+  .rp-cardview,
+  .rp-skeleton-cards.grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

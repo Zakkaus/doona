@@ -22,7 +22,7 @@ import Close from './icons/Close';
 import {phoneQuery, useContentWidth, useMediaQuery} from './hooks';
 import {TextTooltip} from './Tooltip';
 import {buttonClass} from './Button';
-import {Empty, Loading} from './Feedback';
+import {Empty, TableSkeleton} from './Feedback';
 import {revealFlowRow, useTableFlow} from './tableFlow';
 import {fitColumns, selectedRow, tableLayout, useTableHeight, useTableReveal} from './tableHooks';
 
@@ -289,6 +289,9 @@ export function DataTable<T extends {id: string}>({
   }, [restoreKey, flat]);
   useOpenerFocus(ref);
   const hasRows = rows.length > 0;
+  // First-load placeholder rows: as many as the body holds at the table's height. A multiline table sizes to its
+  // content, so it holds the two rows its empty state takes.
+  const skeletonRows = multiline && !virtual && !flow ? 2 : Math.max(1, Math.floor((fitted - 2 - tableLayout.headingHeight) / tableLayout.rowHeight));
   // React Aria counts every row of the collection, folded children included; a tree counts what it shows.
   const rowCount = tree && virtual ? flat.length + 1 : undefined;
   const table = useMemo(() => {
@@ -364,7 +367,7 @@ export function DataTable<T extends {id: string}>({
           dependencies={[shown, getTextValue, highlighted]}
           renderEmptyState={() => (
             <div className="rp-table-empty" style={{width: width ?? '100%'}}>
-              {loading ? <Loading /> : <Empty>{empty ?? t('ui.empty')}</Empty>}
+              {loading ? <TableSkeleton cols={shown} rows={skeletonRows} /> : <Empty>{empty ?? t('ui.empty')}</Empty>}
             </div>
           )}
         >
@@ -393,6 +396,7 @@ export function DataTable<T extends {id: string}>({
     hasRows,
     width,
     loading,
+    skeletonRows,
     empty,
     t
   ]);

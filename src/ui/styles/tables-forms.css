@@ -156,6 +156,23 @@
   flex-shrink: 0;
   max-width: 100%;
 }
+/* The first-load Skeleton (Feedback.tsx) draws its own row lines, so its cell drops the empty state's. Each cell is a
+   real row's height and inset; the bars take the kit Skeleton's fill and shimmer (cards-dashboard.css). */
+.rp-table [role='rowheader']:has(> .rp-table-empty > .rp-table-skeleton) {
+  border-bottom: 0;
+}
+.rp-table-skeleton > [aria-hidden] {
+  display: grid;
+  overflow: hidden;
+}
+.rp-table-skeleton > [aria-hidden] > span {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 40px;
+  padding: 0 var(--rp-cell-padding, var(--rp-space-4));
+  border-bottom: 1px solid var(--rp-line);
+}
 .rp-table [role='row'][data-selection-mode='single'] {
   cursor: default;
 }
