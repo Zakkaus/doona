@@ -209,7 +209,7 @@ function FlowRecords(props: PageProps) {
               <Kv inline items={[[t('ui.outbound'), <OutboundTag {...detail.outboundTag} />], ...detail.fields]} />
               <div className="rp-cluster">
                 {detail.connectionHref && (
-                  <Link appearance="button" small href={detail.connectionHref}>
+                  <Link appearance="button" href={detail.connectionHref}>
                     {t('flow.viewConnection')}
                   </Link>
                 )}

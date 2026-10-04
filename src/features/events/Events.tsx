@@ -71,7 +71,7 @@ export function Events() {
         {event.links.length > 0 && (
           <div className="rp-cluster">
             {event.links.map(link => (
-              <Link key={link.id} appearance="button" small href={link.href}>
+              <Link key={link.id} appearance="button" href={link.href}>
                 {link.label}
               </Link>
             ))}

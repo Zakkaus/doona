@@ -158,3 +158,57 @@ test('an event row copies its record as the export writes it without opening the
   expect(JSON.parse(await page.evaluate(() => navigator.clipboard.readText()))).toEqual(ready);
   await expect(page.locator('.rp-table-detail')).toBeEmpty();
 });
+
+test('an event detail closes from its top-right icon button or Escape, and its actions are M and level', async ({page}) => {
+  const {api, capabilities} = await mockBackend(page);
+  capabilities.resources.events.available = true;
+  const runtime = await api.runtime();
+  const data = {instance_id: runtime.instance_id, observed_at: runtime.observed_at};
+  const flow = (await api.flows()).flows[0].id;
+  await page.route(/\/api\/v1\/events(\?.*)?$/, route =>
+    fulfillStream(route, [{id: 'events:1', event: 'flow.gap', data: {...data, resource_id: flow, reason: 'evicted', dropped_records: '2'}}])
+  );
+  await page.goto('/#/events');
+  const grid = page.getByRole('grid', {name: 'Events', exact: true});
+  const detail = page.locator('.rp-table-detail');
+  const cell = grid.getByRole('gridcell', {name: 'Flow records lost', exact: true});
+  await cell.click();
+  const close = detail.getByRole('button', {name: 'Close', exact: true});
+  await expect(close).toBeVisible();
+  await expect(close).toHaveClass(/\bicon\b/);
+  await expect(close).toHaveText('');
+  const control = await detail.evaluate(el => Number.parseFloat(getComputedStyle(el).getPropertyValue('--rp-control')));
+  const edge = await detail.evaluate(el => {
+    const style = getComputedStyle(el);
+    // The scrollbar gutter takes the right of the padding box; the content ends one padding in from what is left.
+    return el.getBoundingClientRect().left + el.clientLeft + el.clientWidth - Number.parseFloat(style.paddingRight);
+  });
+  const [closeBox, fields] = [await box(close), await box(detail.locator('.rp-kv').first())];
+  expect(Math.abs(closeBox.x + closeBox.width - edge)).toBeLessThanOrEqual(1);
+  expect(closeBox.height).toBeCloseTo(control, 0);
+  expect(fields.x + fields.width).toBeLessThanOrEqual(closeBox.x);
+  // The first row of the detail holds the first line of the fields and the close button.
+  expect(Math.abs(closeBox.y - fields.y)).toBeLessThanOrEqual(1);
+  const actions = await detail
+    .locator('.rp-cluster')
+    .getByRole('link')
+    .evaluateAll(links =>
+      links.map(link => {
+        const rect = link.getBoundingClientRect();
+        return {height: rect.height, centre: rect.top + rect.height / 2};
+      })
+    );
+  expect(actions).toHaveLength(2);
+  for (const action of actions) {
+    expect(action.height).toBeCloseTo(control, 0);
+    expect(Math.abs(action.centre - actions[0].centre)).toBeLessThanOrEqual(1);
+  }
+  await close.click();
+  await expect(detail).toBeEmpty();
+  await expect.poll(() => grid.evaluate(el => el.contains(document.activeElement))).toBe(true);
+  await cell.click();
+  await expect(detail).toContainText('Flow records lost');
+  await page.keyboard.press('Escape');
+  await expect(detail).toBeEmpty();
+  await expect.poll(() => grid.evaluate(el => el.contains(document.activeElement))).toBe(true);
+});
