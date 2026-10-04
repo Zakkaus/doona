@@ -573,6 +573,8 @@ test('a chart two thirds of a row or wider lists its peak and average beside it'
     await expect(strip).toBeVisible();
   }
   await expect(tile(page, 'memory').locator('.rp-facts')).toBeHidden();
+  // The chart loads lazily and its wrapper replaces the placeholder that stood in for it; measure the wrapper once it is there.
+  await expect(tile(page, 'history').locator('.rp-chart-stats svg.rp-activity-surface')).toBeVisible();
   const card = await box(tile(page, 'history').locator('section').first());
   const chart = await box(tile(page, 'history').locator('.rp-chart-stats > :nth-child(2)'));
   const strip = await box(tile(page, 'history').locator('.rp-facts'));
