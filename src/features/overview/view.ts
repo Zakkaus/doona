@@ -1,6 +1,6 @@
 import type {Capabilities, Datapath, Runtime, RuntimeMemory, Version} from '../../api/model';
 import type {Key} from '../../i18n';
-import {formatDuration, localTime, formatBytes, formatCpu} from '../../i18n/format';
+import {formatDuration, localTime, formatBytes, formatBytesFraction, formatCpu} from '../../i18n/format';
 import {memoryTone, shortId} from '../../api/selectors';
 import {parseU64, pctU64} from '../../api/u64';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
@@ -230,10 +230,7 @@ export function overviewView(
               : [
                   {
                     label: t('ov.f.cgroupPercent'),
-                    value: t('ui.fraction', {
-                      part: formatBytes(memory.cgroup?.current_bytes ?? null, locale),
-                      whole: formatBytes(limit, locale)
-                    }),
+                    value: formatBytesFraction(memory.cgroup?.current_bytes ?? null, limit, locale, t),
                     meter: {value: percent, tone: memoryTone(percent)}
                   }
                 ]),

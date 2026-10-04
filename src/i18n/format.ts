@@ -200,10 +200,11 @@ export function formatUnit(value: number | bigint, locale: string, unit: UnitKey
 }
 // Decimal units, scaled in bigint so counters above 2^53 stay exact: one decimal below ten of a unit, whole numbers
 // above. A number (a chart value) is rounded to whole bytes. A value that rounds up to 1000 of a unit takes the next.
-function scaledBytes(input: string | bigint | number | null, locale: string, units: readonly UnitKey[]): string {
+// Null for a missing or negative value.
+function scaleBytes(input: string | bigint | number | null, units: readonly UnitKey[]) {
   const value =
     typeof input === 'number' ? (Number.isFinite(input) && input >= 0 ? BigInt(Math.round(input)) : null) : typeof input === 'bigint' ? input : parseU64(input);
-  if (value === null || value < 0n) return '—';
+  if (value === null || value < 0n) return null;
   let unit = 0,
     scale = 1n;
   while (unit < units.length - 1 && value + scale / 2n >= scale * 1000n) {
@@ -212,11 +213,24 @@ function scaledBytes(input: string | bigint | number | null, locale: string, uni
   }
   const tenths = (value * 10n + scale / 2n) / scale;
   return unit > 0 && value < scale * 10n && tenths % 10n !== 0n
-    ? formatUnit(Number(tenths) / 10, locale, units[unit], 1)
-    : formatUnit((value + scale / 2n) / scale, locale, units[unit]);
+    ? {value: Number(tenths) / 10, digits: 1, unit: units[unit]}
+    : {value: (value + scale / 2n) / scale, digits: 0, unit: units[unit]};
+}
+function scaledBytes(input: string | bigint | number | null, locale: string, units: readonly UnitKey[]): string {
+  const scaled = scaleBytes(input, units);
+  return scaled ? formatUnit(scaled.value, locale, scaled.unit, scaled.digits) : '—';
 }
 export function formatBytes(input: string | bigint | number | null, locale: string): string {
   return scaledBytes(input, locale, byteUnits);
+}
+// Used bytes out of a whole, the unit written once when both sides share it: 70／268 MB, but 461 GB／1.1 TB.
+export function formatBytesFraction(part: string | bigint | number | null, whole: string | bigint | number | null, locale: string, t: Translator): string {
+  const [a, b] = [scaleBytes(part, byteUnits), scaleBytes(whole, byteUnits)];
+  if (a && b && a.unit === b.unit)
+    return translate(langOf(locale), a.unit, {
+      n: t('ui.fraction', {part: formatNumber(a.value, locale, a.digits), whole: formatNumber(b.value, locale, b.digits)})
+    });
+  return t('ui.fraction', {part: formatBytes(part, locale), whole: formatBytes(whole, locale)});
 }
 export function formatRate(input: string | bigint | number | null, locale: string): string {
   return scaledBytes(input, locale, byteRateUnits);

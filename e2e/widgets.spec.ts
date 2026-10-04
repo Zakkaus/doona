@@ -1549,7 +1549,7 @@ test.describe('small and narrow panel widgets', () => {
     const body = floating(page).locator('.rp-widget-body');
     const card = (form: string, size: string) => body.locator(`[data-widget-id="memory-${form}-${size}"]`);
     // Medium names resident memory and the cgroup's use against its limit; large adds the chart and keeps the limit.
-    for (const size of ['medium', 'large']) await expect(card('sparkline', size).locator('.rp-kv')).toContainText(/cgroup used\s*\S+ MB \/ \S+ MB/);
+    for (const size of ['medium', 'large']) await expect(card('sparkline', size).locator('.rp-kv')).toContainText(/cgroup used\s*\S+(?: MB)? \/ \S+ MB/);
     await expect(card('sparkline', 'large').locator('.rp-compact-chart')).toBeVisible();
     await expect(card('sparkline', 'medium').locator('.rp-compact-chart')).toHaveCount(0);
     await expect(card('kv', 'medium').getByRole('meter')).toHaveCount(1);
@@ -1588,3 +1588,23 @@ test.describe('small and narrow panel widgets', () => {
     expect([...heights]).toHaveLength(1);
   });
 });
+
+// A byte fraction writes a shared unit once, so the docked memory meter keeps its label and value on one row.
+for (const [lang, slash] of [
+  ['zh-TW', '／'],
+  ['zh-CN', '／'],
+  ['en', ' / ']
+] as const)
+  test.describe(`the docked memory meter in ${lang}`, () => {
+    test.use({viewport: {width: 1280, height: 900}, storage: {'doona-lang': lang}});
+    test('puts its label and its value on one row at the default dock width', async ({page}) => {
+      await save(page, {...defaults(), docked: true, items: [{...defaultWidget('memory'), form: 'kv', size: 'medium'}]});
+      await page.goto('/#/settings');
+      const meter = page.locator('.rp-side-dock').getByRole('meter');
+      await expect(meter.locator('.v')).toHaveText(new RegExp(`^\\S+${slash}\\S+ MB$`));
+      const [label, value] = await Promise.all([box(meter.locator('.l')), box(meter.locator('.v'))]);
+      const lineHeight = await meter.locator('.l').evaluate(el => Number.parseFloat(getComputedStyle(el).lineHeight));
+      expect(label.height).toBeLessThanOrEqual(lineHeight + 0.5);
+      expect(Math.abs(label.y - value.y)).toBeLessThanOrEqual(0.5);
+    });
+  });

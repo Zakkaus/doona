@@ -80,7 +80,7 @@ it('shows the version without the runtime and formats counts for the locale', ()
   // A fraction follows the locale: a full-width slash in Chinese.
   const zh: Translator = (key, params) => translate('zh-TW', key, params);
   expect(datapathFields({...datapath, ebpf: {...datapath.ebpf!, maps}}, 'unknown', zh, 'zh-TW')).toContainEqual([zh('ov.f.connState'), '1,234／65,536']);
-  expect((overviewView({memory: runtimeMemory}, loading, 'zh-TW', zh).memory.fields[0] as {value: string}).value).toMatch(/^\S+ \S+／\S+ \S+$/);
+  expect((overviewView({memory: runtimeMemory}, loading, 'zh-TW', zh).memory.fields[0] as {value: string}).value).toMatch(/^\S+(?: \S+)?／\S+ \S+$/);
 });
 
 it('exports raw diagnostic snapshots rather than formatted fields', () => {

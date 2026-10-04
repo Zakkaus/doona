@@ -1,6 +1,6 @@
 import {useContext, useMemo} from 'react';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
-import {formatBytes, formatRate, formatCpu, localTime} from '../../i18n/format';
+import {formatBytes, formatBytesFraction, formatRate, formatCpu, localTime} from '../../i18n/format';
 import {useCapabilities, useRuntime, useRuntimeMemory} from '../../store';
 import {ResourceSamples} from '../../store/preview';
 import type {Runtime, RuntimeMemory} from '../../api/model';
@@ -216,14 +216,12 @@ export function MemoryWidget({item, form}: {item: Widget; form: ModuleForm}) {
         items={[
           ...(rss ? [[t('act.rss'), bytes(memory.data?.process?.rss_bytes ?? null)] as [string, string]] : []),
           ...(cgroup && share === null && (!narrow || !rss)
-            ? [[t('act.cgroup'), !narrow && limited ? t('ui.fraction', {part: bytes(used), whole: bytes(limit)}) : bytes(used)] as [string, string]]
+            ? [[t('act.cgroup'), !narrow && limited ? formatBytesFraction(used, limit, locale, t) : bytes(used)] as [string, string]]
             : []),
           ...(cgroup && !narrow && !limited ? [[t('ov.f.cgroupLimit'), t(unlimited ? 'ov.noLimit' : 'widgets.notReported')] as [string, string]] : [])
         ]}
       />
-      {share !== null && (
-        <Meter label={t('ov.f.cgroupPercent')} value={share} valueLabel={t('ui.fraction', {part: bytes(used), whole: bytes(limit)})} tone={memoryTone(share)} />
-      )}
+      {share !== null && <Meter label={t('act.cgroup')} value={share} valueLabel={formatBytesFraction(used, limit, locale, t)} tone={memoryTone(share)} />}
       {!!kills && <Badge tone="negative">{t('ui.valuePair', {label: t('ov.f.oomKill'), value: formatNumber(kills, locale)})}</Badge>}
       {!rss && !cgroup && <span className="rp-label">{t('widgets.unavailable')}</span>}
     </>
