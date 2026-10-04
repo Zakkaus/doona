@@ -1,5 +1,5 @@
 import {useT} from '../../i18n';
-import {Button, InlineAlert, Toolbar} from '../../ui/ui';
+import {Button, InlineAlert, PrimaryActions, Toolbar} from '../../ui/ui';
 
 // A draft whose file changed on disk while it was being edited. Saving waits until the person keeps the draft over
 // the new text or discards it: here, or with the editor's own Cancel when it has one. `keep` is null when there is
@@ -11,16 +11,18 @@ export function ChangedOnDisk({message, busy, keep, discard}: {message: string; 
       action={
         (keep || discard) && (
           <Toolbar>
-            {keep && (
-              <Button isDisabled={busy} onPress={keep}>
-                {t('config.keepChanges')}
-              </Button>
-            )}
-            {discard && (
-              <Button isDisabled={busy} onPress={discard}>
-                {t('config.discard')}
-              </Button>
-            )}
+            <PrimaryActions>
+              {keep && (
+                <Button isDisabled={busy} onPress={keep}>
+                  {t('config.keepChanges')}
+                </Button>
+              )}
+              {discard && (
+                <Button isDisabled={busy} onPress={discard}>
+                  {t('config.discard')}
+                </Button>
+              )}
+            </PrimaryActions>
           </Toolbar>
         )
       }

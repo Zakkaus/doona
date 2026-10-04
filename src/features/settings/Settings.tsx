@@ -1,6 +1,20 @@
 import {Fragment, useId, type ReactNode} from 'react';
 import {LANGS, useT, type Lang} from '../../i18n';
-import {ActionHelp, Button, Card, ErrorMessage, LabeledSelect, Light, Link, InlineAlert, ConfirmDialog, Switch, TextField, Toolbar} from '../../ui/ui';
+import {
+  ActionHelp,
+  Button,
+  PrimaryActions,
+  Card,
+  ErrorMessage,
+  LabeledSelect,
+  Light,
+  Link,
+  InlineAlert,
+  ConfirmDialog,
+  Switch,
+  TextField,
+  Toolbar
+} from '../../ui/ui';
 import {SearchSelect} from '../../ui/SearchSelect';
 import type {DateFormat, PaletteId, Scheme, TimeFormat, ToastPlacement, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
@@ -155,14 +169,16 @@ export function Settings({query}: PageProps) {
             </div>
           )}
           <Toolbar>
-            <div className="rp-contents" data-setting="test">
-              <Button onPress={() => void testConnection()} isPending={pending} isDisabled={saving}>
-                {t('settings.test')}
+            <PrimaryActions>
+              <div className="rp-contents" data-setting="test">
+                <Button onPress={() => void testConnection()} isPending={pending} isDisabled={saving}>
+                  {t('settings.test')}
+                </Button>
+              </div>
+              <Button type="submit" accent isPending={saving} isDisabled={staleLogin}>
+                {t('settings.save')}
               </Button>
-            </div>
-            <Button type="submit" accent isPending={saving} isDisabled={staleLogin}>
-              {t('settings.save')}
-            </Button>
+            </PrimaryActions>
           </Toolbar>
           <div className="rp-label">{t('settings.saveHelp')}</div>
           {pending && <div role="status">{t('settings.testing')}</div>}

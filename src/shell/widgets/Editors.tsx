@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction} from 'react';
 import {useT} from '../../i18n';
-import {Button, ConfirmDialog, ModalDialog, PopoverDialog, VisuallyHidden, closeToast, toast} from '../../ui/ui';
+import {Button, ConfirmDialog, ModalDialog, PopoverDialog, PrimaryActions, VisuallyHidden, closeToast, toast} from '../../ui/ui';
 import {useDraftGuard} from '../draft';
 import {saveDashboard} from './dashboardSettings';
 import {SortableCanvas, reorderKeys} from '../../ui/SortableCanvas';
@@ -183,17 +183,19 @@ export function DashboardActions({draft, saved, setDraft, onClose}: Draft & {sav
           <ModuleGallery items={dashboardItems(draft)} add={(id, preset) => setDraft(extend(draft, id, preset))} surface="dashboard" />
         </div>
       </ModalDialog>
-      <Button onPress={() => setDraft(dashboardDefaults())}>{t('widgets.reset')}</Button>
-      <Button onPress={() => (dirty ? setConfirm(true) : onClose())}>{t('ui.cancel')}</Button>
-      <Button
-        accent
-        onPress={() => {
-          saveDashboard(draft);
-          onClose();
-        }}
-      >
-        {t('ui.done')}
-      </Button>
+      <PrimaryActions>
+        <Button onPress={() => setDraft(dashboardDefaults())}>{t('widgets.reset')}</Button>
+        <Button onPress={() => (dirty ? setConfirm(true) : onClose())}>{t('ui.cancel')}</Button>
+        <Button
+          accent
+          onPress={() => {
+            saveDashboard(draft);
+            onClose();
+          }}
+        >
+          {t('ui.done')}
+        </Button>
+      </PrimaryActions>
       <ConfirmDialog
         title={t('config.discardTitle')}
         isOpen={confirm}

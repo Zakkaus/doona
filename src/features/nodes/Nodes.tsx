@@ -1,5 +1,19 @@
 import {useT} from '../../i18n';
-import {Button, HelpRow, ConfirmDialog, Empty, ErrorMessage, Link, ProblemAlert, ModalDialog, StaticField, Switch, Tabs, TextField} from '../../ui/ui';
+import {
+  Button,
+  PrimaryActions,
+  HelpRow,
+  ConfirmDialog,
+  Empty,
+  ErrorMessage,
+  Link,
+  ProblemAlert,
+  ModalDialog,
+  StaticField,
+  Switch,
+  Tabs,
+  TextField
+} from '../../ui/ui';
 import {NodeLatency} from './Latency';
 import type {PageProps} from '../../shell/routes';
 import {ProviderCards} from './ProviderCards';
@@ -59,12 +73,14 @@ export function Nodes(props: PageProps) {
           {t('nodes.noSources')}
           {(addProvider || addNode) && (
             <span className="rp-cluster">
-              {addProvider && (
-                <Button accent onPress={addProvider}>
-                  {t('nodes.addProvider')}
-                </Button>
-              )}
-              {addNode && <Button onPress={addNode}>{t('nodes.addNode')}</Button>}
+              <PrimaryActions>
+                {addProvider && (
+                  <Button accent onPress={addProvider}>
+                    {t('nodes.addProvider')}
+                  </Button>
+                )}
+                {addNode && <Button onPress={addNode}>{t('nodes.addNode')}</Button>}
+              </PrimaryActions>
             </span>
           )}
         </Empty>

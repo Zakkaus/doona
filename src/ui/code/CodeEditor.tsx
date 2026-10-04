@@ -28,7 +28,7 @@ import {closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/
 import {toDiagnostics} from './diagnostics';
 import type {GroupEntry} from '../../dae/groups';
 import {readOnlyAttempts} from './readOnlyAttempt';
-import {Button} from '../Button';
+import {Button, PrimaryActions} from '../Button';
 import {MenuButton} from '../Menu';
 import {ActionGroup, MoreMenu, type Action} from '../ActionGroup';
 import {useOverflow} from '../hooks';
@@ -393,10 +393,15 @@ export function CodeEditor({
       {!compact && (
         <div className="rp-editor-head" ref={head}>
           <div className="rp-toolbar rp-editor-toolbar">
-            <ActionGroup actions={actions.slice(0, 1)} overflowMode="wrap" />
+            {/* The caller's actions commit or check the source, as a form's do; the editing tools stay action buttons. */}
+            <PrimaryActions>
+              <ActionGroup actions={actions.slice(0, 1)} overflowMode="wrap" />
+            </PrimaryActions>
             <div className="rp-editor-actions" data-collapsed={collapsed || undefined}>
               <div className="rp-toolbar" ref={toolbar}>
-                <ActionGroup actions={actions.slice(1)} overflowMode="wrap" />
+                <PrimaryActions>
+                  <ActionGroup actions={actions.slice(1)} overflowMode="wrap" />
+                </PrimaryActions>
                 <Button onPress={() => run(openSearchPanel)}>{t(readOnly ? 'cm.find' : 'cm.findReplace')}</Button>
                 <Button onPress={() => run(gotoLine)}>{t('cm.gotoLine')}</Button>
                 {onChange && (
