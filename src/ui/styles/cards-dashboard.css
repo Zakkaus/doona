@@ -128,11 +128,13 @@
   width: 40%;
 }
 /* A page's Skeleton (PageSkeleton): its parts at the page's gap, rows of M controls, cards to a row, table rows. */
+/* A stand-in never anchors the scroll position, so the page that replaces it does not move the reader. */
 .rp-page-skeleton {
   display: flex;
   flex-direction: column;
   gap: var(--rp-space-6);
   min-width: 0;
+  overflow-anchor: none;
 }
 .rp-page-skeleton.panel {
   gap: var(--rp-space-4);
