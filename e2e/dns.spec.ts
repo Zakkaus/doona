@@ -102,7 +102,6 @@ test('DNS logs load older pages and export only loaded records', async ({page}) 
   await expect(page.getByText('1 loaded; the export covers loaded records only', {exact: true})).toBeVisible();
   await expect(page.getByText('500 records kept', {exact: true})).toBeVisible();
   await page.getByRole('button', {name: 'Load older records'}).click();
-  // Everything is loaded now, so the qualifier goes away.
   await expect(page.getByText(/loaded; the export covers/)).toHaveCount(0);
   expect(cursors).toContain('older');
   await expect(page.getByRole('button', {name: 'Load older records'})).toHaveCount(0);
@@ -514,7 +513,6 @@ test('the statistics lead to the DNS configuration, the cache and the log filter
   await page.setViewportSize({width: 1440, height: 900});
   await page.goto('/#/dns');
   await page.getByRole('link', {name: 'Open DNS configuration', exact: true}).click();
-  // The link opens the dns section's first line in the main file.
   await expect(page).toHaveURL(/#\/config\?tab=source&source=src-main&line=22$/);
   await expect(page.locator('.cm-activeLine')).toContainText('dns {');
   await page.goBack();

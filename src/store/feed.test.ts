@@ -39,7 +39,6 @@ it.each([
   const feed = createFeed<{id: string}, {connected: boolean}>(1000, {connected: false}, 'ignore', {every});
   const notify = vi.fn();
   const stop = feed.subscribe(notify);
-  // One record every 20 ms for a second.
   for (let i = 0; i < 50; i++) {
     feed.append({id: String(i)});
     vi.advanceTimersByTime(20);

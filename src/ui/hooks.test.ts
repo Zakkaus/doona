@@ -33,7 +33,6 @@ const {useContentSize, useNearViewport} = await import('./hooks');
 const rewind = () => {
   slot = 0;
 };
-// Each call is one render of the same component.
 const useRender = (onNear: () => void) => {
   rewind();
   return useNearViewport(onNear);
@@ -94,7 +93,7 @@ describe('useContentSize', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   // A zoomed grid whose content box is 988.797px wide: clientWidth rounds it to 989, where contentRect keeps the
-  // fraction and the size floors it to 988. A table fitting its columns to the two dropped a column after first paint.
+  // fraction. A table fitting its columns to the two dropped a column after first paint, so both must give one size.
   it('reads the first size and every resize the same way', () => {
     const el = {clientWidth: 989, clientHeight: 608, getBoundingClientRect: () => ({width: 1246, height: 760}), getClientRects: () => [{}]};
     // The ref is the hook's first slot; the element is attached before the layout effect runs, as React does.

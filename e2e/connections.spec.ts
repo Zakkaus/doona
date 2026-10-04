@@ -562,7 +562,7 @@ test('the Select menu lists every device and rule and filters them once the list
   const menu = page.getByRole('menu');
   const search = page.getByRole('searchbox', {name: 'Filter devices and rules'});
   await expect(search).toBeFocused();
-  // The quietest device is past the twelve the menu used to list.
+  // The quietest device ranks below the first twelve, so only the search reaches it.
   await search.fill('10.0.0.49');
   await expect(menu.getByRole('menuitemradio')).toHaveCount(1);
   await menu.getByRole('menuitemradio', {name: /^10\.0\.0\.49/}).click();

@@ -307,7 +307,6 @@ test('a draft in another settings form is answered for before the saved profile 
   await page.getByRole('option', {name: /Backend B/}).click();
   const confirm = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
   await confirm.getByRole('button', {name: 'Cancel', exact: true}).click();
-  // Declining changes nothing: the saved profile is the old one and the page took no reload.
   expect(await page.evaluate(() => localStorage.getItem('doona-profile'))).toBe('a');
   await expect(picker).toBeEnabled();
   await picker.click();

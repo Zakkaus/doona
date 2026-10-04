@@ -228,7 +228,6 @@ test('the download route follows the routing rules by default, and a group route
   expect(bodies[1]).toEqual({geodata: {download: {route: 'direct'}}});
   await expect(route.getByRole('button', {name: t('settings.geodataRouteGroup')})).toHaveCount(0);
   expect(sent).toEqual(['patch', 'patch']);
-  // Reset removes every override after a confirmation.
   await row(page, 'settings.geodataStatus')
     .getByRole('button', {name: t('settings.geodataReset'), exact: true})
     .click();

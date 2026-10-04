@@ -81,7 +81,7 @@ export function nodeFixtures(count: number, faults = false): {nodes: Node[]; gro
     seed = (seed * 48271) % 2147483647;
     return seed / 2147483647;
   };
-  // A second sequence for the averages, so adding them left every other fixture value as it was.
+  // A separate sequence for the averages, so they do not shift the other fixture values.
   let wobble = 11;
   const drift = (): [number, number] => {
     wobble = (wobble * 48271) % 2147483647;

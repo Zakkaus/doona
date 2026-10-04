@@ -43,7 +43,6 @@ export {interestingNotice} from '../../api/selectors';
 
 // The home card holds this many rows; the rest is one click away on the events page.
 const NOTICE_ROWS = 8;
-// A failed operation is an error and a recorder gap a warning; every other event is a notice.
 const noticeTone = (event: ApiEvent): NoticeRow['tone'] =>
   event.event === 'operation.updated' && event.data.status === 'failed' ? 'err' : event.event === 'flow.gap' ? 'warn' : 'info';
 // The row already opens with the kind, so a gap that names no record starts at the reason itself, not at "reason:".
@@ -176,7 +175,6 @@ export function activityRanking(connections: ConnectionList | undefined, by: str
     value: row.percent === null ? formatBytes(row.download, locale) : t('ui.share', {bytes: formatBytes(row.download, locale), percent: row.percent}),
     pct: row.percent ?? 0,
     color: colors.cat[i % colors.cat.length],
-    // The connection list filtered to the device, or searched for the domain or address.
     href: href('connections', by === 'dev' ? {src: row.name} : {q: row.name})
   }));
 }

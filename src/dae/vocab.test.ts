@@ -3,7 +3,7 @@ import {builtinOutboundNames, builtinOutbounds, isBuiltinOutbound, newGroupPolic
 
 it('recognises exactly the built-in outbounds, with and without (must)', () => {
   for (const name of builtinOutboundNames) expect(isBuiltinOutbound(name)).toBe(true);
-  // The places that replaced `=== 'direct' || === 'block'` never meant the rule-only `(must)` spelling.
+  // The rule-only `(must)` spelling is not a bare built-in outbound name.
   for (const name of ['direct(must)', 'block(must)']) expect(isBuiltinOutbound(name)).toBe(false);
   expect(builtinOutbounds).toEqual(expect.arrayContaining([...builtinOutboundNames]));
   for (const name of ['proxy', 'direct-hk', 'Direct', '', null, undefined]) expect(isBuiltinOutbound(name)).toBe(false);

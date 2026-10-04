@@ -221,7 +221,6 @@ export function WidgetEditor({onClose, backend}: {onClose: () => void; backend: 
   const [width, setWidth] = useState(savedWidth);
   const [resized, setResized] = useState(false);
   const widthChanged = width !== (restored ? defaultPanelWidth : savedWidth);
-  // Nothing is selected until the reader picks a widget, so the preview opens without a selection frame.
   const [selected, select] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [announcement, setAnnouncement] = useState({text: '', serial: 0});

@@ -40,7 +40,6 @@ export function NodeCard({
     >
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       <ValueTile
-        // The value opens the node on the nodes page, as the connections tile opens the list it counts.
         value={
           vm.href ? (
             <Link appearance="link" href={vm.href} label={t('ui.valuePair', {label: vm.name, value: vm.latency})}>

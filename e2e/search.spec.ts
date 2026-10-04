@@ -74,7 +74,6 @@ test('search opens a connections tab, and a DNS rule condition on its marked row
   await expect(row).toContainText('qname(suffix: lan, home.arpa)');
   await expect(row).toBeInViewport();
   await expect(row).toHaveAttribute('data-highlighted', 'true');
-  // The mark is brief; the selection stays.
   await expect(row).not.toHaveAttribute('data-highlighted', 'true', {timeout: 5000});
   await expect(row).toHaveAttribute('aria-selected', 'true');
 });

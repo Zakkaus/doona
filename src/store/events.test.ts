@@ -165,8 +165,8 @@ it('leaves history and connection polling on their own cadence under runtime hea
   for (const fetch of fetches) expect(fetch).toHaveBeenCalledTimes(4);
 });
 
-// The KVM lab saw one Activity tab read the capabilities every 2.5 s, once per runtime heartbeat. Over 100 s of
-// heartbeats the first read is the only one; a generation change and a reconnect each add exactly one.
+// Runtime heartbeats arrive every 2.5 s; over 100 s of them the first read is the only one, and a generation change
+// and a reconnect each add exactly one.
 it('reads the capabilities once under runtime heartbeats and again only on generation change or reconnect', async () => {
   const api = createMockApi();
   let options!: EventOptions;

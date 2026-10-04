@@ -195,7 +195,6 @@ test('the tree draws every configured rule, follows a hover along its branch and
   const links = topology.locator('.rp-tree-links path');
   expect(await links.count()).toBeGreaterThan(8);
   await expect(topology.locator('.rp-tree-links path[stroke-dasharray]').first()).toBeAttached();
-  // Hovering a rule lights its branch and dims the rest.
   const item = topology.locator('[data-stage="rule"]').filter({hasText: 'l4proto(udp) && dport(443)'});
   await item.hover();
   await expect(topology.locator('[data-stage="outbound"]').filter({hasText: 'block'})).not.toHaveClass(/dim/);

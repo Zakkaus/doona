@@ -97,8 +97,7 @@ h3.rp-label {
     flex-wrap: wrap;
   }
 }
-/* A drawer scrolls vertically already, so on phones a truncated value wraps to show it whole instead of relying on
-   TextTooltip's reveal, which needs :focus-visible and so never opens on a tap. */
+/* A drawer already scrolls vertically, so on phones a truncated value wraps to show its full text without a tooltip. */
 @media (max-width: 599.98px) {
   .rp-drawer .rp-truncate {
     white-space: normal;

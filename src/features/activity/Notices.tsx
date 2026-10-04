@@ -44,7 +44,6 @@ export function Notices({rows, total, error, retry, loading, empty}: NoticesMode
     </Card>
   );
 }
-// The notice rows, each a list item with its kind's light and its summary, ended by its action.
 export function NoticeList({rows, label}: {rows: NoticeRow[]; label: string}) {
   return (
     <div className="rp-list rp-list-labeled rp-columns" role="list" aria-label={label} style={columns(rows.length)}>

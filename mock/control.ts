@@ -38,7 +38,6 @@ export function probeResult(request: ProbeRequest, nodes: Node[], groups: Group[
   const group = target.type === 'group' ? groups.find(g => g.id === target.group_id) : undefined;
   const selection = {tcp: group?.runtime.selection.tcp?.member_id ?? null, udp: group?.runtime.selection.udp?.member_id ?? null};
   const ids = probeMembers(request, nodes, groups);
-  // The kind fixes the purpose; the request no longer carries it.
   const purpose = request.kind === 'dns' ? 'dns' : 'data';
   const results: ProbeResult['results'] = [];
   for (const member_id of ids)

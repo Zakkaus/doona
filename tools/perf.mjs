@@ -119,7 +119,6 @@ await measure(
   },
   {big: true}
 );
-// Typing narrows the 3,000 nodes a character at a time, then clearing the field brings them back.
 await measure(
   'nodes: type and clear a search',
   async (page, session) => {
@@ -169,7 +168,6 @@ await measure(
   },
   {big: true, busy: true, storage: sortedByStart}
 );
-// Each header click sorts 1,000 rows and rebuilds the table view.
 await measure(
   'connections: sort 1,000 rows by four columns',
   async (page, session) => {

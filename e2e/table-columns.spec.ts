@@ -11,7 +11,7 @@ test.skip(({browserName}) => browserName !== 'chromium', 'classic scrollbars are
 const observed = 150;
 const sampled = 30;
 
-// Pages that show a table; the rules list, config, settings and policies have none for the probe to measure.
+// Pages that show a table for the probe to measure.
 const pages = ['flows?tab=records', 'connections?tab=list', 'nodes', 'logs', 'events', 'dns?tab=log'];
 
 for (const path of pages) {

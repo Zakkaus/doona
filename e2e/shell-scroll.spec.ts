@@ -63,7 +63,7 @@ for (const scheme of ['light', 'dark'])
   });
 
 test.describe('125% zoom', () => {
-  // A 1956x1021 screen at 125%, as the report that found it.
+  // A 1956x1021 screen at 125%.
   test.use({viewport: {width: 1565, height: 817}, deviceScaleFactor: 1.25, storage: {'doona-scheme': 'dark', 'doona-lang': 'zh-TW'}});
   test('the top bar and the side navigation draw the same pixels at fractional scroll offsets', async ({page}) => {
     await open(page, 'dns');

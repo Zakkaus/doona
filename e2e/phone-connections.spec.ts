@@ -16,7 +16,7 @@ test.describe('320px', () => {
       .locator('.rp-toolbar')
       .first()
       .evaluate(el => el.getBoundingClientRect());
-    // Flexible now, not the fixed 240px box: it takes what the filters menu leaves of the row.
+    // It takes what the filters menu leaves of the row.
     expect(box.x).toBeCloseTo(toolbar.x, 0);
     expect(menu.x + menu.width).toBeCloseTo(toolbar.x + toolbar.width, 0);
     expect(menu.x - (box.x + box.width)).toBeCloseTo(8, 0);
@@ -40,9 +40,8 @@ test.describe('1280px', () => {
   });
 });
 
-// TextTooltip only reveals on an ancestor's :focus-visible, which a tap never produces (src/ui/Tooltip.tsx). On a
-// phone the detail drawer has vertical room to spare, so a value that would otherwise truncate wraps instead, and the
-// full text is on screen without needing the tooltip at all.
+// On a phone the detail drawer has vertical room to spare, so a value that would otherwise truncate wraps instead, and
+// the full text is on screen without needing the tooltip.
 test('the detail rule wraps on phones and truncates on desktop', async ({page}) => {
   const {api} = await mockBackend(page);
   const connections = await api.connections({detail: 'full', limit: 1000});

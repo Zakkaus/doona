@@ -33,7 +33,6 @@
 .rp-tabbar[data-fade~='end'] {
   --fade-end: 24px;
 }
-/* The marker fills a tab's whole box: the bar has no inset, as S2's segmented control has none. */
 /* The slider fills the tab flush with the bar's edge, so it takes the bar's radius, as S2's does. */
 .rp-tabbar > .rp-slider {
   top: 0;
