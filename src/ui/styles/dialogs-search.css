@@ -42,6 +42,11 @@
   gap: var(--rp-space-4);
   outline: none;
 }
+/* The column's gap spaces a dialog's paragraphs; a paragraph's own margin would add to it. */
+.rp-dialog > p,
+.rp-dialog-content > p {
+  margin: 0;
+}
 .rp-dialog-sections {
   display: flex;
   flex-direction: column;
