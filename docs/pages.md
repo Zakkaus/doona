@@ -24,7 +24,7 @@ A page is marked unavailable only when every resource it needs is unavailable. T
 
 `Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere. Which resources each page needs, and where doona keeps its own settings, are on the [features page](https://zakkaus.github.io/doona-docs/en/features.html#pages). Help buttons beside unclear states and terms explain them.
 
-Sign-in is a page of its own with an appearance button that opens Settings > Appearance for language, palette and theme settings. From 1024 pixels wide, a panel beside the form shows a construction scene; pressing it starts a Flappy Duck game. The demo fills in the user name `demo` and the password `demo`.
+Sign-in is a page of its own with Language, Palette and Theme controls in the upper-right corner. From 1024 pixels wide, a panel beside the form shows a loading bar stuck at 99%; pressing it starts a Flappy Duck game, but under reduced motion the scene stands still and takes no presses. The demo fills in the user name `demo` and the password `demo`.
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/en/rules-light.webp" alt="The rules page" width="100%">
 
@@ -72,7 +72,9 @@ The Latency tab of Nodes plots each node's latest latency, and its moving averag
 
 Configuration shows the version of the configuration in effect. Modules shows one summary per configuration section and links to the page that manages it. Global settings edits the engine's persistent settings when supported; Config files edits the selected writable source and exports its displayed content, which may contain credentials. A write that changes settings requiring a restart is refused without writing; the notice lists the settings and provides a restart command and an install-guide link.
 
-<!-- Screenshot publication: add config-source-light.webp and config-global-light.webp after the documentation deployment publishes them. -->
+![Config files with the source editor](https://zakkaus.github.io/doona-docs/screenshots/en/config-source-light.webp)
+
+![Global settings form](https://zakkaus.github.io/doona-docs/screenshots/en/config-global-light.webp)
 
 Settings > Geodata lists the geodata files and shows status and update controls when supported. Reset to defaults asks for confirmation, then removes all geodata overrides and values taken from the configuration file so the built-in sources and defaults apply again. Reload, DNS cache, subscription and connection actions remain on their respective pages, not in Settings. Failure toasts and notices for unknown operation results offer Copy error; Settings > About copies the last 20 errors kept in memory, excluding secrets and request bodies.
 

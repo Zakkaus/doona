@@ -6,7 +6,7 @@
 
 十二套配色各有浅色与深色。Rosé Pine 有两种，Catppuccin 有三种；另外七种是 Nord、Kary Pro Colors、Ant Design、Arco Design、Semi Design、玻璃与中国。中国配色的两种模式是白班与夜班。
 
-中国配色将良好与运行中显示为稳中向好，将不可用与降级显示为严峻挑战。可在顶栏切换配色，或通过登录页的外观按钮打开设置页的外观区域。
+中国配色将良好与运行中显示为稳中向好，将不可用与降级显示为严峻挑战。可在顶栏切换配色，或使用登录页的配色菜单。
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/palettes.webp" alt="全部配色的浅色与深色" width="100%">
 

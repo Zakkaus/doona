@@ -24,7 +24,7 @@
 
 任何页面按 `Ctrl K` 可搜索页面、连接、节点、群组、规则与来源。各页面需要的资源与 doona 自身设置的存放位置，见[功能](https://zakkaus.github.io/doona-docs/zh-CN/features.html#pages)一页。不易理解的状态与术语旁设有帮助按钮，按下即显示说明。
 
-登录为独立页面，外观按钮会打开设置页的外观区域，可在其中设置语言、配色与主题。窗口宽度不小于 1024 像素时，表单旁的面板显示施工场景，按下后启动 Flappy Duck 小游戏。演示版预填了用户名 `demo` 和密码 `demo`。
+登录为独立页面，右上角设有语言、配色与主题三个控件。窗口宽度不小于 1024 像素时，表单旁的面板显示停在 99% 的加载进度条，按下后启动 Flappy Duck 小游戏；启用减少动态效果时，场景保持静止且不响应按下操作。演示版预填了用户名 `demo` 和密码 `demo`。
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/zh-CN/rules-light.webp" alt="规则页" width="100%">
 
@@ -72,7 +72,9 @@
 
 配置页显示当前生效的配置版本。模块标签页为每个配置块显示一行摘要，并链接到管理该配置块的页面。后端支持时，全局设置编辑引擎的持久设置；配置文件标签页编辑选中的可写来源，并导出显示的内容，导出文件可能包含凭据。若写入涉及必须重启才能生效的设置，则整次写入被拒绝；提示会列出设置，并提供重启命令和安装指南链接。
 
-<!-- Screenshot publication: add config-source-light.webp and config-global-light.webp after the documentation deployment publishes them. -->
+![配置文件与来源编辑器](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/config-source-light.webp)
+
+![全局设置表单](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/config-global-light.webp)
 
 设置页的地理数据卡片列出地理数据文件，并在后端支持时显示状态与更新操作。重置为默认值经确认后移除所有地理数据覆盖及取自配置文件的值，恢复内置来源与默认值。重新加载、DNS 缓存、订阅与连接操作保留在各自页面，不放在设置页。错误通知和操作结果未知的提示提供复制错误；设置页的关于卡片可复制内存中保留的最近 20 条错误，不含密钥与请求正文。
 

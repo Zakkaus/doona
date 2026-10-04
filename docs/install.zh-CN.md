@@ -14,39 +14,57 @@ doona 依赖 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 [文档](https://zakkaus.github.io/doona-docs/zh-CN/)包含系统要求、honk 与 doona 的安装、示例配置、首次登录、逐项检查功能与故障排查。
 
-## 发布附件与软件包选择
+## 发布文件
 
-手动安装选程序归档文件；通过软件包管理器安装则选对应系统的格式。下列为 v0.1.0-beta.14 的文件名，其他版本遵循相同的[命名方式](../install/README.md#version-spellings)。
+每次发布有 38 个文件。大多数用户只需两个：适用于自己系统的程序文件与 `SHA256SUMS`。下列为 v0.1.0-beta.14 的文件名，其他版本遵循相同的[命名方式](../install/README.md#version-spellings)。
 
-| 格式        | 程序文件                              | 适用系统或方式                      |
-| ----------- | ------------------------------------- | ----------------------------------- |
-| tar.gz      | `doona-0.1.0-beta.14.tar.gz`          | 手动安装，由任意 Web 服务器提供     |
-| deb         | `doona-web_0.1.0-beta.14-1_all.deb`   | Debian 或 Ubuntu                    |
-| rpm         | `doona-0.1.0-beta.14-1.noarch.rpm`    | Fedora 或 openSUSE                  |
-| Arch        | `doona-0.1.0beta14-1-any.pkg.tar.zst` | Arch Linux                          |
-| ipk         | `doona_0.1.0-beta.14-1_all.ipk`       | OpenWrt 24.10 及更早版本，使用 opkg |
-| OpenWrt apk | `doona-0.1.0_beta14-r1.apk`           | OpenWrt 25.12，使用 apk-tools 3     |
-| Alpine apk  | `doona-0.1.0-beta.14-r0.alpine.apk`   | Alpine Linux                        |
+### 程序
 
-Debian 与 Ubuntu 自带一个无关的 `doona` 软件包，因此 deb 名称为 `doona-web`，安装到 `/usr/share/doona-web`；请将 honk 的 `ui` 设为该路径。可选 deb 软件包为 `doona-web-fonts` 与 `doona-web-precompressed`。其他软件包格式保留 `doona` 名称，安装到 `/usr/share/doona`。Alpine 与 OpenWrt 的 apk 文件不能混用；签名密钥与安装命令见 [apk 安装说明](../install/README.md#installing-the-apk-packages)。
+手动安装或通过系统的软件包管理器安装，选择其中一个。
 
-### 可选字体
+| 文件                                  | 内容                                        | 适用系统或方式                  |
+| ------------------------------------- | ------------------------------------------- | ------------------------------- |
+| `doona-0.1.0-beta.14.tar.gz`          | 构建好的 UI、许可证与更新日志，不含安装程序 | 手动安装，由任意 Web 服务器提供 |
+| `doona-web_0.1.0-beta.14-1_all.deb`   | Debian 软件包                               | Debian 或 Ubuntu                |
+| `doona-0.1.0-beta.14-1.noarch.rpm`    | RPM 软件包                                  | Fedora 或 openSUSE              |
+| `doona-0.1.0beta14-1-any.pkg.tar.zst` | pacman 软件包                               | Arch Linux                      |
+| `doona_0.1.0-beta.14-1_all.ipk`       | opkg 软件包                                 | OpenWrt 24.10 及更早版本        |
+| `doona-0.1.0_beta14-r1.apk`           | apk-tools 3 软件包                          | OpenWrt 25.12                   |
+| `doona-0.1.0-beta.14-r0.alpine.apk`   | Alpine 软件包                               | Alpine Linux                    |
 
-`doona-fonts-<version>.tar.gz` 包含 Noto Sans TC 与 SC。要使用内置中文字体，可选择此归档文件或 `doona-fonts` 软件包；未安装时，界面使用备用字体。详见[字体说明](fonts.md)。
+Debian 与 Ubuntu 自带一个无关的 `doona` 软件包，因此 deb 名称为 `doona-web`，安装到 `/usr/share/doona-web`；请将 honk 的 `ui` 设为该路径。其他软件包格式保留 `doona` 名称，安装到 `/usr/share/doona`。Alpine 与 OpenWrt 的 apk 文件不能混用。
 
-### 预压缩资源
+### 可选附加包
 
-Precompressed 指提前压缩。`doona-precompressed-<version>.tar.gz` 与 `doona-precompressed` 软件包在原始文件旁添加文本资源的 `.br` 与 `.gz` 压缩副本。
+每个附加包都提供与程序相同的格式，名称包含 `fonts` 或 `precompressed`，例如 `doona-fonts-0.1.0-beta.14.tar.gz`、`doona-web-fonts_0.1.0-beta.14-1_all.deb`、`doona-fonts_0.1.0-beta.14-1_all.ipk` 等。安装与程序格式和版本相同的附加包。
 
-浏览器接受压缩内容时，honk 或 Web 服务器可以发送已压缩的文件，无需在每次请求时重新压缩。服务器无需耗费 CPU 压缩，传输量也更少，在较慢的网络上页面加载更快。此软件包为可选，不安装时主软件包不受影响。
+| 名称部分        | 添加的内容                                                                         | 何时安装                                                   |
+| --------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `fonts`         | Noto Sans TC 与 SC，约 8 MB                                                        | 要使用内置中文字体而非系统字体时。详见[字体说明](fonts.md) |
+| `precompressed` | 文本资源的 `.br` 与 `.gz` 压缩副本，约 1.6 MB                                      | 服务器与桌面系统；路由器上可选                             |
+| `doc`（Alpine） | `doona-doc-0.1.0-beta.14-r0.alpine.apk`：NOTICE 文件，按 Alpine 软件包惯例单独拆分 | 很少需要                                                   |
 
-压缩副本约多占用 1.6 MB 磁盘空间。
+Precompressed 意为预先压缩。浏览器接受压缩内容时，honk 或 Web 服务器发送 `.br` 或 `.gz` 副本，无需在每次请求时重新压缩，因此服务器无需耗费 CPU 压缩，在较慢的网络上页面加载更快。压缩副本针对至少 1 KiB 的文本资源，以 `brotli -q 11` 与 `gzip -9 -n` 生成，仅保留小于原始文件的副本。手动安装时，将归档文件解压到存放 doona 文件的目录。
 
-将预压缩归档文件解压到存放 doona 文件的目录。使用软件包时，安装与主软件包版本相同的 `doona-precompressed`。压缩副本针对至少 1 KiB 的文本资源，以 `brotli -q 11` 与 `gzip -9 -n` 生成，仅保留小于原始文件的副本。
+### apk 签名密钥
 
-## honk debug 归档文件与校验和
+| 文件                   | 内容                           | 使用方式                               |
+| ---------------------- | ------------------------------ | -------------------------------------- |
+| `doona-alpine.rsa.pub` | 用于验证 Alpine 软件包的公钥   | Alpine：复制到 `/etc/apk/keys/`        |
+| `doona-openwrt.pem`    | 用于验证 OpenWrt 索引的公钥    | OpenWrt 25.12：复制到 `/etc/apk/keys/` |
+| `doona-openwrt.adb`    | OpenWrt apk 软件包的已签名索引 | OpenWrt 25.12：由 `apk add -X` 读取    |
 
-自 v0.1.0-beta.8 起，在 honk 发行含原生 API 的正式版本之前，每个 doona 发行版也附带预先构建的 `honk-core-debug-<target>[-stock].tar.gz`，用户无需自行编译 honk。归档文件包含 honk 原生 API 分支的 debug 构建，实现最终的原生 API 契约。
+每次发布都使用新的密钥签名。见 [apk 安装说明](../install/README.md#installing-the-apk-packages)。
+
+### honk
+
+自 v0.1.0-beta.8 起，在 honk 发行含原生 API 的版本之前，每次 doona 发布也附带 honk 构建，用户无需自行编译 honk。这些构建是 honk 原生 API 分支的 debug 预发布版本的原样副本。
+
+| 文件                                      | 内容                                        |
+| ----------------------------------------- | ------------------------------------------- |
+| `honk-core-debug-<target>[-stock].tar.gz` | 每个目标一个 honk 构建，共八个              |
+| `HONK-SOURCE.txt`                         | honk 发布版本与提交，以及每个构建的 SHA-256 |
+| `honk-source-<commit>.tar.gz`             | honk 在该提交的源码                         |
 
 | 文件名部分            | 选择依据                               |
 | --------------------- | -------------------------------------- |
@@ -56,7 +74,14 @@ Precompressed 指提前压缩。`doona-precompressed-<version>.tar.gz` 与 `doon
 | 无后缀                | 默认分配器 mimalloc                    |
 | `-stock`              | 使用系统分配器代替 mimalloc            |
 
-`HONK-SOURCE.txt` 注明构建所用的 honk 提交，`honk-source-<commit>.tar.gz` 为该提交的源码。`SHA256SUMS` 涵盖除自身以外的全部发布附件。[安装 honk](https://zakkaus.github.io/doona-docs/zh-CN/install.html#install) 说明如何按网关选择、验证和安装归档文件。
+[安装 honk](https://zakkaus.github.io/doona-docs/zh-CN/install.html#install) 说明如何按网关选择、验证和安装构建。
+
+### 校验和与源码
+
+| 文件                                    | 内容                                                                                               |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `SHA256SUMS`                            | 除自身以外的每个发布文件的 SHA-256；使用 `sha256sum -c --ignore-missing SHA256SUMS` 检查下载的文件 |
+| Source code (zip), Source code (tar.gz) | doona 在发布标签处的源码，由 GitHub 添加                                                           |
 
 ## 打包维护
 
