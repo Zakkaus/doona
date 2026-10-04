@@ -1,10 +1,10 @@
 import {useLayoutEffect, useMemo, useRef, type ComponentProps, type ReactNode} from 'react';
 import {useT} from '../../i18n';
 import {NodeName} from '../../ui/NodeName';
-import {Badge, Button, DataTable, TextTooltip, TimeCell, useFillHeight, RuleRef, type TableColumn} from '../../ui/ui';
+import {Badge, DataTable, TextTooltip, TimeCell, useFillHeight, RuleRef, type TableColumn} from '../../ui/ui';
 import {columns, connectionId, connectionKey, isCollapsed, type ConnectionView, type GroupCollapse} from './viewState';
 import type {ConnectionRowView, ConnectionTableRow} from './tableRows';
-import AddCircle from '../../ui/icons/AddCircle';
+import {QuickRuleButton} from '../shared/RuleDialog';
 import type {ConnectionRowRule} from './useConnectionRule';
 
 type Props = Pick<ComponentProps<typeof DataTable<ConnectionRowView>>, 'loading' | 'selected' | 'onSelect' | 'selectOnFocus' | 'onSort'> & {
@@ -57,19 +57,7 @@ export function ConnectionTable({collection, view, collapse, onToggleGroup, load
         render: c => {
           const action = latest.current;
           const disabled = !action.canAdd(c.seed);
-          return (
-            <Button
-              quiet
-              icon
-              small
-              label={action.label(c.target)}
-              tip={disabled ? action.noTarget : undefined}
-              isDisabled={disabled}
-              onPress={() => latest.current.open(c.seed)}
-            >
-              <AddCircle />
-            </Button>
-          );
+          return <QuickRuleButton label={action.label(c.target)} disabled={disabled} tip={action.noTarget} onPress={() => latest.current.open(c.seed)} />;
         }
       }
     ];
