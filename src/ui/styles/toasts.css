@@ -41,6 +41,18 @@
 [dir='rtl'] .rp-toasts[data-align='end'] {
   --rp-toast-from: calc(-100% - 12px) 0;
 }
+/* A modal dialog starts below the toasts (see --rp-toast-band), so while one is open every position setting stacks them
+   from the top centre, above it, instead of over its footer. A drawer fills the height and leaves them where they are. */
+:root:has(.rp-underlay:not(.rp-drawer-underlay)) .rp-toasts {
+  --rp-toast-from: 0 calc(-100% - 12px);
+  --rp-toast-peek: 10px;
+  margin-inline: auto;
+  flex-direction: column;
+}
+:root:has(.rp-underlay:not(.rp-drawer-underlay)) .rp-toasts:not(.expanded) {
+  top: 16px;
+  bottom: auto;
+}
 .rp-toasts.expanded {
   bottom: 0;
   top: 0;
@@ -56,7 +68,8 @@
   padding: 0;
   list-style: none;
 }
-.rp-toasts[data-placement='top'] .rp-toast-list {
+.rp-toasts[data-placement='top'] .rp-toast-list,
+:root:has(.rp-underlay:not(.rp-drawer-underlay)) .rp-toasts .rp-toast-list {
   flex-direction: column;
 }
 .rp-toasts.expanded .rp-toast-list {
@@ -143,6 +156,9 @@
 }
 .rp-toast .more > .up {
   rotate: 180deg;
+}
+:root:has(.rp-underlay:not(.rp-drawer-underlay)) .rp-toast .more > .up {
+  rotate: none;
 }
 /* S2's secondary outline button in a static colour: it takes the toast's text colour on any tone. */
 .rp-toast .action {

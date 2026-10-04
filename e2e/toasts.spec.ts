@@ -1,4 +1,4 @@
-import {test, expect, mockBackend, moreAction, box} from './fixtures';
+import {test, expect, expectApart, mockBackend, moreAction, box} from './fixtures';
 import {ApiError} from '../src/api/error';
 import type {Page} from '@playwright/test';
 import type {Provider} from '../src/api/model';
@@ -221,34 +221,45 @@ test('a failure toast leaves the request id out of its text and logs it', async 
   expect(warnings.filter(text => text.includes('request_id: 0f8c2a4e-5b1d-4c3e-9a7f-2d6b8e1c4f90'))).toHaveLength(1);
 });
 
+// A failed refresh leaves an error toast, which stays until read; the settings page's Add profile dialog then opens.
+async function openDialogUnderErrorToast(page: Page) {
+  const backend = await mockBackend(page);
+  backend.handlers['POST providers/harbor/refresh'] = async () => {
+    throw new ApiError(502, 'upstream_unavailable', 'Subscription server unreachable');
+  };
+  await page.goto('/#/nodes?tab=list');
+  await page.getByRole('button', {name: 'Update harbor', exact: true}).click();
+  const failure = page.locator('.rp-toast.negative');
+  await expect(failure.locator('.foot .action')).toHaveText('Copy error');
+  await page.goto('/#/settings');
+  await page.getByRole('button', {name: 'Add profile', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Add profile'});
+  await dialog.getByRole('textbox', {name: 'Profile name'}).fill('Home');
+  await expect(failure).toBeVisible();
+  return failure;
+}
+
 for (const width of [1280, 390])
-  test(`an error toast without an action at ${width}px copies its error from a footer row and, on a phone, stays clear of a dialog's button`, async ({
-    page
-  }) => {
+  test(`an error toast without an action at ${width}px copies its error from a footer row and stays above a dialog that opens`, async ({page}) => {
     await page.setViewportSize({width, height: 844});
     await page.clock.install();
-    const backend = await mockBackend(page);
-    backend.handlers['POST providers/harbor/refresh'] = async () => {
-      throw new ApiError(502, 'upstream_unavailable', 'Subscription server unreachable');
-    };
-    await page.goto('/#/nodes?tab=list');
-    await page.getByRole('button', {name: 'Update harbor', exact: true}).click();
-    const failure = page.locator('.rp-toast.negative');
-    await expect(failure.locator('.foot .action')).toHaveText('Copy error');
+    const failure = await openDialogUnderErrorToast(page);
     const boxes = await parts(failure);
     expectMessageBesideClose(boxes);
     expect(Math.abs(boxes.action!.right - boxes.close.right)).toBeLessThanOrEqual(1);
-    if (width > 400) return;
-    // On a phone the toast sits over the page's lower part, but not over the centre of a dialog's Save button.
-    await page.goto('/#/settings');
-    await page.getByRole('button', {name: 'Add profile', exact: true}).click();
-    const dialog = page.getByRole('dialog', {name: 'Add profile'});
-    await dialog.getByRole('textbox', {name: 'Profile name'}).fill('Home');
-    const save = dialog.getByRole('button', {name: 'Save', exact: true});
-    await expect(save).toBeVisible();
-    const centre = await save.evaluate(button => {
-      const rect = button.getBoundingClientRect();
-      return button.contains(document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2));
-    });
-    expect(centre).toBe(true);
+    // A modal dialog starts below the toasts, which wait at the top: the stack's own height sets where it begins.
+    await expectApart(failure, page.locator('.rp-modal'));
+    expect((await box(failure)).y).toBeLessThan(20);
   });
+
+test.describe('toasts at the end of the window', () => {
+  test.use({storage: {'doona-toast-placement': 'bottom end'}});
+  test('stack from the top centre while a dialog is open', async ({page}) => {
+    await page.clock.install();
+    const failure = await openDialogUnderErrorToast(page);
+    await expectApart(failure, page.locator('.rp-modal'));
+    const rect = await box(failure);
+    expect(rect.y).toBeLessThan(20);
+    expect(Math.abs(rect.x + rect.width / 2 - page.viewportSize()!.width / 2)).toBeLessThan(2);
+  });
+});
