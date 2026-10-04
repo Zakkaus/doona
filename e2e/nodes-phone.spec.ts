@@ -14,7 +14,8 @@ for (const width of [320, 360, 390])
         const toolbar = content.locator('.rp-toolbar').first();
         const more = toolbar.locator('.rp-narrow-only button');
         await expect(more).toBeVisible();
-        const refresh = toolbar.locator('button').first();
+        // The first action button; the lead line's help button comes before it.
+        const refresh = toolbar.locator(':scope > button').first();
         const paste = content.locator('.rp-toolbar').last().locator('button.rp-btn').last();
         const size = async (button: typeof refresh) =>
           button.evaluate(el => {
