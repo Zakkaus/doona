@@ -75,7 +75,7 @@ export function NodeLatency() {
           caption: formatLatency(measured[measured.length - 1].latest, t)
         },
         {
-          label: t('nodes.latency.unavailable'),
+          label: t('ui.unavailable'),
           value: t('nodes.latency.count', {n: down}),
           icon: <AlertTriangle />,
           tint: 'c5',

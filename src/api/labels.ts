@@ -5,7 +5,7 @@ import type {MessageRef} from './selectors';
 // so they stay out of the startup bundle.
 const flowWords: Record<string, Key> = {
   kernel: 'flow.v.kernel',
-  userspace: 'flow.v.userspace',
+  userspace: 'ov.v.userspace',
   matched: 'flow.v.matched',
   other_family_trusted: 'flow.v.otherFamilyTrusted',
   failed: 'flow.v.failed',

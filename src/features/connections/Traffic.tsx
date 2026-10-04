@@ -68,8 +68,8 @@ export const Traffic = memo(function Traffic({
           value: view.heaviest.name,
           caption: outboundLabel(view.heaviest.outbound, t)
         },
-        {label: t('conn.chart.down'), value: bytes(view.heaviest.down), icon: <Download />, tint: 'c1'},
-        {label: t('conn.chart.up'), value: bytes(view.heaviest.up), icon: <Upload />, tint: 'c4'}
+        {label: t('ui.download'), value: bytes(view.heaviest.down), icon: <Download />, tint: 'c1'},
+        {label: t('ui.upload'), value: bytes(view.heaviest.up), icon: <Upload />, tint: 'c4'}
       ]
     : [];
   const sample = view.unknown ? t('conn.chart.sampleUnknown', {n: records.length, unknown: view.unknown}) : t('conn.chart.sample', {n: records.length});

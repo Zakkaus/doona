@@ -65,7 +65,7 @@ export function ProviderCards({model: m, intro}: {model: ProviderTableView; intr
       >
         <Kv
           items={[
-            [t('nodes.count'), row.count],
+            [t('nav.nodes'), row.count],
             [t('nodes.updated'), <TimeCell key="updated" at={row.updatedAt} />],
             [t('nodes.interval'), row.interval],
             {label: t('nodes.expires'), value: row.expiresShort, fit: true, full: row.expiresShort === '—' ? undefined : row.expires},

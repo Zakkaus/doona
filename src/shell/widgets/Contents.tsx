@@ -100,7 +100,7 @@ function StatusWidget({item}: {item: Widget}) {
     <Reading state={runtime}>
       <ErrorMessage error={path.error} onRetry={path.refetch} />
       <Light tone={status.tone}>{status.text}</Light>
-      <Kv compact row={item.size !== 'small'} items={[[t('widgets.uptime'), formatDuration(runtime.data?.lifecycle.uptime_seconds ?? null, locale)]]} />
+      <Kv compact row={item.size !== 'small'} items={[[t('ov.uptime'), formatDuration(runtime.data?.lifecycle.uptime_seconds ?? null, locale)]]} />
     </Reading>
   );
 }

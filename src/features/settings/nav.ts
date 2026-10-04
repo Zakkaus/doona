@@ -65,7 +65,7 @@ export const settingsFields: ReadonlyArray<SettingsField> = [
   {id: 'deleteProfile', card: 'backend', labelKey: 'settings.deleteProfile'},
   {id: 'signOut', card: 'backend', labelKey: 'settings.signOut', aliases: ['logout', 'log out']},
   {id: 'api', card: 'backend', labelKey: 'ui.backendUrl', aliases: ['url', 'api']},
-  {id: 'token', card: 'backend', labelKey: 'settings.token', aliases: ['password']},
+  {id: 'token', card: 'backend', labelKey: 'login.token', aliases: ['password']},
   {id: 'test', card: 'backend', labelKey: 'settings.test'},
   {id: 'lang', card: 'appearance', labelKey: 'ui.lang', aliases: ['language', 'locale']},
   {id: 'dateFormat', card: 'appearance', labelKey: 'settings.dateFormat', aliases: ['date']},

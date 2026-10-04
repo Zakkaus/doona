@@ -53,7 +53,7 @@ it('chooses measured nodes and preserves an explicitly selected unavailable node
   const unavailable = nodeView(nodes, 'jp-01', t);
   expect(unavailable.tone).toBe('err');
   expect(unavailable.latency).toBe('—');
-  expect(unavailable.status).toBe(t('act.unavailable'));
+  expect(unavailable.status).toBe(t('ui.unavailable'));
   // honk's failure code reads as words in the page language.
   expect(nodes.find(node => node.id === 'jp-01')?.health[0].error).toBe('probe_failed');
   expect(unavailable.healthError).toBe(t('ui.backend.probeFailed'));
@@ -117,7 +117,7 @@ it('shows an em dash for an unmeasured active node even when its group is busies
   const {nodes, groups} = groupFixtures();
   nodes[0].health = [];
   const snapshot = {...connections, tcp: [connection('proxy')], udp: []};
-  expect(activityGroupView(groups, nodes, '', t, snapshot)).toMatchObject({id: 'hk-01', latency: '—', status: t('act.unknown')});
+  expect(activityGroupView(groups, nodes, '', t, snapshot)).toMatchObject({id: 'hk-01', latency: '—', status: t('ui.unknown')});
   expect(activityGroupView(groups, nodes, 'proxy', t).latency).toBe('—');
   nodes[0].health = nodeFixtures(0).nodes[0].health.map(h => ({...h, latency_ms: 0}));
   expect(activityGroupView(groups, nodes, 'proxy', t).latency).toBe('0 ms');

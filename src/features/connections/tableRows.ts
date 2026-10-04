@@ -169,7 +169,7 @@ export function connectionsView(
         items: seen(rows.map(c => sourceIp(c.src))).map(({key: ip, count}) => ({id: tagId('src', ip), label: ip, desc: formatNumber(count, locale)}))
       },
       {
-        title: t('conn.rule'),
+        title: t('ui.rule'),
         value: tagId('rule', rule),
         items: seen(rows.map(c => c.rule_expression)).map(({key: expression, count}) => ({
           id: tagId('rule', expression),

@@ -152,7 +152,7 @@ export function Connections(props: PageProps) {
                 ]}
               />
               <div className="rp-list">
-                <span className="rp-label">{t('conn.rule')}</span>
+                <span className="rp-label">{t('ui.rule')}</span>
                 <RuleRef {...cur.rule} />
               </div>
             </>

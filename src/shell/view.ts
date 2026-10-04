@@ -156,11 +156,11 @@ export function shellView(
       title: t('shell.backend.title'),
       heading: version ? engineText : t('shell.backend.title'),
       facts: [
-        [t('about.api'), apiText],
-        ...fact(t('shell.backend.build'), version?.build?.revision?.slice(0, 12)),
+        [t('ov.f.api'), apiText],
+        ...fact(t('ov.f.build'), version?.build?.revision?.slice(0, 12)),
         [t('ui.backendUrl'), address],
         // The built-in demo data runs without a profile.
-        ...fact(t('shell.backend.profile'), profile?.name)
+        ...fact(t('settings.profile'), profile?.name)
       ],
       about: t('about.title'),
       edit: {href: href('settings', {card: 'backend'}), label: t('shell.backend.edit')}
@@ -177,8 +177,8 @@ export function shellView(
       privacy: t('about.privacy'),
       versionText: `v${import.meta.env.VITE_DOONA_VERSION}`,
       items: [
-        [t('about.engine'), engineText + build],
-        [t('about.api'), apiText],
+        [t('ov.f.engine'), engineText + build],
+        [t('ov.f.api'), apiText],
         [t('about.contract'), contractText],
         [t('about.license'), 'GPL-3.0-only']
       ],

@@ -77,7 +77,7 @@ export function Latency({item}: {item: Widget}) {
               id: 'nodes',
               label: item.group ? (view[0]?.label ?? t('nodes.latency.noGroup')) : t('dashboard.allGroups'),
               rows: measured.map(row => latencyPlotRow(row, t)),
-              notes: missing.map(row => t('ui.valuePair', {label: row.name, value: t(row.state === 'unavailable' ? 'act.unavailable' : 'act.unknown')}))
+              notes: missing.map(row => t('ui.valuePair', {label: row.name, value: t(row.state === 'unavailable' ? 'ui.unavailable' : 'ui.unknown')}))
             }
           ]}
         />
@@ -87,7 +87,7 @@ export function Latency({item}: {item: Widget}) {
             <Kv key={row.id} compact row={item.size !== 'small'} items={[[row.name, formatLatency(row.latest, t)]]} />
           ))}
           {missing.slice(0, Math.max(0, limit - measured.length)).map(row => (
-            <Kv key={row.id} compact row={item.size !== 'small'} items={[[row.name, t(row.state === 'unavailable' ? 'act.unavailable' : 'act.unknown')]]} />
+            <Kv key={row.id} compact row={item.size !== 'small'} items={[[row.name, t(row.state === 'unavailable' ? 'ui.unavailable' : 'ui.unknown')]]} />
           ))}
         </div>
       )}
@@ -114,8 +114,8 @@ export function NodeAvailability({item}: {item: Widget}) {
           row
           items={[
             [t('ov.available'), <Light tone={measured.length ? 'ok' : 'muted'}>{available}</Light>],
-            [t('act.unavailable'), count(down, 'err')],
-            [t('act.unknown'), count(missing.length - down, 'neutral')]
+            [t('ui.unavailable'), count(down, 'err')],
+            [t('ui.unknown'), count(missing.length - down, 'neutral')]
           ]}
         />
       )}

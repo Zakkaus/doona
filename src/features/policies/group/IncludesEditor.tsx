@@ -60,8 +60,8 @@ export function IncludesEditor({model: m}: {model: GroupDialogView}) {
         isDisabled={m.busy}
       />
       <SearchMultiSelect
-        label={t('group.nodes')}
-        searchLabel={t('group.search')}
+        label={t('nav.nodes')}
+        searchLabel={t('nodes.search')}
         summary={m.includes.nodeSummary}
         description={m.includes.count}
         action={

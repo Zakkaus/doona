@@ -40,8 +40,8 @@ export function useActivity(kind: 'download' | 'upload' | 'connections' | 'cpu' 
   const cpuSpark = useMemo(() => sparkWindow(cpuRing, trafficRanges.live.seconds, foldCpu), [cpuRing]);
   const traffic = useMemo(
     () => [
-      {label: t('act.download'), color: p.cat[0], values: series.down},
-      {label: t('act.upload'), color: p.cat[3], values: series.up}
+      {label: t('ui.download'), color: p.cat[0], values: series.down},
+      {label: t('ui.upload'), color: p.cat[3], values: series.up}
     ],
     [t, p, series]
   );

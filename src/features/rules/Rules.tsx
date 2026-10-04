@@ -109,7 +109,7 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
             />
             <TextField label={t('ui.destinationIp')} value={form.dst_ip} onChange={dst_ip => setForm({...form, dst_ip})} error={trace.errors.dst_ip} />
             <TextField
-              label={t('rule.dstPort')}
+              label={t('rule.kind.dport')}
               value={form.dst_port}
               placeholder="443"
               onChange={dst_port => setForm({...form, dst_port})}
@@ -129,7 +129,7 @@ function Trace({form: state, go}: {form: ReturnType<typeof useTraceForm>; go: Pa
         <Disclosure id="rules-trace-advanced" title={t('rule.advanced')} isExpanded={trace.advanced} onExpandedChange={trace.setAdvanced}>
           <Toolbar>
             <TextField label={t('ui.sourceIp')} value={form.src_ip} onChange={src_ip => setForm({...form, src_ip})} error={trace.errors.src_ip} />
-            <TextField label={t('rule.srcPort')} value={form.src_port} onChange={src_port => setForm({...form, src_port})} error={trace.errors.src_port} />
+            <TextField label={t('rule.kind.sport')} value={form.src_port} onChange={src_port => setForm({...form, src_port})} error={trace.errors.src_port} />
             <TextField label={t('ui.process')} value={form.pname} onChange={pname => setForm({...form, pname})} />
             <TextField label={t('rule.dscp')} value={form.dscp} onChange={dscp => setForm({...form, dscp})} error={trace.errors.dscp} />
           </Toolbar>

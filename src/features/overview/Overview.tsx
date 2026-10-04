@@ -91,7 +91,7 @@ export function Overview({query}: PageProps) {
         </div>
       </div>
       <div className="rp-g3">
-        <Card title={t('ov.engine')}>
+        <Card title={t('ov.f.engine')}>
           <ErrorMessage error={vm.errors.version} onRetry={vm.retry.version} />
           {vm.engine.state === 'ready' ? (
             <>
@@ -123,7 +123,7 @@ export function Overview({query}: PageProps) {
             <Empty>{t('ov.unavailable')}</Empty>
           )}
         </Card>
-        <Card title={t('ov.memory')}>
+        <Card title={t('act.memory')}>
           <ErrorMessage error={vm.errors.memory} onRetry={vm.retry.memory} />
           {vm.memory.state === 'ready' ? (
             <Kv items={vm.memory.fields} />
@@ -147,10 +147,10 @@ export function Overview({query}: PageProps) {
                   rows={vm.datapath.attachments}
                   empty={t('ov.noAttachments')}
                   cols={[
-                    {id: 'n', label: t('ov.name'), minWidth: 128, isRowHeader: true, render: a => a.name},
+                    {id: 'n', label: t('ui.name'), minWidth: 128, isRowHeader: true, render: a => a.name},
                     {id: 'i', label: t('ov.interface'), minWidth: 88, drop: 2, render: a => a.interface},
                     {id: 'd', label: t('ov.direction'), minWidth: 80, grow: 0, drop: 1, render: a => a.direction},
-                    {id: 's', label: t('ov.state'), minWidth: 88, grow: 0, render: a => a.state}
+                    {id: 's', label: t('ui.state'), minWidth: 88, grow: 0, render: a => a.state}
                   ]}
                 />
               )}

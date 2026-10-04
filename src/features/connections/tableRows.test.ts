@@ -84,7 +84,7 @@ it('groups, sorts and describes by the displayed labels', () => {
     [...list].sort((x, y) => compareNames('en-US')(t(`conn.state.${x.state}`), t(`conn.state.${y.state}`))).map(row => row.id)
   );
   const fields = connectionDetails({...c, observed_by: 'ebpf'}, 'en-US');
-  expect(fields.find(([key]) => key === 'conn.f.observedBy')?.[1]).toEqual({key: 'conn.observed.ebpf'});
+  expect(fields.find(([key]) => key === 'conn.f.observedBy')?.[1]).toEqual({key: 'ov.v.ebpf'});
   expect(connectionDetails(c, 'en-US')).toContainEqual(['conn.f.chainSource', {key: 'conn.chainSource.evaluation'}]);
   expect(connectionDetails({...c, chain_source: 'reconstructed'}, 'en-US')).toContainEqual(['conn.f.chainSource', {key: 'conn.chainSource.reconstructed'}]);
   expect(connectionDetails({...c, chain_source: 'unknown'}, 'en-US')).toContainEqual(['conn.f.chainSource', {key: 'ui.unknown'}]);

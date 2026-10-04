@@ -29,16 +29,16 @@ export const ruleKindLabels: Record<RuleConditionKind, Key> = {
   domain: 'rule.kind.domain',
   domainKeyword: 'rule.kind.domainKeyword',
   geosite: 'rule.kind.geosite',
-  dip: 'rule.kind.dip',
+  dip: 'ui.destinationIp',
   geoip: 'rule.kind.geoip',
-  sip: 'rule.kind.sip',
+  sip: 'ui.sourceIp',
   dport: 'rule.kind.dport',
   sport: 'rule.kind.sport',
-  pname: 'rule.kind.pname',
+  pname: 'ui.process',
   l4proto: 'rule.kind.l4proto',
   qnameSuffix: 'rule.kind.domainSuffix',
   qnameFull: 'rule.kind.domain',
-  qnameKeyword: 'rule.dns.kind.keyword',
+  qnameKeyword: 'rule.kind.domainKeyword',
   qnameGeosite: 'rule.kind.geosite',
   qtype: 'rule.dns.kind.qtype',
   upstream: 'rule.dns.kind.upstream',
@@ -47,7 +47,7 @@ export const ruleKindLabels: Record<RuleConditionKind, Key> = {
 };
 // The list a quick rule goes into: the routing rules, or one of the two DNS lists.
 export type RuleList = PendingRule['list'];
-export const ruleListLabels: Record<RuleList, Key> = {routing: 'rule.list.routing', request: 'rule.list.request', response: 'rule.list.response'};
+export const ruleListLabels: Record<RuleList, Key> = {routing: 'rule.listTitle', request: 'rule.list.request', response: 'rule.list.response'};
 
 // The addresses of the A and AAAA records among an answer, as a response rule's `ip` can match them; other records,
 // such as a CNAME, carry names.
