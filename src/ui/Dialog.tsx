@@ -248,13 +248,15 @@ export function PopoverDialog({
 // A dialog with Cancel and one action. While the action is pending the dialog stays open and the action button
 // waits; Cancel and Escape still work, and `onCancel` must then abandon the action or report its late result
 // elsewhere, so a request that never answers cannot hold the page. A failure shows inside the dialog, and a new
-// `error.id` moves focus to it again.
+// `error.id` moves focus to it again. A dialog with fields puts them in a `Form` and passes its `id` as `form` instead
+// of `onConfirm`: the action button submits that form, so Enter in a field does what the button does.
 export function ConfirmDialog({
   title,
   isOpen,
   onCancel,
   confirmLabel,
   onConfirm,
+  form,
   tone = 'negative',
   isPending,
   isDisabled,
@@ -268,7 +270,6 @@ export function ConfirmDialog({
   isOpen: boolean;
   onCancel: () => void;
   confirmLabel: string;
-  onConfirm: () => void;
   tone?: 'negative' | 'accent';
   isPending?: boolean;
   isDisabled?: boolean;
@@ -279,7 +280,7 @@ export function ConfirmDialog({
   error?: Problem | null;
   scrollBody?: boolean;
   children: ReactNode;
-}) {
+} & ({onConfirm: () => void; form?: never} | {form: string; onConfirm?: never})) {
   const t = useT();
   return (
     <ModalDialog
@@ -298,7 +299,13 @@ export function ConfirmDialog({
         ) : (
           <>
             <Button onPress={onCancel}>{t('ui.cancel')}</Button>
-            <Button negative={tone === 'negative'} accent={tone === 'accent'} isDisabled={isDisabled} isPending={isPending} onPress={onConfirm}>
+            <Button
+              negative={tone === 'negative'}
+              accent={tone === 'accent'}
+              isDisabled={isDisabled}
+              isPending={isPending}
+              {...(form ? {type: 'submit' as const, form} : {onPress: onConfirm})}
+            >
               {confirmLabel}
             </Button>
           </>

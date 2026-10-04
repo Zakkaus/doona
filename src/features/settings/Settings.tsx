@@ -86,6 +86,7 @@ export function Settings({query}: PageProps) {
     dialogDiscards,
     deleteHelp
   } = useSettingsPage(query);
+  const profileFormId = useId();
   const mirrorHelpId = useId();
   const countryFlagsHelpId = useId();
   const sparklinesHelpId = useId();
@@ -358,9 +359,22 @@ export function Settings({query}: PageProps) {
           isDisabled={dialogBlocked}
           isPending={saving}
           error={profile.result?.error ? {id: profile.result.id, text: profile.result.text} : null}
-          onConfirm={confirmProfile}
+          {...(dialog === 'delete' ? {onConfirm: confirmProfile} : {form: profileFormId})}
         >
-          {dialog === 'delete' ? <p className="rp-label">{deleteHelp}</p> : <TextField label={t('settings.profileName')} value={name} onChange={setName} />}
+          {dialog === 'delete' ? (
+            <p className="rp-label">{deleteHelp}</p>
+          ) : (
+            <Form
+              id={profileFormId}
+              className="rp-contents"
+              onSubmit={event => {
+                event.preventDefault();
+                if (!dialogBlocked && !saving) confirmProfile();
+              }}
+            >
+              <TextField label={t('settings.profileName')} value={name} onChange={setName} />
+            </Form>
+          )}
           {dialogDiscards && <p className="rp-label">{t('settings.profileDiscardHelp')}</p>}
         </ConfirmDialog>
       )}

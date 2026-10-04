@@ -34,7 +34,8 @@ test('profiles add, rename, switch, and delete without losing the route', async 
   await page.getByRole('button', {name: 'Rename profile', exact: true}).click();
   dialog = page.getByRole('dialog', {name: 'Rename profile'});
   await dialog.getByRole('textbox', {name: 'Profile name'}).fill('Home router');
-  await Promise.all([page.waitForEvent('load'), dialog.getByRole('button', {name: 'Save', exact: true}).click()]);
+  // Enter in the name saves, as the button does.
+  await Promise.all([page.waitForEvent('load'), dialog.getByRole('textbox', {name: 'Profile name'}).press('Enter')]);
   await page.getByRole('button', {name: 'Delete profile', exact: true}).click();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('alertdialog', {name: 'Delete profile'})).toBeHidden();

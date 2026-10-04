@@ -148,7 +148,8 @@ for (const list of ['request', 'response'] as const) {
     if (list === 'response') await expect(dialog.getByRole('switch', {name: 'Negate condition'}).nth(1)).toBeChecked();
     await dialog.getByRole('button', {name: /Action$/}).click();
     await page.getByRole('option', {name: /^reject/}).click();
-    await dialog.getByRole('button', {name: 'Edit rule', exact: true}).click();
+    // Enter in a condition saves, as the button does.
+    await dialog.getByRole('textbox', {name: 'Values'}).first().press('Enter');
     await expect(dialog).toBeHidden();
     const changed = list === 'request' ? '!qname(suffix: example.com) -> reject' : '!ip(geoip: cn) && !qname(geosite: cn) -> reject';
     expect((await api.config()).sources.find(source => source.id === 'src-main')!.content).toBe(before.replace(rule.expression, changed));

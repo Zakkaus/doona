@@ -1,8 +1,9 @@
+import {useId} from 'react';
 import {useT} from '../../i18n';
 import {DaeCode} from '../../ui/DaeCode';
 import AddCircle from '../../ui/icons/AddCircle';
 import {SearchSelect} from '../../ui/SearchSelect';
-import {Button, ErrorMessage, InlineAlert, LabeledSelect, Link, ModalDialog, StaticField, Switch, Toolbar} from '../../ui/ui';
+import {Button, ErrorMessage, Form, InlineAlert, LabeledSelect, Link, ModalDialog, StaticField, Switch, Toolbar} from '../../ui/ui';
 import type {QuickRuleDialog} from './useQuickRule';
 
 export function QuickRuleButton({label, disabled, tip, onPress}: {label: string; disabled: boolean; tip?: string; onPress: () => void}) {
@@ -15,6 +16,7 @@ export function QuickRuleButton({label, disabled, tip, onPress}: {label: string;
 
 export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
   const t = useT();
+  const formId = useId();
   return (
     <ModalDialog
       title={t('rule.add')}
@@ -35,7 +37,7 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
           <Button isDisabled={dialog?.disabled} isPending={dialog?.busy} onPress={() => dialog?.applyNow()}>
             {t('rule.addApply')}
           </Button>
-          <Button accent isDisabled={dialog?.disabled || dialog?.busy} onPress={() => dialog?.hold()}>
+          <Button accent type="submit" form={formId} isDisabled={dialog?.disabled || dialog?.busy}>
             {t('rule.hold')}
           </Button>
         </>
@@ -47,7 +49,16 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
         </InlineAlert>
       )}
       {dialog && (
-        <div className="rp-list">
+        // Hold is the default action: Enter in the form does what its button does. Add and apply stays its own button.
+        <Form
+          id={formId}
+          className="rp-list"
+          validationBehavior="aria"
+          onSubmit={event => {
+            event.preventDefault();
+            if (!dialog.disabled && !dialog.busy) dialog.hold();
+          }}
+        >
           {dialog.failure?.lines.map((line, i) => (
             <span key={i} className="rp-label">
               {line}
@@ -113,7 +124,7 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
             ))}
           {dialog.duplicate && <p className="rp-note">{dialog.duplicate}</p>}
           <DaeCode text={dialog.preview} />
-        </div>
+        </Form>
       )}
     </ModalDialog>
   );

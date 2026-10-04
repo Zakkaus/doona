@@ -5,10 +5,11 @@ import {
   Card,
   Checkbox,
   ConfirmDialog,
+  DialogForm,
   DialogSection,
-  DialogSections,
   Diff,
   Disclosure,
+  Form,
   InlineAlert,
   Light,
   HelpRow,
@@ -27,6 +28,7 @@ import '../../ui/styles/impact.css';
 export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
   const t = useT();
   const headingId = useId();
+  const confirmFormId = useId();
   const {current, dialog} = model;
   const summaries: Partial<Record<RuleTemplate, Key>> = {
     single: 'rule.template.singleSummary',
@@ -47,35 +49,43 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
     <div className="rp-col">
       <Card title={t('rule.template.mode')} titleId={headingId} reason={model.refusal}>
         {!current && <InlineAlert tone="informative">{t('rule.template.customNote', {file: model.file ?? ''})}</InlineAlert>}
-        <RadioGroup
-          aria-labelledby={headingId}
-          description={t('rule.template.common')}
-          value={model.selected}
-          onChange={id => model.select(id as RuleTemplate)}
+        <Form
+          className="rp-contents"
+          onSubmit={event => {
+            event.preventDefault();
+            if (model.canApply) model.open();
+          }}
         >
-          {radios(model.primary)}
-          <Disclosure flush title={t('rule.template.more')} defaultExpanded={model.more.some(choice => choice.id === model.selected)}>
-            {radios(model.more)}
-          </Disclosure>
-        </RadioGroup>
-        <div className="rp-col">
-          {templateOptionKeys.map(option => (
-            <Switch
-              key={option}
-              isSelected={model[option]}
-              onChange={enabled => model.setOption(option, enabled)}
-              isDisabled={model.applying}
-              description={t(templateOptionText[option].help)}
-            >
-              {t(templateOptionText[option].label)}
-            </Switch>
-          ))}
-        </div>
-        <Toolbar>
-          <Button accent isDisabled={!model.canApply} onPress={model.open}>
-            {t('rule.template.apply')}
-          </Button>
-        </Toolbar>
+          <RadioGroup
+            aria-labelledby={headingId}
+            description={t('rule.template.common')}
+            value={model.selected}
+            onChange={id => model.select(id as RuleTemplate)}
+          >
+            {radios(model.primary)}
+            <Disclosure flush title={t('rule.template.more')} defaultExpanded={model.more.some(choice => choice.id === model.selected)}>
+              {radios(model.more)}
+            </Disclosure>
+          </RadioGroup>
+          <div className="rp-col">
+            {templateOptionKeys.map(option => (
+              <Switch
+                key={option}
+                isSelected={model[option]}
+                onChange={enabled => model.setOption(option, enabled)}
+                isDisabled={model.applying}
+                description={t(templateOptionText[option].help)}
+              >
+                {t(templateOptionText[option].label)}
+              </Switch>
+            ))}
+          </div>
+          <Toolbar>
+            <Button accent type="submit" isDisabled={!model.canApply}>
+              {t('rule.template.apply')}
+            </Button>
+          </Toolbar>
+        </Form>
       </Card>
       <ConfirmDialog
         title={dialog ? t('rule.template.confirmTitle', {name: dialog.choice.name}) : ''}
@@ -85,10 +95,16 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
         isPending={model.applying}
         scrollBody
         onCancel={model.close}
-        onConfirm={() => void model.confirm()}
+        form={confirmFormId}
       >
         {dialog && (
-          <DialogSections>
+          <DialogForm
+            id={confirmFormId}
+            onSubmit={event => {
+              event.preventDefault();
+              if (!model.applying) void model.confirm();
+            }}
+          >
             <DialogSection>
               <p>{t('rule.template.scope', {file: dialog.file})}</p>
               {dialog.optionImpact.map(text => (
@@ -131,7 +147,7 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
             <Disclosure flush title={t('rule.template.changes', {file: dialog.file})}>
               <Diff rows={dialog.diff} label={t('rule.template.changes', {file: dialog.file})} />
             </Disclosure>
-          </DialogSections>
+          </DialogForm>
         )}
       </ConfirmDialog>
     </div>
