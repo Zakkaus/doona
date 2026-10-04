@@ -12,7 +12,16 @@ export const hasEmbeddedFlag = (name: string) => /[\u{1F1E6}-\u{1F1FF}]{2}|\u{1F
 export const validFlagChoice = (value: unknown): value is string => typeof value === 'string' && (value === 'none' || flagRegions.includes(value));
 export const regionFlag = (region: string) => String.fromCodePoint(...[...region].map(letter => 0x1f1e6 + letter.charCodeAt(0) - 65));
 
-export function flagChoices(locale: string) {
+type FlagChoice = {id: string; label: string; flag: string; keywords: string};
+// Every policy card and group dialog asks for the same list, and building it walks every region through Intl, so it is
+// built once per locale.
+const choicesByLocale = new Map<string, FlagChoice[]>();
+export function flagChoices(locale: string): FlagChoice[] {
+  let choices = choicesByLocale.get(locale);
+  if (!choices) choicesByLocale.set(locale, (choices = buildFlagChoices(locale)));
+  return choices;
+}
+function buildFlagChoices(locale: string): FlagChoice[] {
   const names = new Intl.DisplayNames([locale], {type: 'region'});
   const language = new Intl.Locale(locale).language;
   const english = new Intl.DisplayNames(['en'], {type: 'region'});

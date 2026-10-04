@@ -98,10 +98,12 @@ export function setIncludes(filters: string[], kind: IncludeKind, selected: stri
   if (active.length) return active;
   return filters.some(filter => filter.trim()) ? [noNodes] : next;
 }
-// Nodes matching a set of filter lines, each distinct line compiled once.
+// Nodes matching a set of filter lines, each distinct line compiled once, and none while there are no nodes to match:
+// a closed group dialog still lists every region.
 function matcher(nodes: Node[]) {
   const cache = new Map<string, Node[]>();
   return (filters: string[]) => {
+    if (!nodes.length) return nodes;
     if (!filters.length) return nodes.filter(compileFilters([]));
     const matched = new Set(
       filters.flatMap(filter => {
