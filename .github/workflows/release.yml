@@ -4,17 +4,24 @@ on:
   push:
     tags:
       - 'v*'
+  # A manual run packages package.json's version from any branch and keeps the files as run artifacts: it neither waits
+  # for Check nor publishes.
+  workflow_dispatch:
 
 permissions: {}
 
 env:
   NFPM_VERSION: 2.47.0
   NFPM_SHA256: 0660ca602b2d2d2ae4781a06c692b3eeb9d437ffea05b831d76e41f4a3188783
+  ALPINE_IMAGE: alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+  # The OpenWrt packages are PKGARCH all, so any target's SDK builds them.
+  OPENWRT_SDK_IMAGE: openwrt/sdk:x86-64-25.12.5@sha256:e916b7cc555890bdc4725c926e139b888294f0c8f56561b88d8da3a6348616a2
 
 jobs:
   # A tag points at a commit that main's Check already ran the browser suite on, so the release waits for that run
   # instead of repeating the suite serially.
   verified:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -36,6 +43,7 @@ jobs:
 
   build:
     needs: [verified]
+    if: ${{ !cancelled() && (needs.verified.result == 'success' || github.event_name == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -58,9 +66,11 @@ jobs:
       - name: Check the tag against package.json
         id: version
         run: |
-          eval "$(tools/version.sh "${GITHUB_REF_NAME}")"
+          tag=${GITHUB_REF_NAME}
+          [ "$GITHUB_EVENT_NAME" = push ] || tag=v$(node -p 'require("./package.json").version')
+          eval "$(tools/version.sh "$tag")"
           declared=$(node -p 'require("./package.json").version')
-          [ "$NPM" = "$declared" ] || { echo "tag ${GITHUB_REF_NAME} is version $NPM, package.json says $declared" >&2; exit 1; }
+          [ "$NPM" = "$declared" ] || { echo "tag $tag is version $NPM, package.json says $declared" >&2; exit 1; }
           {
             echo "VERSION=$VERSION"
             echo "PRERELEASE=$PRERELEASE"
@@ -72,7 +82,48 @@ jobs:
       - run: pnpm check
       - run: pnpm build
       - run: pnpm check:size
-      - run: tools/package.sh --git-version
+      - name: Install asset compressors
+        run: sudo apt-get update && sudo apt-get install -y brotli gzip
+      - name: Package the archives
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then tools/package.sh --git-version; else tools/package.sh; fi
+      # Temporary: honk has no release with the native API yet, so every doona release carries the honk debug builds of the
+      # tag pinned in tools/honk-pin.txt, the source archive of their commit and a note naming it. fetch-honk.mjs reads that
+      # tag's own release and fails unless its body, target and source tag name the pinned tag and commit. Remove this step,
+      # that file and the three honk lines in release's `files` once honk ships one.
+      - name: Bundle the honk-core debug builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node tools/fetch-honk.mjs release
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: archives
+          path: |
+            release/
+            !release/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 1
+
+  # nfpm builds the deb, rpm, ipk and Arch packages in seconds, so one job runs the four formats in turn.
+  nfpm:
+    needs: [build]
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.build.outputs.VERSION }}
+      PRERELEASE: ${{ needs.build.outputs.PRERELEASE }}
+      ARCH_PRERELEASE: ${{ needs.build.outputs.ARCH_PRERELEASE }}
+      NPM: ${{ needs.build.outputs.NPM }}
+      PACKAGE_RELEASE: ${{ needs.build.outputs.PACKAGE_RELEASE }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: archives
+          path: release/
       - name: Install nfpm
         run: |
           curl -fsSL --retry 3 -o "$RUNNER_TEMP/nfpm.tar.gz" \
@@ -88,9 +139,11 @@ jobs:
           export SOURCE_DATE_EPOCH
           program=build/stage/doona/usr/share/doona
           fonts=build/stage/doona-fonts/usr/share/doona
-          mkdir -p "$program" "$fonts"
+          precompressed=build/stage/doona-precompressed/usr/share/doona
+          mkdir -p "$program" "$fonts" "$precompressed" packages
           tar -xzf "release/doona-${NPM}.tar.gz" -C "$program"
           tar -xzf "release/doona-fonts-${NPM}.tar.gz" -C "$fonts"
+          tar -xzf "release/doona-precompressed-${NPM}.tar.gz" -C "$precompressed"
           doc=build/stage/doona/usr/share/doc/doona
           mkdir -p "$doc" build/stage/doona-fonts/usr/share/doc/doona
           mv "$program"/LICENSE "$program"/LICENSES "$program"/NOTICE "$program"/THIRD-PARTY-NOTICES.txt \
@@ -104,46 +157,111 @@ jobs:
           # Debian's archive has an unrelated doona, so only the deb carries the -web suffix (see doona.yaml).
           for packager in deb rpm ipk archlinux; do
             if [ "$packager" = deb ]; then export PACKAGE_SUFFIX=-web; else export PACKAGE_SUFFIX=; fi
-            for config in install/nfpm/doona.yaml install/nfpm/doona-fonts.yaml; do
+            # doona-precompressed depends on exactly this doona version, spelled the way the format spells it.
+            if [ "$packager" = archlinux ]; then
+              export DOONA_VERSION="${VERSION}${ARCH_PRERELEASE}-${PACKAGE_RELEASE}"
+            else
+              export DOONA_VERSION="${VERSION}${PRERELEASE:+~$PRERELEASE}-${PACKAGE_RELEASE}"
+            fi
+            for config in install/nfpm/doona.yaml install/nfpm/doona-fonts.yaml install/nfpm/doona-precompressed.yaml; do
               if [ "$packager" = archlinux ]; then
                 # nfpm 2.47 needs an explicit default epoch to retain Arch's prerelease in .PKGINFO.
                 arch_config="$RUNNER_TEMP/$(basename "$config")"
                 sed "/^version_schema: semver$/a epoch: '0'" "$config" > "$arch_config"
-                PRERELEASE="$ARCH_PRERELEASE" nfpm package --config "$arch_config" --packager "$packager" --target release/
+                PRERELEASE="$ARCH_PRERELEASE" nfpm package --config "$arch_config" --packager "$packager" --target packages/
               else
-                nfpm package --config "$config" --packager "$packager" --target release/
+                nfpm package --config "$config" --packager "$packager" --target packages/
               fi
             done
           done
       # Keep upstream SemVer in asset names; package metadata retains each format's own version.
-      - name: Sum every asset
+      - name: Name the packages after the upstream version
         run: |
-          cd release
-          if [ -n "$PRERELEASE" ]; then
-            for name in doona doona-fonts; do
-              deb="doona-web${name#doona}"
+          cd packages
+          for name in doona doona-fonts doona-precompressed; do
+            deb="doona-web${name#doona}"
+            if [ -n "$PRERELEASE" ]; then
               mv "${deb}_${VERSION}~${PRERELEASE}-${PACKAGE_RELEASE}_all.deb" "${deb}_${NPM}-${PACKAGE_RELEASE}_all.deb"
               mv "${name}-${VERSION}~${PRERELEASE}-${PACKAGE_RELEASE}.noarch.rpm" "${name}-${NPM}-${PACKAGE_RELEASE}.noarch.rpm"
               mv "${name}_${VERSION}~${PRERELEASE}-${PACKAGE_RELEASE}_all.ipk" "${name}_${NPM}-${PACKAGE_RELEASE}_all.ipk"
-            done
-          fi
-          set -- "doona-${NPM}.tar.gz" "doona-fonts-${NPM}.tar.gz"
-          for name in doona doona-fonts; do
-            set -- "$@" "doona-web${name#doona}_${NPM}-${PACKAGE_RELEASE}_all.deb" "${name}-${NPM}-${PACKAGE_RELEASE}.noarch.rpm" \
+            fi
+            ls "${deb}_${NPM}-${PACKAGE_RELEASE}_all.deb" "${name}-${NPM}-${PACKAGE_RELEASE}.noarch.rpm" \
               "${name}_${NPM}-${PACKAGE_RELEASE}_all.ipk" "${name}-${VERSION}${ARCH_PRERELEASE}-${PACKAGE_RELEASE}-any.pkg.tar.zst"
           done
-          sha256sum "$@" > SHA256SUMS
-      # Temporary: honk has no release with the native API yet, so every doona release carries the honk debug builds of the
-      # tag pinned in tools/honk-pin.txt, the source archive of their commit and a note naming it. fetch-honk.mjs reads that
-      # tag's own release and fails unless its body, target and source tag name the pinned tag and commit. Remove this step,
-      # that file and the three honk lines in release's `files` once honk ships one.
-      - name: Bundle the honk-core debug builds
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nfpm-packages
+          path: packages/
+          if-no-files-found: error
+          retention-days: 1
+
+  alpine:
+    needs: [build]
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      NPM: ${{ needs.build.outputs.NPM }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: archives
+          path: release/
+      - name: Build the Alpine packages
+        run: docker run --rm -v "$PWD:/src" -w /src "$ALPINE_IMAGE" sh tools/package-alpine.sh "$NPM"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: alpine-packages
+          path: release/alpine/
+          if-no-files-found: error
+          retention-days: 1
+
+  openwrt-apk:
+    needs: [build]
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      NPM: ${{ needs.build.outputs.NPM }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: archives
+          path: release/
+      # The SDK image builds as its own unprivileged user, which needs to write the output directory.
+      - name: Build the OpenWrt apk packages
         run: |
-          node tools/fetch-honk.mjs release
+          mkdir -p release/openwrt
+          chmod 777 release/openwrt
+          docker run --rm -v "$PWD:/src" -w /src "$OPENWRT_SDK_IMAGE" sh tools/package-openwrt.sh "$NPM"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: openwrt-packages
+          path: release/openwrt/
+          if-no-files-found: error
+          retention-days: 1
+
+  # Collects every package next to the archives and sums them, so the release job only uploads.
+  sums:
+    needs: [build, nfpm, alpine, openwrt-apk]
+    if: ${{ !cancelled() && needs.nfpm.result == 'success' && needs.alpine.result == 'success' && needs.openwrt-apk.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: '{archives,*-packages}'
+          path: release/
+          merge-multiple: true
+      - name: Sum every asset
+        run: |
           cd release
-          sha256sum honk-core-debug-*.tar.gz honk-source-*.tar.gz HONK-SOURCE.txt >> SHA256SUMS
+          sha256sum -- * > "$RUNNER_TEMP/SHA256SUMS"
+          mv "$RUNNER_TEMP/SHA256SUMS" SHA256SUMS
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-assets
@@ -152,7 +270,8 @@ jobs:
           retention-days: 1
 
   release:
-    needs: [build]
+    needs: [build, nfpm, alpine, openwrt-apk, sums]
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -179,6 +298,10 @@ jobs:
             release/*-${{ env.NPM }}-${{ env.PACKAGE_RELEASE }}.noarch.rpm
             release/*_${{ env.NPM }}-${{ env.PACKAGE_RELEASE }}_all.ipk
             release/*-${{ env.VERSION }}${{ env.ARCH_PRERELEASE }}-${{ env.PACKAGE_RELEASE }}-any.pkg.tar.zst
+            release/*.apk
+            release/doona-alpine.rsa.pub
+            release/doona-openwrt.adb
+            release/doona-openwrt.pem
             release/SHA256SUMS
             release/honk-core-debug-*.tar.gz
             release/honk-source-*.tar.gz
