@@ -118,14 +118,8 @@ export function PanelHost({
     document.body
   );
 }
-// The panel's switches in its menu on every host: the rates widget's one chart or two, and the widgets' titles.
+// The panel's switch in its menu on every host: the widgets' titles.
 const panelSwitches = (layout: Layout, t: ReturnType<typeof useT>) => [
-  {
-    id: 'combine',
-    label: t('widgets.combineRates'),
-    checked: !layout.splitRates,
-    onAction: () => patchLayout({splitRates: layout.splitRates ? undefined : true})
-  },
   {id: 'titles', label: t('widgets.showTitles'), checked: !!layout.titles, onAction: () => patchLayout({titles: layout.titles ? undefined : true})}
 ];
 // The phone drawer, loaded on its first opening.

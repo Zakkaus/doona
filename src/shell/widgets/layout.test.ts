@@ -151,11 +151,23 @@ it.each([
   ['keeps them shown once chosen', {titles: true}, true],
   ['drops a value that is not true', {titles: 1}, undefined]
 ])('%s', (_name, value, titles) => expect(parseLayout({...defaults(), ...value}).titles).toBe(titles));
+const rates = [
+  {id: 'speed', form: 'sparkline', size: 'medium'},
+  {id: 'speed', instance: 'speed-2', form: 'sparkline', size: 'medium', split: true},
+  {id: 'memory', form: 'kv', size: 'medium', split: true}
+];
 it.each([
-  ['combines the rates charts by default', {}, undefined],
-  ['keeps them split once chosen', {splitRates: true}, true],
-  ['drops a value that is not true', {splitRates: 'yes'}, undefined]
-])('%s', (_name, value, split) => expect(parseLayout({...defaults(), ...value}).splitRates).toBe(split));
+  ['combines the rates charts by default', {}, [undefined, true, undefined]],
+  ['splits every rates widget the former panel switch split, and only those', {splitRates: true}, [true, true, undefined]],
+  ['drops a former switch that is not true', {splitRates: 'yes'}, [undefined, true, undefined]],
+  ['reads a version 1 switch the same way', {version: 1, splitRates: true}, [true, true, undefined]]
+])('%s', (_name, value, split) => {
+  const layout = parseLayout({...defaults(), items: rates, ...value});
+  expect(layout.items.map(item => item.split)).toEqual(split);
+  expect(layout).not.toHaveProperty('splitRates');
+});
+it('keeps a rates split per instance on the dashboard too', () =>
+  expect(parseItems(rates, 'dashboard').map(item => item.split)).toEqual([undefined, true, undefined]));
 it.each([
   ['keeps a docked panel docked', {docked: true}, true],
   ['floats a panel saved before docking existed', {}, undefined],

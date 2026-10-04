@@ -14,7 +14,6 @@ import {sampleCpu} from './samples';
 import {registry, type ModuleForm, type Widget} from './layout';
 import {Reading} from './Reading';
 import {scaleOf} from './dashboardSizing';
-import {useWidgetLayout} from './settings';
 
 // A chart's legend carries the live value beside its colour, so a charted widget lists the rates once, there.
 export const chartedRates = (item: Pick<Widget, 'id' | 'size'>, form: ModuleForm) => registry[item.id].rate === true && form !== 'kv' && item.size !== 'small';
@@ -78,6 +77,7 @@ export function RuntimeWidget({item, form}: {item: Widget; form: ModuleForm}) {
             runtime={r}
             connections={item.id === 'connections'}
             direction={item.id}
+            combine={item.id === 'speed' && !item.split}
           />
         ))}
     </Reading>
@@ -121,17 +121,15 @@ function HistoryChart({
     </>
   );
 }
-type ChartProps = {large: boolean; form: ModuleForm; scale?: number; wide?: boolean};
+type ChartProps = {large: boolean; form: ModuleForm; scale?: number; wide?: boolean; combine?: boolean};
 function TrafficChart({runtime, connections, direction, ...props}: ChartProps & {runtime: Runtime | undefined; connections: boolean; direction: string}) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const p = usePalette();
   const {history, series} = useTrafficSeries(useCapabilities().data, runtime, 60, {anchored: !!useContext(ResourceSamples)});
-  const split = useWidgetLayout().splitRates;
   return (
     <HistoryChart
       {...props}
-      combine={direction === 'speed' && !split}
       widest={connections ? undefined : formatRate(888e6, locale)}
       history={history}
       timestamps={series.timestamps}
