@@ -93,7 +93,8 @@ export const runtime: Runtime = {
   },
   traffic: {
     scope: 'visible',
-    observed_by: 'mixed',
+    // As honk reports it: only what passes through userspace, never the direct connections the kernel forwards.
+    observed_by: 'userspace',
     counter_since: runtimeOutbounds.counter_since,
     sampled_at: observedAt,
     connections: {

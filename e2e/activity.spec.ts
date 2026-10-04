@@ -84,6 +84,23 @@ test('the traffic figures stay while the runtime read fails, muted until it reco
   await expect(tiles.locator('.rp-big.rp-muted')).toHaveCount(0);
 });
 
+test('the traffic card says kernel-forwarded direct traffic is not counted, only while it is left out', async ({page}) => {
+  const {api} = await mockBackend(page);
+  await page.goto('/#/activity');
+  const card = page.locator('.rp-card').filter({has: page.getByRole('heading', {name: 'Traffic', exact: true})});
+  await card.getByRole('button', {name: 'About Traffic'}).click();
+  await expect(page.getByRole('dialog')).toContainText('Direct connections that the kernel forwards on its own are not counted.');
+  await page.keyboard.press('Escape');
+  // Observed by eBPF as well, the figures miss nothing.
+  await page.route(/\/api\/v1\/runtime$/, async route => {
+    const runtime = await api.runtime();
+    await route.fulfill({json: {...runtime, traffic: {...runtime.traffic, observed_by: 'mixed'}}});
+  });
+  await page.reload();
+  await expect(card.getByRole('heading', {name: 'Traffic', exact: true})).toBeVisible();
+  await expect(card.getByRole('button', {name: 'About Traffic'})).toHaveCount(0);
+});
+
 test('the outbound mode is staged and applied as a configuration write with a reload', async ({page}) => {
   const {api} = await mockBackend(page);
   const source = (await api.config()).sources.find(source => source.kind === 'main')!;

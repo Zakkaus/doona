@@ -1,6 +1,7 @@
 import {afterEach, expect, it} from 'vitest';
 import {createServerClock, selectServerClock} from '../../api/serverClock';
-import {historyTrafficSamples, isTrafficRange, trafficRanges, trafficWindow} from '../shared/traffic';
+import {historyTrafficSamples, isTrafficRange, kernelTrafficUncounted, trafficRanges, trafficWindow} from '../shared/traffic';
+import type {Runtime} from '../../api/model';
 
 afterEach(() => selectServerClock(createServerClock()));
 
@@ -49,4 +50,20 @@ it('offers each traffic range once, shortest first, and nothing outside the tabl
   expect(isTrafficRange('h6')).toBe(true);
   expect(isTrafficRange('h2')).toBe(false);
   expect(isTrafficRange('toString')).toBe(false);
+});
+
+it.each([
+  ['userspace', 'ebpf', true],
+  ['mixed', 'ebpf', false],
+  ['ebpf', 'ebpf', false],
+  ['userspace', 'userspace', false],
+  ['userspace', 'mock', false],
+  ['userspace', 'unknown', false]
+] as const)('traffic observed by %s on a %s datapath leaves out kernel-forwarded bytes: %s', (observed, kind, uncounted) => {
+  const runtime = {datapath: {kind}, traffic: {observed_by: observed}} as Pick<Runtime, 'datapath' | 'traffic'>;
+  expect(kernelTrafficUncounted(runtime)).toBe(uncounted);
+});
+
+it('says nothing about uncounted traffic before the runtime is read', () => {
+  expect(kernelTrafficUncounted(undefined)).toBe(false);
 });

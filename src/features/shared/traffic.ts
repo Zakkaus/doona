@@ -27,6 +27,11 @@ export const foldTraffic: Fold<TrafficSample> = (group, time) => ({
   connections: group.some(s => s.connections !== null) ? Math.max(...group.map(s => s.connections ?? 0)) : null
 });
 
+// With an eBPF datapath the kernel forwards some direct connections on its own; a backend that counts only what
+// passes through userspace then leaves their bytes out of every rate, history and connection figure.
+export const kernelTrafficUncounted = (runtime: Pick<Runtime, 'datapath' | 'traffic'> | undefined) =>
+  runtime?.traffic.observed_by === 'userspace' && runtime.datapath.kind === 'ebpf';
+
 export function trafficSample(runtime: Runtime): TrafficSample | undefined {
   const traffic = runtime.traffic;
   const time = Date.parse(traffic.sampled_at ?? '');

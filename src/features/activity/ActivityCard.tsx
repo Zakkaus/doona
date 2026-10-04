@@ -150,7 +150,11 @@ function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useAc
       break;
     case 'history':
       content = (
-        <Card title={t('act.traffic')} aside={<Segmented label={t('act.historyRange')} value={range} onChange={setRange} items={ranges} />}>
+        <Card
+          title={t('act.traffic')}
+          help={vm.trafficUncounted ? {title: t('act.traffic'), text: t('ui.trafficUncounted')} : undefined}
+          aside={<Segmented label={t('act.historyRange')} value={range} onChange={setRange} items={ranges} />}
+        >
           {vm.history.error && vm.history.state !== 'ready' ? (
             <ErrorMessage error={vm.history.error} onRetry={vm.history.retry} />
           ) : vm.history.state === 'unavailable' ? (

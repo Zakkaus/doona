@@ -1,6 +1,7 @@
 import {useCallback, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
 import {readTag} from '../shared/taggedId';
-import {useCapabilities, useConnectionClose, useConnections, useFlowDemand, useGroups, useNodes, useOutboundNames} from '../../store';
+import {useCapabilities, useConnectionClose, useConnections, useFlowDemand, useGroups, useNodes, useOutboundNames, useRuntime} from '../../store';
+import {kernelTrafficUncounted} from '../shared/traffic';
 import {outboundTag} from '../shared/link';
 import {ApiError, errorText} from '../../api/error';
 import {chainNames, closedAllTone, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
@@ -96,6 +97,7 @@ export function useConnectionsPage({go, query}: PageProps) {
     () => (nodesListed && trafficNodes ? pathLatency(trafficRows, trafficNodes, locale) : null),
     [nodesListed, trafficNodes, trafficRows, locale]
   );
+  const runtime = useRuntime(tab === 'traffic' && offered(capabilities.data?.resources, 'runtime', {whileLoading: false}));
   // A failed read keeps the card, with the reason, so it does not pass for a backend without health samples.
   const latencyError = nodesListed && !nodes.data ? nodes.error : null;
   const outboundKeys = useMemo(
@@ -184,6 +186,7 @@ export function useConnectionsPage({go, query}: PageProps) {
     tab,
     setTab: (next: string) => go('connections', tabQuery(query, next, fallback === 'traffic' ? fallback : null)),
     openInList,
+    trafficUncounted: kernelTrafficUncounted(runtime.data),
     view,
     updateView,
     collapse,
