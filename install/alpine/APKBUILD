@@ -8,18 +8,20 @@ pkgdesc="Web UI for the daeuniverse engines"
 url="https://github.com/Zakkaus/doona"
 arch="noarch"
 license="GPL-3.0-only AND 0BSD AND Apache-2.0 AND BSD-3-Clause AND ISC AND MIT AND CC-BY-3.0 AND CC-BY-4.0 AND CC-BY-SA-4.0 AND CC0-1.0 AND LicenseRef-GitHub-Logos"
-subpackages="$pkgname-doc $pkgname-fonts:fonts:noarch"
+subpackages="$pkgname-doc $pkgname-fonts:fonts:noarch $pkgname-precompressed:precompressed:noarch"
 source="$pkgname-$_upstream_ver.tar.gz::$url/releases/download/$_tag/$pkgname-$_upstream_ver.tar.gz
 	$pkgname-fonts-$_upstream_ver.tar.gz::$url/releases/download/$_tag/$pkgname-fonts-$_upstream_ver.tar.gz
+	$pkgname-precompressed-$_upstream_ver.tar.gz::$url/releases/download/$_tag/$pkgname-precompressed-$_upstream_ver.tar.gz
 	"
 options="!check" # static files
 builddir="$srcdir"
 
-# Both archives hold their files at the root: unpack each into its own directory.
+# The archives hold their files at the root: unpack each into its own directory.
 unpack() {
-	mkdir -p "$srcdir"/web "$srcdir"/fonts
+	mkdir -p "$srcdir"/web "$srcdir"/fonts "$srcdir"/precompressed
 	tar -xzf "$srcdir"/$pkgname-$_upstream_ver.tar.gz -C "$srcdir"/web
 	tar -xzf "$srcdir"/$pkgname-fonts-$_upstream_ver.tar.gz -C "$srcdir"/fonts
+	tar -xzf "$srcdir"/$pkgname-precompressed-$_upstream_ver.tar.gz -C "$srcdir"/precompressed
 }
 
 package() {
@@ -37,6 +39,13 @@ fonts() {
 	depends="$pkgname=$pkgver-r$pkgrel"
 	mkdir -p "$subpkgdir"/usr/share/doona
 	cp -a "$srcdir"/fonts/fonts "$subpkgdir"/usr/share/doona/
+}
+
+precompressed() {
+	pkgdesc="Brotli and gzip copies of doona's text assets"
+	depends="$pkgname=$pkgver-r$pkgrel"
+	mkdir -p "$subpkgdir"/usr/share/doona
+	cp -a "$srcdir"/precompressed/. "$subpkgdir"/usr/share/doona/
 }
 
 sha512sums="

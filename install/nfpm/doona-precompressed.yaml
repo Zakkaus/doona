@@ -1,0 +1,37 @@
+# The optional .br and .gz siblings staged from the prebuilt precompressed archive, installed next to doona's files.
+# PACKAGE_SUFFIX follows doona.yaml: -web for the deb, unset for the other formats. DOONA_VERSION is the doona package
+# version in the target format's spelling; the release workflow sets it so both packages stay at the same release.
+name: doona${PACKAGE_SUFFIX}-precompressed
+arch: all
+platform: linux
+version: ${VERSION}
+prerelease: ${PRERELEASE}
+release: ${PACKAGE_RELEASE}
+version_schema: semver
+section: web
+priority: optional
+maintainer: Zakkaus <zakk@gentoozh.org>
+vendor: Zakkaus
+homepage: https://github.com/Zakkaus/doona
+license: GPL-3.0-only AND 0BSD AND Apache-2.0 AND BSD-3-Clause AND ISC AND MIT AND CC-BY-3.0 AND CC-BY-4.0 AND CC-BY-SA-4.0 AND CC0-1.0 AND LicenseRef-GitHub-Logos
+description: |
+  Precompressed assets for doona
+  Brotli and gzip copies of doona's text assets, so the engine or a web server can send compressed responses.
+depends:
+  - doona${PACKAGE_SUFFIX} (= ${DOONA_VERSION})
+overrides:
+  deb:
+    contents:
+      - src: build/stage/doona-precompressed/usr/share/doona
+        dst: /usr/share/doona-web
+        type: tree
+  rpm:
+    depends:
+      - doona = ${DOONA_VERSION}
+  archlinux:
+    depends:
+      - doona=${DOONA_VERSION}
+contents:
+  - src: build/stage/doona-precompressed/usr/share/doona
+    dst: /usr/share/doona
+    type: tree
