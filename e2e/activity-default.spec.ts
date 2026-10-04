@@ -16,7 +16,7 @@ for (const lang of ['en', 'zh-TW'])
       test(`matches main ${width}`, async ({page}, info) => {
         await page.setViewportSize({width, height});
         await page.goto('/#/activity');
-        const details = page.locator("[data-profile='details'] .rp-card");
+        const details = page.locator("[data-profile='details'] > .rp-dashboard-cell > .rp-card");
         await expect(details).toHaveCount(3);
         await details.last().scrollIntoViewIfNeeded();
         await expect(page.locator("[data-profile='traffic'] svg").first()).toBeVisible();

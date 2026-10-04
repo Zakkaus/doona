@@ -13,75 +13,92 @@ import {FactStrip, usePalette} from '../../ui/charts';
 import {WidgetAreaChart} from '../../ui/charts/compact';
 import {Badge, ErrorMessage, Kv, Meter} from '../../ui/ui';
 import {sampleCpu} from './samples';
-import {registry, type ModuleForm, type Widget} from './layout';
+import {WideCell} from '../../ui/DashboardTile';
+import {registry, WidgetSurface, type ModuleForm, type Widget} from './layout';
 import {Reading} from './Reading';
 import {scaleOf} from './dashboardSizing';
 
 // A chart's legend carries the live value beside its colour, so a charted widget lists the rates once, there.
 export const chartedRates = (item: Pick<Widget, 'id' | 'size'>, form: ModuleForm) => registry[item.id].rate === true && form !== 'kv' && item.size !== 'small';
-// A card two thirds of a row or wider lists its chart's peak and average beside it (see dashboard.css).
-const wide = (item: Widget) => item.width === '2/3' || item.width === 'full';
+// A dashboard card two thirds of a row or wider lists its chart's peak and average beside it (see dashboard.css): by its
+// chosen width, or for Auto by the box its footprint has now.
+function useWide(item: Widget) {
+  const surface = useContext(WidgetSurface);
+  const cell = useContext(WideCell);
+  return surface === 'dashboard' && (item.width ? item.width === '2/3' || item.width === 'full' : cell);
+}
 export function RuntimeWidget({item, form}: {item: Widget; form: ModuleForm}) {
   const t = useT();
   const locale = LOCALE[useLang()];
+  const wide = useWide(item);
   const runtime = useRuntime();
   const r = runtime.data;
   const rates = r?.traffic.rates;
+  // A wide key-value card lists the same statistics as a wide chart, beside its readings.
+  const listed = form === 'kv' && wide && item.id !== 'traffic';
+  const chart = (statsOnly: boolean) =>
+    item.id === 'cpu' ? (
+      <CpuChart scale={scaleOf(item)} wide={wide} large={item.size === 'large' || item.size === 'wide'} form={form} runtime={r} statsOnly={statsOnly} />
+    ) : (
+      <TrafficChart
+        scale={scaleOf(item)}
+        wide={wide}
+        large={item.size === 'large' || item.size === 'wide'}
+        form={form}
+        runtime={r}
+        connections={item.id === 'connections'}
+        direction={item.id}
+        combine={item.id === 'speed' && !item.split}
+        statsOnly={statsOnly}
+      />
+    );
+  const readings = !chartedRates(item, form) && (
+    <Kv
+      compact
+      row={item.size !== 'small'}
+      items={
+        item.id === 'traffic'
+          ? [
+              [t('ui.download'), formatBytes(r?.traffic.bytes.download ?? null, locale)],
+              ...(item.size === 'small' ? [] : [[t('ui.upload'), formatBytes(r?.traffic.bytes.upload ?? null, locale)] as [string, string]])
+            ]
+          : registry[item.id].rate
+            ? [
+                [
+                  t(item.id === 'upload' ? 'ui.upload' : 'ui.download'),
+                  formatRate((item.id === 'upload' ? rates?.upload_bytes_per_second : rates?.download_bytes_per_second) ?? null, locale)
+                ],
+                ...(item.size === 'small' || item.id === 'download' || item.id === 'upload'
+                  ? []
+                  : [[t('ui.upload'), formatRate(rates?.upload_bytes_per_second ?? null, locale)] as [string, string]])
+              ]
+            : [
+                [
+                  t(item.id === 'cpu' ? 'act.cpu' : 'act.active'),
+                  item.id === 'cpu'
+                    ? formatCpu(r?.process.cpu_percent, t)
+                    : r?.traffic.connections.total == null
+                      ? '—'
+                      : formatNumber(r.traffic.connections.total, locale)
+                ]
+              ]
+      }
+    />
+  );
   return (
     <Reading state={runtime}>
-      {!chartedRates(item, form) && (
-        <Kv
-          compact
-          row={item.size !== 'small'}
-          items={
-            item.id === 'traffic'
-              ? [
-                  [t('ui.download'), formatBytes(r?.traffic.bytes.download ?? null, locale)],
-                  ...(item.size === 'small' ? [] : [[t('ui.upload'), formatBytes(r?.traffic.bytes.upload ?? null, locale)] as [string, string]])
-                ]
-              : registry[item.id].rate
-                ? [
-                    [
-                      t(item.id === 'upload' ? 'ui.upload' : 'ui.download'),
-                      formatRate((item.id === 'upload' ? rates?.upload_bytes_per_second : rates?.download_bytes_per_second) ?? null, locale)
-                    ],
-                    ...(item.size === 'small' || item.id === 'download' || item.id === 'upload'
-                      ? []
-                      : [[t('ui.upload'), formatRate(rates?.upload_bytes_per_second ?? null, locale)] as [string, string]])
-                  ]
-                : [
-                    [
-                      t(item.id === 'cpu' ? 'act.cpu' : 'act.active'),
-                      item.id === 'cpu'
-                        ? formatCpu(r?.process.cpu_percent, t)
-                        : r?.traffic.connections.total == null
-                          ? '—'
-                          : formatNumber(r.traffic.connections.total, locale)
-                    ]
-                  ]
-          }
-        />
+      {listed ? (
+        <div className="rp-chart-stats">
+          {readings}
+          {chart(true)}
+        </div>
+      ) : (
+        readings
       )}
       {item.id === 'traffic' && item.size !== 'small' && (
         <span className="rp-label rp-counter-since">{t('act.since', {time: localTime(r?.traffic.counter_since ?? null, locale)})}</span>
       )}
-      {item.id !== 'traffic' &&
-        form !== 'kv' &&
-        item.size !== 'small' &&
-        (item.id === 'cpu' ? (
-          <CpuChart scale={scaleOf(item)} wide={wide(item)} large={item.size === 'large' || item.size === 'wide'} form={form} runtime={r} />
-        ) : (
-          <TrafficChart
-            scale={scaleOf(item)}
-            wide={wide(item)}
-            large={item.size === 'large' || item.size === 'wide'}
-            form={form}
-            runtime={r}
-            connections={item.id === 'connections'}
-            direction={item.id}
-            combine={item.id === 'speed' && !item.split}
-          />
-        ))}
+      {item.id !== 'traffic' && form !== 'kv' && item.size !== 'small' && chart(false)}
     </Reading>
   );
 }
@@ -91,6 +108,7 @@ function HistoryChart({
   large,
   scale,
   wide,
+  statsOnly,
   history,
   ...chart
 }: {
@@ -98,6 +116,7 @@ function HistoryChart({
   large: boolean;
   scale?: number;
   wide?: boolean;
+  statsOnly?: boolean;
   history?: {error?: Error | null; refetch: () => unknown};
   timestamps: number[];
   fmt: (n: number | null) => string;
@@ -107,6 +126,7 @@ function HistoryChart({
 }) {
   const t = useT();
   const locale = LOCALE[useLang()];
+  if (statsOnly) return <FactStrip facts={seriesFacts(chart.series, chart.fmt, t)} />;
   return (
     <>
       {history && <ErrorMessage error={history.error} onRetry={history.refetch} />}
@@ -123,7 +143,7 @@ function HistoryChart({
     </>
   );
 }
-type ChartProps = {large: boolean; form: ModuleForm; scale?: number; wide?: boolean; combine?: boolean};
+type ChartProps = {large: boolean; form: ModuleForm; scale?: number; wide?: boolean; combine?: boolean; statsOnly?: boolean};
 function TrafficChart({runtime, connections, direction, ...props}: ChartProps & {runtime: Runtime | undefined; connections: boolean; direction: string}) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -166,50 +186,71 @@ function CpuChart({runtime, ...props}: ChartProps & {runtime: Runtime | undefine
     />
   );
 }
-// Past the narrowest size, the key-value form draws the cgroup's use against its limit as a meter when a limit is set,
-// and any form names the OOM kills when there were some.
+// Past the narrowest size, the readings add the cgroup's use against its limit: a meter in the key-value form, text in
+// a chart's, and the limit's absence named where there is no positive limit to measure against. Any form names the OOM
+// kills when there were some. The panel's medium size keeps to these readings, and its chart starts at large.
 export function MemoryWidget({item, form}: {item: Widget; form: ModuleForm}) {
   const t = useT();
   const locale = LOCALE[useLang()];
+  const surface = useContext(WidgetSurface);
+  const wide = useWide(item);
   const memory = useRuntimeMemory();
   const metrics = useCapabilities().data?.resources.runtime_memory?.metrics ?? [];
   const rss = metrics.includes('process.rss_bytes');
   const cgroup = metrics.includes('cgroup.current_bytes');
+  const narrow = item.size === 'small';
   const used = memory.data?.cgroup?.current_bytes ?? null;
   const limit = memory.data?.cgroup?.limit_bytes ?? null;
-  const share = form === 'kv' && item.size !== 'small' ? pctU64(used, limit) : null;
-  const kills = item.size === 'small' ? null : parseU64(memory.data?.cgroup?.events?.oom_kill ?? null);
-  return (
-    <Reading state={memory}>
+  const limited = (parseU64(limit) ?? 0n) > 0n;
+  const share = form === 'kv' && !narrow && limited ? pctU64(used, limit) : null;
+  const kills = narrow ? null : parseU64(memory.data?.cgroup?.events?.oom_kill ?? null);
+  const charted = form !== 'kv' && !narrow && (surface === 'dashboard' || item.size === 'large' || item.size === 'wide');
+  const bytes = (value: string | null) => formatBytes(value, locale);
+  // A listed limit that reads null means none is set, as on the overview; an absent one is not reported.
+  const unlimited = metrics.includes('cgroup.limit_bytes') && memory.data?.cgroup?.limit_bytes === null;
+  const readings = (
+    <>
       <Kv
         compact
-        row={item.size !== 'small'}
+        row={!narrow}
         items={[
-          ...(rss ? [[t('act.rss'), formatBytes(memory.data?.process?.rss_bytes ?? null, locale)] as [string, string]] : []),
-          ...(cgroup && share === null && (item.size !== 'small' || !rss) ? [[t('act.cgroup'), formatBytes(used, locale)] as [string, string]] : [])
+          ...(rss ? [[t('act.rss'), bytes(memory.data?.process?.rss_bytes ?? null)] as [string, string]] : []),
+          ...(cgroup && share === null && (!narrow || !rss)
+            ? [[t('act.cgroup'), !narrow && limited ? t('ui.fraction', {part: bytes(used), whole: bytes(limit)}) : bytes(used)] as [string, string]]
+            : []),
+          ...(cgroup && !narrow && !limited ? [[t('ov.f.cgroupLimit'), t(unlimited ? 'ov.noLimit' : 'widgets.notReported')] as [string, string]] : [])
         ]}
       />
       {share !== null && (
-        <Meter
-          label={t('ov.f.cgroupPercent')}
-          value={share}
-          valueLabel={t('ui.fraction', {part: formatBytes(used, locale), whole: formatBytes(limit, locale)})}
-          tone={memoryTone(share)}
-        />
+        <Meter label={t('ov.f.cgroupPercent')} value={share} valueLabel={t('ui.fraction', {part: bytes(used), whole: bytes(limit)})} tone={memoryTone(share)} />
       )}
       {!!kills && <Badge tone="negative">{t('ui.valuePair', {label: t('ov.f.oomKill'), value: formatNumber(kills, locale)})}</Badge>}
       {!rss && !cgroup && <span className="rp-label">{t('widgets.unavailable')}</span>}
-      {form !== 'kv' && item.size !== 'small' && (
-        <MemoryChart
-          scale={scaleOf(item)}
-          wide={wide(item)}
-          large={item.size === 'large' || item.size === 'wide'}
-          form={form}
-          memory={memory.data}
-          rss={rss}
-          cgroup={cgroup}
-        />
+    </>
+  );
+  const chart = (statsOnly: boolean) => (
+    <MemoryChart
+      scale={scaleOf(item)}
+      wide={wide}
+      large={item.size === 'large' || item.size === 'wide'}
+      form={form}
+      memory={memory.data}
+      rss={rss}
+      cgroup={cgroup}
+      statsOnly={statsOnly}
+    />
+  );
+  return (
+    <Reading state={memory}>
+      {form === 'kv' && wide ? (
+        <div className="rp-chart-stats">
+          <div className="rp-col">{readings}</div>
+          {chart(true)}
+        </div>
+      ) : (
+        readings
       )}
+      {charted && chart(false)}
     </Reading>
   );
 }

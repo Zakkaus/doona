@@ -160,6 +160,13 @@ export function packSection(section: HTMLElement): () => void {
       }
       section.dataset.controls = layout;
     } else delete section.dataset.controls;
+    // From tablet width, where chosen widths apply, a card two thirds of its row or wider by the box it has now lists its
+    // chart's statistics beside it (see dashboard.css), so an Auto card follows the footprint its profile gives it at
+    // this width. The line sits between a half and two thirds, where no gap can tip it.
+    const style = getComputedStyle(section);
+    const row = section.getBoundingClientRect().width + Math.min(0, Number.parseFloat(style.marginInlineStart) || 0);
+    const tablet = style.getPropertyValue('--rp-dash-snap').trim() !== 'none';
+    for (const cell of list) cell.toggleAttribute('data-wide', tablet && cell.getBoundingClientRect().width > (row * 7) / 12);
     // Columns depend on width alone, so whether a tile stacks is known before packing; its row is known after.
     const tiles = list.filter(cell => cell.querySelector(valueTile));
     const own = tiles.map(stacks);

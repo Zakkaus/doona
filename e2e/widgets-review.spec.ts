@@ -17,6 +17,33 @@ test('a backend without outbound traffic does not ask for it for connection stat
   expect(requests.filter(request => new URL(request.url()).pathname === '/api/v1/runtime/outbounds')).toEqual([]);
 });
 
+test('a dashboard key-value metric two thirds wide or wider lists its statistics beside its readings', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 1000});
+  await mockBackend(page);
+  const items = [
+    {id: 'speed', form: 'kv', size: 'medium', width: 'full'},
+    {id: 'memory', form: 'kv', size: 'medium', width: '2/3'},
+    {id: 'cpu', form: 'kv', size: 'medium', width: '1/2'}
+  ];
+  await page.addInitScript(value => localStorage.setItem('doona-dashboard', value), JSON.stringify({version: 3, sections: [{id: 'extensions', items}]}));
+  await page.goto('/#/activity');
+  const cell = (id: string) => page.locator(`.rp-dashboard-cell[data-instance="${id}"]`);
+  for (const [id, facts] of [
+    ['speed', 4],
+    ['memory', 4]
+  ] as const) {
+    const strip = cell(id).locator('.rp-chart-stats > .rp-facts');
+    await expect(strip).toBeVisible();
+    await expect(strip.locator('dt')).toHaveCount(facts);
+    const readings = await cell(id).locator('.rp-chart-stats > :first-child').boundingBox();
+    expect((await strip.boundingBox())!.x).toBeGreaterThanOrEqual(readings!.x + readings!.width);
+  }
+  await expect(cell('memory').getByRole('meter')).toBeVisible();
+  // Half a row keeps the readings alone.
+  await expect(cell('cpu').locator('.rp-kv')).toBeVisible();
+  await expect(cell('cpu').locator('.rp-facts')).toHaveCount(0);
+});
+
 test('metric forms change the renderer without acquiring history for key-value cards', async ({page}) => {
   const backend = await mockBackend(page);
   await page.addInitScript(

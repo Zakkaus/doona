@@ -3,7 +3,7 @@ import {Button as RButton, DropIndicator, GridList, GridListItem, type DragAndDr
 import {useDragAndDrop} from './dragAndDrop';
 import {buttonClass} from './Button';
 import {cellSize} from './WidgetGrid';
-import {sectionGrid, tileAttributes, usePacking, type TileProps} from './DashboardTile';
+import {DashboardBody, sectionGrid, tileAttributes, usePacking, type TileProps} from './DashboardTile';
 import DragHandle from './icons/DragHandle';
 import {DashboardGaps, dragStarted} from './DashboardGaps';
 import './styles/dashboard.css';
@@ -138,9 +138,7 @@ export function SortableCanvas<T extends TileProps>({
             </RButton>
             {tools?.(item)}
           </div>
-          <div className="rp-dashboard-body" inert>
-            {children(item)}
-          </div>
+          <DashboardBody>{children(item)}</DashboardBody>
           {resize?.(item)}
         </GridListItem>
       )}

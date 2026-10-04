@@ -1,3 +1,4 @@
+import {useContext} from 'react';
 import {DeferredLoading} from './DeferredLoading';
 import Download from '../../ui/icons/Download';
 import Upload from '../../ui/icons/Upload';
@@ -5,6 +6,7 @@ import LinkIcon from '../../ui/icons/Link';
 import Cpu from '../../ui/icons/Cpu';
 import {useT} from '../../i18n';
 import {Card, CardLink, ContextualHelp, Segmented, Light, ErrorMessage, Empty, Link, ChartWait, ValueTile} from '../../ui/ui';
+import {WideCell} from '../../ui/DashboardTile';
 import {href} from '../../shell/route';
 import {AreaChart, FactStrip, Legend, Spark} from '../../ui/charts';
 import {ModeCards} from './ModeSwitch';
@@ -30,8 +32,10 @@ export function ActivityCard({
   ranking?: {by: string; setBy: (by: string) => void};
   selection?: {chosen: string; setChosen: (id: string) => void};
 }) {
-  // A card two thirds of a row or wider lists its chart's peak and average beside it (see dashboard.css).
-  const stats = item.width === '2/3' || item.width === 'full';
+  // A card two thirds of a row or wider lists its chart's peak and average beside it (see dashboard.css): by its chosen
+  // width, or for Auto by the box its footprint has now.
+  const wideCell = useContext(WideCell);
+  const stats = item.width ? item.width === '2/3' || item.width === 'full' : wideCell;
   switch (item.id) {
     case 'mode':
       return <ModeModule part="mode" />;

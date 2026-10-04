@@ -1,4 +1,4 @@
-import {test, expect, box, expectTextInside, fulfillStream, loadCatalogues, mockBackend} from './fixtures';
+import {test, expect, box, expectTextInside, fulfillStream, loadCatalogues, mockBackend, settle as settleNetwork, settleFrames} from './fixtures';
 import type {Locator, Page} from '@playwright/test';
 import {translate} from '../src/i18n';
 const open = (page: Page) => page.getByRole('button', {name: 'Edit dashboard', exact: true}).click();
@@ -655,6 +655,36 @@ test('a chart two thirds of a row or wider lists its peak and average beside it'
   await expect(tile(page, 'history').locator('.rp-facts')).toBeHidden();
 });
 
+test('an Auto chart lists its statistics once its footprint is two thirds of its row, as the default traffic card', async ({page}) => {
+  await page.goto('/#/activity');
+  const history = tile(page, 'history');
+  for (const width of [1024, 1280]) {
+    await page.setViewportSize({width, height: 1000});
+    await expect(history).toHaveAttribute('data-wide', '');
+    await expect(tile(page, 'outbounds')).not.toHaveAttribute('data-wide');
+    await expect(history.locator('.rp-chart-stats svg.rp-activity-surface')).toBeVisible();
+    const strip = history.locator('.rp-facts');
+    await expect(strip).toBeVisible();
+    await expect(strip.locator('dt')).toHaveCount(4);
+    // The figures sit beside the chart, level with its top, each on one line and together no taller than the chart.
+    // Sections repack in the frames after a resize and move the card, so both boxes come from one settled layout.
+    await settleFrames(page);
+    const [chart, facts] = await history.evaluate(cell =>
+      [cell.querySelector('.rp-chart-stats > :nth-child(2)')!, cell.querySelector('.rp-facts')!].map(el => el.getBoundingClientRect().toJSON() as DOMRect)
+    );
+    expect(Math.abs(facts.y - chart.y), String(width)).toBeLessThanOrEqual(1);
+    expect(facts.x).toBeGreaterThanOrEqual(chart.x + chart.width);
+    expect(facts.height, String(width)).toBeLessThanOrEqual(chart.height);
+    expect(await strip.locator('dt').evaluateAll(list => list.filter(dt => dt.getClientRects().length > 1 || dt.scrollWidth > dt.clientWidth + 1).length)).toBe(
+      0
+    );
+    await expectTextInside(history.locator('section').first());
+  }
+  // A phone keeps the chart alone.
+  await page.setViewportSize({width: 390, height: 900});
+  await expect(history.locator('.rp-facts')).toBeHidden();
+});
+
 test('source lists meter each reported quota and memory meters its cgroup limit, at their narrowest width', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 1000});
   const backend = await mockBackend(page);
@@ -691,9 +721,21 @@ test('source lists meter each reported quota and memory meters its cgroup limit,
   for (const id of ['sourceHealth', 'providerBudget', 'memory']) await expectTextInside(tile(page, id).locator('section').first());
   // Without a limit there is nothing to meter against; OOM kills are named once there were some.
   memory = {...memory, cgroup: {...memory.cgroup!, limit_bytes: null, events: {...memory.cgroup!.events!, oom_kill: '2'}}};
+  // Reloading while lazy chunks still load cancels them, and WebKit can fail the reload itself.
+  await settleNetwork(page);
   await page.reload();
   await expect(card.locator('.rp-badge')).toHaveText('OOM kills: 2');
   await expect(card.getByRole('meter')).toHaveCount(0);
+  // The capabilities list the limit, so a null one is none set; a zero or an absent one is not reported.
+  await expect(card.locator('.rp-kv')).toContainText(/cgroup limit\s*No limit/);
+  for (const limit of ['0', undefined]) {
+    memory = {...memory, cgroup: {...memory.cgroup!, limit_bytes: limit as string}};
+    if (limit === undefined) delete (memory.cgroup as {limit_bytes?: string | null}).limit_bytes;
+    await settleNetwork(page);
+    await page.reload();
+    await expect(card.locator('.rp-kv')).toContainText(/cgroup limit\s*Not reported/);
+    await expect(card.getByRole('meter')).toHaveCount(0);
+  }
 });
 
 test('a tall CPU tile keeps its height while its first samples arrive', async ({page}) => {
@@ -847,7 +889,7 @@ for (const [profile, id, width, choice] of [
   test(`choosing one card's width keeps every other Auto card in its section where it was and as large: ${profile} at ${width} px`, async ({page}) => {
     await page.setViewportSize({width, height: 1000});
     await page.goto('/#/activity');
-    await expect(tile(page, 'cpu').locator('.rp-tile-body')).toBeVisible();
+    await expect(tile(page, 'cpu').locator('[data-pack="tile"]')).toBeVisible();
     await open(page);
     const before = await boxes(page, profile);
     await settings(page, id);
@@ -1278,12 +1320,17 @@ test('a chart set tall, by settings or by its edge, fills the card it grew', asy
   const card = tile(page, 'history');
   await expect(card.locator('.rp-legend + div svg')).toBeVisible();
   const plot = () =>
-    card.locator('.rp-card').evaluate(node => {
+    card.locator('section.rp-card').evaluate(node => {
       const style = getComputedStyle(node);
       const box = node.getBoundingClientRect();
       const chart = node.querySelector('.rp-legend + div')!.getBoundingClientRect();
+      // The statistics beside a wide chart share the row with it.
+      const facts = node.querySelector('.rp-chart-stats > .rp-facts');
+      const beside = facts?.getClientRects().length
+        ? facts.getBoundingClientRect().width + Number.parseFloat(getComputedStyle(node.querySelector('.rp-chart-stats')!).columnGap)
+        : 0;
       return {
-        width: chart.width,
+        width: chart.width + beside,
         inner:
           box.width -
           Number.parseFloat(style.paddingInlineStart) -
