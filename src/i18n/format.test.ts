@@ -1,5 +1,17 @@
-import {expect, it} from 'vitest';
-import {compareNames, formatBytes, formatDuration, formatRate, localMinute, localTime} from './format';
+import {afterEach, expect, it} from 'vitest';
+import {
+  compareNames,
+  formatBytes,
+  formatDuration,
+  formatRate,
+  localMinute,
+  localMonthDayFormat,
+  localTime,
+  readDateFormat,
+  setDateFormat,
+  DATE_FORMATS,
+  type DateFormat
+} from './format';
 import {LANGS, LOCALE} from './index';
 
 it('keeps duration units, truncation and compound spacing in every language', () => {
@@ -60,15 +72,69 @@ it('sorts names by the interface language, numbers by value, whatever the case',
   expect(compareNames(LOCALE.en)).toBe(compareNames(LOCALE.en));
 });
 
-it('writes times on a 24-hour clock with the date in the language order', () => {
+// The browser's language tags for one test; `undefined` takes the property away, as a browser that offers none.
+function browserTags(tags: string[] | undefined) {
+  Object.defineProperty(navigator, 'languages', {configurable: true, get: () => tags});
+  Object.defineProperty(navigator, 'language', {configurable: true, get: () => tags?.[0]});
+}
+afterEach(() => {
+  Reflect.deleteProperty(navigator, 'languages');
+  Reflect.deleteProperty(navigator, 'language');
+  setDateFormat('automatic');
+});
+
+it('writes times on a 24-hour clock with the date in the chosen or the browser order', () => {
   // A local afternoon, whatever the test machine's zone.
   const at = new Date(2026, 9, 27, 15, 4, 5).toISOString();
   // ICU may join the date and time with another space character.
   const time = (locale: string) => localTime(at, locale).replace(/\s/g, ' ');
-  expect(time('en-US')).toBe('10/27/26, 15:04:05');
-  expect(time('zh-TW')).toBe('2026/10/27 15:04:05');
-  expect(time('zh-CN')).toBe('2026/10/27 15:04:05');
-  expect(localMinute(at, 'en-US').replace(/\s/g, ' ')).toBe('10/27/26, 15:04');
-  expect(localMinute(at, 'zh-TW').replace(/\s/g, ' ')).toBe('2026/10/27 15:04');
+  // [date format, browser tags, interface locale, time, minute, month and day]
+  const cases: Array<[DateFormat, string[] | undefined, string, string, string, string]> = [
+    ['automatic', ['en-AU', 'en'], 'en-US', '27/10/26, 15:04:05', '27/10/26, 15:04', '27/10'],
+    ['automatic', ['en-US'], 'en-US', '10/27/26, 15:04:05', '10/27/26, 15:04', '10/27'],
+    ['automatic', ['en-US'], 'zh-TW', '10/27/26, 15:04:05', '10/27/26, 15:04', '10/27'],
+    ['automatic', ['zh-TW'], 'en-US', '2026/10/27 15:04:05', '2026/10/27 15:04', '10/27'],
+    // A Thai region, whose calendar counts Buddhist years, still writes the Gregorian year.
+    ['automatic', ['th-TH'], 'en-US', '27/10/26 15:04:05', '27/10/26 15:04', '27/10'],
+    ['automatic', ['not a tag'], 'zh-TW', '2026/10/27 15:04:05', '2026/10/27 15:04', '10/27'],
+    ['automatic', undefined, 'zh-CN', '2026/10/27 15:04:05', '2026/10/27 15:04', '10/27'],
+    ['dmy', ['en-US'], 'en-US', '27/10/26, 15:04:05', '27/10/26, 15:04', '27/10'],
+    ['dmy', ['zh-TW'], 'zh-TW', '27/10/26, 15:04:05', '27/10/26, 15:04', '27/10'],
+    ['mdy', ['en-AU'], 'en-US', '10/27/26, 15:04:05', '10/27/26, 15:04', '10/27'],
+    ['mdy', ['en-AU'], 'zh-CN', '10/27/26, 15:04:05', '10/27/26, 15:04', '10/27'],
+    ['ymd', ['en-AU'], 'en-US', '2026-10-27 15:04:05', '2026-10-27 15:04', '10-27'],
+    ['ymd', ['en-US'], 'zh-TW', '2026-10-27 15:04:05', '2026-10-27 15:04', '10-27']
+  ];
+  for (const [format, tags, locale, expectedTime, expectedMinute, monthDay] of cases) {
+    browserTags(tags);
+    setDateFormat(format);
+    const row = [format, tags, locale];
+    expect([...row, time(locale)]).toEqual([...row, expectedTime]);
+    expect([...row, localMinute(at, locale).replace(/\s/g, ' ')]).toEqual([...row, expectedMinute]);
+    expect([...row, localMonthDayFormat(locale).format(Date.parse(at))]).toEqual([...row, monthDay]);
+  }
+  // Year-Month-Day pads month and day itself, so it does not depend on what a locale does with them.
+  browserTags(['en-US']);
+  setDateFormat('ymd');
+  const early = new Date(2026, 0, 5, 3, 4, 5).toISOString();
+  expect([localTime(early, 'en'), localMinute(early, 'en'), localMonthDayFormat('en').format(Date.parse(early))]).toEqual([
+    '2026-01-05 03:04:05',
+    '2026-01-05 03:04',
+    '01-05'
+  ]);
   expect([localTime(null, 'en'), localMinute(null, 'en')]).toEqual(['—', '—']);
+});
+
+it('reads a stored date format and falls back to automatic', () => {
+  const stored = (value: string | null) => ({getItem: () => value});
+  expect(DATE_FORMATS.map(value => readDateFormat(stored(value)))).toEqual(DATE_FORMATS);
+  expect(readDateFormat(stored('dd/mm/yy'))).toBe('automatic');
+  expect(readDateFormat(stored(null))).toBe('automatic');
+  expect(
+    readDateFormat({
+      getItem: () => {
+        throw new Error('blocked');
+      }
+    })
+  ).toBe('automatic');
 });

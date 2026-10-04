@@ -1,6 +1,6 @@
 import {useCallback, useId, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useT} from '../../i18n';
-import {localTimeFormat} from '../../i18n/format';
+import {localMonthDayFormat, localTimeFormat} from '../../i18n/format';
 import {useContentSize} from '../hooks';
 import {usePalette} from './palette';
 import {ChartTip, tipBounds, useChartTip} from './tip';
@@ -117,14 +117,12 @@ export function AreaPlot({
   const withDate = marks ? marks.step >= 86400000 : span > 36 * 60 * 60 * 1000;
   const clock = useMemo(
     () =>
-      new Intl.DateTimeFormat(
-        locale,
-        withDate
-          ? {month: 'numeric', day: 'numeric'}
-          : withSeconds
-            ? {hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'}
-            : {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'}
-      ),
+      withDate
+        ? localMonthDayFormat(locale)
+        : new Intl.DateTimeFormat(
+            locale,
+            withSeconds ? {hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'} : {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'}
+          ),
     [locale, withSeconds, withDate]
   );
   const {yDomain, yTicks} = useMemo(() => {

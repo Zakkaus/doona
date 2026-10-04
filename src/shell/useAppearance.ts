@@ -1,7 +1,8 @@
 import {useCallback, useLayoutEffect, useMemo, useState} from 'react';
-import {updateFlagOverride, writeSetting, type PaletteId, type Scheme, type Settings, type ToastPlacement, type Wordmark} from './preferences';
+import {updateFlagOverride, writeSetting, type DateFormat, type PaletteId, type Scheme, type Settings, type ToastPlacement, type Wordmark} from './preferences';
 import {useMediaQuery, withCrossfade} from '../ui/hooks';
 import type {RoutePath} from './routes';
+import {setDateFormat} from '../i18n/format';
 
 export function applyAppearance(dark: boolean, palette: PaletteId, wordmark: Wordmark) {
   const [family, flavour] = palette.split('/');
@@ -21,6 +22,7 @@ export function useAppearance(stored: Settings) {
   const [sparklines, setSparklines] = useState(stored.sparklines);
   const [toastPlacement, setToastPlacement] = useState<ToastPlacement>(stored.toastPlacement);
   const [startPage, setStartPage] = useState<RoutePath>(stored.startPage);
+  const [dateFormat, setDateFormatState] = useState<DateFormat>(stored.dateFormat);
   const sysDark = useMediaQuery('(prefers-color-scheme: dark)');
   const dark = scheme === 'dark' || (scheme === 'system' && sysDark);
   useLayoutEffect(() => applyAppearance(dark, palette, wordmark), [dark, palette, wordmark]);
@@ -66,6 +68,13 @@ export function useAppearance(stored: Settings) {
     setStartPage(next);
     writeSetting('startPage', next);
   }, []);
+  // The formatters read the order each time they run: the settings page shows dates only in tooltips, which format on
+  // hover, and a page opened after the change formats with the new order.
+  const pickDateFormat = useCallback((next: DateFormat) => {
+    setDateFormat(next);
+    setDateFormatState(next);
+    writeSetting('dateFormat', next);
+  }, []);
   return useMemo(
     () => ({
       scheme,
@@ -87,7 +96,9 @@ export function useAppearance(stored: Settings) {
       toastPlacement,
       pickToastPlacement,
       startPage,
-      pickStartPage
+      pickStartPage,
+      dateFormat,
+      pickDateFormat
     }),
     [
       scheme,
@@ -109,7 +120,9 @@ export function useAppearance(stored: Settings) {
       toastPlacement,
       pickToastPlacement,
       startPage,
-      pickStartPage
+      pickStartPage,
+      dateFormat,
+      pickDateFormat
     ]
   );
 }

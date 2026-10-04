@@ -36,6 +36,7 @@ type SettingsFieldId =
   | 'token'
   | 'test'
   | 'lang'
+  | 'dateFormat'
   | 'palette'
   | 'scheme'
   | 'wordmark'
@@ -66,6 +67,7 @@ export const settingsFields: ReadonlyArray<SettingsField> = [
   {id: 'token', card: 'backend', labelKey: 'settings.token', aliases: ['password']},
   {id: 'test', card: 'backend', labelKey: 'settings.test'},
   {id: 'lang', card: 'appearance', labelKey: 'ui.lang', aliases: ['language', 'locale']},
+  {id: 'dateFormat', card: 'appearance', labelKey: 'settings.dateFormat', aliases: ['date', 'time format']},
   {id: 'palette', card: 'appearance', labelKey: 'ui.palette', aliases: ['theme', 'color']},
   {id: 'scheme', card: 'appearance', labelKey: 'settings.scheme', aliases: ['dark mode', 'light mode']},
   {id: 'wordmark', card: 'appearance', labelKey: 'ui.wordmark'},

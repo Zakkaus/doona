@@ -1,5 +1,6 @@
 import {formatNumber, languages, REFERENCE_LANG, translate, type Key, type Translator} from './index';
 import {millis, parseU64} from '../api/u64';
+import {storageKeys} from '../api/storage';
 
 const relativeTimes = new Map<string, Intl.RelativeTimeFormat>();
 export function relativeStart(startedAt: string | null, locale: string, now = Date.now()): string {
@@ -35,12 +36,83 @@ export function formatDuration(seconds: string | null, locale: string): string {
   if (m > 0n) return unit(m, 'minute');
   return unit(total, 'second');
 }
-const localTimes = new Map<string, Intl.DateTimeFormat>();
-// A date and time in the language's own order, on a 24-hour clock in every language.
-export function localTimeFormat(locale: string) {
-  let formatter = localTimes.get(locale);
-  if (!formatter) localTimes.set(locale, (formatter = new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'medium', hourCycle: 'h23'})));
+// The reader's date order. Automatic follows the browser's first language tag, so an English interface in an
+// Australian browser writes 27/10/26. Day-Month-Year and Month-Day-Year stand for a locale that writes that order, so
+// Intl keeps the separators and the glue between date and time; Year-Month-Day is put together from the parts.
+export const DATE_FORMATS = ['automatic', 'dmy', 'mdy', 'ymd'] as const;
+export type DateFormat = (typeof DATE_FORMATS)[number];
+const orderLocales = {dmy: 'en-AU', mdy: 'en-US'} as const;
+export function readDateFormat(storage?: Pick<Storage, 'getItem'>): DateFormat {
+  try {
+    const value = (storage ?? localStorage).getItem(storageKeys.dateFormat);
+    return DATE_FORMATS.find(format => format === value) ?? 'automatic';
+  } catch {
+    return 'automatic';
+  }
+}
+let dateFormat: DateFormat | undefined;
+// The shell calls this when the reader picks an order; until then the stored one applies.
+export function setDateFormat(value: DateFormat) {
+  dateFormat = value;
+}
+// The locale whose date order the helpers below write, or null for Year-Month-Day; `locale`, the interface's, when
+// the browser offers no valid tag.
+function dateLocale(locale: string): string | null {
+  dateFormat ??= readDateFormat();
+  if (dateFormat === 'ymd') return null;
+  if (dateFormat !== 'automatic') return orderLocales[dateFormat];
+  const region = typeof navigator === 'undefined' ? undefined : (navigator.languages?.[0] ?? navigator.language);
+  try {
+    return (region && Intl.getCanonicalLocales(region)[0]) || locale;
+  } catch {
+    return locale;
+  }
+}
+// The Gregorian calendar and Latin digits whatever the region, as the interface languages write them.
+const calendar = {calendar: 'gregory', numberingSystem: 'latn'} as const;
+type DateKind = 'time' | 'minute' | 'monthDay';
+type Formatter = Pick<Intl.DateTimeFormat, 'format'>;
+// No locale is promised to write the ISO order (en-CA does not in every engine), so the digits come from the parts of
+// one formatter, joined with '-'; the time of day stays Intl's, on a 24-hour clock, after a space.
+function isoFormat(kind: DateKind): Formatter {
+  const dates = new Intl.DateTimeFormat('en-US', {
+    ...(kind === 'monthDay' ? {} : {year: 'numeric'}),
+    month: '2-digit',
+    day: '2-digit',
+    ...calendar
+  });
+  const times =
+    kind === 'monthDay' ? undefined : new Intl.DateTimeFormat('en-US', {timeStyle: kind === 'time' ? 'medium' : 'short', hourCycle: 'h23', ...calendar});
+  return {
+    format(value) {
+      const parts = new Map(dates.formatToParts(value).map((part): [string, string] => [part.type, part.value]));
+      const date = ['year', 'month', 'day']
+        .map(type => parts.get(type))
+        .filter(Boolean)
+        .join('-');
+      return times ? date + ' ' + times.format(value) : date;
+    }
+  };
+}
+const dateTimes = new Map<string, Formatter>();
+function dateTimeFormat(locale: string, kind: DateKind): Formatter {
+  const resolved = dateLocale(locale);
+  const key = kind + '/' + resolved;
+  let formatter = dateTimes.get(key);
+  if (!formatter) {
+    const style: Intl.DateTimeFormatOptions =
+      kind === 'monthDay' ? {month: 'numeric', day: 'numeric'} : {dateStyle: 'short', timeStyle: kind === 'time' ? 'medium' : 'short', hourCycle: 'h23'};
+    dateTimes.set(key, (formatter = resolved === null ? isoFormat(kind) : new Intl.DateTimeFormat(resolved, {...style, ...calendar})));
+  }
   return formatter;
+}
+// A date and time in the reader's date order, on a 24-hour clock in every language.
+export function localTimeFormat(locale: string) {
+  return dateTimeFormat(locale, 'time');
+}
+// The month and day alone, in the reader's date order, for a chart axis that spans days.
+export function localMonthDayFormat(locale: string) {
+  return dateTimeFormat(locale, 'monthDay');
 }
 export function localTime(iso: string | null, locale: string): string {
   if (!iso) return '—';
@@ -48,15 +120,12 @@ export function localTime(iso: string | null, locale: string): string {
   if (!Number.isFinite(t)) return iso;
   return localTimeFormat(locale).format(t);
 }
-const localMinutes = new Map<string, Intl.DateTimeFormat>();
-// A date and time to the minute on a 24-hour clock, where the seconds would not fit.
+// A date and time to the minute on a 24-hour clock, in the reader's date order, where the seconds would not fit.
 export function localMinute(iso: string | null, locale: string): string {
   if (!iso) return '—';
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return iso;
-  let formatter = localMinutes.get(locale);
-  if (!formatter) localMinutes.set(locale, (formatter = new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'short', hourCycle: 'h23'})));
-  return formatter.format(t);
+  return dateTimeFormat(locale, 'minute').format(t);
 }
 // Each unit is a catalogue message around the formatted number, so a language writes its own symbol and spacing.
 export type UnitKey = Extract<Key, `unit.${string}`>;
