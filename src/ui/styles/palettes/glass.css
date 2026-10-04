@@ -94,7 +94,6 @@
   /* Apple's increased-contrast system red, with white text as on the blue. */
   --rp-negative-fill: #d70015;
   --rp-on-negative-fill: #ffffff;
-  --rp-on-notice: #1c1c1e;
   /* Red text, such as field errors, takes the same red: the plain one is under 4.5:1 on glass. */
   --rp-negative-text: var(--rp-negative-fill);
   --rp-line: rgba(60, 60, 67, 0.29);

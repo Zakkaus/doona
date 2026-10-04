@@ -40,18 +40,24 @@ const subtleFloors: Record<string, [number, number]> = {
 // page-level subtle keeps the lower floors above.
 const karyFloors: Record<string, number> = {base: 4, surface: 4.2, tile: 3.8, 'selected tile': 3.4};
 // Text on a success or error fill (a toast) or a notice fill (a badge) that stays under 4.5:1 because no colour of the palette
-// reaches it on that tone; the fill keeps the palette's own on-colour. Each floor sits just under the measured ratio,
-// which the notice entries give: 4.24:1 on Rose Pine light and 3.05:1 on Catppuccin light.
+// reaches it on that tone; the fill keeps the palette's own on-colour. Light schemes write notice fills in white, as
+// Adobe S2 does, so those entries give the white's ratio on the palette's own notice tone: 2.24:1 on Rose Pine, 2.62:1 on
+// Catppuccin, 2.84:1 on Nord, 1.90:1 on Ant Design, 1.75:1 on Arco and 2.42:1 on Semi. Each floor sits just under the
+// measured ratio.
 const fillFloors: Record<string, number> = {
   'rose-pine/main light text on positive': 3.2,
   'rose-pine/main light text on negative': 4,
   'rose-pine/moon light text on positive': 3.2,
   'rose-pine/moon light text on negative': 4,
-  'rose-pine/main light text on notice': 4.2,
-  'rose-pine/moon light text on notice': 4.2,
-  'catppuccin/frappe light text on notice': 3,
-  'catppuccin/macchiato light text on notice': 3,
-  'catppuccin/mocha light text on notice': 3,
+  'rose-pine/main light text on notice': 2.2,
+  'rose-pine/moon light text on notice': 2.2,
+  'catppuccin/frappe light text on notice': 2.6,
+  'catppuccin/macchiato light text on notice': 2.6,
+  'catppuccin/mocha light text on notice': 2.6,
+  'nord/nord light text on notice': 2.8,
+  'antd/antd light text on notice': 1.8,
+  'arco/arco light text on notice': 1.7,
+  'semi/semi light text on notice': 2.4,
   'catppuccin/frappe light text on positive': 3.7,
   'catppuccin/macchiato light text on positive': 3.7,
   'catppuccin/mocha light text on positive': 3.7,

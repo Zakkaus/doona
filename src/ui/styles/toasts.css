@@ -183,18 +183,18 @@
   color: var(--rp-on-negative);
 }
 /* Success takes the same tone as the ok light and a good latency; a result that needs a look the notice tone, with the
-   same on-accent text as info; info the accent. */
+   same text as info; info the accent. */
 .rp-toast.positive {
   background: var(--rp-positive);
   color: var(--rp-on-positive);
 }
 .rp-toast.warning {
   background: var(--rp-notice);
-  color: var(--rp-on-accent);
+  color: var(--rp-on-toast);
 }
 .rp-toast.info {
   background: var(--rp-info);
-  color: var(--rp-on-accent);
+  color: var(--rp-on-toast);
 }
 
 /* Collapsed stack: toasts behind the main one sit on it, pushed away from the edge and shrunk by their depth; only
