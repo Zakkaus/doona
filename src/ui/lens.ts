@@ -3,8 +3,10 @@
 // radius into a displacement map, and an SVG filter that backdrop-filter references applies it. A map is nine slices
 // held by an SVG image without a fixed size: the corners keep their pixels and the edges stretch, so one map fits a
 // surface of any size and nothing is rebuilt per element or on resize. A second image, from the same surface normals
-// and one light from the top left, adds the specular rim. Only Chromium applies an SVG filter in backdrop-filter;
-// Safari parses it and ignores it, so the check below asks for Chromium's own API as well as the CSS syntax.
+// and one light from the top left, says how much the rim concentrates light: the filter multiplies the bent backdrop by
+// it, so the rim glows in the colour of what lies behind and stays dark over dark content, with no light of its own.
+// Only Chromium applies an SVG filter in backdrop-filter; Safari parses it and ignores it, so the check below asks for
+// Chromium's own API as well as the CSS syntax.
 
 type Lens = {id: string; radius: number; bezel: number; scale: number};
 
@@ -15,6 +17,8 @@ const lenses: Lens[] = [
 ];
 const INDEX = 1.5;
 const LIGHT = [-Math.SQRT1_2, -Math.SQRT1_2];
+// How much brighter the backdrop gets where the rim faces the light: 1 doubles it.
+const GAIN = 0.9;
 
 export function lensSupported(): boolean {
   // userAgentData exists only in secure contexts, and doona is often served over plain HTTP, so the engine check falls
@@ -61,24 +65,24 @@ function tile(width: number, height: number, sample: (x: number, y: number) => [
   canvas.height = height;
   const context = canvas.getContext('2d')!;
   const map = context.createImageData(width, height);
-  const spec = context.createImageData(width, height);
+  const rim = context.createImageData(width, height);
   for (let y = 0; y < height; y++)
     for (let x = 0; x < width; x++) {
       const [d, nx, ny] = sample(x + 0.5, y + 0.5);
       const m = shift(d);
       const i = (y * width + x) * 4;
       map.data.set([128 - 127 * m * nx, 128 - 127 * m * ny, 128, 255], i);
-      // The rim: brightest where the edge faces the light, fainter where light leaves on the far side, fading in 3px.
+      // The rim's gain: highest where the edge faces the light, lower where light leaves on the far side, fading in 3px.
       const facing = nx * LIGHT[0] + ny * LIGHT[1];
       const glow = Math.pow(Math.max(facing, 0), 2) + 0.4 * Math.pow(Math.max(-facing, 0), 2);
       const fade = Math.max(1 - d / 3, 0) ** 2;
-      spec.data.set([255, 255, 255, Math.round(255 * Math.min(glow * fade, 1))], i);
+      rim.data.set([255, 255, 255, Math.round(255 * Math.min(glow * fade, 1))], i);
     }
   const encode = (data: ImageData) => {
     context.putImageData(data, 0, 0);
     return canvas.toDataURL('image/png');
   };
-  return [encode(map), encode(spec)];
+  return [encode(map), encode(rim)];
 }
 
 // The nine slices as one SVG image: a neutral middle, four stretched edges and four corners of `size` pixels.
@@ -125,8 +129,9 @@ export function installLens(): boolean {
   svg.style.position = 'absolute';
   svg.innerHTML = lenses
     .map(lens => {
-      const [map, spec] = slices(lens);
-      return `<filter id="${lens.id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage href="${map}" preserveAspectRatio="none" result="map"/><feDisplacementMap in="SourceGraphic" in2="map" scale="${lens.scale}" xChannelSelector="R" yChannelSelector="G" result="bent"/><feImage href="${spec}" preserveAspectRatio="none" result="rim"/><feComposite in="rim" in2="bent" operator="over"/></filter>`;
+      const [map, rim] = slices(lens);
+      // bent + GAIN * rim * bent: the rim brightens each backdrop pixel in proportion to it.
+      return `<filter id="${lens.id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage href="${map}" preserveAspectRatio="none" result="map"/><feDisplacementMap in="SourceGraphic" in2="map" scale="${lens.scale}" xChannelSelector="R" yChannelSelector="G" result="bent"/><feImage href="${rim}" preserveAspectRatio="none" result="rim"/><feComposite in="rim" in2="bent" operator="arithmetic" k1="${GAIN}" k2="0" k3="1" k4="0"/></filter>`;
     })
     .join('');
   document.body.append(svg);

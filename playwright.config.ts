@@ -27,7 +27,8 @@ export default defineConfig({
       : []),
     ...(webkit
       ? [
-          // Safari carries the installed iOS app: a smoke pass over navigation, drag and drop, dialogs and the keyboard.
+          // Safari carries the installed iOS app: a smoke pass over navigation, drag and drop, dialogs, the keyboard and
+          // the Glass materials.
           // WebKit's request interception does not see what a service worker fetches, so the mock backend needs it
           // blocked; the PWA spec, which is about the worker, runs with it.
           {
@@ -39,7 +40,8 @@ export default defineConfig({
               'mobile.spec.ts',
               'charts.spec.ts',
               'segmented.spec.ts',
-              'dashboard.spec.ts'
+              'dashboard.spec.ts',
+              'glass.spec.ts'
             ],
             use: {...devices['Desktop Safari'], serviceWorkers: 'block'}
           },

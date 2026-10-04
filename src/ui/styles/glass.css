@@ -1,11 +1,11 @@
-/* The Glass family's materials: Glass (Apple's Liquid Glass), Frosted (Microsoft's Acrylic), Float (a detached,
-   evenly blurred layer) and Tinted (Microsoft's Mica). The rules read only material tokens, set per flavour in
-   palettes/glass.css: a wallpaper, the chrome's fill and filter, and the fills and filters of cards, the floating
-   panel and floating layers. A glass layer never sits inside another one: an ancestor with a backdrop-filter, an
-   opacity, a filter or a mask would hide the page from it. */
+/* The Glass family's materials: Glass (Apple's Liquid Glass), Frosted (an evenly blurred layer) and Tinted
+   (Microsoft's Mica). The rules read only material tokens, set per flavour in palettes/glass.css: a wallpaper, the
+   chrome's fill and filter, and the fills and filters of cards, the floating panel and floating layers. A glass layer
+   never sits inside another one: an ancestor with a backdrop-filter, an opacity, a filter or a mask would hide the
+   page from it. */
 
 :root[data-family='glass'] {
-  /* A fine noise tile: grey at about 4% average opacity, for the wallpaper and Frosted's surfaces. */
+  /* A fine noise tile: grey at about 4% average opacity, for the wallpaper. */
   --rp-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0.09 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 :root[data-family='glass'] body {
@@ -23,13 +23,13 @@
     var(--rp-wall);
 }
 
-/* The top bar and the sidebar share one fixed sheet, so their blur has no seam. The sheet covers the viewport and a
+/* In Frosted and Tinted the top bar and the sidebar share one fixed sheet, so their blur has no seam. The sheet covers the viewport and a
    mask cuts the content box out of it, from the shell's own sizes: the top bar, the sidebar, the content's end margin
    and its rounded top corners. Because the blur runs over the whole sheet before the mask, content approaching the
    bar from below already tints it, as in Josh Comeau's taller backdrop. A clip-path polygon would cut the same shape,
    but Chrome stops applying a concave clip to the blur when an ancestor clips with rounded corners, such as a rounded
    iframe, and the sheet then covers the content. */
-:root[data-family='glass'] .rp-shell::after {
+:root[data-family='glass']:not([data-flavour='glass']) .rp-shell::after {
   --rp-sheet-corner: var(--rp-r-xl);
   /* The sheet's width beside the content on each side; on narrow screens the content spans the viewport. */
   --rp-sheet-left: 0px;
@@ -43,9 +43,7 @@
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background:
-    var(--rp-grain) 0 0 / 180px,
-    var(--rp-chrome);
+  background: var(--rp-chrome);
   backdrop-filter: var(--rp-chrome-filter);
   /* Each corner layer is opaque outside a circle centred on the content's corner, so it fills the gap beside it. */
   mask:
@@ -61,13 +59,13 @@
 /* From 1024px the sidebar holds one side and the content keeps an end margin, inside the shell's centred maximum width.
    Percentages here are of the viewport, which the layer covers. */
 @media (min-width: 1024px) {
-  :root[data-family='glass'] .rp-shell::after {
+  :root[data-family='glass']:not([data-flavour='glass']) .rp-shell::after {
     --rp-shell-inset: max(0px, (100% - 1600px) / 2);
     --rp-sheet-left: calc(var(--rp-shell-inset) + var(--rp-sidebar-width));
     --rp-sheet-right: calc(var(--rp-shell-inset) + var(--rp-space-4));
   }
   /* Right to left, the sidebar is on the right. */
-  :root[data-family='glass'][dir='rtl'] .rp-shell::after {
+  :root[data-family='glass']:not([data-flavour='glass'])[dir='rtl'] .rp-shell::after {
     --rp-sheet-left: calc(var(--rp-shell-inset) + var(--rp-space-4));
     --rp-sheet-right: calc(var(--rp-shell-inset) + var(--rp-sidebar-width));
   }
@@ -77,49 +75,102 @@
   background: transparent;
   z-index: 2;
 }
+/* Glass's chrome floats over the content as glass objects, as in macOS 26, and no sheet sits behind the content: cards
+   float on the wallpaper. The top bar draws no material. The brand sits on the wallpaper; the search field and the icon
+   buttons are two capsules of the cards' glass, as a toolbar's items are, each a ::before one --rp-space-1 outside its
+   controls, so the controls keep their sizes and places. Being small, they keep the plain blur of controls on the
+   wallpaper. */
+:root[data-flavour='glass'] :is(.rp-search, .rp-actions) {
+  position: relative;
+  z-index: 0;
+}
+:root[data-flavour='glass'] .rp-search,
+:root[data-flavour='glass'] .rp-search[data-hovered] {
+  background: transparent;
+}
+:root[data-flavour='glass'] :is(.rp-search, .rp-actions)::before {
+  content: '';
+  position: absolute;
+  inset: calc(0px - var(--rp-space-1));
+  z-index: -1;
+  border-radius: var(--rp-r-pill);
+  background: var(--rp-card-fill);
+  backdrop-filter: var(--rp-ctl-filter, var(--rp-card-filter));
+  box-shadow: var(--rp-shadow);
+  pointer-events: none;
+}
+:root[data-flavour='glass'] .rp-search[data-hovered]::before {
+  background: linear-gradient(var(--rp-ctl-hover) 0 0), var(--rp-card-fill);
+}
+/* Apple's scroll edge: once the page scrolls, a progressive blur under the bar keeps the content passing beneath from
+   colliding with its capsules. The layer masks only itself; a mask or opacity on an ancestor of the cards would hide the
+   page from their glass. Hidden, it draws nothing. */
+:root[data-flavour='glass'] .rp-shell::after {
+  content: '';
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 1;
+  height: calc(var(--rp-topbar) + var(--rp-space-4));
+  background: var(--rp-card-fill);
+  backdrop-filter: var(--rp-ctl-filter, var(--rp-card-filter));
+  mask-image: linear-gradient(#000 50%, transparent);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+:root[data-flavour='glass'][data-scrolled] .rp-shell::after {
+  opacity: 1;
+  visibility: visible;
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-flavour='glass'] .rp-shell::after {
+    transition:
+      opacity var(--rp-duration-panel) var(--rp-ease-out),
+      visibility 0s var(--rp-duration-panel);
+  }
+  :root[data-flavour='glass'][data-scrolled] .rp-shell::after {
+    transition: opacity var(--rp-duration-panel) var(--rp-ease-out);
+  }
+}
+/* A landscape phone's bar scrolls away with the page, so nothing passes beneath it. */
+@media (max-width: 1023.98px) and (max-height: 500px) {
+  :root[data-flavour='glass'] .rp-shell::after {
+    display: none;
+  }
+}
+/* The sidebar is a floating card: the cards' fill, filter, corners and shadow, inset from the window and the top bar by
+   the card grid's gap, --rp-space-3. Its box is inset, so the links scroll inside the rounded corners and the shadow
+   falls outside the box's clip; the material is ::before, so the sidebar's own content still samples the page. */
+@media (min-width: 1024px) {
+  :root[data-flavour='glass'] .rp-side {
+    --rp-sidebar-content-width: calc(
+      var(--rp-sidebar-width) - 2 * var(--rp-space-3) - var(--rp-sidebar-padding) - var(--rp-sidebar-inset-end) - var(--rp-space-3) - var(--rp-space-2)
+    );
+    top: calc(var(--rp-topbar) + var(--rp-space-3));
+    bottom: var(--rp-space-3);
+    inset-inline-start: calc(max(0px, (100% - 1600px) / 2) + var(--rp-space-3));
+    width: calc(var(--rp-sidebar-width) - 2 * var(--rp-space-3));
+    border-radius: var(--rp-r-2xl);
+    box-shadow: var(--rp-shadow);
+  }
+  :root[data-flavour='glass'] .rp-side::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--rp-card-fill);
+    backdrop-filter: var(--rp-card-filter);
+    pointer-events: none;
+  }
+}
 :root[data-family='glass'] .rp-main {
   background: var(--rp-column);
   border-color: transparent;
 }
 :root[data-family='glass'] :is(.rp-vrule, .rp-hrule) {
   background: var(--rp-line);
-}
-
-/* Float detaches the top bar: a rounded bar inset from the viewport's edges, over the content that scrolls under it.
-   The shell reserves the bar and its inset, and the sheet keeps only the sidebar, attached to its edge. */
-:root[data-flavour='float'] {
-  --rp-bar-inset: var(--rp-space-3);
-  --rp-bar-inset-x: var(--rp-space-3);
-  --rp-topbar: calc(64px + var(--rp-bar-inset));
-}
-@media (min-width: 640px) {
-  :root[data-flavour='float'] {
-    --rp-bar-inset: var(--rp-space-5);
-    --rp-bar-inset-x: var(--rp-space-6);
-  }
-}
-:root[data-flavour='float'] .rp-top {
-  padding-block-start: var(--rp-bar-inset);
-  padding-inline: calc(var(--rp-bar-inset-x) + var(--rp-space-4));
-}
-:root[data-flavour='float'] .rp-top::before {
-  content: '';
-  position: absolute;
-  inset: var(--rp-bar-inset) var(--rp-bar-inset-x) 0;
-  z-index: -1;
-  border-radius: var(--rp-r-xl);
-  background: var(--rp-chrome);
-  backdrop-filter: var(--rp-chrome-filter);
-  border: 1px solid var(--rp-rim-lit);
-  box-shadow: var(--rp-shadow);
-}
-:root[data-flavour='float'] .rp-shell::after {
-  --rp-sheet-top: 0px;
-  --rp-sheet-corner: 0px;
-  --rp-sheet-right: 0px;
-}
-:root[data-flavour='float'][dir='rtl'] .rp-shell::after {
-  --rp-sheet-left: 0px;
 }
 
 /* Sidebar as in macOS: accent icons, the current page on a filled pill instead of a coloured bar. */
@@ -135,32 +186,48 @@
 }
 
 /* Cards are glass of their own, one blur each over the wallpaper. A card inside a card or a floating layer is a tile of
-   that glass instead: no blur, shadow or rim of its own. */
+   that glass instead: no blur or shadow of its own. The material is ::before, and the card itself keeps no
+   backdrop-filter, opacity, filter or mask, so it samples the page rather than the card. Nothing is drawn round the
+   edge: the shadow and the material make it, and in Chromium's Glass the lens bends the backdrop there. The card draws
+   no border, which would leave the material a pixel inside its overflow clip; its padding takes that pixel. */
 :root[data-family='glass'] .rp-card:not(:is(.rp-card, .rp-popover, .rp-modal, .rp-floating-panel) .rp-card) {
   position: relative;
-  border-color: transparent;
+  z-index: 0;
+  padding: calc(var(--rp-space-4) + 1px);
+  border-width: 0;
   border-radius: var(--rp-r-2xl);
-  background:
-    var(--rp-grain) 0 0 / 180px,
-    var(--rp-card-fill);
-  backdrop-filter: var(--rp-card-filter);
+  background: none;
   box-shadow: var(--rp-shadow);
+}
+:root[data-family='glass'] .rp-card:not(:is(.rp-card, .rp-popover, .rp-modal, .rp-floating-panel) .rp-card)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--rp-card-fill);
+  backdrop-filter: var(--rp-card-filter);
+  pointer-events: none;
 }
 :root[data-family='glass'] .rp-table {
   border-color: transparent;
   background: var(--rp-card-fill);
   backdrop-filter: var(--rp-card-filter);
-  box-shadow:
-    inset 1px 1px 0 var(--rp-rim-lit),
-    inset -1px -1px 0 var(--rp-rim-far);
+  box-shadow: none;
 }
-/* Inside a card or a floating layer the material is already there, so a table takes no second blur. */
+/* Inside a card or a floating layer the material is already there, so a table takes no second blur or fill. A tile
+   inside a card or the floating panel, such as a chart's figures, sits on that glass too; menus and dialogs keep a
+   tile's fill to group their sections. */
 :root[data-family='glass'] :is(.rp-card, .rp-popover, .rp-modal, .rp-floating-panel) .rp-table {
+  background: transparent;
   backdrop-filter: none;
 }
 :root[data-family='glass'] :is(.rp-card, .rp-popover, .rp-modal, .rp-floating-panel) .rp-card {
   border-color: transparent;
   background: var(--rp-overlay);
+}
+:root[data-family='glass'] :is(.rp-card, .rp-floating-panel) .rp-card {
+  background: transparent;
 }
 /* A table's sticky header frosts the rows scrolled under it. Inside a card, the card is its backdrop root, so it never
    samples the wallpaper a second time. */
@@ -170,6 +237,10 @@
   color: var(--rp-subtle);
   font-weight: 600;
   border-color: var(--rp-line);
+}
+/* A heatmap's empty cell tints the glass as a control does; the filled cells keep their scale. */
+:root[data-family='glass'] .rp-heatmap .cell.t0 {
+  background: var(--rp-ctl);
 }
 :root[data-family='glass'] .rp-table-empty {
   background: var(--rp-table-head);
@@ -185,65 +256,37 @@
 }
 :root[data-family='glass'] .rp-floating-panel {
   border-color: transparent;
-  background:
-    var(--rp-grain) 0 0 / 180px,
-    var(--rp-panel-fill);
+  background: var(--rp-panel-fill);
   backdrop-filter: var(--rp-panel-filter);
   box-shadow: var(--rp-shadow-lg);
 }
 :root[data-family='glass'] .rp-edge-handle {
   border-color: transparent;
-  background:
-    var(--rp-grain) 0 0 / 180px,
-    var(--rp-panel-fill);
+  background: var(--rp-panel-fill);
   backdrop-filter: var(--rp-float-filter);
   box-shadow: var(--rp-shadow-lg);
 }
 :root[data-family='glass'] .rp-modal {
-  background:
-    var(--rp-grain) 0 0 / 180px,
-    var(--rp-float-fill);
+  background: var(--rp-float-fill);
   backdrop-filter: var(--rp-panel-filter);
   box-shadow: var(--rp-shadow-lg);
 }
-/* A popover scrolls, so its rim is drawn by inset shadows, which stay put, instead of the overlay below. */
 :root[data-family='glass'] .rp-popover {
   border-color: transparent;
-  background:
-    var(--rp-grain) 0 0 / 180px,
-    var(--rp-float-fill);
+  background: var(--rp-float-fill);
   backdrop-filter: var(--rp-lens-sm, var(--rp-float-filter));
-  box-shadow:
-    inset 1px 1px 0 var(--rp-rim-lit),
-    inset -1px -1px 0 var(--rp-rim-far),
-    var(--rp-shadow-lg);
+  box-shadow: var(--rp-shadow-lg);
 }
+/* The bar's backdrop ends at the viewport's bottom edge, and Chromium's blur fades out over its last 30px or so, where
+   the labels sit: text under them would show almost sharp. The bar's lower half thickens towards the solid chrome, as
+   in iOS's scroll edge, so the labels keep their contrast whatever scrolls under them. */
 :root[data-family='glass'] .rp-hubbar {
-  background:
-    var(--rp-grain) 0 0 / 180px,
-    var(--rp-chrome);
-  backdrop-filter: var(--rp-chrome-filter);
+  background: linear-gradient(transparent 35%, color-mix(in srgb, var(--rp-solid-chrome) 88%, transparent) 60%), var(--rp-chrome);
+  backdrop-filter: var(--rp-hubbar-filter, var(--rp-chrome-filter));
 }
 /* The dialog's underlay dims without a blur of its own, which would hide the page from the dialog's glass. */
 :root[data-family='glass'] .rp-underlay {
   backdrop-filter: none;
-}
-
-/* The rim: one pixel lit from the top left, faint along the sides and catching a little light at the bottom right,
-   never an even stroke. It sits just inside the edge, over a soft shadow and no dark outline. */
-:root[data-family='glass'] .rp-card:not(:is(.rp-card, .rp-popover, .rp-modal, .rp-floating-panel) .rp-card)::before,
-:root[data-family='glass'] :is(.rp-floating-panel, .rp-edge-handle, .rp-modal, .rp-toast)::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  padding: 1px;
-  border-radius: inherit;
-  pointer-events: none;
-  background: linear-gradient(135deg, var(--rp-rim-lit), var(--rp-rim-mid) 35%, var(--rp-rim-mid) 65%, var(--rp-rim-far));
-  mask:
-    linear-gradient(#000 0 0) content-box exclude,
-    linear-gradient(#000 0 0);
 }
 
 /* Toasts float like menus, tinted by their tone over the floating fill. */
@@ -266,16 +309,17 @@
   background: color-mix(in srgb, var(--rp-info) 86%, var(--rp-float-fill));
 }
 
-/* Increase Contrast and forced colours draw a solid edge and no shadow. */
-@media (prefers-contrast: more), (forced-colors: active) {
+/* Reduce Transparency, Increase Contrast and forced colours draw a solid edge and no shadow. A card's border takes back
+   the pixel its padding held. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+  :root[data-family='glass'] .rp-card:not(:is(.rp-card, .rp-popover, .rp-modal, .rp-floating-panel) .rp-card) {
+    padding: var(--rp-space-4);
+    border-width: 1px;
+  }
   :root[data-family='glass'] .rp-card:not(:is(.rp-card, .rp-popover, .rp-modal, .rp-floating-panel) .rp-card),
   :root[data-family='glass'] :is(.rp-table, .rp-popover, .rp-floating-panel, .rp-edge-handle, .rp-modal, .rp-toast) {
     border-color: var(--rp-solid-edge);
     box-shadow: none;
-  }
-  :root[data-family='glass'] .rp-card:not(:is(.rp-card, .rp-popover, .rp-modal, .rp-floating-panel) .rp-card)::before,
-  :root[data-family='glass'] :is(.rp-floating-panel, .rp-edge-handle, .rp-modal, .rp-toast)::before {
-    content: none;
   }
 }
 
@@ -295,19 +339,19 @@
   border-color: var(--rp-negative);
 }
 :root[data-family='glass'] :is(.rp-btn, .rp-selectbtn, .rp-search, .rp-node)[data-hovered] {
-  background: var(--rp-hl-med);
+  background: var(--rp-ctl-hover);
 }
 :root[data-family='glass'] :is(.rp-btn, .rp-selectbtn, .rp-node)[data-pressed] {
-  background: var(--rp-hl-high);
+  background: var(--rp-ctl-pressed);
 }
 :root[data-family='glass'] .rp-btn.quiet {
   background: transparent;
 }
 :root[data-family='glass'] .rp-btn.quiet[data-hovered] {
-  background: var(--rp-fill);
+  background: var(--rp-ctl-hover);
 }
 :root[data-family='glass'] .rp-btn.quiet[data-pressed] {
-  background: var(--rp-hl-high);
+  background: var(--rp-ctl-pressed);
 }
 /* Glass fills a negative button, the quiet one included, with the increased-contrast red, as the accent one is with the
    increased-contrast blue: red text is faint over its gradient. */
@@ -333,13 +377,13 @@
 }
 /* The glass rules outrank the generic disabled ones, so the disabled looks are restated here. */
 :root[data-family='glass'] .rp-btn[data-disabled] {
-  background: var(--rp-fill);
+  background: var(--rp-ctl);
 }
 :root[data-family='glass'] .rp-btn.quiet[data-disabled] {
   background: transparent;
 }
 :root[data-family='glass'] :is(.rp-btn.accent, .rp-btn.negative)[data-disabled] {
-  background: var(--rp-hl-med);
+  background: var(--rp-ctl);
   color: var(--rp-muted);
 }
 :root[data-family='glass'] .rp-node[data-selected],
@@ -367,13 +411,35 @@
 :root[data-family='glass'] .rp-seg .rp-btn[data-hovered] {
   background: transparent;
 }
+/* A control on the wallpaper, outside any card, such as a page's header actions or its tabs, is a small piece of the
+   cards' glass: their fill and plain blur. The lens would show on a control this small only as a bright rim, so it keeps
+   none. Its states tint that glass. */
+:root[data-family='glass']
+  .rp-main
+  :is(.rp-btn:not(.quiet, .accent, .negative), .rp-selectbtn, .rp-input, .rp-seg, .rp-tabbar):not(
+    :is(.rp-card, .rp-table, .rp-popover, .rp-modal, .rp-floating-panel, .rp-seg, .rp-tabbar) *
+  ) {
+  background: var(--rp-card-fill);
+  backdrop-filter: var(--rp-ctl-filter, var(--rp-card-filter));
+}
+:root[data-family='glass']
+  .rp-main
+  :is(.rp-btn:not(.quiet, .accent, .negative), .rp-selectbtn)[data-hovered]:not(:is(.rp-card, .rp-table, .rp-popover, .rp-modal, .rp-floating-panel) *) {
+  background: linear-gradient(var(--rp-ctl-hover) 0 0), var(--rp-card-fill);
+}
+:root[data-family='glass']
+  .rp-main
+  :is(.rp-btn:not(.quiet, .accent, .negative), .rp-selectbtn)[data-pressed]:not(:is(.rp-card, .rp-table, .rp-popover, .rp-modal, .rp-floating-panel) *) {
+  background: linear-gradient(var(--rp-ctl-pressed) 0 0), var(--rp-card-fill);
+}
 :root[data-family='glass'] .rp-slider {
   background: var(--rp-knob);
   border-color: transparent;
   box-shadow: var(--rp-knob-shadow);
 }
+/* The Switch keeps its firmer track, so its boundary stays clear. */
 :root[data-family='glass'] .rp-switch .track {
-  background: var(--rp-track);
+  background: var(--rp-ctl-pressed);
 }
 :root[data-family='glass'] .rp-switch[data-selected] .track {
   background: var(--rp-accent);
