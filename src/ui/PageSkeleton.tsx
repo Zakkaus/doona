@@ -1,4 +1,4 @@
-import {createContext, use} from 'react';
+import {createContext, use, useLayoutEffect, useRef} from 'react';
 import {cx} from './cx';
 import {SkeletonStatus, TableSkeleton, useWaitAttr} from './Feedback';
 
@@ -29,9 +29,10 @@ const tableCols = [{minWidth: 240, isRowHeader: true}, {minWidth: 140}, {minWidt
 export function PageSkeleton({shape, panel}: {shape?: PageShape; panel?: boolean}) {
   const parts = shape ?? use(PageShapeContext);
   const wait = useWaitAttr();
+  const hold = useHeldColumn();
   const tabs = parts.findIndex(part => 'tabs' in part);
   return (
-    <div className={cx('rp-page-skeleton', panel && 'panel')} data-wait={wait}>
+    <div ref={hold} className={cx('rp-page-skeleton', panel && 'panel')} data-wait={wait}>
       <SkeletonStatus />
       {tabs < 0 ? (
         parts.map(drawPart)
@@ -43,6 +44,29 @@ export function PageSkeleton({shape, panel}: {shape?: PageShape; panel?: boolean
       )}
     </div>
   );
+}
+// WebKit lays out a size container (container-type) that has just been inserted before its contents, so the page that
+// replaces the Skeleton is briefly shorter than the reader's scroll offset, and WebKit moves the reader to the top. The
+// page's column keeps its height from before the swap through that first layout, and lets go two frames later. The
+// height is read as layout reports it, never forced while React is changing the page.
+function useHeldColumn() {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const column = ref.current?.closest<HTMLElement>('.rp-content');
+    if (!column) return;
+    let height = 0;
+    const watch = new ResizeObserver(([entry]) => {
+      height = entry.borderBoxSize[0].blockSize;
+    });
+    watch.observe(column);
+    return () => {
+      watch.disconnect();
+      if (!height) return;
+      column.style.minHeight = `${height}px`;
+      requestAnimationFrame(() => requestAnimationFrame(() => column.style.removeProperty('min-height')));
+    };
+  }, []);
+  return ref;
 }
 function drawPart(part: PagePart, i: number) {
   return 'tabs' in part ? (
