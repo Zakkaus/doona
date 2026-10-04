@@ -13,7 +13,8 @@ import {
   ConfirmDialog,
   Switch,
   TextField,
-  Toolbar
+  Toolbar,
+  Form
 } from '../../ui/ui';
 import {SearchSelect} from '../../ui/SearchSelect';
 import type {DateFormat, PaletteId, Scheme, TimeFormat, ToastPlacement, Wordmark} from '../../shell/preferences';
@@ -132,9 +133,9 @@ export function Settings({query}: PageProps) {
           </Toolbar>
         </ActionHelp>
         {session?.tokenOnly && <span className="rp-label">{t('settings.signOutTokenHelp')}</span>}
-        <form
+        <Form
           className="rp-form"
-          noValidate
+          validationBehavior="aria"
           onSubmit={event => {
             event.preventDefault();
             save();
@@ -188,7 +189,7 @@ export function Settings({query}: PageProps) {
               {profile.result.request && <span className="rp-code">{profile.result.request}</span>}
             </div>
           )}
-        </form>
+        </Form>
       </Card>
     ),
     runtime: <RuntimeSettingsCard />,

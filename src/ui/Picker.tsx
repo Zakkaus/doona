@@ -4,6 +4,7 @@ import {Check} from './Check';
 import {ItemLabel, ItemText, type Item} from './ItemText';
 import {cx} from './cx';
 import {useControlSize, type ControlSize} from './controlSize';
+import {Necessity, useFormProps, type FormFieldProps} from './Form';
 
 export function LabeledSelect({
   label,
@@ -33,6 +34,7 @@ export function LabeledSelect({
 }) {
   const layout = bare ? undefined : side ? 'side' : 'field';
   const controlSize = useControlSize(size);
+  const form = useFormProps<FormFieldProps>({isDisabled});
   // With a layout the label is visible and a real Label, so pressing it opens the picker; without one it only names it.
   return (
     <Select
@@ -42,9 +44,15 @@ export function LabeledSelect({
       onSelectionChange={(k: Key | null) => {
         if (k != null) onChange(String(k));
       }}
-      isDisabled={isDisabled}
+      isDisabled={form.isDisabled}
+      isRequired={form.isRequired}
     >
-      {layout && <Label className={layout === 'field' ? 'lbl' : 'rp-label'}>{label}</Label>}
+      {layout && (
+        <Label className={layout === 'field' ? 'lbl' : 'rp-label'}>
+          {label}
+          <Necessity isRequired={form.isRequired} necessityIndicator={form.necessityIndicator} />
+        </Label>
+      )}
       {/* eslint-disable-next-line jsx-a11y/no-autofocus -- An explicit jump focuses the requested field. */}
       <RButton className="rp-selectbtn" data-size={controlSize} autoFocus={takeFocus}>
         <SelectValue>{({selectedItem}) => (selectedItem ? <ItemLabel i={selectedItem as Item} cut={cut} /> : value)}</SelectValue>

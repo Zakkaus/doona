@@ -1,6 +1,7 @@
 import {useId} from 'react';
 import {Checkbox as RCheckbox} from 'react-aria-components';
 import Checkmark from './icons/Checkmark';
+import {useFormProps} from './Form';
 
 // An option that is on or off, after S2's Checkbox: a 14px box beside its label, with an optional line of help under
 // the label. The label alone names it; the help describes it.
@@ -19,12 +20,13 @@ export function Checkbox({
 }) {
   const labelId = useId();
   const descriptionId = useId();
+  const form = useFormProps({isDisabled});
   return (
     <RCheckbox
       className="rp-radio rp-checkbox"
       isSelected={isSelected}
       onChange={onChange}
-      isDisabled={isDisabled}
+      isDisabled={form.isDisabled}
       aria-labelledby={labelId}
       aria-describedby={description ? descriptionId : undefined}
     >

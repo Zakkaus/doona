@@ -9,6 +9,7 @@ import {ActionHelp, Button, PrimaryActions} from './Button';
 import {ProblemAlert, type Problem} from './Feedback';
 import {useMediaQuery, panelQuery, escapeLayers} from './hooks';
 import {ControlSizeContext} from './controlSize';
+import {Form, FormContext} from './Form';
 
 export function ModalDialog({
   trigger,
@@ -101,11 +102,13 @@ export function ModalDialog({
       </Modal>
     </ModalOverlay>
   );
-  // Its controls are M even when the trigger sits in an L page toolbar, and everyday buttons even when it sits in a row
-  // of primary actions.
+  // Its controls are M even when the trigger sits in an L page toolbar, everyday buttons even when it sits in a row
+  // of primary actions, and free of a form it was opened from.
   const modal = (
     <ControlSizeContext value={null}>
-      <PrimaryActions active={false}>{overlay}</PrimaryActions>
+      <FormContext value={null}>
+        <PrimaryActions active={false}>{overlay}</PrimaryActions>
+      </FormContext>
     </ControlSizeContext>
   );
   return trigger ? (
@@ -118,12 +121,9 @@ export function ModalDialog({
   );
 }
 
-export function DialogForm({children, ...props}: Omit<ComponentProps<'form'>, 'className'>) {
-  return (
-    <form {...props} className="rp-dialog-sections">
-      {children}
-    </form>
-  );
+// The kit form laid out in a dialog's sections.
+export function DialogForm(props: Omit<ComponentProps<typeof Form>, 'className'>) {
+  return <Form {...props} className="rp-dialog-sections" />;
 }
 
 // A dialog's content in sections: a section's own lines sit closer together than the sections do, as in S2's dialogs,
@@ -230,7 +230,9 @@ export function PopoverDialog({
   );
   const popover = (
     <ControlSizeContext value={null}>
-      <PrimaryActions active={false}>{surface}</PrimaryActions>
+      <FormContext value={null}>
+        <PrimaryActions active={false}>{surface}</PrimaryActions>
+      </FormContext>
     </ControlSizeContext>
   );
   return trigger ? (

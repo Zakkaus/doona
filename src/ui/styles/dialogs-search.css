@@ -157,6 +157,37 @@
   white-space: nowrap;
   color: var(--rp-subtle);
 }
+/* S2 NumberField at M: two 20px stepper buttons at the field's end, 4px apart and 4px in from the border. */
+.rp-input.stepped {
+  padding-inline-end: var(--rp-space-1);
+}
+.rp-input .steppers {
+  display: flex;
+  flex: none;
+  gap: var(--rp-space-1);
+}
+.rp-input .step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--rp-r-xs);
+  background: var(--rp-hl-low);
+  color: var(--rp-text);
+}
+.rp-input .step[data-hovered] {
+  background: var(--rp-hl-med);
+}
+.rp-input .step[data-disabled] {
+  opacity: 0.4;
+}
+.rp-input .step .rp-icon {
+  width: 10px;
+  height: 10px;
+}
 .rp-input input::-webkit-search-cancel-button {
   display: none;
 }

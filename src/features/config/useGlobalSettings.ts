@@ -85,6 +85,15 @@ export function useGlobalSettings({query, go}: PageProps) {
           ]
         : null,
       value,
+      // A plain whole number within a safe integer edits in a number field; a stored value it cannot show stays text.
+      number:
+        definition.type === 'integer' &&
+        !definition.choices &&
+        !definition.hexMax &&
+        BigInt(definition.max!) <= BigInt(Number.MAX_SAFE_INTEGER) &&
+        /^\d*$/.test(value)
+          ? {max: Number(definition.max), value: value === '' ? NaN : Number(value)}
+          : null,
       duplicate: matches.length > 1,
       invalid: serializeSetting(definition, value) === null,
       change: (value: string) => {

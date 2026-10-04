@@ -20,6 +20,8 @@ export {ActionHelp, Button, PrimaryActions, buttonClass, type ButtonStyle} from 
 export {TextTooltip} from './Tooltip';
 export {Link} from './Link';
 export {TextField, StaticField, Switch} from './Fields';
+export {Form} from './Form';
+export {NumberField} from './NumberField';
 export {Segmented} from './Segmented';
 export {RadioGroup, Radio} from './Radio';
 export {Check} from './Check';
