@@ -61,12 +61,25 @@ function useHeldColumn() {
     watch.observe(column);
     return () => {
       watch.disconnect();
-      if (!height) return;
-      column.style.minHeight = `${height}px`;
-      requestAnimationFrame(() => requestAnimationFrame(() => column.style.removeProperty('min-height')));
+      if (height) holdColumn(column, height);
     };
   }, []);
   return ref;
+}
+// The latest hold on each column. Swaps a frame apart overlap, and only the latest hold lets go, so an earlier
+// Skeleton's release does not drop the height a later one is holding.
+const holders = new WeakMap<HTMLElement, object>();
+export function holdColumn(column: HTMLElement, height: number) {
+  const hold = {};
+  holders.set(column, hold);
+  column.style.minHeight = `${height}px`;
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      if (holders.get(column) !== hold) return;
+      holders.delete(column);
+      column.style.removeProperty('min-height');
+    })
+  );
 }
 function drawPart(part: PagePart, i: number) {
   return 'tabs' in part ? (

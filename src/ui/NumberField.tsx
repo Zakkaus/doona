@@ -45,7 +45,8 @@ export function NumberField(
     size,
     width,
     necessityIndicator,
-    formatOptions = {useGrouping: false},
+    // A whole-number step takes no decimal separator, so a count or a port cannot be typed as 123.5.
+    formatOptions = {useGrouping: false, ...(Number.isInteger(fieldProps.step) && {maximumFractionDigits: 0})},
     ...props
   } = useFormProps(fieldProps);
   const t = useT();
@@ -59,8 +60,8 @@ export function NumberField(
         <Necessity isRequired={props.isRequired} necessityIndicator={necessityIndicator} />
       </Label>
       <Group className={cx('rp-input', !hideStepper && 'stepped')} data-size={controlSize}>
-        <Input placeholder={placeholder} />
-        <Typed value={props.value} onChange={props.onChange} />
+        <NumberInput placeholder={placeholder} />
+        <Typed value={props.value} onChange={props.onChange} range={props} />
         {!hideStepper && (
           <span className="steppers">
             <RButton slot="decrement" className="step" aria-label={t('ui.decrease')}>
@@ -88,19 +89,59 @@ export function NumberField(
 }
 
 // The draft follows the typing, as a TextField's does, so an action that waits for a change is ready before the field
-// loses focus; leaving the field still snaps the value into range. A partial entry such as a lone minus waits.
-function Typed({value, onChange}: Pick<NumberFieldProps, 'value' | 'onChange'>) {
+// loses focus; leaving the field still snaps the value into range. A partial entry such as a lone minus waits, and so
+// does a number outside the range or off the step: React Aria snaps a controlled value at once, so passing 1 on the way
+// to 128 in a field from 64 would replace the typing with 64.
+function Typed({value, onChange, range}: Pick<NumberFieldProps, 'value' | 'onChange'> & {range: NumberRange}) {
   const state = useContext(NumberFieldStateContext);
   const typed = state?.numberValue;
   const partial = !!state?.inputValue && Number.isNaN(typed);
   // Each entry is passed on once, so a draft that cannot hold it does not loop.
   const sent = useRef(typed);
+  const held = typed !== undefined && !Number.isNaN(typed) && !keepsAsTyped(typed, range);
   useEffect(() => {
-    if (typed === undefined || partial || Object.is(typed, sent.current)) return;
+    if (typed === undefined || partial || held || Object.is(typed, sent.current)) return;
     sent.current = typed;
     if (!Object.is(typed, value)) onChange?.(typed);
-  }, [typed, partial, value, onChange]);
+  }, [typed, partial, held, value, onChange]);
   return null;
+}
+
+// React Aria commits a paste over the whole text without the check typing goes through, so 123.5 pasted into a
+// whole-number field would round to 124. The same check refuses it first and the field keeps its text.
+function NumberInput({placeholder}: {placeholder?: string}) {
+  const state = useContext(NumberFieldStateContext);
+  return (
+    <Input
+      placeholder={placeholder}
+      onPasteCapture={event => {
+        if (!state || !refusesPaste(event.currentTarget, event.clipboardData.getData('text/plain'), state.validate)) return;
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+    />
+  );
+}
+
+// Whether a paste that replaces the whole text is text the field would not accept typed. A paste into part of the
+// text goes through the typing check, which React Aria runs on the result.
+export function refusesPaste(
+  {value, selectionStart, selectionEnd}: Pick<HTMLInputElement, 'value' | 'selectionStart' | 'selectionEnd'>,
+  text: string,
+  validate: (text: string) => boolean
+) {
+  return (selectionEnd ?? 0) - (selectionStart ?? 0) === value.length && !validate(text.trim());
+}
+
+type NumberRange = Pick<NumberFieldProps, 'minValue' | 'maxValue' | 'step'>;
+
+// Whether React Aria keeps a typed number as it is: inside the range and on a step counted from the minimum.
+export function keepsAsTyped(value: number, {minValue, maxValue, step}: NumberRange) {
+  if (minValue !== undefined && value < minValue) return false;
+  if (maxValue !== undefined && value > maxValue) return false;
+  if (!step) return true;
+  const steps = (value - (minValue ?? 0)) / step;
+  return Math.abs(steps - Math.round(steps)) < 1e-9;
 }
 
 // A draft that keeps a number as text, read for the field: anything else shows as an empty field.
