@@ -165,7 +165,8 @@ test('desktop subscription and node actions use the kit control text role', asyn
       };
     });
     expect(type.size).toBe(type.control);
-    expect(type.weight).toBe('500');
+    // S2's Button sets its label in bold.
+    expect(type.weight).toBe('700');
     expect(type.height).toBe(32);
   }
 });

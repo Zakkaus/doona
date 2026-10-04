@@ -1,21 +1,27 @@
 /* Controls on react-aria-components */
+/* The kit Button after S2's Button: a pill in bold type, with no border when filled and a 2px one when outlined. The
+   default is S2's secondary fill, `secondary` its secondary outline, `accent` and `negative` its accent and negative
+   fills. Hover and keyboard focus take one step up S2's gray scale (gray-100 to gray-200: the overlay to highlight
+   med here). S2 keeps that colour while pressed and only sinks the control (motion.css); here the press also takes one
+   more step, so a held press reads apart from hover. `quiet` and an icon-only button follow S2's
+   ActionButton instead: medium type, the control corner and a 3/8 inset. */
 .rp-btn {
   display: inline-flex;
   align-items: center;
   gap: var(--rp-space-2);
   height: var(--rp-control);
-  padding: 0 var(--rp-space-3);
-  border-radius: var(--rp-r-md);
-  border: 1px solid transparent;
+  padding: 0 var(--rp-inset-btn);
+  border-radius: var(--rp-r-pill);
+  border: 0 solid transparent;
   background: var(--rp-overlay);
   color: var(--rp-text);
   cursor: pointer;
   font: inherit;
-  font-weight: 500;
+  font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
 }
-.rp-btn[data-hovered] {
+.rp-btn:is([data-hovered], [data-focus-visible]) {
   background: var(--rp-hl-med);
 }
 .rp-btn[data-pressed] {
@@ -23,25 +29,36 @@
 }
 .rp-btn.quiet {
   background: transparent;
+  font-weight: 500;
+  padding: 0 var(--rp-space-3);
+  border-radius: var(--rp-r-md);
 }
-.rp-btn.quiet[data-hovered] {
-  background: var(--rp-fill);
+.rp-btn.quiet:is([data-hovered], [data-focus-visible]) {
+  background: var(--rp-hl-med);
 }
+/* S2's gray-300 border is the step above the hover fill: highlight med on the base and the surface. */
 .rp-btn.secondary {
   background: transparent;
-  border-color: var(--rp-subtle);
+  border-width: 2px;
+  border-color: var(--rp-hl-med);
 }
-.rp-btn.secondary[data-hovered] {
-  background: var(--rp-fill);
+.rp-btn.secondary:is([data-hovered], [data-focus-visible]) {
+  background: var(--rp-overlay);
 }
 .rp-btn.secondary[data-pressed] {
   background: var(--rp-hl-med);
 }
+/* S2 sizes a Button's leading icon to its line: 18px beside 14px type, 20px at L (below), 16px at S. A menu
+   trigger's chevron keeps 16px. */
 .rp-btn:not(.icon) > .rp-icon,
 .rp-btn.rp-help > .rp-icon,
 .rp-subitem > .ic > :is(svg, img) {
   width: 16px;
   height: 16px;
+}
+.rp-btn:not(.icon, .quiet, .rp-help, .sm) > .rp-icon:first-of-type:not(.rp-chev) {
+  width: 18px;
+  height: 18px;
 }
 .rp-btn.sm {
   --rp-icon-size: 1lh;
@@ -53,13 +70,21 @@
   width: var(--rp-control);
   padding: 0;
   justify-content: center;
+  border-radius: var(--rp-r-md);
 }
 .rp-btn[data-size='L'] {
   height: var(--rp-control-lg);
   padding-inline: var(--rp-lg-inset-btn);
   font-size: var(--rp-lg-text);
   line-height: var(--rp-line-body);
-  border-radius: calc(var(--rp-control-lg) / 2);
+}
+.rp-btn[data-size='L']:not(.icon, .quiet, .rp-help, .sm) > .rp-icon:first-of-type:not(.rp-chev) {
+  width: 20px;
+  height: 20px;
+}
+.rp-btn.quiet[data-size='L'] {
+  padding-inline: var(--rp-lg-inset-field);
+  border-radius: var(--rp-lg-radius);
 }
 .rp-btn.icon[data-size='L'] {
   width: var(--rp-control-lg);
@@ -70,7 +95,7 @@
   background: var(--rp-accent);
   color: var(--rp-on-accent);
 }
-.rp-btn.accent[data-hovered] {
+.rp-btn.accent:is([data-hovered], [data-focus-visible]) {
   background: color-mix(in srgb, var(--rp-accent) 86%, var(--rp-ink-mix));
 }
 .rp-btn.accent[data-pressed] {
