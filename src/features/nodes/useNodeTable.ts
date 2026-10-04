@@ -26,8 +26,10 @@ type NodeTableInput = {
   names: OutboundNames;
   loading: boolean;
   label: string;
-  // Which source the table shows and how to change it, where there is more than one.
+  // Which source the table shows and how to change it, where there is more than one; `scopePending` while the sources
+  // are on their way, when the line is held for it.
   scope: string | null;
+  scopePending?: boolean;
   multiple: boolean;
   query: string | null;
   groupQuery: string | null;
@@ -163,6 +165,7 @@ export function useNodeTable(input: NodeTableInput) {
     loading: input.loading,
     label: across || selectedNodes ? t('nav.nodes') : input.label,
     scope: selectedNodes ? t('nodes.selectedNodes', {n: input.nodeIds.length}) : across ? t('nodes.searchAll') : input.scope,
+    scopePending: !!input.scopePending,
     across: across || selectedNodes,
     empty: t(across ? 'nodes.noMatch' : 'nodes.empty'),
     canManage,
@@ -226,6 +229,7 @@ export type NodeTableView = {
   loading: boolean;
   label: string;
   scope: string | null;
+  scopePending: boolean;
   // A search spanning every source, whose rows name their source.
   across: boolean;
   empty: string;

@@ -1,4 +1,4 @@
-import {expect, expectLoadFailures, loadCatalogues, routes, test} from './fixtures';
+import {expect, expectLoadFailures, loadCatalogues, routes, test, loadingState} from './fixtures';
 import {LANGS, LOCALE, translate} from '../src/i18n';
 
 // The specs read the catalogues the page loads on demand.
@@ -67,7 +67,7 @@ for (const [lang] of LANGS) {
         await expect(nav).toBeVisible();
       }
       await expect(page.locator('.rp-nav').first()).toBeVisible();
-      await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+      await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
     });
     test('uses and warms its font faces', async ({page}) => {
       await page.addInitScript(() => {

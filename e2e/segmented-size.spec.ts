@@ -1,5 +1,5 @@
 import type {Locator, Page} from '@playwright/test';
-import {expect, loadCatalogues, mockBackend, routes, settle, settleFrames, test} from './fixtures';
+import {expect, loadCatalogues, mockBackend, routes, settle, settleFrames, test, loadingState} from './fixtures';
 import {translate} from '../src/i18n';
 import {defaultWidget, defaults, type Layout} from '../src/shell/widgets/layout';
 
@@ -78,7 +78,7 @@ for (const [width, phone] of [
       for (const route of routes) {
         await page.goto(`/#/${route}`);
         await expect(page.locator('.rp-content h1')).toBeVisible();
-        await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+        await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
         await page.evaluate(() => document.fonts.ready);
         const tabs = page.locator('.rp-content [data-page-tabrow] [role=tab]');
         const count = await tabs.count();

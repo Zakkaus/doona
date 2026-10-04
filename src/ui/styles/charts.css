@@ -327,15 +327,8 @@
 .rp-chart-hold {
   position: relative;
 }
-.rp-chart-hold > :not(.rp-skeleton-text) {
+.rp-chart-hold > :not(.rp-skeleton-cover) {
   visibility: hidden;
-}
-.rp-chart-hold > .rp-skeleton-text {
-  position: absolute;
-  inset: 0;
-  width: auto;
-  height: auto;
-  border-radius: var(--rp-lg-radius);
 }
 .rp-heatmap {
   display: flex;

@@ -1,6 +1,8 @@
 import type {ComponentType, SVGProps} from 'react';
 import type {Capabilities, Version} from '../api/model';
+import type {PageShape} from '../ui/PageSkeleton';
 import {ApiError} from '../api/error';
+import {expectsAccess} from '../api';
 import {isDemoApi} from '../api/profiles';
 import type {Scheme, Settings} from './preferences';
 import {palettes, type PaletteId} from './palettes';
@@ -52,7 +54,7 @@ export type PaletteSection = {title: string; items: Array<{id: string; label: st
 export type AppearanceMenu = ReturnType<typeof appearanceMenu>;
 export type ShellView = {
   groups: NavGroup[];
-  current: {id: string; path: string; title: string; hint: string | undefined; Page: ComponentType<PageProps>};
+  current: {id: string; path: string; title: string; hint: string | undefined; Page: ComponentType<PageProps>; skeleton: PageShape};
   content:
     {kind: 'login'; profileId: string; api: string; backend: string; rejected: boolean; missingApi: boolean} | {kind: 'loading' | 'unavailable' | 'page'};
   busy: boolean;
@@ -112,7 +114,7 @@ export function shellView(
           rejected: !!profile?.token,
           missingApi
         }
-      : !capabilities && !capabilityError && !feature.offline
+      : !capabilities && !capabilityError && !feature.offline && !(feature.early && expectsAccess())
         ? {kind: 'loading'}
         : capabilities && !offered(feature.path)
           ? {kind: 'unavailable'}
@@ -137,7 +139,8 @@ export function shellView(
       path: route,
       title: t(feature.nav?.titleKey ?? 'nav.activity'),
       hint: feature.nav?.hintKey ? t(feature.nav.hintKey) : undefined,
-      Page: feature.Page
+      Page: feature.Page,
+      skeleton: feature.skeleton
     },
     content,
     busy: !capabilities && !capabilityError,

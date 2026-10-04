@@ -29,15 +29,16 @@ import {
   ErrorMessage,
   IconTip,
   Light,
-  Loading,
   Segmented,
+  PageSkeleton,
   Empty,
   Tag,
   Tags,
   LinkTag,
   TextTooltip,
   MoreMenu,
-  Toolbar
+  Toolbar,
+  type PageShape
 } from '../../ui/ui';
 import Lock from '../../ui/icons/Lock';
 import {NodeName} from '../../ui/NodeName';
@@ -86,8 +87,10 @@ function PolicyWait({heading, members, label, collapsed}: {heading: ReactNode; m
 }
 // The cards that open on screen when the list first shows hold it back until their group's read arrives. A card's
 // heading, toolbar and tiles depend on the group's capabilities and its members' health, which the groups list does
-// not carry, so no placeholder can know the loaded card's height; the list is laid out hidden behind the loading state
-// instead, and shown once. Cards reached later by scrolling open off screen behind a placeholder.
+// not carry, so no placeholder can know the loaded card's height; the list is laid out hidden behind generic Skeleton
+// cards instead, and shown once. Cards reached later by scrolling open off screen behind a placeholder.
+// Generic group cards: an open manual group's, then automatic groups folded to their summary.
+const policyCards: PageShape = [{cards: [614, 142, 150, 150]}];
 type FirstShowGate = {hold: (id: string) => void; release: (id: string) => void};
 const FirstShow = createContext<FirstShowGate>({hold() {}, release() {}});
 function PolicyList({loading, children}: {loading: boolean; children: ReactNode}) {
@@ -116,7 +119,7 @@ function PolicyList({loading, children}: {loading: boolean; children: ReactNode}
   return (
     <FirstShow value={gate}>
       <div className="rp-policy-list" data-wait={shown ? undefined : ''}>
-        {!shown && <Loading />}
+        {!shown && <PageSkeleton shape={policyCards} />}
         {children}
       </div>
     </FirstShow>

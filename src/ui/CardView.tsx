@@ -2,12 +2,13 @@ import {GridList, GridListItem} from 'react-aria-components';
 import type {ReactNode} from 'react';
 import {useT} from '../i18n';
 import {cardClass} from './Card';
-import {Empty, Loading} from './Feedback';
+import {Empty, SkeletonBody} from './Feedback';
 import {TextTooltip} from './Tooltip';
 
 // S2's CardView with highlight selection: a grid of cards of which one is selected, drawn with S2's dark stroke round
 // the card. The arrow keys move between cards and select the one they reach; within a card, left and right also reach
-// its actions. Cards in a row share its height.
+// its actions. Cards in a row share its height. A first load draws Skeleton cards at a provider card's height.
+const cardHeight = 224;
 export function CardView<T extends {id: string}>({
   label,
   items,
@@ -42,7 +43,7 @@ export function CardView<T extends {id: string}>({
         const id = [...keys][0];
         if (id != null) onSelect(String(id));
       }}
-      renderEmptyState={() => (loading ? <Loading /> : <Empty>{empty ?? t('ui.empty')}</Empty>)}
+      renderEmptyState={() => (loading ? <SkeletonBody shape="cards" count={3} height={cardHeight} grid /> : <Empty>{empty ?? t('ui.empty')}</Empty>)}
     >
       {children}
     </GridList>

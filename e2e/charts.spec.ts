@@ -293,7 +293,8 @@ for (const [served, note] of [
       return {...seed, records: seed.records.slice(0, served), next_cursor: 'older'};
     };
     await page.goto('/#/dns');
-    await expect(page.locator('.rp-chart-page > .rp-facts')).toBeVisible();
+    // The strip shows its Skeleton values first; its loaded values follow the served page.
+    await expect(page.locator('.rp-chart-page > .rp-facts:not(:has([role=status]))')).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
     expect(limits.slice(0, 2)).toEqual(['100', '25']);
     // Measured against the 25 asked for when the page was served, not the 100 that was refused.
@@ -395,7 +396,11 @@ test('activity draws all eight charts without loading a chart vendor', async ({p
   expect(requests.filter(url => /vendor-charts/.test(url))).toEqual([]);
   // The CPU and latency lines draw from their second sample, the latency one after the next node list read.
   await page.clock.runFor(61000);
-  await expect(page.locator('main .rp-activity-surface')).toHaveCount(8);
+  // Activity's own eight; a widget card further down draws its chart when it comes into view.
+  const own = ['download', 'upload', 'connections', 'latency', 'cpu', 'history', 'outbounds', 'memory'].map(
+    id => `main [data-module='${id}'] .rp-activity-surface`
+  );
+  await expect(page.locator(own.join(', '))).toHaveCount(8);
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
   const chart = traffic.getByRole('application');
   await chart.focus();

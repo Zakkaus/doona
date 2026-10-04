@@ -1,4 +1,4 @@
-import {expect, routes, settleFrames, test} from './fixtures';
+import {expect, routes, settleFrames, test, loadingState} from './fixtures';
 
 for (const width of [1280, 1024, 390, 320]) {
   test.describe(`${width}px layout`, () => {
@@ -8,7 +8,7 @@ for (const width of [1280, 1024, 390, 320]) {
       test(`${route} keeps content and controls inside the viewport`, async ({page}) => {
         await page.goto(`/#/${route}`);
         await expect(page.locator('.rp-content > *').first()).toBeVisible();
-        await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+        await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
 
         const check = async () => {
           const layout = await page.evaluate(() => {
@@ -87,7 +87,7 @@ test.describe('844x390 landscape', () => {
       await page.goto(`/#/${route}`);
       // Policies lays its cards out hidden behind a loading state, which already overflows the viewport by a few pixels.
       // Scrolling then moves the page while the cards mount and the list is first shown, so wait for the shown list.
-      await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+      await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
       // The page's own content, not just its heading, decides whether there is anything to scroll to.
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight)).toBeGreaterThan(390);
       await expect(page.locator('.rp-top')).toHaveCSS('position', 'static');

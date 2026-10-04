@@ -86,6 +86,8 @@ export function useActivity(kind: 'download' | 'upload' | 'connections' | 'cpu' 
   return {
     ...view,
     limited: limited > 0 ? t('act.limited', {n: limited}) : null,
+    // The runtime's or the capabilities' first read: the status and the limits are not known yet.
+    statusLoading: (!runtime.data && !runtime.error && resources?.runtime.available !== false) || !capabilities.data,
     range,
     ranges,
     setRange: pickRange,

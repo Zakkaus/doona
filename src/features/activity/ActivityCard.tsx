@@ -1,12 +1,12 @@
 import {useContext} from 'react';
-import {DeferredLoading} from './DeferredLoading';
+import {DeferredChart, DeferredLoading} from './DeferredLoading';
 import Download from '../../ui/icons/Download';
 import Upload from '../../ui/icons/Upload';
 import LinkIcon from '../../ui/icons/Link';
 import Cpu from '../../ui/icons/Cpu';
 import Memory from '../../ui/icons/Memory';
 import {useT} from '../../i18n';
-import {Card, CardLink, ContextualHelp, Segmented, Light, ErrorMessage, Empty, Link, ChartWait, ValueTile} from '../../ui/ui';
+import {Card, CardLink, ContextualHelp, Segmented, Light, ErrorMessage, Empty, Link, ChartWait, SkeletonBar, SkeletonGroup, ValueTile} from '../../ui/ui';
 import {WideCell} from '../../ui/DashboardTile';
 import {href} from '../../shell/route';
 import {AreaChart, FactStrip, Legend, Spark} from '../../ui/charts';
@@ -88,19 +88,31 @@ function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useAc
   const alert = kind === 'status' && vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />;
   const stats = (label: string, values: (number | null)[], fmt: (value: number) => string) =>
     wide && <FactStrip facts={seriesFacts([{label, values}], fmt, t)} />;
-  if (!vm.ready) return alert || (vm.discoveryFailed ? null : <DeferredLoading>{t('ui.loading')}</DeferredLoading>);
+  if (!vm.ready) return alert || (vm.discoveryFailed ? null : <DeferredLoading />);
   let content;
   switch (kind) {
     case 'status':
       content = (
         <Card className="rp-control-card">
           <div className="rp-row" data-pack="line">
-            <Light tone={vm.status.tone}>{vm.status.text}</Light>
-            <div className="rp-control-tail">
-              <Link appearance="button" quiet href={href('overview')}>
-                {vm.limited ?? t('act.viewDetails')}
-              </Link>
-            </div>
+            {/* The first read draws the state and the link as bars about as wide as their usual text. */}
+            {vm.statusLoading ? (
+              <SkeletonGroup>
+                <SkeletonBar line="body" width={88} />
+                <div className="rp-control-tail">
+                  <SkeletonBar line="body" width={112} />
+                </div>
+              </SkeletonGroup>
+            ) : (
+              <>
+                <Light tone={vm.status.tone}>{vm.status.text}</Light>
+                <div className="rp-control-tail">
+                  <Link appearance="button" quiet href={href('overview')}>
+                    {vm.limited ?? t('act.viewDetails')}
+                  </Link>
+                </div>
+              </>
+            )}
           </div>
         </Card>
       );
@@ -169,9 +181,8 @@ function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useAc
               <Empty>{t('act.noHistory')}</Empty>
             </ChartWait>
           ) : vm.history.state === 'loading' ? (
-            <ChartWait holds="tall">
-              <DeferredLoading>{t('ui.loading')}</DeferredLoading>
-            </ChartWait>
+            // The legend's line and the chart's height, as the loaded body draws them.
+            <DeferredChart parts={[{line: 'caption'}, {height: 120 * scale}]} />
           ) : vm.history.state === 'empty' ? (
             <ChartWait holds="tall">
               <Empty>{t('act.emptyHistory')}</Empty>
@@ -251,7 +262,7 @@ function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useAc
             <Empty>{t('act.noHistory')}</Empty>
           ) : (
             <ChartWait>
-              <DeferredLoading>{t('act.sampling')}</DeferredLoading>
+              <DeferredLoading shape="block" label={t('act.sampling')} />
             </ChartWait>
           )}
         </Card>

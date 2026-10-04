@@ -39,13 +39,16 @@ export {DataTable, type TableSort, type TableColumn} from './Table';
 export {cachedRows, fitColumns} from './tableHooks';
 export {TimeCell} from './TimeCell';
 export {CardView, CardViewItem} from './CardView';
+export {PageSkeleton, PageShapeContext, type PageShape, type PagePart} from './PageSkeleton';
 export {
   Empty,
   Loading,
   ProgressCircle,
   Skeleton,
   SkeletonBody,
-  PageSkeleton,
+  SkeletonBar,
+  SkeletonCard,
+  SkeletonGroup,
   type SkeletonShape,
   ChartWait,
   ErrorMessage,

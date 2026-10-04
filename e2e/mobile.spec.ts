@@ -1,7 +1,7 @@
 import type {Page} from '@playwright/test';
 import {hubs} from '../src/shell/routes';
 import {demoRouting, demoRoutingInclude} from '../src/dae/startingRouting';
-import {expect, isLive, mockBackend, routes, scrollTableToEnd, settle, test, box} from './fixtures';
+import {expect, isLive, mockBackend, routes, scrollTableToEnd, settle, test, box, loadingState} from './fixtures';
 
 test.use({viewport: {width: 390, height: 844}});
 
@@ -115,7 +115,7 @@ test('Back and Forward return a page to where it was left, while a link still op
 test('the bottom bar leaves the end of the page uncovered', async ({page}) => {
   await page.goto('/#/overview');
   await expect(page.locator('.rp-content > *').first()).toBeVisible();
-  await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+  await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
   // Long enough to scroll, so the bar would sit over the end of the page without the reserved space.
   expect(await page.evaluate(() => document.documentElement.scrollHeight > innerHeight)).toBe(true);
   await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
@@ -452,7 +452,7 @@ test.describe('320px', () => {
       await expect(page.locator('.rp-content > *').first()).toBeVisible();
       // WebKit's per-page load check: the page is the current one and has finished loading.
       if (route !== 'flows') await expect(page.locator(`.rp-nav[href="#/${route}"]`)).toHaveAttribute('aria-current', 'page');
-      await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+      await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
     });
   }

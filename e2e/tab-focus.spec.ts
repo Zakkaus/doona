@@ -1,4 +1,4 @@
-import {expect, test, box} from './fixtures';
+import {expect, test, box, loadingState} from './fixtures';
 import type {Locator, Page} from '@playwright/test';
 
 const phase = (globalThis as {process?: {env: Record<string, string | undefined>}}).process?.env.DOONA_OWNER_SHOTS;
@@ -76,7 +76,7 @@ for (const width of [390, 768, 1440]) {
               await tabs.nth(index).click();
               await expect(page.locator('.rp-tabpanel[data-shown]')).toHaveAttribute('aria-labelledby', (await tabs.nth(index).getAttribute('id'))!);
             }
-            await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+            await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
             const tracks = page.locator('.rp-content .rp-seg:visible');
             for (let at = 0; at < (await tracks.count()); at++) {
               if (phase && route === 'activity' && at === 0) {

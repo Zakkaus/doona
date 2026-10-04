@@ -47,11 +47,13 @@ test('home charts collect memory polls and change the traffic history range', as
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
   await expect(traffic.locator('.rp-activity-surface')).toBeVisible();
   releaseNodes();
-  // One sample is not a curve yet; the second poll draws it.
-  await expect(memory.getByRole('status')).toContainText('Sampling');
+  // One sample is not a curve yet; a later poll draws it. The card is in view from the start, so the first polls may
+  // run before the nodes arrive.
+  await expect.poll(() => memoryPoll).toBeGreaterThan(0);
   await page.clock.fastForward(5100);
   await expect(memory.locator('.rp-activity-surface')).toBeVisible();
-  await expect(memory.locator('.rp-legend')).toContainText('2 MB');
+  // The legend reads the latest poll; how many polls ran before the card came into view depends on its place.
+  await expect.poll(async () => (await memory.locator('.rp-legend').textContent())?.includes(`Resident memory ${memoryPoll} MB`)).toBe(true);
   await expect(memory.locator('.rp-area-curve').first()).toHaveAttribute('d', /L|C/);
   const memoryCurve = await memory.locator('.rp-area-curve').first().getAttribute('d');
   const request = page.waitForRequest(

@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import {expect, isLive, offered, routes, test, detail, mockBackend} from './fixtures';
+import {expect, isLive, offered, routes, test, detail, mockBackend, loadingState} from './fixtures';
 
 // Palettes carry their official values, so their own secondary text on their own base and surface is a known
 // exception: Rosé Pine Dawn's subtle is 4.0:1 and Moon's 4.5:1. Any other pairing fails. Glass is not checked for
@@ -29,7 +29,7 @@ for (const [palette, scheme] of looks)
         await expect(page.locator(`.rp-nav[href="#/${route}"]`)).toHaveAttribute('aria-current', 'page');
         // A loading notice stays hidden for its first 150ms, and a role query skips hidden elements: select it and the
         // skeletons by CSS so a fast machine does not scan the page before its data has arrived.
-        await expect(page.locator('.rp-content :is(.rp-empty[role=status], .rp-skeleton)')).toHaveCount(0);
+        await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
         await page.evaluate(() => document.fonts.ready.then(() => undefined));
         const results = await new AxeBuilder({page}).withTags(['wcag2a', 'wcag2aa']).analyze();
         const findings = Object.fromEntries(
@@ -87,7 +87,7 @@ for (const route of ['activity', 'overview', 'connections?id=1', 'flows', 'dns',
   test(`headings on ${route.split('?')[0]} keep their order`, async ({page}) => {
     await page.goto(`/#/${route}`);
     await expect(page.locator('.rp-content').getByRole('heading').first()).toBeVisible();
-    await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+    await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
     const results = await new AxeBuilder({page}).withRules(['heading-order']).analyze();
     expect(results.violations.flatMap(rule => rule.nodes.map(node => node.target.join(' ')))).toEqual([]);
   });

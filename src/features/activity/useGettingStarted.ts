@@ -48,6 +48,8 @@ export function useGettingStarted() {
     done,
     pending: !stopped && supported && !ready && !failed,
     visible: !stopped && ready && !complete,
+    // Finished or dismissed before: the card cannot appear above the dashboard.
+    settled: !!stopped,
     dismiss: () => {
       saveState('dismissed');
       setStopped('dismissed');

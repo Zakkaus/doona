@@ -1,4 +1,4 @@
-import {expect, routes, test, box} from './fixtures';
+import {expect, routes, test, box, loadingState} from './fixtures';
 import type {Locator, Page} from '@playwright/test';
 
 const ranges = ['实时', '10 分钟', '1 小时', '6 小时', '24 小时', '7 天'];
@@ -83,7 +83,7 @@ for (const lang of ['zh-TW', 'en']) {
       test(`${route}: no radio group overflows or clips an option`, async ({page}) => {
         await page.goto(`/#/${route}`);
         await expect(page.locator('.rp-content > *').first()).toBeVisible();
-        await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+        await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
         await page.evaluate(() => document.fonts.ready);
         await expect.poll(() => clipped(page)).toEqual([]);
         const tabs = page.locator('.rp-content [role=tab]');

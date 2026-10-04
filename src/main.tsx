@@ -7,7 +7,7 @@ import {detectHostedBackend} from './api/profiles';
 import {pruneRings} from './store/rings';
 import {expectsAccess, initializeApi, startedOnMock} from './api';
 import {preloadActivity} from './shell/registry';
-import {Button, Empty, Loading, ErrorMessage} from './ui/ui';
+import {Button, Empty, ErrorMessage, PageSkeleton} from './ui/ui';
 import logo from './logo.svg';
 import {toast} from './ui/ui';
 import {activated, announceBuild} from './shell/newBuild';
@@ -92,7 +92,7 @@ function Startup() {
             ) : lang && error ? (
               <ErrorMessage error={error} onRetry={() => location.reload()} />
             ) : lang ? (
-              <Loading />
+              <PageSkeleton />
             ) : null}
           </div>
         </main>

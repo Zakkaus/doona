@@ -86,7 +86,7 @@ export function RuntimeWidget({item, form}: {item: Widget; form: ModuleForm}) {
     />
   );
   return (
-    <Reading state={runtime}>
+    <Reading state={runtime} rows={item.size === 'small' ? 1 : 2} chart={form !== 'kv' && item.size !== 'small' ? 48 : undefined}>
       {listed ? (
         <div className="rp-chart-stats">
           {readings}
@@ -239,7 +239,7 @@ export function MemoryWidget({item, form}: {item: Widget; form: ModuleForm}) {
     />
   );
   return (
-    <Reading state={memory}>
+    <Reading state={memory} chart={charted ? 48 : undefined}>
       {form === 'kv' && wide ? (
         <div className="rp-chart-stats">
           <div className="rp-col">{readings}</div>

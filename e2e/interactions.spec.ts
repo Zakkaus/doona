@@ -1,5 +1,5 @@
 import {test as browserTest} from '@playwright/test';
-import {expect, routes, test, settleFrames, box} from './fixtures';
+import {expect, routes, test, settleFrames, box, loadingState} from './fixtures';
 import {createMockApi} from '../mock';
 
 test('Disclosure toggles with Enter and Space and keeps focus on its trigger', async ({page}) => {
@@ -112,7 +112,7 @@ for (const route of routes) {
     await page.goto('/#/' + route);
     await expect(page.locator('.rp-content .rp-alert').first()).toContainText('Could not load data');
     await expect(page.locator('.rp-content h1')).toBeVisible();
-    await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+    await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
     expect(exceptions).toEqual([]);
   });
 }

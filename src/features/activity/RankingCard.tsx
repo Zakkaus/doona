@@ -30,7 +30,7 @@ export function RankingCard({model}: {model: ReturnType<typeof useRankingCard>})
       )}
       {state === 'error' ? null : state === 'loading' ? (
         <ChartWait holds="bars">
-          <DeferredLoading>{t('ui.loading')}</DeferredLoading>
+          <DeferredLoading shape="bars" count={4} columns />
         </ChartWait>
       ) : state === 'unavailable' ? (
         <ChartWait holds="bars">

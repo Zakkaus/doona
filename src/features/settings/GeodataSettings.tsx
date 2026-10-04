@@ -11,18 +11,20 @@ import {
   Kv,
   LabeledSelect,
   Link,
-  Loading,
+  SkeletonBar,
+  SkeletonGroup,
   Switch,
   TextField,
   TextTooltip,
-  TimeCell,
-  ChartWait
+  TimeCell
 } from '../../ui/ui';
 import ChevronDown from '../../ui/icons/ChevronDown';
 import {useGeodataSettings} from './useGeodataSettings';
 import {settingsCard} from './nav';
 
 const card = settingsCard('geodata');
+
+const geodataRows = ['settings.geodataSource', 'settings.geodataRoute', 'settings.geodataVerifyChecksum', 'settings.geodataAutoUpdate'] as const;
 
 // Files are always shown; source controls mount only where the backend lets them be configured.
 export function GeodataSettingsCard() {
@@ -34,9 +36,25 @@ export function GeodataSettingsCard() {
       {m.note && <span className="rp-label">{m.note}</span>}
       <ErrorMessage error={m.error} onRetry={m.retry} />
       {m.loading && (
-        <ChartWait holds="ops">
-          <Loading />
-        </ChartWait>
+        // The source settings' first read: the rows the form draws for a preset source (source, route, checksum and
+        // automatic update) under their real labels, each control a Skeleton bar.
+        <SkeletonGroup>
+          <div className="rp-ops">
+            {geodataRows.map(label => (
+              <div key={label} className="rp-ops-group">
+                <span className="rp-label">{t(label)}</span>
+                {label === 'settings.geodataVerifyChecksum' ? (
+                  <div className="rp-cluster">
+                    <SkeletonBar width={40} />
+                    <span className="rp-label">{m.checksumHelp}</span>
+                  </div>
+                ) : (
+                  <SkeletonBar width={200} />
+                )}
+              </div>
+            ))}
+          </div>
+        </SkeletonGroup>
       )}
       {m.ready && (
         <div className="rp-ops">
@@ -145,6 +163,12 @@ export function GeodataSettingsCard() {
           </ActionHelp>
         </div>
         <ErrorMessage error={m.statusError} onRetry={m.retryStatus} />
+        {/* The status details' disclosure. */}
+        {m.loading && (
+          <SkeletonGroup>
+            <SkeletonBar width={160} />
+          </SkeletonGroup>
+        )}
         {m.ready && m.status.details.length > 0 && (
           <Disclosure title={t('settings.geodataDetails')}>
             <div className="rp-geodata-details">

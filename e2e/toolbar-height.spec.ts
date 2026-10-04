@@ -1,4 +1,4 @@
-import {expect, routes, test, settleFrames} from './fixtures';
+import {expect, routes, test, settleFrames, loadingState} from './fixtures';
 import type {Page} from '@playwright/test';
 
 for (const width of [1280, 390]) {
@@ -10,7 +10,7 @@ for (const width of [1280, 390]) {
       for (const route of routes) {
         await page.goto(`/#/${route}`);
         await expect(page.locator('.rp-content h1')).toBeVisible();
-        await expect(page.locator('.rp-content .rp-empty[role=status]')).toHaveCount(0);
+        await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
         await page.evaluate(() => document.fonts.ready);
         const tabs = page.locator('.rp-content [data-page-tabrow] [role=tab]');
         const count = await tabs.count();

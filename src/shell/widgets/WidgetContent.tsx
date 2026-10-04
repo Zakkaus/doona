@@ -1,5 +1,5 @@
 import {useContext} from 'react';
-import {useNearViewport} from '../../ui/ui';
+import {SkeletonBar, SkeletonGroup, useNearViewport} from '../../ui/ui';
 import {ResourcePreview} from '../../store/preview';
 import {useT} from '../../i18n';
 import {useCapabilities} from '../../store';
@@ -48,8 +48,15 @@ function Content({item, sample = false, onChange}: {item: Widget; sample?: boole
     >
       {sample || available(item.id, capabilities) ? (
         <Contents item={item} onChange={onChange} />
+      ) : capabilities ? (
+        <span className="rp-label">{t('widgets.unavailable')}</span>
       ) : (
-        <span className="rp-label">{t(capabilities ? 'widgets.unavailable' : 'ui.loading')}</span>
+        // Until the capabilities arrive, the widget's lines as Skeleton bars, as many as it lists.
+        <SkeletonGroup>
+          {Array.from({length: item.rows ?? 2}, (_, i) => (
+            <SkeletonBar key={i} line="body" />
+          ))}
+        </SkeletonGroup>
       )}
     </WidgetSection>
   );

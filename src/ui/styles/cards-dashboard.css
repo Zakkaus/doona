@@ -15,10 +15,6 @@
 .rp-chart-wait.form {
   min-height: 204px;
 }
-/* Geodata controls while their source settings load. */
-.rp-chart-wait.ops {
-  min-height: 164px;
-}
 /* S2's Skeleton (Feedback.tsx): placeholder blocks in the loaded body's own grid and lines, so the card keeps its
    height when the values arrive. The shimmer is S2's: a 300% gradient from the base fill to a lighter one, swept every
    2s; reduced motion keeps the still base fill. */
@@ -103,6 +99,71 @@
   width: 100%;
   height: var(--rp-control);
   border-radius: var(--rp-lg-radius);
+}
+/* Bars a feature places beside its real labels (SkeletonBar), in a group that takes no box of its own. */
+.rp-skeleton-group {
+  display: contents;
+}
+.rp-skeleton-cover {
+  width: auto;
+  height: auto;
+  position: absolute;
+  inset: 0;
+  border-radius: var(--rp-lg-radius);
+}
+.rp-skeleton-bar {
+  display: block;
+  width: 100%;
+}
+.rp-skeleton-bar.control {
+  height: var(--rp-control);
+  border-radius: var(--rp-r-md);
+}
+.rp-skeleton-bar.body {
+  height: var(--rp-line-body);
+  width: 60%;
+}
+.rp-skeleton-bar.caption {
+  height: var(--rp-line-caption);
+  width: 40%;
+}
+/* A page's Skeleton (PageSkeleton): its parts at the page's gap, rows of M controls, cards to a row, table rows. */
+.rp-page-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-6);
+  min-width: 0;
+}
+.rp-page-skeleton.panel {
+  gap: var(--rp-space-4);
+}
+.rp-skeleton-row.line {
+  height: var(--rp-line-body);
+}
+.rp-skeleton-controls {
+  display: flex;
+  gap: var(--rp-space-2);
+  height: var(--rp-control);
+}
+.rp-skeleton-controls > .rp-skeleton-text {
+  height: 100%;
+  border-radius: var(--rp-r-md);
+}
+.rp-skeleton-cards.page {
+  gap: var(--rp-space-6);
+}
+.rp-skeleton-cards.columns {
+  display: grid;
+  grid-template-columns: var(--columns);
+  gap: var(--rp-space-3);
+}
+@media (max-width: 599.98px) {
+  .rp-skeleton-cards.columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.rp-page-skeleton .rp-facts .rp-skeleton-text {
+  width: 60%;
 }
 /* Card surfaces (SkeletonBody cards), each with one block inside its padding. */
 .rp-skeleton-cards {
@@ -612,6 +673,10 @@
   .rp-skeleton-cards.grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+/* A first load's Skeleton cards (CardView) sit in the empty state's row, which takes no box, and span the grid. */
+.rp-cardview .rp-skeleton-cards {
+  grid-column: 1 / -1;
 }
 .rp-cardview:has(> .rp-empty) {
   grid-template-columns: minmax(0, 1fr);
