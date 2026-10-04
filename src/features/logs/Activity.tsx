@@ -1,4 +1,4 @@
-import {useCallback, useMemo} from 'react';
+import {useCallback, useMemo, type ReactNode} from 'react';
 import {LOCALE, useLang, useT} from '../../i18n';
 import {localClockFormat} from '../../i18n/format';
 import type {LogLevel, LogRecord} from '../../api/model';
@@ -11,17 +11,20 @@ import {levelHeatmap} from './heatmap';
 import {logLevelLabels, logLevels} from '../../api/selectors';
 
 // When the feed was busy and with what: a row per level, a column per stretch of time. A row header sets the
-// minimum level the list shows, which is what the level control already means.
+// minimum level the list shows, which is what the level control already means. While the stream opens (`waiting`),
+// its space is held, so the list below does not move down when the first records arrive.
 export function LogActivity({
   records,
   offered,
   minimum,
-  setMinimum
+  setMinimum,
+  waiting
 }: {
   records: LogRecord[];
   offered: LogLevel[];
   minimum: string;
   setMinimum: (level: string) => void;
+  waiting: boolean;
 }) {
   const t = useT();
   const locale = LOCALE[useLang()];
@@ -73,7 +76,7 @@ export function LogActivity({
       })
     };
   }, [map, span, clock, heads, p, t]);
-  if (!records.length) return null;
+  if (!records.length) return waiting ? <ActivityHold heads={heads} levels={map.rows.map(row => row.level)} time={clock.format(0)} /> : null;
   const busiest = map.busiest;
   const facts: ChartFact[] = !busiest
     ? []
@@ -92,6 +95,31 @@ export function LogActivity({
       <Card title={t('log.chart.title')} note={t('log.chart.sample', {n: records.length})}>
         <Heatmap label={t('log.chart.title')} columns={heat.columns} rows={heat.rows} />
       </Card>
+    </div>
+  );
+}
+
+// The strip and the card laid out as loaded, hidden, each with a skeleton block over it: it takes the loaded chart's
+// height exactly, with a row per level and the time marks below them.
+function ActivityHold({heads, levels, time}: {heads: Map<LogLevel, {text: string; label: ReactNode}>; levels: LogLevel[]; time: string}) {
+  const t = useT();
+  const facts: ChartFact[] = [
+    {label: t('log.chart.errors'), value: t('log.chart.count', {n: 0}), icon: <AlertTriangle />, tint: 'c5'},
+    {label: t('log.chart.peak'), icon: <History />, tint: 'c1', value: `${time}–${time}`, caption: t('log.chart.count', {n: 0})}
+  ];
+  const rows = levels.map(level => ({id: level, color: 'transparent', label: heads.get(level)!.label, counts: [0], titles: ['']}));
+  return (
+    <div className="rp-chart-page" inert aria-hidden="true">
+      <div className="rp-chart-hold">
+        <FactStrip facts={facts} />
+        <span className="rp-skeleton-text" />
+      </div>
+      <div className="rp-chart-hold">
+        <Card title={t('log.chart.title')} note={t('log.chart.sample', {n: 0})}>
+          <Heatmap label={t('log.chart.title')} columns={[time]} rows={rows} />
+        </Card>
+        <span className="rp-skeleton-text" />
+      </div>
     </div>
   );
 }

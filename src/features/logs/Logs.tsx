@@ -112,7 +112,7 @@ export function Logs({go}: PageProps) {
         />
       </Toolbar>
       <ErrorMessage error={vm.error} onRetry={vm.retry} />
-      <LogActivity records={vm.records} offered={vm.offered} minimum={vm.level} setMinimum={vm.setLevel} />
+      <LogActivity records={vm.records} offered={vm.offered} minimum={vm.level} setMinimum={vm.setLevel} waiting={vm.loading} />
       <DataTable label={t('nav.logs')} stream flow rows={vm.rows} loading={vm.loading} empty={vm.empty} cols={columns} detail={detail} />
     </div>
   );
