@@ -2,6 +2,7 @@ import {afterEach, expect, it} from 'vitest';
 import {
   compareNames,
   formatBytes,
+  formatBytesFraction,
   formatDuration,
   formatRate,
   localMinute,
@@ -17,7 +18,7 @@ import {
   type DateFormat,
   type TimeFormat
 } from './format';
-import {LANGS, LOCALE} from './index';
+import {LANGS, LOCALE, translate, type Lang, type Translator} from './index';
 
 it('keeps duration units, truncation and compound spacing in every language', () => {
   const cases = {
@@ -68,6 +69,22 @@ it('writes every byte and byte-rate unit the same in English and Chinese', () =>
   }
 });
 
+it('writes a byte fraction with a shared unit once and keeps differing units on each side', () => {
+  const cases: Array<[Lang, string, string, string, string]> = [
+    ['en', '70 / 268 MB', '461 GB / 1.1 TB', '— / 268 MB', '70 MB / —'],
+    ['zh-TW', '70／268 MB', '461 GB／1.1 TB', '—／268 MB', '70 MB／—'],
+    ['zh-CN', '70／268 MB', '461 GB／1.1 TB', '—／268 MB', '70 MB／—']
+  ];
+  for (const [lang, same, differing, noPart, noWhole] of cases) {
+    const t: Translator = (key, params) => translate(lang, key, params);
+    const locale = LOCALE[lang];
+    expect(formatBytesFraction('70000000', '268000000', locale, t)).toBe(same);
+    expect(formatBytesFraction(461_000_000_000, 1_100_000_000_000n, locale, t)).toBe(differing);
+    expect(formatBytesFraction(null, '268000000', locale, t)).toBe(noPart);
+    expect(formatBytesFraction('70000000', null, locale, t)).toBe(noWhole);
+  }
+  expect(formatBytesFraction(1_500_000, 2_500_000, 'en', (key, params) => translate('en', key, params))).toBe('1.5 / 2.5 MB');
+});
 it('sorts names by the interface language, numbers by value, whatever the case', () => {
   const list = ['上海 02', 'node10', '北京', 'Node2', '上海 01'];
   expect([...list].sort(compareNames(LOCALE['zh-CN']))).toEqual(['北京', '上海 01', '上海 02', 'Node2', 'node10']);

@@ -19,7 +19,7 @@ import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
 import {addU64, pctU64} from '../../api/u64';
-import {compareNames, localMinute, localTime, formatBytes, formatLatency} from '../../i18n/format';
+import {compareNames, localMinute, localTime, formatBytes, formatBytesFraction, formatLatency} from '../../i18n/format';
 import {backendCode, backendMessage, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
 import {isBareName, isQuotable} from '../../dae/text';
@@ -304,12 +304,7 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
     url: item.url_redacted ?? undefined,
     kind: enumLabel(kinds, item.kind, t),
     count: formatNumber(item.node_count, locale),
-    usage:
-      used === null
-        ? '—'
-        : item.traffic?.total_bytes
-          ? t('ui.fraction', {part: formatBytes(used, locale), whole: formatBytes(item.traffic.total_bytes, locale)})
-          : formatBytes(used, locale),
+    usage: used === null ? '—' : item.traffic?.total_bytes ? formatBytesFraction(used, item.traffic.total_bytes, locale, t) : formatBytes(used, locale),
     updatedAt: pseudo ? null : item.updated_at,
     expires: item.expires_at ? localTime(item.expires_at, locale) : '—',
     // To the minute, for a card too narrow for the seconds; `expires` is its full form.

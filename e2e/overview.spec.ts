@@ -355,7 +355,7 @@ test('the memory card meters cgroup usage by its name and value text', async ({p
   await page.goto('/#/overview');
   const meter = page.getByRole('region', {name: 'Memory', exact: true}).getByRole('meter', {name: 'cgroup usage', exact: true});
   await expect(meter).toBeVisible();
-  await expect(meter).toHaveAttribute('aria-valuetext', /^\S+ \S+ \/ \S+ \S+$/);
+  await expect(meter).toHaveAttribute('aria-valuetext', /^\S+(?: \S+)? \/ \S+ \S+$/);
   await expect(meter.locator('.v')).toHaveText((await meter.getAttribute('aria-valuetext'))!);
   expect(Number(await meter.getAttribute('aria-valuenow'))).toBeGreaterThan(0);
 });
