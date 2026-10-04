@@ -13,9 +13,16 @@ it('keeps the release write token away from dependency and build steps', () => {
   expect(writers.map(([name]) => name)).toEqual(['release']);
   const {build, release: publish} = release.jobs;
   expect(build.permissions).toEqual({contents: 'read'});
-  expect(publish.needs).toContain('build');
+  expect(publish.needs).toEqual(expect.arrayContaining(['build', 'nfpm', 'alpine', 'openwrt-apk', 'sums']));
   expect(publish.steps.some(step => step.run || step.uses?.startsWith('actions/checkout@'))).toBe(false);
-  expect(uses(publish, 'actions/download-artifact').with.name).toBe(uses(build, 'actions/upload-artifact').with.name);
+  expect(uses(publish, 'actions/download-artifact').with.name).toBe(uses(release.jobs.sums, 'actions/upload-artifact').with.name);
+});
+
+it('publishes and waits for Check only on a tag push', () => {
+  expect(release.on.push.tags).toEqual(['v*']);
+  expect(release.on).toHaveProperty('workflow_dispatch');
+  expect(release.jobs.verified.if).toBe("github.event_name == 'push'");
+  expect(release.jobs.release.if).toBe("github.event_name == 'push'");
 });
 
 it('builds the release once, after the Check run on the tagged commit passed', () => {
