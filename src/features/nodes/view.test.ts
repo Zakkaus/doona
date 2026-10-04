@@ -1,3 +1,6 @@
+import {cachedRows} from '../../ui/tableHooks';
+import {steadyNodes} from '../../store/nodes';
+import {poll, steadyBase, withLatency} from '../../store/testHelpers';
 import {describe, expect, it} from 'vitest';
 import type {ConfigSource, Node, Provider} from '../../api/model';
 import {readSubscriptionEntries} from '../../dae/subscriptions';
@@ -107,7 +110,7 @@ describe('node rows', () => {
     const remote = provider('remote');
     const nodes = [node('local'), node('remote', {provider_id: 'remote'}), node('direct', {protocol: 'direct'})];
     const {list} = providerRows([remote], nodes, [], t);
-    const sourceOf = nodeSource(list, [remote]);
+    const sourceOf = nodeSource(new Map(list.map(item => [item.id, item.displayName ?? item.name])), [remote]);
     expect(nodes.map(sourceOf)).toEqual([t('nodes.kind.unattributed'), 'opaque-remote', t('nodes.kind.builtin')]);
     expect(sourceOf(node('gone', {provider_id: 'gone'}))).toBe('—');
   });
@@ -581,4 +584,20 @@ it.each([
   const entry = readSubscriptionEntries("subscription {\n  harbor: 'https://example.org/sub'\n}")[0];
   const form = {name: entry.tag, value: entry.url, interval: '', agent: '', cache: null, route: '', ...change};
   expect(providerChanges(form, entry, defaultCache)[field]).toBe(edited);
+});
+
+describe('row stability', () => {
+  it.each([
+    {name: 'probe times only', next: (nodes: Node[]) => poll(nodes), rebuilt: 0},
+    {name: 'one node’s latency', next: (nodes: Node[]) => withLatency(poll(nodes), 3, 99), rebuilt: 1}
+  ])('rebuilds only the rows whose node moved: $name', ({next, rebuilt}) => {
+    const cache = new WeakMap<Node, {id: string}>();
+    let built = 0;
+    const build = (node: Node) => (built++, {id: node.id});
+    const before = cachedRows(cache, steadyBase, build);
+    built = 0;
+    const after = cachedRows(cache, steadyNodes(steadyBase, next(steadyBase)), build);
+    expect(built).toBe(rebuilt);
+    expect(after.filter((row, i) => row !== before[i])).toHaveLength(rebuilt);
+  });
 });
