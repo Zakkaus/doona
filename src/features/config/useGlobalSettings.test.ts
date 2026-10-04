@@ -123,6 +123,15 @@ it('keeps stored hex ports visible and requires a valid edited value', () => {
   expect(read().dirty).toBe(false);
 });
 
+it('keeps the kind the stored value gives while the field is edited', () => {
+  config.data!.sources[0].content = 'global { tproxy_port: 12345 pprof_port: 0x10 }';
+  expect(field('tproxy_port').number).toMatchObject({value: 12345});
+  field('tproxy_port').change('123.5');
+  expect(field('tproxy_port').number).toMatchObject({value: 123.5});
+  field('pprof_port').change('16');
+  expect(field('pprof_port')).toMatchObject({value: '16', number: null});
+});
+
 it.each(['digest', 'source', 'section'])('blocks a draft after its %s changes', async change => {
   const source = config.data!.sources[0];
   source.content += '\nglobal { log_level: warn }';
