@@ -292,8 +292,8 @@ const captions = {
     'zh-TW': ['未固定：展開', '切換頁面後收合', '已固定：切換頁面後保持原狀', '嵌入側邊欄']
   }
 };
-// The sign-in pane, after `fill`, for a backend that answers discovery with `auth` and refuses every other read without
-// a session. The showcase beside it stays out: it is a placeholder.
+// The sign-in card, after `fill`, for a backend that answers discovery with `auth` and refuses every other read without
+// a session.
 async function signIn(browser, lang, auth, fill = async () => {}) {
   const context = await browser.newContext({...desktop, colorScheme: 'light', reducedMotion: 'reduce', serviceWorkers: 'block', timezoneId: 'UTC'});
   await context.addInitScript(lang => {
@@ -314,7 +314,7 @@ async function signIn(browser, lang, auth, fill = async () => {}) {
   await page.locator('.rp-login-page form input').first().waitFor();
   await page.evaluate(() => document.fonts.ready);
   await fill(page);
-  const png = await page.locator('.rp-login-pane').screenshot();
+  const png = await page.locator('.rp-login-card').screenshot();
   await context.close();
   return png;
 }

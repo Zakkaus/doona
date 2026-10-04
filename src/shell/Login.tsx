@@ -1,18 +1,10 @@
-import {lazy, Suspense} from 'react';
 import {useT, type Lang} from '../i18n';
 import {useLogin} from './useLogin';
-import {Button, ErrorMessage, Form, InlineAlert, Link, Loading, TextField} from '../ui/ui';
-import {sidebarQuery, useMediaQuery} from '../ui/hooks';
-import {LoadBoundary} from '../ui/LoadBoundary';
+import {Button, Card, ErrorMessage, Form, InlineAlert, Link, Loading, TextField} from '../ui/ui';
 import LinkOut from '../ui/icons/LinkOut';
 import logo from '../logo.svg';
 import {href} from './route';
 import {LanguageMenu, PaletteMenu, SchemeToggle, type PaletteMenuProps} from './AppearanceControls';
-
-// The panel beside the form loads only where it is shown, so the sign-in chunk stays the same size on a phone. Until it
-// arrives, or if it never does, the panel stays empty and the form works as before.
-const LoginShowcase = lazy(() => import('./LoginShowcase'));
-const emptyShowcase = <div className="rp-login-showcase" aria-hidden="true" />;
 
 type LoginProps = {
   profileId: string;
@@ -32,7 +24,8 @@ type LoginProps = {
   onRetry: () => void;
 };
 
-// The whole page until the backend accepts the credentials: nothing behind it works before then.
+// The whole page until the backend accepts the credentials: nothing behind it works before then. One card centred on
+// the page background, the same on a phone and a desktop, with the appearance controls in the corner.
 export function Login({
   profileId,
   api,
@@ -51,7 +44,6 @@ export function Login({
 }: LoginProps) {
   const t = useT();
   const view = useLogin(profileId, api, backend, rejected, missingApi);
-  const wide = useMediaQuery(sidebarQuery);
   const reveal = {shown: view.secretType === 'text', label: view.toggleText, onToggle: view.toggle};
   const links = (
     <div className="rp-login-links">
@@ -66,13 +58,13 @@ export function Login({
   );
   return (
     <div className="rp-login-page">
-      <div className="rp-login-pane">
-        <header className="rp-login-controls">
-          <LanguageMenu lang={lang} pickLang={pickLang} />
-          <PaletteMenu {...palette} />
-          <SchemeToggle dark={dark} label={themeLabel} toggle={toggleScheme} />
-        </header>
-        <main className="rp-login-column">
+      <header className="rp-login-controls">
+        <LanguageMenu lang={lang} pickLang={pickLang} />
+        <PaletteMenu {...palette} />
+        <SchemeToggle dark={dark} label={themeLabel} toggle={toggleScheme} />
+      </header>
+      <main className="rp-login-main">
+        <Card className="rp-login-card">
           <div className="rp-login-brand">
             <img src={logo} alt="" />
             <span className="rp-brand-text">
@@ -167,15 +159,8 @@ export function Login({
               {links}
             </>
           )}
-        </main>
-      </div>
-      {wide && (
-        <LoadBoundary fallback={emptyShowcase}>
-          <Suspense fallback={emptyShowcase}>
-            <LoginShowcase />
-          </Suspense>
-        </LoadBoundary>
-      )}
+        </Card>
+      </main>
     </div>
   );
 }

@@ -142,33 +142,6 @@ for (const chunk of ['Policies', 'AreaChart', 'Sparkline', 'Donut']) {
   });
 }
 
-test('a rejected showcase import leaves its panel empty and the sign-in form working', async ({browser}) => {
-  const context = await browser.newContext({serviceWorkers: 'block', viewport: {width: 1280, height: 800}});
-  const page = await context.newPage();
-  const uncaught: string[] = [];
-  page.on('pageerror', error => uncaught.push(error.message));
-  await page.addInitScript(() => {
-    localStorage.setItem('doona-profiles', JSON.stringify([{id: 'demo', name: 'Demo', api: 'mock', token: ''}]));
-    localStorage.setItem('doona-profile', 'demo');
-    localStorage.setItem('doona-lang', 'en');
-    sessionStorage.setItem('doona-stale-reload', String(Date.now()));
-  });
-  const rejected = page.waitForRequest(/\/LoginShowcase-[^/]+\.js$/);
-  await page.route('**/assets/LoginShowcase-*.js', route => route.abort());
-  try {
-    await page.goto('/#/activity');
-    await rejected;
-    const login = page.locator('.rp-login-page');
-    await expect(login.locator('.rp-login-showcase[aria-hidden="true"]')).toBeVisible();
-    await expect(login.locator('.rp-alert')).toHaveCount(0);
-    await Promise.all([page.waitForEvent('load'), login.getByRole('button', {name: 'Sign in', exact: true}).click()]);
-    await expect(page.locator('.rp-nav[href="#/activity"]')).toHaveAttribute('aria-current', 'page');
-    expect(uncaught).toEqual([]);
-  } finally {
-    await context.close();
-  }
-});
-
 // The page chunks the shell warms once signed in. On the demo the Activity chunk also carries code the mock backend
 // imports, so only a hosted backend leaves it out too.
 const pageChunks = ['SearchDialog', ...routes.filter(route => route !== 'activity').map(route => route[0].toUpperCase() + route.slice(1))];
@@ -259,40 +232,6 @@ test('a stale chunk whose reload is cancelled says doona was updated, and so doe
     await expect(page.locator('.rp-nav[href="#/nodes"]')).toHaveAttribute('aria-current', 'page');
     await expect(alert.getByRole('button', {name: 'Reload'})).toBeVisible();
   } finally {
-    await context.close();
-  }
-});
-
-test('a stale showcase chunk leaves the sign-in form as typed instead of reloading', async ({browser}) => {
-  const context = await browser.newContext({serviceWorkers: 'block', viewport: {width: 1280, height: 800}});
-  const page = await context.newPage();
-  await page.addInitScript(() => {
-    localStorage.setItem('doona-profiles', JSON.stringify([{id: 'demo', name: 'Demo', api: 'mock', token: ''}]));
-    localStorage.setItem('doona-profile', 'demo');
-    localStorage.setItem('doona-lang', 'en');
-  });
-  let loads = 0;
-  page.on('load', () => loads++);
-  let release!: () => void;
-  const gate = new Promise<void>(resolve => (release = resolve));
-  const rejected = page.waitForRequest(/\/LoginShowcase-[^/]+\.js$/);
-  await page.route('**/assets/LoginShowcase-*.js', async route => {
-    await gate;
-    await route.abort();
-  });
-  try {
-    await page.goto('/#/activity');
-    await rejected;
-    const login = page.locator('.rp-login-page');
-    await expect(login.getByRole('button', {name: 'Sign in', exact: true})).toBeVisible();
-    release();
-    await expect(login.locator('.rp-login-showcase[aria-hidden="true"]')).toBeVisible();
-    // A reload would have run by now; the page stays the one first loaded.
-    await page.waitForLoadState('networkidle');
-    expect(loads).toBe(1);
-    await expect(login.getByRole('button', {name: 'Sign in', exact: true})).toBeVisible();
-  } finally {
-    release();
     await context.close();
   }
 });

@@ -24,7 +24,7 @@ A page is marked unavailable only when every resource it needs is unavailable. T
 
 `Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere. Which resources each page needs, and where doona keeps its own settings, are on the [features page](https://zakkaus.github.io/doona-docs/en/features.html#pages). Help buttons beside unclear states and terms explain them.
 
-Sign-in is a page of its own with Language, Palette and Theme controls in the upper-right corner. From 1024 pixels wide, a panel beside the form shows a loading bar stuck at 99%; pressing it starts a Flappy Duck game, but under reduced motion the scene stands still and takes no presses. The demo fills in the user name `demo` and the password `demo`.
+Sign-in is a page of its own: one card centred on the theme background, with Language, Palette and Theme controls in the upper-right corner. The demo fills in the user name `demo` and the password `demo`.
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/en/rules-light.webp" alt="The rules page" width="100%">
 

@@ -10,7 +10,6 @@ const manifest = {
   '_activity.css': chunk('activity.css'),
   'src/shell/Login.tsx': chunk('login.js', {isDynamicEntry: true, imports: ['_vendor.js', '_loginOnly.js']}),
   '_loginOnly.js': chunk('loginOnly.js'),
-  'src/shell/LoginShowcase.tsx': chunk('showcase.js', {isDynamicEntry: true}),
   'src/ui/charts/Donut.tsx': chunk('donut.js', {isDynamicEntry: true, imports: ['_vendor.js']}),
   'src/ui/charts/AreaChart.tsx': chunk('area.js', {isDynamicEntry: true, imports: ['_chartMath.js']}),
   '_chartMath.js': chunk('chartMath.js'),
@@ -32,7 +31,6 @@ const bytes = {
   'activity.js': 200,
   'login.js': 20,
   'loginOnly.js': 30,
-  'showcase.js': 40,
   'donut.js': 50,
   'area.js': 60,
   'chartMath.js': 70,
@@ -70,7 +68,7 @@ it('closure survives import cycles and names a missing chunk', () => {
 
 // Shell is entry plus vendor (1100); the larger locale (9) counts, the smaller does not.
 it.each([
-  ['startupLogin', 'login', 1100 + 9 + 20 + 30 + 40],
+  ['startupLogin', 'login', 1100 + 9 + 20 + 30],
   ['startupActivity', 'activity', 1100 + 9 + 200 + 10 + 50 + 60 + 70 + 80],
   ['startupCss', 'activity', 3 + 4],
   ['mock', 'mock/index.ts', 1100 + 1200],
@@ -98,12 +96,12 @@ it('reports a manifest without the expected layout instead of passing', () => {
 });
 
 it('fails a budget with its name, size, limit and largest contributors', () => {
-  const results = evaluate(measure(manifest, size), {...limits, startupLogin: 1198, route: 700});
+  const results = evaluate(measure(manifest, size), {...limits, startupLogin: 1158, route: 700});
   expect(results.filter(({ok}) => !ok).map(({name}) => name)).toEqual(['startupLogin']);
   const failing = results.find(({name}) => name === 'startupLogin');
   expect(report(failing, 2)).toBe(
     [
-      'FAIL startupLogin: 1199 bytes gzip / 1198 limit (login), over by 1',
+      'FAIL startupLogin: 1159 bytes gzip / 1158 limit (login), over by 1',
       '  largest contributors:',
       '    assets/vendor.js: 1000 bytes gzip',
       '    assets/entry.js: 100 bytes gzip'
