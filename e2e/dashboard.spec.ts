@@ -685,6 +685,44 @@ test('an Auto chart lists its statistics once its footprint is two thirds of its
   await expect(history.locator('.rp-facts')).toBeHidden();
 });
 
+test('memory is a value tile like the traffic tiles, its figures beside the sparkline on wide cards', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 1000});
+  const memory = (instance: string, width: string) => ({id: 'memory', instance, form: 'sparkline', size: 'medium', width});
+  const item = (id: string, extra: object) => ({id, form: 'sparkline', size: 'medium', ...extra});
+  await seed(page, {
+    version: 3,
+    sections: [
+      {
+        id: 'extensions',
+        items: [
+          memory('memory', '1/2'),
+          item('download', {width: '1/2'}),
+          memory('memory-2', '2/3'),
+          item('upload', {width: '1/3'}),
+          memory('memory-3', 'full')
+        ]
+      }
+    ]
+  });
+  await page.goto('/#/activity');
+  for (const id of ['memory', 'memory-2', 'memory-3']) {
+    await expect(tile(page, id).locator('.rp-tile-body .rp-spark')).toBeVisible();
+    await expect(tile(page, id).locator('span.rp-tile-head')).toHaveText('Memory');
+  }
+  // A half, as the download beside it, draws no figures and has the download's height.
+  await expect(tile(page, 'memory').locator('.rp-facts')).toBeHidden();
+  expect(Math.abs((await height(tile(page, 'memory'))) - (await height(tile(page, 'download'))))).toBeLessThanOrEqual(1);
+  for (const id of ['memory-2', 'memory-3']) {
+    const strip = tile(page, id).locator('.rp-facts');
+    await expect(strip).toBeVisible();
+    await expect(strip.locator('dt')).toHaveText(['Resident memory peak', 'Resident memory average']);
+    expect((await box(strip)).height, id).toBeLessThanOrEqual((await box(tile(page, id).locator('.rp-tile-body .rp-spark'))).height + 1);
+    await expectTextInside(tile(page, id).locator('section').first());
+  }
+  // Two thirds beside a third keeps one height across the row.
+  expect(Math.abs((await height(tile(page, 'memory-2'))) - (await height(tile(page, 'upload'))))).toBeLessThanOrEqual(1);
+});
+
 test('source lists meter each reported quota and memory meters its cgroup limit, at their narrowest width', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 1000});
   const backend = await mockBackend(page);

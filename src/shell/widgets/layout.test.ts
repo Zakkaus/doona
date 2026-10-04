@@ -193,7 +193,7 @@ it.each([
 ])('%s: restoring it changes the layout: %s', (_name, value, changes) => expect(changesPanel({...defaults(), ...value})).toBe(changes));
 const idsWith = (has: (definition: (typeof registry)[WidgetId]) => unknown) => (Object.keys(registry) as WidgetId[]).filter(id => has(registry[id])).sort();
 it.each([
-  ['value tiles', idsWith(definition => definition.tile), ['download', 'upload', 'connections', 'cpu', 'latency']],
+  ['value tiles', idsWith(definition => definition.tile), ['download', 'upload', 'connections', 'cpu', 'latency', 'memory']],
   [
     'charted',
     idsWith(definition => definition.forms.some(form => form === 'area' || form === 'sparkline')),
