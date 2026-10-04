@@ -5,6 +5,7 @@ import {FileButton} from '../../ui/FileButton';
 import {Slider} from '../../ui/Slider';
 import {WallpaperThumb} from '../../ui/WallpaperThumb';
 import {DEFAULT_DIM, MAX_DIM, setWallpaper, useWallpaper, wallpaperState} from '../../shell/wallpaper';
+import {MAX_BLUR} from '../../shell/preferences';
 import {prepareWallpaper, WallpaperError, type WallpaperProblem} from './wallpaperImage';
 
 const problems: Record<WallpaperProblem, Key> = {
@@ -88,6 +89,16 @@ export function WallpaperSettings() {
           onChangeEnd={dim => void setWallpaper({...wallpaper, dim})}
         />
       )}
+    </div>
+  );
+}
+
+// The blur strength of every glass surface, with or without a custom wallpaper.
+export function BlurSetting({value, onChange}: {value: number; onChange: (value: number) => void}) {
+  const t = useT();
+  return (
+    <div className="rp-field" data-setting="blur">
+      <Slider label={t('settings.blur')} value={value} maxValue={MAX_BLUR} step={0.01} formatOptions={percent} onChange={onChange} />
     </div>
   );
 }

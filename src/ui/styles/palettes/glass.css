@@ -3,6 +3,12 @@
    ../glass.css draws them from the material tokens set here. Each material tunes its own wallpaper, fills and blur;
    the blur and opacity values are doona's. */
 :root[data-family='glass'] {
+  /* Settings > Appearance > Blur multiplies every material's blur radius below by --rp-blur-scale, 0 to 1.5, which
+     src/shell/useAppearance.ts sets on the root; each material keeps its own radii in proportion. Under 1 the
+     backdrop shows sharper behind text, so each blurred fill's alpha rises by (1 - min(scale, 1)) * 0.2: 0.2 more
+     with no blur, nothing from 1 up, so label and secondary text keep 4.5:1. The lens keeps its own blur. */
+  --rp-blur-scale: 1;
+  --rp-fill-boost: calc((1 - min(var(--rp-blur-scale), 1)) * 0.2);
   /* Apple's label is black and placeholderText is tertiaryLabel. Its secondaryLabel, rgba(60, 60, 67, 0.6), falls
      under 4.5:1 on a translucent card over the wallpaper, so secondary text keeps the stronger systemGray3 of dark
      (R-72,G-72,B-74), and muted text keeps systemGray (R-142,G-142,B-147), both from the HIG's colour page. */
@@ -79,15 +85,15 @@
     radial-gradient(40% 50% at 74% 84%, rgba(255, 149, 0, 0.55), rgba(255, 149, 0, 0) 72%),
     radial-gradient(36% 46% at 26% 88%, rgba(52, 199, 89, 0.5), rgba(52, 199, 89, 0) 72%),
     radial-gradient(28% 36% at 52% 56%, rgba(175, 82, 222, 0.45), rgba(175, 82, 222, 0) 72%), linear-gradient(160deg, #e3eaf8 0%, #f1e8f4 50%, #f8eee2 100%);
-  --rp-chrome: rgba(255, 255, 255, 0.3);
-  --rp-chrome-filter: blur(16px) saturate(1.8);
+  --rp-chrome: rgba(255, 255, 255, calc(0.3 + var(--rp-fill-boost)));
+  --rp-chrome-filter: blur(calc(16px * var(--rp-blur-scale))) saturate(1.8);
   --rp-column: transparent;
-  --rp-card-fill: rgba(255, 255, 255, 0.4);
-  --rp-card-filter: blur(12px) saturate(1.7);
-  --rp-panel-fill: rgba(255, 255, 255, 0.4);
-  --rp-panel-filter: blur(14px) saturate(1.8) brightness(1.04);
-  --rp-float-fill: rgba(255, 255, 255, 0.74);
-  --rp-float-filter: blur(14px) saturate(1.8) brightness(1.04);
+  --rp-card-fill: rgba(255, 255, 255, calc(0.4 + var(--rp-fill-boost)));
+  --rp-card-filter: blur(calc(12px * var(--rp-blur-scale))) saturate(1.7);
+  --rp-panel-fill: rgba(255, 255, 255, calc(0.4 + var(--rp-fill-boost)));
+  --rp-panel-filter: blur(calc(14px * var(--rp-blur-scale))) saturate(1.8) brightness(1.04);
+  --rp-float-fill: rgba(255, 255, 255, calc(0.74 + var(--rp-fill-boost)));
+  --rp-float-filter: blur(calc(14px * var(--rp-blur-scale))) saturate(1.8) brightness(1.04);
   --rp-table-head: rgba(255, 255, 255, 0.5);
 }
 :root[data-family='glass'][data-scheme='dark'],
@@ -158,10 +164,10 @@
     radial-gradient(40% 50% at 74% 84%, rgba(255, 159, 10, 0.32), rgba(255, 159, 10, 0) 72%),
     radial-gradient(36% 46% at 26% 88%, rgba(48, 209, 88, 0.28), rgba(48, 209, 88, 0) 72%),
     radial-gradient(28% 36% at 52% 56%, rgba(191, 90, 242, 0.4), rgba(191, 90, 242, 0) 72%), linear-gradient(160deg, #070a17 0%, #110c1e 50%, #05131a 100%);
-  --rp-chrome: rgba(22, 22, 26, 0.46);
-  --rp-card-fill: rgba(30, 30, 34, 0.5);
-  --rp-panel-fill: rgba(30, 30, 34, 0.52);
-  --rp-float-fill: rgba(36, 36, 40, 0.78);
+  --rp-chrome: rgba(22, 22, 26, calc(0.46 + var(--rp-fill-boost)));
+  --rp-card-fill: rgba(30, 30, 34, calc(0.5 + var(--rp-fill-boost)));
+  --rp-panel-fill: rgba(30, 30, 34, calc(0.52 + var(--rp-fill-boost)));
+  --rp-float-fill: rgba(36, 36, 40, calc(0.78 + var(--rp-fill-boost)));
   --rp-table-head: rgba(30, 30, 34, 0.5);
 }
 
@@ -180,15 +186,15 @@
     radial-gradient(40% 50% at 12% 14%, rgba(90, 200, 250, 0.5), rgba(90, 200, 250, 0) 70%),
     radial-gradient(36% 46% at 90% 16%, rgba(175, 82, 222, 0.36), rgba(175, 82, 222, 0) 70%),
     radial-gradient(44% 52% at 84% 90%, rgba(52, 199, 89, 0.36), rgba(52, 199, 89, 0) 70%), linear-gradient(160deg, #f5f5f5 0%, #f2f0f5 50%, #f5f2ee 100%);
-  --rp-chrome: rgba(255, 255, 255, 0.6);
-  --rp-chrome-filter: blur(24px);
+  --rp-chrome: rgba(255, 255, 255, calc(0.6 + var(--rp-fill-boost)));
+  --rp-chrome-filter: blur(calc(24px * var(--rp-blur-scale)));
   --rp-column: rgba(255, 255, 255, 0.16);
-  --rp-card-fill: rgba(255, 255, 255, 0.6);
-  --rp-card-filter: blur(24px);
-  --rp-panel-fill: rgba(255, 255, 255, 0.6);
-  --rp-panel-filter: blur(24px);
-  --rp-float-fill: rgba(255, 255, 255, 0.6);
-  --rp-float-filter: blur(24px);
+  --rp-card-fill: rgba(255, 255, 255, calc(0.6 + var(--rp-fill-boost)));
+  --rp-card-filter: blur(calc(24px * var(--rp-blur-scale)));
+  --rp-panel-fill: rgba(255, 255, 255, calc(0.6 + var(--rp-fill-boost)));
+  --rp-panel-filter: blur(calc(24px * var(--rp-blur-scale)));
+  --rp-float-fill: rgba(255, 255, 255, calc(0.6 + var(--rp-fill-boost)));
+  --rp-float-filter: blur(calc(24px * var(--rp-blur-scale)));
   --rp-table-head: rgba(255, 255, 255, 0.6);
 }
 :root[data-flavour='frosted'][data-scheme='dark'] {
@@ -203,15 +209,15 @@
     radial-gradient(40% 50% at 12% 14%, rgba(100, 210, 255, 0.3), rgba(100, 210, 255, 0) 70%),
     radial-gradient(36% 46% at 90% 16%, rgba(191, 90, 242, 0.3), rgba(191, 90, 242, 0) 70%),
     radial-gradient(44% 52% at 84% 90%, rgba(48, 209, 88, 0.24), rgba(48, 209, 88, 0) 70%), linear-gradient(160deg, #0a0a0a 0%, #100e14 50%, #0c0d0a 100%);
-  --rp-chrome: rgba(38, 38, 38, 0.6);
-  --rp-chrome-filter: blur(24px);
+  --rp-chrome: rgba(38, 38, 38, calc(0.6 + var(--rp-fill-boost)));
+  --rp-chrome-filter: blur(calc(24px * var(--rp-blur-scale)));
   --rp-column: rgba(0, 0, 0, 0.14);
-  --rp-card-fill: rgba(23, 23, 23, 0.5);
-  --rp-card-filter: blur(24px);
-  --rp-panel-fill: rgba(38, 38, 38, 0.6);
-  --rp-panel-filter: blur(24px);
-  --rp-float-fill: rgba(38, 38, 38, 0.6);
-  --rp-float-filter: blur(24px);
+  --rp-card-fill: rgba(23, 23, 23, calc(0.5 + var(--rp-fill-boost)));
+  --rp-card-filter: blur(calc(24px * var(--rp-blur-scale)));
+  --rp-panel-fill: rgba(38, 38, 38, calc(0.6 + var(--rp-fill-boost)));
+  --rp-panel-filter: blur(calc(24px * var(--rp-blur-scale)));
+  --rp-float-fill: rgba(38, 38, 38, calc(0.6 + var(--rp-fill-boost)));
+  --rp-float-filter: blur(calc(24px * var(--rp-blur-scale)));
   --rp-table-head: rgba(23, 23, 23, 0.5);
 }
 
@@ -268,11 +274,11 @@
    the scroll edge and controls on the wallpaper keep a plain blur (../glass.css), as the lens would show on them only
    as a bright rim. Menus and dialogs sit over the page's text rather than the wallpaper, so their fill stays thicker. */
 :root[data-flavour='glass'][data-lens] {
-  --rp-panel-filter: blur(4px) url(#doona-lens) saturate(1.8) brightness(1.04);
+  --rp-panel-filter: blur(calc(4px * var(--rp-blur-scale))) url(#doona-lens) saturate(1.8) brightness(1.04);
   --rp-card-filter: var(--rp-panel-filter);
   --rp-hubbar-filter: var(--rp-card-filter);
-  --rp-lens-sm: blur(6px) url(#doona-lens-sm) saturate(1.8) brightness(1.04);
-  --rp-ctl-filter: blur(12px) saturate(1.7);
+  --rp-lens-sm: blur(calc(6px * var(--rp-blur-scale))) url(#doona-lens-sm) saturate(1.8) brightness(1.04);
+  --rp-ctl-filter: blur(calc(12px * var(--rp-blur-scale))) saturate(1.7);
   --rp-float-fill: rgba(255, 255, 255, 0.56);
 }
 :root[data-flavour='glass'][data-scheme='dark'][data-lens] {

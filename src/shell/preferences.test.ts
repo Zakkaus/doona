@@ -1,7 +1,8 @@
 import {describe, expect, it} from 'vitest';
 import {consumeProfileReadError, detectHostedBackend, hostedRoot, normalizeApi, normalizeProfiles, readProfiles, writeProfiles} from '../api/profiles';
-import {readFlagOverrides, updateFlagOverride, writeSetting, readSettings, shouldOpenSettings} from './preferences';
+import {DEFAULT_BLUR, readBlur, readFlagOverrides, updateFlagOverride, writeSetting, readSettings, shouldOpenSettings} from './preferences';
 import {routePaths} from './routes';
+import glassPalettes from '../ui/styles/palettes/glass.css?raw';
 
 describe('backend URL normalization', () => {
   it.each([
@@ -230,4 +231,34 @@ it.each(['Japan\u202801', 'Japan\u202901', 'Japan' + '😀'.repeat(253)])('round
   const stored = updateFlagOverride({}, name, 'TW');
   expect(readFlagOverrides(storageFrom([['doona-flag-overrides', JSON.stringify(stored)]]))).toEqual(stored);
   expect(stored[`node:${name}`]).toBe('TW');
+});
+
+describe('glass blur strength', () => {
+  it("defaults to today's blur when nothing is stored", () => {
+    expect(DEFAULT_BLUR).toBe(1);
+    expect(readSettings(storageFrom([])).blur).toBe(1);
+  });
+  it.each([
+    ['0.5', 0.5],
+    ['0', 0],
+    ['1.5', 1.5],
+    ['2', 1.5],
+    ['-1', 0],
+    ['', 1],
+    ['wide', 1],
+    [null, 1]
+  ])('reads %s as %s', (stored, scale) => expect(readBlur(stored)).toBe(scale));
+  it('round trips through storage', () => {
+    const storage = storageFrom([]);
+    writeSetting('blur', '0.25', storage);
+    expect(readSettings(storage).blur).toBe(0.25);
+  });
+  // Every material blur scales with the setting; only the lens keeps its own.
+  it('scales every material blur radius', () => {
+    const blurs = [...glassPalettes.matchAll(/--rp-(?:chrome|card|panel|float)-filter:[^;]*\bblur\((.*?)\)(?=[ ;])[^;]*/g)].filter(
+      ([line]) => !line.includes('url(')
+    );
+    expect(blurs.length).toBeGreaterThan(0);
+    for (const [, radius] of blurs) expect(radius).toMatch(/^calc\(\d+px \* var\(--rp-blur-scale\)\)$/);
+  });
 });

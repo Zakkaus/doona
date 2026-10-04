@@ -1481,6 +1481,7 @@
   "settings.appearance": "外觀",
   "settings.apply": "套用",
   "settings.backend": "後端",
+  "settings.blur": "模糊程度",
   "settings.copyErrors": "複製最近錯誤",
   "settings.copyErrorsNone": "沒有可複製的錯誤",
   "settings.cors": "網路或跨網域請求失敗：請確認後端可連線並允許此來源。",

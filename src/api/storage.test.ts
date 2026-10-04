@@ -9,6 +9,7 @@ it('keeps the keys browsers already hold', () => {
     'doona-nav-groups',
     'doona-scheme',
     'doona-palette',
+    'doona-blur',
     'doona-wordmark',
     'doona-mirror',
     'doona-country-flags',

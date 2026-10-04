@@ -25,13 +25,14 @@ function watchScroll() {
   update();
 }
 
-export function applyAppearance(dark: boolean, palette: PaletteId, wordmark: Wordmark) {
+export function applyAppearance(dark: boolean, palette: PaletteId, wordmark: Wordmark, blur: number) {
   const [family, flavour] = palette.split('/');
   const d = document.documentElement.dataset;
   d.scheme = dark ? 'dark' : 'light';
   d.family = family;
   d.flavour = flavour;
   d.wordmark = wordmark;
+  document.documentElement.style.setProperty('--rp-blur-scale', String(blur));
   // Glass's lens filters load with the palette, once; the stylesheet uses them while the root carries data-lens.
   if (palette === 'glass/glass' && d.lens === undefined)
     void import('../ui/lens').then(({installLens}) => {
@@ -42,6 +43,7 @@ export function applyAppearance(dark: boolean, palette: PaletteId, wordmark: Wor
 export function useAppearance(stored: Settings) {
   const [scheme, setScheme] = useState<Scheme>(stored.scheme);
   const [palette, setPalette] = useState<PaletteId>(stored.palette);
+  const [blur, setBlur] = useState(stored.blur);
   const [wordmark, setWordmark] = useState<Wordmark>(stored.wordmark);
   const [mirrored, setMirrored] = useState(stored.mirrored);
   const [flagOverrides, setFlagOverrides] = useState(stored.flagOverrides);
@@ -53,7 +55,7 @@ export function useAppearance(stored: Settings) {
   const [timeFormat, setTimeFormatState] = useState<TimeFormat>(stored.timeFormat);
   const sysDark = useMediaQuery('(prefers-color-scheme: dark)');
   const dark = scheme === 'dark' || (scheme === 'system' && sysDark);
-  useLayoutEffect(() => applyAppearance(dark, palette, wordmark), [dark, palette, wordmark]);
+  useLayoutEffect(() => applyAppearance(dark, palette, wordmark, blur), [dark, palette, wordmark, blur]);
   const pickScheme = useCallback((next: Scheme) => {
     withCrossfade(() => setScheme(next));
     writeSetting('scheme', next);
@@ -63,6 +65,10 @@ export function useAppearance(stored: Settings) {
   const pickPalette = useCallback((next: PaletteId) => {
     withCrossfade(() => setPalette(next));
     writeSetting('palette', next);
+  }, []);
+  const pickBlur = useCallback((next: number) => {
+    setBlur(next);
+    writeSetting('blur', String(next));
   }, []);
   const pickWordmark = useCallback((next: Wordmark) => {
     setWordmark(next);
@@ -116,6 +122,8 @@ export function useAppearance(stored: Settings) {
       pickScheme,
       palette,
       pickPalette,
+      blur,
+      pickBlur,
       wordmark,
       pickWordmark,
       mirrored,
@@ -142,6 +150,8 @@ export function useAppearance(stored: Settings) {
       pickScheme,
       palette,
       pickPalette,
+      blur,
+      pickBlur,
       wordmark,
       pickWordmark,
       mirrored,

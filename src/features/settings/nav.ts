@@ -47,6 +47,7 @@ type SettingsFieldId =
   | 'sparklines'
   | 'mirrored'
   | 'wallpaper'
+  | 'blur'
   | 'probeMethod'
   | 'probeFamily'
   | 'probeWarmth'
@@ -80,6 +81,7 @@ export const settingsFields: ReadonlyArray<SettingsField> = [
   {id: 'sparklines', card: 'appearance', labelKey: 'settings.sparklines', aliases: ['sparklines']},
   {id: 'mirrored', card: 'appearance', labelKey: 'settings.mirror', aliases: ['rtl']},
   {id: 'wallpaper', card: 'appearance', labelKey: 'settings.wallpaper', aliases: ['background', 'image']},
+  {id: 'blur', card: 'appearance', labelKey: 'settings.blur'},
   {id: 'probeMethod', card: 'probes', labelKey: 'settings.probeMethod'},
   {id: 'probeFamily', card: 'probes', labelKey: 'settings.probeFamily', aliases: ['ipv4', 'ipv6']},
   {id: 'probeWarmth', card: 'probes', labelKey: 'settings.probeWarmth'},

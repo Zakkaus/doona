@@ -57,8 +57,15 @@
 .rp-switch[data-selected] .track::after {
   transform: translateX(calc(16px * var(--rp-dir)));
 }
-/* S2 Slider: the label and value on one line over a 4px track, filled up to a round handle of 20px at M and 22px at
-   L. */
+/* S2 Slider, emphasized, with its thin track and default thumb. The label and the value share the line above the
+   track and span its width, the value end-aligned in tabular figures and as wide as the longest value. The track's box
+   is the control height; the 4px track in its middle has S2's large radius, so its ends are round. Unfilled, it is
+   S2's gray-300, here half the muted grey over what lies beneath, so it still shows on a glass card; the fill is the
+   emphasized accent-900, the accent here as on the Switch. The thumb is 20px at M and 22px at L, a 2px gray-800 ring
+   (text here) around gray-25 (the opaque card colour of the Glass palettes, else the surface), centred on the track.
+   S2 darkens the ring to gray-900 on hover and drag, and doona's text is already the end of its scale, so the ring
+   keeps it; a drag sinks the thumb as S2's pressScale does (motion.css). Disabled, the label, the value, both tracks
+   and the ring take S2's disabled grey, the muted grey here. */
 .rp-range {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -69,6 +76,10 @@
   font-size: var(--rp-text-xs);
   line-height: var(--rp-line-caption);
   color: var(--rp-subtle);
+}
+.rp-range .out {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
 }
 .rp-range .track {
   grid-column: 1 / -1;
@@ -84,25 +95,25 @@
   position: absolute;
   inset-block-start: calc(50% - 2px);
   block-size: 4px;
-  border-radius: 2px;
+  border-radius: var(--rp-r-lg);
 }
 .rp-range .track::before {
   inset-inline: 0;
-  background: var(--rp-hl-high);
+  background: color-mix(in srgb, var(--rp-muted) 50%, transparent);
 }
 .rp-range .fill {
   inset-inline-start: 0;
-  background: var(--rp-text);
+  background: var(--rp-accent);
 }
 .rp-range .thumb {
   --rp-thumb: 20px;
-  inset-block-start: calc(50% - var(--rp-thumb) / 2);
+  inset-block-start: 50%;
   inline-size: var(--rp-thumb);
   block-size: var(--rp-thumb);
   box-sizing: border-box;
   border: 2px solid var(--rp-text);
   border-radius: 50%;
-  background: var(--rp-surface);
+  background: var(--rp-solid-card, var(--rp-surface));
   cursor: grab;
 }
 .rp-range[data-size='L'] .thumb {
@@ -114,6 +125,17 @@
 .rp-range .thumb[data-focus-visible] {
   outline: var(--rp-focus-width) solid var(--rp-focus-color);
   outline-offset: 2px;
+}
+.rp-range[data-disabled] .lbl {
+  color: var(--rp-muted);
+}
+.rp-range[data-disabled] .track::before,
+.rp-range[data-disabled] .fill {
+  background: var(--rp-muted);
+}
+.rp-range[data-disabled] .thumb {
+  border-color: var(--rp-muted);
+  cursor: default;
 }
 .rp-switch[data-disabled],
 .rp-radio[data-disabled],
