@@ -1,9 +1,9 @@
-import {useId} from 'react';
+import {useId, type FormEvent} from 'react';
 import {useT} from '../../i18n';
 import {ConditionRow} from '../../ui/ConditionRow';
 import {DaeCode} from '../../ui/DaeCode';
 import {SearchSelect} from '../../ui/SearchSelect';
-import {Button, ConfirmDialog, DialogForm, LabeledSelect, Segmented, StaticField, Switch, TextField, Toolbar} from '../../ui/ui';
+import {Button, ConfirmDialog, DialogSections, Form, LabeledSelect, Segmented, StaticField, Switch, TextField, Toolbar} from '../../ui/ui';
 import type {RuleConditionKind} from '../../dae/groups';
 import type {DictionaryModel} from './useRuleList';
 
@@ -12,6 +12,13 @@ export function RuleDialogs({view}: {view: DictionaryModel}) {
   const {form, setForm, draft, dialog} = view;
   const {target} = view.copy;
   const mustHelpId = useId();
+  const formId = useId();
+  // Enter in a field submits, as the action button does, and is refused while the button is disabled.
+  const submit = () => void view.submit(view.close);
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!view.submitDisabled && !view.busy) submit();
+  };
   const targetFields = (
     <>
       <Toolbar className="end">
@@ -47,7 +54,7 @@ export function RuleDialogs({view}: {view: DictionaryModel}) {
     </>
   );
   const conditionFields = (
-    <DialogForm onSubmit={event => event.preventDefault()}>
+    <DialogSections>
       {view.conditions?.map(row => (
         <ConditionRow
           key={row.id}
@@ -83,7 +90,7 @@ export function RuleDialogs({view}: {view: DictionaryModel}) {
           {t('rule.addCondition')}
         </Button>
       </Toolbar>
-    </DialogForm>
+    </DialogSections>
   );
   return (
     <ConfirmDialog
@@ -96,7 +103,7 @@ export function RuleDialogs({view}: {view: DictionaryModel}) {
       isDisabled={view.submitDisabled}
       reason={view.submitReason}
       isPending={view.busy}
-      onConfirm={() => void view.submit(view.close)}
+      {...(dialog?.kind === 'remove' ? {onConfirm: submit} : {form: formId})}
     >
       {dialog?.kind === 'remove' && (
         <div className="rp-list">
@@ -105,7 +112,7 @@ export function RuleDialogs({view}: {view: DictionaryModel}) {
         </div>
       )}
       {dialog?.kind === 'edit' && (
-        <div className="rp-list">
+        <Form id={formId} className="rp-list" validationBehavior="aria" onSubmit={onSubmit}>
           <span className="rp-label">{t(dialog.fallback ? 'rule.editFallbackHelp' : view.conditions ? 'rule.editHelp' : 'rule.editExpressionHelp')}</span>
           <DaeCode text={dialog.expression} />
           {!dialog.fallback &&
@@ -122,10 +129,10 @@ export function RuleDialogs({view}: {view: DictionaryModel}) {
               />
             ))}
           {targetFields}
-        </div>
+        </Form>
       )}
       {dialog?.kind === 'add' && (
-        <div className="rp-list">
+        <Form id={formId} className="rp-list" validationBehavior="aria" onSubmit={onSubmit}>
           <span className="rp-label">{draft.mode === 'pick' ? view.copy.addHelp : t('rule.addExpressionHelp')}</span>
           <Segmented
             isDisabled={view.busy}
@@ -167,7 +174,7 @@ export function RuleDialogs({view}: {view: DictionaryModel}) {
               sections={view.table.positionSections}
             />
           )}
-        </div>
+        </Form>
       )}
     </ConfirmDialog>
   );

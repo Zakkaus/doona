@@ -1,3 +1,4 @@
+import {useId} from 'react';
 import {useT} from '../../i18n';
 import {
   ActionHelp,
@@ -8,6 +9,7 @@ import {
   DataTable,
   Disclosure,
   ErrorMessage,
+  Form,
   Kv,
   LabeledSelect,
   Link,
@@ -30,6 +32,7 @@ const geodataRows = ['settings.geodataSource', 'settings.geodataRoute', 'setting
 export function GeodataSettingsCard() {
   const t = useT();
   const m = useGeodataSettings();
+  const urlFormId = useId();
   if (!m.available) return null;
   return (
     <Card level={2} title={t(card.titleKey)} titleId={card.headingId}>
@@ -256,40 +259,50 @@ export function GeodataSettingsCard() {
           isOpen
           onCancel={m.dialog.cancel}
           confirmLabel={m.dialog.confirm}
-          onConfirm={m.dialog.save}
+          form={urlFormId}
           isPending={m.dialog.pending}
           isDisabled={m.dialog.blocked}
         >
-          {m.dialog.lists.map(list => (
-            <div key={list.kind} className="rp-field" role="group" aria-label={list.kind}>
-              {list.fields.map(field => (
-                <TextField
-                  key={field.id}
-                  type="url"
-                  className="rp-url-field"
-                  spellCheck={false}
-                  autoComplete="off"
-                  label={field.label}
-                  value={field.value}
-                  error={field.error}
-                  isDisabled={m.dialog?.pending}
-                  onChange={field.change}
-                  action={
-                    <>
-                      <Button quiet icon small label={field.upLabel} isDisabled={m.dialog?.pending || !field.up} onPress={field.up}>
-                        <ChevronDown className="rp-up" />
-                      </Button>
-                      <Button quiet icon small label={field.downLabel} isDisabled={m.dialog?.pending || !field.down} onPress={field.down}>
-                        <ChevronDown />
-                      </Button>
-                    </>
-                  }
-                />
-              ))}
-              {list.empty && <span className="rp-label">{t('settings.geodataUrlRequired')}</span>}
-            </div>
-          ))}
-          <span className="rp-label">{t('settings.geodataUrlHelp')}</span>
+          <Form
+            id={urlFormId}
+            className="rp-contents"
+            validationBehavior="aria"
+            onSubmit={event => {
+              event.preventDefault();
+              if (m.dialog && !m.dialog.blocked) m.dialog.save();
+            }}
+          >
+            {m.dialog.lists.map(list => (
+              <div key={list.kind} className="rp-field" role="group" aria-label={list.kind}>
+                {list.fields.map(field => (
+                  <TextField
+                    key={field.id}
+                    type="url"
+                    className="rp-url-field"
+                    spellCheck={false}
+                    autoComplete="off"
+                    label={field.label}
+                    value={field.value}
+                    error={field.error}
+                    isDisabled={m.dialog?.pending}
+                    onChange={field.change}
+                    action={
+                      <>
+                        <Button quiet icon small label={field.upLabel} isDisabled={m.dialog?.pending || !field.up} onPress={field.up}>
+                          <ChevronDown className="rp-up" />
+                        </Button>
+                        <Button quiet icon small label={field.downLabel} isDisabled={m.dialog?.pending || !field.down} onPress={field.down}>
+                          <ChevronDown />
+                        </Button>
+                      </>
+                    }
+                  />
+                ))}
+                {list.empty && <span className="rp-label">{t('settings.geodataUrlRequired')}</span>}
+              </div>
+            ))}
+            <span className="rp-label">{t('settings.geodataUrlHelp')}</span>
+          </Form>
         </ConfirmDialog>
       )}
     </Card>
