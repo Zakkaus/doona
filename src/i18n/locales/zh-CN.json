@@ -907,7 +907,6 @@
   "nodes.kind.inline": "配置内",
   "nodes.kind.subscription": "订阅",
   "nodes.kind.unattributed": "未归属",
-  "nodes.kindLabel": "种类",
   "nodes.latency": "延迟",
   "nodes.latency.andMore": "{names}，{more}",
   "nodes.latency.average": "平均",

@@ -7,6 +7,9 @@ import {expect, isLive, offered, routes, test, detail, mockBackend} from './fixt
 const knownContrast = new Set(['#797593 on #faf4ed', '#797593 on #fffaf3', '#908caa on #232136', '#908caa on #2a273f']);
 // Highlighted rule tokens take the palette's official code colours, which doona does not change; other text is checked.
 const highlighted = (html: string) => /^<span class="rp-dae-(comment|string|keyword|number|propertyName|variableName|punctuation|operator)">/.test(html);
+// React Aria's Meter names `progressbar` as the fallback for `meter`, as ARIA allows, but axe reads no role from the pair
+// and then rejects the meter's value attributes. Only that pair is let through; any other attribute finding fails.
+const meterFallback = (html: string) => /^<div [^>]*role="meter progressbar"/.test(html);
 // The default look, its dark side, and glass, whose translucent surfaces depend on what lies beneath them.
 const looks = [
   ['rose-pine/moon', 'light'],
@@ -48,7 +51,9 @@ for (const [palette, scheme] of looks)
                           node => !highlighted(node.html) && !knownContrast.has(`${node.any[0]?.data?.fgColor} on ${node.any[0]?.data?.bgColor}`)
                         )
                 }
-              : rule
+              : rule.id === 'aria-allowed-attr'
+                ? {...rule, nodes: rule.nodes.filter(node => !meterFallback(node.html))}
+                : rule
           )
           .filter(rule => rule.nodes.length > 0);
         expect(

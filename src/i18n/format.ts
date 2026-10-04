@@ -36,9 +36,10 @@ export function formatDuration(seconds: string | null, locale: string): string {
   return unit(total, 'second');
 }
 const localTimes = new Map<string, Intl.DateTimeFormat>();
+// A date and time in the language's own order, on a 24-hour clock in every language.
 export function localTimeFormat(locale: string) {
   let formatter = localTimes.get(locale);
-  if (!formatter) localTimes.set(locale, (formatter = new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'medium'})));
+  if (!formatter) localTimes.set(locale, (formatter = new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'medium', hourCycle: 'h23'})));
   return formatter;
 }
 export function localTime(iso: string | null, locale: string): string {
@@ -46,6 +47,16 @@ export function localTime(iso: string | null, locale: string): string {
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return iso;
   return localTimeFormat(locale).format(t);
+}
+const localMinutes = new Map<string, Intl.DateTimeFormat>();
+// A date and time to the minute on a 24-hour clock, where the seconds would not fit.
+export function localMinute(iso: string | null, locale: string): string {
+  if (!iso) return '—';
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return iso;
+  let formatter = localMinutes.get(locale);
+  if (!formatter) localMinutes.set(locale, (formatter = new Intl.DateTimeFormat(locale, {dateStyle: 'short', timeStyle: 'short', hourCycle: 'h23'})));
+  return formatter.format(t);
 }
 // Each unit is a catalogue message around the formatted number, so a language writes its own symbol and spacing.
 export type UnitKey = Extract<Key, `unit.${string}`>;

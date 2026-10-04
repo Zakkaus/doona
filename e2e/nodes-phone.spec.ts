@@ -42,6 +42,13 @@ for (const width of [320, 360, 390])
         await page.keyboard.press('Escape');
         await expect(more).toBeFocused();
 
+        // The source cards' actions are M too, and every card stays inside the page.
+        const cards = content.locator('.rp-cardview [role=row]');
+        for (const button of await cards.getByRole('button').all()) {
+          await expect(button).toHaveAttribute('data-size', 'M');
+          expect((await size(button)).height).toBe(36);
+        }
+        for (const card of await cards.all()) expect(await card.evaluate(el => el.getBoundingClientRect().right <= innerWidth - 16 + 1)).toBe(true);
         await expect(content.locator('.rp-table-pan')).toHaveCount(0);
         for (const table of await tables.all()) {
           const grid = table.locator('[role=grid]');
@@ -105,12 +112,15 @@ for (const width of [320, 360, 390])
             await table.locator('[role=grid]').evaluate(el => {
               (el.tagName === 'TABLE' ? el.parentElement! : el).scrollLeft = 0;
             });
-          const source = tables.first().getByRole('row').filter({hasText: 'harbor'});
-          await source.getByRole('gridcell').nth(1).getByRole('button').last().click();
+          const source = content.locator('.rp-cardview [role=row]').filter({hasText: 'harbor'});
+          await source
+            .getByRole('button', {name: /harbor/})
+            .last()
+            .click();
           const positions = () =>
-            tables.evaluateAll(els =>
+            content.locator('.rp-table, .rp-cardview').evaluateAll(els =>
               els.map(el => {
-                const scroller = el.querySelector<HTMLElement>('[role=grid]')!;
+                const scroller = el.querySelector<HTMLElement>('[role=grid]') ?? (el as HTMLElement);
                 const box = el.getBoundingClientRect();
                 return {
                   left: box.left,
@@ -186,9 +196,9 @@ test.describe('390px touch nodes', () => {
     await page.setViewportSize({width: 390, height: 900});
     await page.goto('/#/nodes');
     await page.evaluate(() => document.fonts.ready);
-    await scrollTableToEnd(page.locator('.rp-table').nth(1).locator('[role=grid]'));
+    await scrollTableToEnd(page.locator('.rp-table').first().locator('[role=grid]'));
     await expectFittedGroupTags(page);
-    const more = page.locator('.rp-table').nth(1).locator('.rp-tag-more').first();
+    const more = page.locator('.rp-table').first().locator('.rp-tag-more').first();
     const tip = page.getByRole('tooltip');
     await page.keyboard.press('Escape');
     await expect(tip).toBeHidden();

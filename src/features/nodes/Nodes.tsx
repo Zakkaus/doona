@@ -2,7 +2,7 @@ import {useT} from '../../i18n';
 import {Button, HelpRow, ConfirmDialog, Empty, ErrorMessage, Link, ProblemAlert, ModalDialog, StaticField, Switch, Tabs, TextField} from '../../ui/ui';
 import {NodeLatency} from './Latency';
 import type {PageProps} from '../../shell/routes';
-import {ProviderTable} from './ProviderTable';
+import {ProviderCards} from './ProviderCards';
 import {NodeTable} from './NodeTable';
 import {useNodesPage} from './useNodesPage';
 import {SubscriptionFields} from './SubscriptionFields';
@@ -67,7 +67,7 @@ export function Nodes(props: PageProps) {
         </Empty>
       ) : (
         <>
-          <ProviderTable model={providerTable} />
+          <ProviderCards model={providerTable} />
           <NodeTable model={nodeTable} />
         </>
       )}

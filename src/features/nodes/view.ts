@@ -19,7 +19,7 @@ import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
 import {addU64, pctU64} from '../../api/u64';
-import {compareNames, localTime, formatBytes, formatLatency} from '../../i18n/format';
+import {compareNames, localMinute, localTime, formatBytes, formatLatency} from '../../i18n/format';
 import {backendCode, backendMessage, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
 import {isBareName, isQuotable} from '../../dae/text';
@@ -312,6 +312,8 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
           : formatBytes(used, locale),
     updatedAt: pseudo ? null : item.updated_at,
     expires: item.expires_at ? localTime(item.expires_at, locale) : '—',
+    // To the minute, for a card too narrow for the seconds; `expires` is its full form.
+    expiresShort: item.expires_at ? localMinute(item.expires_at, locale) : '—',
     quota: share === null ? null : {pct: share, tone: memoryTone(share)},
     interval: interval == null ? '—' : intervalText(interval, locale, t),
     status: pseudo ? null : never ? t('nodes.status.never') : enumLabel(statuses, item.status, t),

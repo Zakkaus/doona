@@ -122,7 +122,12 @@ for (const lang of ['en', 'zh-TW'] as const) {
           return {...list, providers: list.providers.map(provider => ({...provider, status: 'stale', updated_at: null, last_error: null}))};
         };
         await page.goto('/#/nodes');
-        await expectWholeToken(page.getByRole('gridcell', {name: lang === 'en' ? 'Not fetched' : '尚未擷取', exact: true}).first());
+        await expectWholeToken(
+          page
+            .locator('.rp-cardview')
+            .getByText(lang === 'en' ? 'Not fetched' : '尚未擷取', {exact: true})
+            .first()
+        );
       });
 
       test('Rules retain four-digit snapshot hit counts in both views', async ({page}) => {

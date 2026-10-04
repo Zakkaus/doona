@@ -9,13 +9,16 @@ import type {ProbeResult, Provider} from '../src/api/model';
 
 type ProbeResultItem = ProbeResult['results'][number];
 
-const nodeRows = (page: import('@playwright/test').Page) => page.locator('.rp-table').nth(1).locator('[role=row][data-key]');
+const nodeRows = (page: import('@playwright/test').Page) => page.locator('.rp-table').first().locator('[role=row][data-key]');
 
 const rows = (table: Locator) => table.locator('[role=rowgroup]:last-child [role=row][data-key]');
+// The node sources, as cards.
+const sourceGrid = (page: import('@playwright/test').Page) => page.locator('.rp-cardview');
+const sourceCards = (page: import('@playwright/test').Page) => sourceGrid(page).getByRole('row');
 
 test('nodes sort by name, latency and protocol, and filter by group and protocol', async ({page}) => {
   await page.goto('/#/nodes?provider=inline');
-  const table = page.locator('.rp-table').nth(1);
+  const table = page.locator('.rp-table').first();
   const list = rows(table);
   await expect(list).toHaveCount(5);
   await expect(list.first()).toContainText('hk-01');
@@ -46,7 +49,7 @@ test('a node list that comes back empty once is asked for again and shown', asyn
     {times: 1}
   );
   await page.goto('/#/nodes?provider=inline');
-  await expect(rows(page.locator('.rp-table').nth(1))).toHaveCount(5);
+  await expect(rows(page.locator('.rp-table').first())).toHaveCount(5);
   expect(dropped).toBe(1);
   expect(requests.some(request => new URL(request.url()).pathname === '/api/v1/nodes')).toBe(true);
 });
@@ -54,7 +57,7 @@ test('a node list that comes back empty once is asked for again and shown', asyn
 test('node cell content starts at its header text, including latency and action icons', async ({page}) => {
   await page.setViewportSize({width: 1440, height: 900});
   await page.goto('/#/nodes?provider=inline');
-  const table = page.locator('.rp-table').nth(1);
+  const table = page.locator('.rp-table').first();
   await expect(rows(table)).toHaveCount(5);
   await page.evaluate(() => document.fonts.ready);
   for (const label of ['Protocol', 'Latency', 'Groups', 'Actions']) {
@@ -81,7 +84,7 @@ test('node cell content starts at its header text, including latency and action 
 
 test('a share link becomes an inline node and can be removed again', async ({page}) => {
   await page.goto('/#/nodes?provider=inline');
-  const table = page.locator('.rp-table').nth(1);
+  const table = page.locator('.rp-table').first();
   const list = rows(table);
   await expect(list).toHaveCount(5);
   await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
@@ -114,7 +117,7 @@ test('include declarations block removal even when the main source also declares
   const removeNode = (name: string) => page.getByRole('button', {name: `Remove ${name}`, exact: true});
   await expect(removeNode('hk-01')).toBeEnabled();
   await expect(removeNode('eu-01')).toBeDisabled();
-  const sources = page.locator('.rp-table').first();
+  const sources = sourceGrid(page);
   const harbor = await moreItem(sources, 'Remove harbor', 'More actions for harbor');
   await expect(harbor).not.toHaveAttribute('aria-disabled', 'true');
   await page.keyboard.press('Escape');
@@ -136,7 +139,7 @@ test('include declarations block removal even when the main source also declares
 // The contract creates a provider unfetched; the page refreshes it right away so the person sees nodes, not "stale".
 test('a subscription is added, refreshed at once, and removed with its nodes', async ({page}) => {
   await page.goto('/#/nodes?tab=list');
-  const sources = rows(page.locator('.rp-table').first());
+  const sources = sourceCards(page);
   await sources.first().waitFor({state: 'visible'});
   await expect(sources).toHaveCount(2);
   await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
@@ -185,7 +188,7 @@ test('an open source menu keeps Remove in place when its edit action becomes ava
   const response = page.waitForResponse(response => response.url().endsWith('/api/v1/config'));
   release();
   await response;
-  await expect(rows(page.locator('.rp-table').first()).filter({hasText: 'harbor'})).toContainText('Every 6 hours');
+  await expect(sourceCards(page).filter({hasText: 'harbor'})).toContainText('Every 6 hours');
   await page.mouse.click(before.x + before.width / 2, before.y + before.height / 2);
   const confirmation = page.getByRole('alertdialog', {name: 'Remove node source harbor', exact: true});
   await expect(confirmation).toBeVisible();
@@ -413,7 +416,7 @@ async function udpOnlyNode(page: Parameters<typeof mockBackend>[0], rows: (row: 
 test('a UDP-only node is measured through the node, and the table shows its latency', async ({page}) => {
   const kinds = await udpOnlyNode(page, row => ({...row, state: 'healthy', latency_ms: 42, error: null}));
   await page.goto('/#/nodes?provider=inline');
-  const row = rows(page.locator('.rp-table').nth(1)).filter({hasText: 'hk-01'});
+  const row = rows(page.locator('.rp-table').first()).filter({hasText: 'hk-01'});
   await expect(row).toContainText('Unavailable');
   await page.getByRole('button', {name: 'Test hk-01', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('hk-01: 42 ms');
@@ -426,7 +429,7 @@ test('an unavailable latency fits its column in English at 1440 px', async ({pag
   await udpOnlyNode(page, row => row);
   await page.setViewportSize({width: 1440, height: 900});
   await page.goto('/#/nodes?provider=inline');
-  const latency = rows(page.locator('.rp-table').nth(1)).filter({hasText: 'hk-01'}).locator('.ms.err');
+  const latency = rows(page.locator('.rp-table').first()).filter({hasText: 'hk-01'}).locator('.ms.err');
   await expect(latency).toHaveText('Unavailable');
   const {text, room} = await latency.evaluate(el => {
     const cell = el.closest<HTMLElement>('[role="gridcell"]')!;
@@ -485,7 +488,7 @@ test.describe('long lists', () => {
   test('a node list of thousands renders only the visible rows', async ({page}) => {
     await page.goto('/#/nodes?provider=harbor');
     await expect(page.locator('.rp-toolbar').nth(1)).toContainText('3,000 / 3,000');
-    const list = rows(page.locator('.rp-table').nth(1));
+    const list = rows(page.locator('.rp-table').first());
     await expect(list.first()).toBeVisible();
     expect(await list.count()).toBeLessThan(100);
   });
@@ -493,10 +496,10 @@ test.describe('long lists', () => {
 
 test('node sources list their nodes and a subscription can be refreshed', async ({page}) => {
   await page.goto('/#/nodes?tab=list');
-  const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
+  const sources = sourceCards(page);
   await expect(sources).toHaveCount(2);
   await expect(sources.first()).toContainText('harbor');
-  const nodes = page.locator('.rp-table').nth(1).locator('[role=rowgroup]:last-child [role=row][data-key]');
+  const nodes = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
   await expect(nodes.first()).toBeVisible();
   expect(await nodes.count()).toBeGreaterThan(10);
   await sources.nth(1).click();
@@ -504,6 +507,50 @@ test('node sources list their nodes and a subscription can be refreshed', async 
   await expect(nodes).toHaveCount(5);
   await page.getByRole('button', {name: 'Update harbor', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('harbor updated, 120 nodes');
+});
+
+test('source card facts keep one whole line in English and Traditional Chinese', async ({page}) => {
+  await page.goto('/#/nodes?tab=list');
+  for (const lang of ['en', 'zh-TW']) {
+    await page.evaluate(value => localStorage.setItem('doona-lang', value), lang);
+    for (const width of [1280, 1024]) {
+      await page.setViewportSize({width, height: 900});
+      await page.reload();
+      await expect(sourceCards(page)).toHaveCount(2);
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+      const lines = await sourceGrid(page)
+        .locator('.rp-kv > * > :is(.k, .v)')
+        .evaluateAll(els =>
+          els.map(el => [
+            el.textContent,
+            Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)),
+            [el, ...el.querySelectorAll('*')].some(e => e.scrollWidth > e.clientWidth)
+          ])
+        );
+      // One line each, and none cut short with an ellipsis.
+      expect(
+        lines.filter(([, n, cut]) => n !== 1 || cut),
+        `${lang} ${width}`
+      ).toEqual([]);
+    }
+  }
+});
+
+test('the arrow keys move between source cards and select the one they reach, and Tab reaches its actions', async ({page}) => {
+  await page.goto('/#/nodes?tab=list');
+  const sources = sourceCards(page);
+  await expect(sources).toHaveCount(2);
+  await expect(sources.first()).toHaveAttribute('aria-selected', 'true');
+  await sources.first().focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(sources.nth(1)).toBeFocused();
+  await expect(sources.nth(1)).toHaveAttribute('aria-selected', 'true');
+  await expect(sources.first()).toHaveAttribute('aria-selected', 'false');
+  await expect(page).toHaveURL(/provider=inline$/);
+  await page.keyboard.press('ArrowLeft');
+  await expect(sources.first()).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Tab');
+  await expect(sources.first().getByRole('button', {name: 'Update harbor', exact: true})).toBeFocused();
 });
 
 test('a subscription refresh interval is written into the configuration', async ({page}) => {
@@ -519,7 +566,7 @@ test('a subscription refresh interval is written into the configuration', async 
   await page.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
   await page.goto('/#/nodes?tab=list');
-  const sources = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child [role=row][data-key]');
+  const sources = sourceCards(page);
   await expect(sources.first()).toContainText('Every 24 hours');
   await expect(sources.nth(1)).not.toContainText('Every');
   await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
@@ -564,8 +611,8 @@ test('built-in and unattributed provenance stay separate without granting inline
   await page.route('**/api/v1/providers?*', route => route.fulfill({json: providers}));
   await page.route('**/api/v1/nodes?*', route => route.fulfill({json: snapshot}));
   await page.goto('/#/nodes?tab=list');
-  const list = rows(page.locator('.rp-table').nth(1));
-  const sources = rows(page.locator('.rp-table').first());
+  const list = rows(page.locator('.rp-table').first());
+  const sources = sourceCards(page);
   await expect(sources.first()).toContainText('Built-in');
   // The first real source is the default; the built-in row is chosen explicitly.
   await sources.first().click();
@@ -576,14 +623,14 @@ test('built-in and unattributed provenance stay separate without granting inline
   await expect(list).toHaveCount(2);
   await expect(list).toContainText(['Null owner', 'Omitted owner']);
   await expect(page.getByRole('button', {name: /^Remove .* owner$/})).toHaveCount(0);
-  await rows(page.locator('.rp-table').first()).filter({hasText: inline.name}).click();
+  await sourceCards(page).filter({hasText: inline.name}).click();
   await expect(list).toHaveCount(1);
   await expect(page.getByRole('button', {name: 'Remove Inline owner', exact: true})).toBeVisible();
 });
 
 test('an unspecified subscription interval claims neither manual-only nor an engine default but can be set', async ({page}) => {
   await page.goto('/#/nodes?tab=list');
-  const subscription = rows(page.locator('.rp-table').first()).filter({hasText: 'harbor'});
+  const subscription = sourceCards(page).filter({hasText: 'harbor'});
   await expect(subscription).toBeVisible();
   await expect(subscription).not.toContainText('Every 24 hours');
   await expect(subscription).not.toContainText('Manual only');
@@ -628,6 +675,97 @@ test('while a cancelled removal is still pending, no other node dialog can submi
   await expect(add).toBeEnabled();
 });
 
+test('a source card meters its quota under its usage, and the facts of every card line up row for row', async ({page}) => {
+  const backend = await mockBackend(page);
+  backend.handlers['GET providers'] = async () => {
+    const list = await backend.api.providers();
+    const harbor = list.providers.find(provider => provider.id === 'harbor')!;
+    return {...list, providers: [harbor, {...harbor, id: 'open', name: 'open', traffic: {...harbor.traffic!, total_bytes: null}}]};
+  };
+  for (const lang of ['en', 'zh-TW']) {
+    await page.goto('/#/nodes?tab=list');
+    await page.evaluate(value => localStorage.setItem('doona-lang', value), lang);
+    for (const width of [1280, 1024, 390]) {
+      await page.setViewportSize({width, height: 900});
+      await page.reload();
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+      const [harbor, open] = [0, 1].map(i => sourceCards(page).nth(i));
+      const meter = harbor.getByRole('meter');
+      await expect(meter).toHaveCount(1);
+      await expect(meter).toHaveAttribute('aria-valuetext', /\d.*[/／].*\d/);
+      const valueText = (await meter.getAttribute('aria-valuetext'))!;
+      // The meter is the usage fact: its label names it, and its value shows the value text whole.
+      await expect(meter).toHaveAccessibleName(lang === 'en' ? 'Usage' : await meter.locator('.k').innerText());
+      await expect(meter.locator('.v')).toHaveText(valueText);
+      expect(await meter.locator('.v').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      await expect(open.getByRole('meter')).toHaveCount(0);
+      await expect(open.locator('.rp-kv > .wide .v')).toHaveText(/\d/);
+      // Offsets from the card's corner: every text starts at the title's edge, and each row of one card sits where the
+      // same row of the other does: title, badges, two rows of facts, the usage label and its value.
+      const layout = (card: Locator) =>
+        card.evaluate(el => {
+          const c = el.getBoundingClientRect();
+          const at = (node: Element | null) => {
+            const r = node!.getBoundingClientRect();
+            return {x: Math.round(r.left - c.left), y: Math.round(r.top - c.top), mid: r.top + r.height / 2 - c.top};
+          };
+          // The glyph box of an element's own text, which a line box taller than the font would not move.
+          const glyphs = (node: Element) => {
+            const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
+              acceptNode: n => (n.textContent!.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP)
+            });
+            const range = document.createRange();
+            range.selectNodeContents(walker.nextNode()!);
+            const r = range.getBoundingClientRect();
+            return {left: r.left - c.left, bottom: r.bottom - c.top};
+          };
+          const facts = [...el.querySelectorAll('.rp-kv > *')];
+          const badge = el.querySelector('.rp-cardview-meta .rp-badge')!;
+          const light = el.querySelector('.rp-cardview-meta .rp-light')!;
+          return {
+            title: at(el.querySelector('.rp-cardview-title')),
+            actions: at(el.querySelector('.rp-cardview-actions')),
+            badge: at(badge),
+            badgeText: glyphs(badge),
+            statusText: glyphs(light),
+            facts: facts.map(fact => ({label: at(fact.querySelector('.k')), value: at(fact.querySelector('.v'))})),
+            track: el.querySelector('.rp-kv > .wide .track') && at(el.querySelector('.rp-kv > .wide .track'))
+          };
+        });
+      const [a, b] = [await layout(harbor), await layout(open)];
+      for (const card of [a, b]) {
+        expect(Math.abs(card.title.mid - card.actions.mid), `${lang} ${width} title and actions share a centre`).toBeLessThanOrEqual(1);
+        expect(Math.abs(card.badgeText.bottom - card.statusText.bottom), `${lang} ${width} badge and status baseline`).toBeLessThanOrEqual(1);
+        expect(card.facts).toHaveLength(5);
+        const edges = [card.title.x, card.badge.x, ...card.facts.filter((_, i) => i % 2 === 0).flatMap(f => [f.label.x, f.value.x])];
+        expect(new Set(edges).size, `${lang} ${width} left edges ${edges}`).toBe(1);
+        // Two facts to a row, and usage on a row of its own, label over value.
+        expect(card.facts[0].label.y).toBe(card.facts[1].label.y);
+        expect(card.facts[2].label.y).toBe(card.facts[3].label.y);
+        expect(card.facts[4].value.y).toBeGreaterThan(card.facts[4].label.y);
+      }
+      // The track runs under harbor's usage value, and a source without an allowance draws none.
+      expect(a.track!.x).toBe(a.facts[4].value.x);
+      expect(a.track!.y).toBeGreaterThan(a.facts[4].value.y);
+      expect(b.track).toBeNull();
+      const rowsOf = (card: typeof a) => [card.title.y, card.badge.y, ...card.facts.flatMap(f => [f.label.y, f.value.y])];
+      const [ra, rb] = [rowsOf(a), rowsOf(b)];
+      ra.forEach((y, i) => expect(Math.abs(y - rb[i]), `${lang} ${width} row ${i}`).toBeLessThanOrEqual(1));
+      const [ca, cb] = [await box(harbor), await box(open)];
+      if (width === 390) {
+        // One column on a phone: each card takes the row.
+        expect(cb.y).toBeGreaterThan(ca.y + ca.height - 1);
+        expect(Math.abs(ca.width - cb.width)).toBeLessThanOrEqual(1);
+      } else {
+        // Cards in a row share its height.
+        expect(Math.abs(ca.y - cb.y)).toBeLessThanOrEqual(1);
+        expect(Math.abs(ca.height - cb.height)).toBeLessThanOrEqual(1);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+  }
+});
+
 test('short tables fit their rows, the protocol column shows whole names, and a long address stays inside its table', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 900});
   const backend = await mockBackend(page);
@@ -643,9 +781,9 @@ test('short tables fit their rows, the protocol column shows whole names, and a 
   const whole = (cell: Locator) => cell.evaluate(element => element.scrollWidth <= element.clientWidth);
   await page.goto('/#/nodes');
   const sources = page.getByRole('grid', {name: 'Node sources', exact: true});
-  await expect(sources.getByRole('row')).toHaveCount(3);
-  // A heading, two rows and the frame: no placeholder height left over from loading.
-  await expect.poll(async () => (await box(page.locator('.rp-table', {has: sources}))).height).toBeLessThanOrEqual(2 + 37 + 2 * 40 + 1);
+  await expect(sources.getByRole('row')).toHaveCount(2);
+  // One row of cards: no placeholder height left over from loading.
+  await expect.poll(async () => (await box(sources)).height).toBeLessThanOrEqual((await box(sources.getByRole('row').first())).height + 1);
   const protocol = page.locator('.rp-table .rp-truncate', {hasText: /^shadowsocks$/}).first();
   expect(await whole(protocol)).toBe(true);
   await page.goto('/#/settings');
@@ -680,7 +818,7 @@ test('the source kind badge shows its whole label in every language', async ({pa
     await page.evaluate(value => localStorage.setItem('doona-lang', value), lang);
     await settle(page);
     await page.reload();
-    const badges = page.locator('.rp-table').first().locator('[role=rowgroup]:last-child .rp-badge');
+    const badges = sourceGrid(page).locator('.rp-badge');
     await expect(badges).toHaveCount(2);
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
     for (const badge of await badges.all()) expect(await badge.evaluate(element => element.scrollWidth <= element.clientWidth), lang).toBe(true);
@@ -700,7 +838,7 @@ test.describe('in Traditional Chinese', () => {
       return list;
     };
     await page.goto('/#/nodes?tab=list');
-    const status = rows(page.locator('.rp-table').first()).getByText('失敗', {exact: true});
+    const status = sourceCards(page).getByText('失敗', {exact: true});
     await expect(async () => {
       await page.mouse.move(0, 0);
       await status.hover();
@@ -815,6 +953,7 @@ for (const width of [1440, 390])
   });
 
 test('long group lists scroll inside the submenu and omit existing memberships', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 900});
   const {api, handlers} = await mockBackend(page);
   const config = await api.config();
   const main = config.sources.find(source => source.kind === 'main')!;
@@ -843,7 +982,7 @@ test('long group lists scroll inside the submenu and omit existing memberships',
 
 test('a node search looks through every source and names the source of each result', async ({page}) => {
   await page.goto('/#/nodes?provider=harbor');
-  const table = page.locator('.rp-table').nth(1);
+  const table = page.locator('.rp-table').first();
   const list = rows(table);
   const source = table.getByRole('columnheader', {name: /^Node source/});
   await expect(source).toHaveCount(0);
@@ -1029,7 +1168,7 @@ test('a subscription in a read-only source offers its source file instead of an 
     return config;
   };
   await page.goto('/#/nodes?tab=list');
-  const sources = page.locator('.rp-table').first();
+  const sources = sourceGrid(page);
   const open = await moreItem(sources, 'Open config file', 'More actions for harbor');
   await expect(page.getByRole('menu', {name: 'More actions for harbor'}).getByRole('menuitem', {name: 'Edit harbor', exact: true})).toHaveCount(0);
   await open.click();
@@ -1042,7 +1181,7 @@ test('a subscription never fetched says so and refreshes from its row', async ({
   const added = main.content!.replace('subscription {\n', "subscription {\n  sub-d: 'https://example.org/sub'\n");
   await api.pollOperation(await api.replaceConfigSource(main.id, added, `"${main.content_sha256}"`));
   await page.goto('/#/nodes?tab=list');
-  const row = rows(page.locator('.rp-table').first()).filter({hasText: 'sub-d'});
+  const row = sourceCards(page).filter({hasText: 'sub-d'});
   await expect(row).toContainText('Not fetched');
   await expect(row.getByRole('button', {name: 'Fetch now'})).toHaveCount(0);
   await row.getByRole('button', {name: 'Update sub-d', exact: true}).click();
@@ -1100,7 +1239,7 @@ test('two subscriptions sharing a name offer their source file instead of an edi
     return {...list, providers: [...list.providers, {...tagged, id: 'harbor-untagged', url_redacted: 'https://harbor/sub'}]};
   };
   await page.goto('/#/nodes?tab=list');
-  const named = rows(page.locator('.rp-table').first()).filter({hasText: 'harbor'});
+  const named = sourceCards(page).filter({hasText: 'harbor'});
   await expect(named).toHaveCount(2);
   for (const row of [named.first(), named.last()]) {
     await expect(await moreItem(row, 'Open config file', 'More actions for harbor')).toBeVisible();
@@ -1123,7 +1262,7 @@ test('a subscription in a writable include is edited while the main source is re
     return config;
   };
   await page.goto('/#/nodes?tab=list');
-  const edit = await moreItem(page.locator('.rp-table').first(), 'Edit harbor', 'More actions for harbor');
+  const edit = await moreItem(sourceGrid(page), 'Edit harbor', 'More actions for harbor');
   await expect(edit).toBeEnabled();
   await edit.click();
   await expect(page.getByRole('dialog', {name: 'Edit subscription harbor'})).toBeVisible();
@@ -1197,8 +1336,8 @@ test('an empty file provider keeps its status and removal action with only built
     nodes: ['direct', 'block'].map(protocol => ({...listed.nodes[0], id: protocol, name: protocol, protocol, provider_id: null, group_ids: [], health: []}))
   });
   await page.goto('/#/nodes');
-  const sources = page.locator('.rp-table').first();
-  await expect(rows(sources).filter({hasText: 'empty-file'})).toContainText('Failed');
+  const sources = sourceGrid(page);
+  await expect(sources.getByRole('row').filter({hasText: 'empty-file'})).toContainText('Failed');
   await moreAction(sources, 'Remove empty-file', 'More actions for empty-file');
   await expect(page.getByRole('alertdialog').getByRole('button', {name: 'Remove empty-file', exact: true})).toBeEnabled();
 });
@@ -1328,7 +1467,7 @@ test('missing latency names and the remaining count open probeable node rows', a
   await expect(nodeRows(page)).toHaveCount(8);
   await page.getByRole('button', {name: 'Clear filters', exact: true}).click();
   await expect(page).not.toHaveURL(/nodes=/);
-  await page.locator('.rp-table').first().locator('[role=row][data-key=inline]').click();
+  await sourceGrid(page).locator('[role=row][data-key=inline]').click();
   await expect(nodeRows(page)).toHaveCount(9);
 });
 

@@ -15,7 +15,7 @@ for (const scheme of ['light', 'dark'])
     test.use({viewport: {width: 390, height: 900}, storage: {'doona-scheme': scheme}});
 
     for (const [url, virtual] of [
-      ['/#/nodes?tab=list', false],
+      ['/#/nodes?provider=inline', false],
       ['/#/logs', true]
     ] as const)
       test(`${virtual ? 'virtual' : 'native'} table fades only toward hidden columns`, async ({page}) => {

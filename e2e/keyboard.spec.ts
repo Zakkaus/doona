@@ -243,22 +243,37 @@ test('Tab leaves an empty resizable table in flat mode', async ({page}) => {
   await tabThroughEmptyTable(page, page.getByRole('grid'), tab);
 });
 
-test('Escape on a menu or dialog opened from a table row returns focus to its trigger', async ({page}) => {
+test('Escape on a menu or dialog opened from a table row returns focus to its trigger, and from a card to the card', async ({page}) => {
   test.skip(isLive, 'The rows are the demo’s nodes and rules');
-  const reach = async (row: import('@playwright/test').Locator, name: string) => {
+  // A table row's actions are reached with the arrow keys, a card's with Tab, as S2's CardView does.
+  const reach = async (row: import('@playwright/test').Locator, name: string, key = 'ArrowRight') => {
     await row.focus();
     const trigger = row.getByRole('button', {name, exact: true});
-    for (let i = 0; i < 12 && !(await trigger.evaluate(el => el === document.activeElement)); i++) await page.keyboard.press('ArrowRight');
+    for (let i = 0; i < 12 && !(await trigger.evaluate(el => el === document.activeElement)); i++) await page.keyboard.press(key);
     await expect(trigger).toBeFocused();
     return trigger;
   };
-  await page.goto('/#/nodes');
-  const menu = await reach(page.getByRole('row', {name: /harbor/}), 'More actions for harbor');
+  await page.goto('/#/nodes?provider=inline');
+  const node = page.getByRole('row').filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})});
+  const menu = await reach(node, 'Node actions');
   await page.keyboard.press('Enter');
   await expect(page.getByRole('menu')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toBeHidden();
   await expect(menu).toBeFocused();
+
+  // A source card's menu gives focus back to its card, as React Aria's grid list does for S2's CardView; Tab then
+  // reaches the trigger again.
+  const card = page.getByRole('row', {name: 'harbor', exact: true});
+  const more = await reach(card, 'More actions for harbor', 'Tab');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menu')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toBeHidden();
+  await expect(card).toBeFocused();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  await expect(more).toBeFocused();
 
   await page.goto('/#/rules?tab=list&view=advanced');
   const edit = await reach(page.getByRole('row', {name: /domain\(geosite:telegram\)/}), 'Edit rule');

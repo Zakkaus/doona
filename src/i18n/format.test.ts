@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {compareNames, formatBytes, formatDuration, formatRate} from './format';
+import {compareNames, formatBytes, formatDuration, formatRate, localMinute, localTime} from './format';
 import {LANGS, LOCALE} from './index';
 
 it('keeps duration units, truncation and compound spacing in every language', () => {
@@ -58,4 +58,17 @@ it('sorts names by the interface language, numbers by value, whatever the case',
   expect([...list].sort(compareNames(LOCALE.en))).toEqual(['Node2', 'node10', '上海 01', '上海 02', '北京']);
   for (const [lang] of LANGS) expect(compareNames(LOCALE[lang])('Alpha', 'alpha')).toBe(0);
   expect(compareNames(LOCALE.en)).toBe(compareNames(LOCALE.en));
+});
+
+it('writes times on a 24-hour clock with the date in the language order', () => {
+  // A local afternoon, whatever the test machine's zone.
+  const at = new Date(2026, 9, 27, 15, 4, 5).toISOString();
+  // ICU may join the date and time with another space character.
+  const time = (locale: string) => localTime(at, locale).replace(/\s/g, ' ');
+  expect(time('en-US')).toBe('10/27/26, 15:04:05');
+  expect(time('zh-TW')).toBe('2026/10/27 15:04:05');
+  expect(time('zh-CN')).toBe('2026/10/27 15:04:05');
+  expect(localMinute(at, 'en-US').replace(/\s/g, ' ')).toBe('10/27/26, 15:04');
+  expect(localMinute(at, 'zh-TW').replace(/\s/g, ' ')).toBe('2026/10/27 15:04');
+  expect([localTime(null, 'en'), localMinute(null, 'en')]).toEqual(['—', '—']);
 });

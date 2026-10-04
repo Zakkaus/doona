@@ -294,8 +294,16 @@ it('projects traffic without truncating counters and retains custom refresh inte
   expect(providerRowView({...provider('unattributed'), kind: 'unattributed'}, undefined, 'en-US', t)).toMatchObject({
     usage: '—',
     status: null,
-    expires: '—'
+    expires: '—',
+    expiresShort: '—'
   });
+});
+
+it('gives an expiry to the minute beside the full date and time', () => {
+  const at = new Date(2026, 9, 27, 16, 27, 25).toISOString();
+  const row = providerRowView(provider('a', {expires_at: at}), undefined, 'en-US', t);
+  expect(row.expiresShort.replace(/\s/g, ' ')).toBe('10/27/26, 16:27');
+  expect(row.expires.replace(/\s/g, ' ')).toBe('10/27/26, 16:27:25');
 });
 
 it('separates built-in outbounds from unattributed nodes and avoids provider id collisions', () => {

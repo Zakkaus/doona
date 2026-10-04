@@ -60,7 +60,6 @@ export function useProviderTable(input: ProviderTableInput) {
     onSelect: input.onSelect,
     canManage: input.canManage,
     busy: input.busy,
-    editing: rows.some(row => row.action !== null),
     // An edit writes the file that declares the entry, which need not be the main source.
     editBusy: input.source.busy,
     // Refreshing every subscription, as Settings offers it, where the backend can refresh them.
@@ -77,8 +76,10 @@ export type ProviderTableView = {
     kind: string;
     count: string;
     usage: string;
+    quota: ReturnType<typeof providerRowView>['quota'];
     updatedAt: string | null;
     expires: string;
+    expiresShort: string;
     interval: string;
     status: string | null;
     tone: 'ok' | 'warn' | 'err' | 'neutral';
@@ -100,7 +101,6 @@ export type ProviderTableView = {
   onSelect: (id: string | null) => void;
   canManage: boolean;
   busy: boolean;
-  editing: boolean;
   editBusy: boolean;
   refreshAll: ReturnType<typeof useRefreshAll> | null;
   onAdd: () => void;

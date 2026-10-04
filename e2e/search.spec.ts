@@ -29,7 +29,7 @@ test('search opens a node in its source, a group on its card, a subscription and
   await dialog.getByRole('option', {name: /^jp-01/}).click();
   await expect(page).toHaveURL(/#\/nodes\?provider=inline&q=jp-01&node=[^&]+$/);
   await expect(page.getByLabel('Search nodes')).toHaveValue('jp-01');
-  await expect(page.locator('.rp-table').nth(1).locator('[role=row][data-key]')).toHaveCount(1);
+  await expect(page.locator('.rp-table').first().locator('[role=row][data-key]')).toHaveCount(1);
   dialog = await open(page, 'gaming');
   await dialog.getByRole('option', {name: /^gaming/}).click();
   await expect(page).toHaveURL(/#\/policies\?group=gaming$/);

@@ -26,4 +26,9 @@ it('reads a meter as its value text, filled to its share', () => {
   expect(markup).toContain('aria-valuetext="420 GB / 1 TB"');
   expect(markup).toContain('rp-meter warn');
   expect(markup).toContain('width:42%');
+  expect(markup).not.toContain('data-size');
+});
+
+it('marks a small meter for its own label and track sizes', () => {
+  expect(renderToStaticMarkup(<Meter size="S" label="Usage" value={42} valueLabel="420 GB / 1 TB" />)).toContain('data-size="S"');
 });

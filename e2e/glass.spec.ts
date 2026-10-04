@@ -9,7 +9,7 @@ for (const scheme of ['light', 'dark']) {
       localStorage.setItem('doona-mock-big', '29');
     }, scheme);
     await page.goto('/#/nodes?provider=harbor');
-    const table = page.locator('.rp-table').nth(1);
+    const table = page.locator('.rp-table').first();
     const header = table.getByRole('columnheader').first();
     await expect(header).toBeVisible();
     await table.evaluate(element => (element.scrollTop = 160));

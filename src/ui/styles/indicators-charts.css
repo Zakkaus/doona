@@ -137,22 +137,43 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.rp-meter .track {
+.rp-meter .track,
+.rp-kv-meter .track {
   display: block;
   height: 6px;
   border-radius: 3px;
   background: var(--rp-hl-high);
   overflow: hidden;
 }
-.rp-meter .fill {
+.rp-meter .fill,
+.rp-kv-meter .fill {
   display: block;
   height: 100%;
   background: var(--meter, var(--rp-accent));
 }
-.rp-meter.warn {
+/* S2 Meter, size S: the small field label (12px, subdued) and a 4px track. */
+.rp-meter[data-size='S'] {
+  font-size: var(--rp-text-xs);
+  line-height: 16px;
+}
+.rp-meter[data-size='S'] .l {
+  color: var(--rp-subtle);
+}
+.rp-meter[data-size='S'] .track,
+.rp-kv-meter .track {
+  height: 4px;
+  border-radius: 2px;
+}
+/* A fact's meter (Kv): the S track under the fact's value, 4px below it as in Meter. */
+.rp-kv-meter .track {
+  margin-block-start: 4px;
+}
+.rp-meter.warn,
+.rp-kv-meter.warn {
   --meter: var(--rp-notice);
 }
-.rp-meter.err {
+.rp-meter.err,
+.rp-kv-meter.err {
   --meter: var(--rp-negative);
 }
 
