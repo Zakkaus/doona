@@ -154,7 +154,7 @@ test.describe('1440px', () => {
 });
 
 for (const width of [1440, 768, 390]) {
-  test(`kit tabs are the segmented control at L and segmented controls M at ${width}px`, async ({page}) => {
+  test(`kit tabs and the Policies kind switch are the segmented control at L at ${width}px`, async ({page}) => {
     await page.setViewportSize({width, height: 1000});
     await page.goto('/#/connections?tab=list');
     await expect(page.getByRole('tab').first()).toBeVisible();
@@ -182,6 +182,7 @@ for (const width of [1440, 768, 390]) {
     await page.goto('/#/policies');
     const segments = page.getByRole('radiogroup', {name: 'Filter groups by selection'});
     await expect(segments).toBeVisible();
-    expect((await box(segments)).height).toBe(geometry.control);
+    // The Policies kind filter is that page's top-level switch, drawn at L like the tabs.
+    expect((await box(segments)).height).toBe(geometry.large);
   });
 }

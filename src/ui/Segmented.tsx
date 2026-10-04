@@ -2,17 +2,20 @@ import {useCallback, useLayoutEffect, useRef} from 'react';
 import {ToggleButton, ToggleButtonGroup} from 'react-aria-components';
 import {useOverflow, useSlider} from './hooks';
 import {LabeledSelect} from './Picker';
+import type {ControlSize} from './controlSize';
 
 // S2 does not scroll a segmented control: one too wide for its space collapses into a picker, as S2 Tabs do. The hidden
 // track keeps its box, so the switch moves nothing, and is measured to tell when the items fit again.
-// S2's SegmentedControl has no size: it is always M (32px), as are the default controls beside it.
+// S2's SegmentedControl has no size: it is M (32px), as are the default controls beside it. A page's top-level switch, on a
+// page without tabs, is drawn at L like the page tabs, and so are the controls on its row. A card's size does not reach it.
 export function Segmented({
   items,
   value,
   onChange,
   label,
   isDisabled,
-  fill
+  fill,
+  size = 'M'
 }: {
   items: Array<[string, string]>;
   value: string;
@@ -21,6 +24,7 @@ export function Segmented({
   isDisabled?: boolean;
   // Takes the width of its container, every segment the same share of it.
   fill?: boolean;
+  size?: ControlSize;
 }) {
   const [ref, pos] = useSlider(value);
   const collapsed = useOverflow(ref, items.flat().join('\n'));
@@ -50,7 +54,7 @@ export function Segmented({
       <ToggleButtonGroup
         ref={ref}
         className="rp-seg"
-        data-size="M"
+        data-size={size}
         aria-label={label}
         isDisabled={isDisabled}
         selectionMode="single"
@@ -63,14 +67,22 @@ export function Segmented({
       >
         {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
         {items.map(([k, l]) => (
-          <ToggleButton key={k} id={k} className="rp-btn" data-size="M">
+          <ToggleButton key={k} id={k} className="rp-btn" data-size={size}>
             {l}
           </ToggleButton>
         ))}
       </ToggleButtonGroup>
       {collapsed && (
         <div ref={pickRef} className="rp-segpick">
-          <LabeledSelect bare label={label} value={value} onChange={onChange} isDisabled={isDisabled} items={items.map(([id, l]) => ({id, label: l}))} />
+          <LabeledSelect
+            bare
+            size={size}
+            label={label}
+            value={value}
+            onChange={onChange}
+            isDisabled={isDisabled}
+            items={items.map(([id, l]) => ({id, label: l}))}
+          />
         </div>
       )}
     </div>
