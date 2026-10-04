@@ -15,7 +15,7 @@ vi.mock('react', () => ({
   useSyncExternalStore: (_subscribe: unknown, read: () => unknown) => read()
 }));
 vi.mock('../api/index', () => ({getApi: () => state.api}));
-vi.mock('./nodes', () => ({useNodes: () => ({data: state.nodes})}));
+vi.mock('./nodes', async importOriginal => ({...(await importOriginal<typeof import('./nodes')>()), useNodes: () => ({data: state.nodes})}));
 vi.mock('./runtime', () => ({useCapabilities: () => ({data: state.capabilities})}));
 vi.mock('./resource', () => ({
   useResource: <T>(resource: Resource<T>, {enabled = true} = {}) => {

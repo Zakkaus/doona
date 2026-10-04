@@ -11,7 +11,7 @@ export {
   useRuntimeOperations,
   useCapabilities
 } from './runtime';
-export {useNodes, useProviders, useProviderRefresh, useNodeManage, useNodeProbe, useGeodata} from './nodes';
+export {useNodes, useSteadyNodes, nodeIndex, steadyNodes, useProviders, useProviderRefresh, useNodeManage, useNodeProbe, useGeodata} from './nodes';
 export {useGroups, useGroupControl, groupConflict} from './groups';
 export {useOutboundNames} from './outbounds';
 export {useConnections, useConnectionClose} from './connections';
