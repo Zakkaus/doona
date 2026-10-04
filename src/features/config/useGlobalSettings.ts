@@ -69,7 +69,8 @@ export function useGlobalSettings({query, go}: PageProps) {
             : undefined;
   const fields = (schema?.fields ?? []).map(definition => {
     const matches = stored.filter(field => field.name === definition.key);
-    const value = patch[definition.key] ?? (matches[0] ? settingValue(definition, matches[0].value) : '');
+    const saved = matches[0] ? settingValue(definition, matches[0].value) : '';
+    const value = patch[definition.key] ?? saved;
     const picked = definition.type === 'boolean' || (!!definition.choices && definition.type !== 'integer');
     const options = definition.type === 'boolean' ? ['true', 'false'] : (definition.choices ?? []);
     return {
@@ -86,7 +87,8 @@ export function useGlobalSettings({query, go}: PageProps) {
         : null,
       value,
       // A plain whole number within a safe integer edits in a number field; a stored value it cannot show stays text.
-      number: numberSetting(definition) && /^\d*$/.test(value) ? {max: Number(definition.max), value: value === '' ? NaN : Number(value)} : null,
+      // The stored value decides, so the field keeps its kind, and its focus, while it is edited.
+      number: numberSetting(definition) && /^\d*$/.test(saved) ? {max: Number(definition.max), value: value === '' ? NaN : Number(value)} : null,
       duplicate: matches.length > 1,
       invalid: serializeSetting(definition, value) === null,
       change: (value: string) => {
@@ -94,7 +96,7 @@ export function useGlobalSettings({query, go}: PageProps) {
         editor.cancel();
         setFailure(null);
         const next = {...patch, [definition.key]: value};
-        if (value === (matches[0] ? settingValue(definition, matches[0].value) : '')) delete next[definition.key];
+        if (value === saved) delete next[definition.key];
         setDraft(Object.keys(next).length ? {source: draft?.source ?? source, id: chosen.id, patch: next} : null);
       }
     };

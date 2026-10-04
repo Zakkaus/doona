@@ -9,6 +9,8 @@ export async function copyText(text: string): Promise<boolean> {
   } catch {
     // Refused, for example without focus: the copy command may still work.
   }
+  // Selecting the text area moves focus to it; focus goes back once it is removed, so the keyboard stays where it was.
+  const active = document.activeElement;
   const area = document.createElement('textarea');
   area.value = text;
   area.setAttribute('readonly', '');
@@ -22,5 +24,6 @@ export async function copyText(text: string): Promise<boolean> {
     return false;
   } finally {
     area.remove();
+    if (active instanceof HTMLElement && active.isConnected) active.focus({preventScroll: true});
   }
 }

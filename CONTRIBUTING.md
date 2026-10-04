@@ -250,7 +250,7 @@ Every form is a kit `Form`, or `DialogForm` in a dialog's sections; no feature o
 - A whole number that can exceed `Number.MAX_SAFE_INTEGER`, such as `max_concurrent_dials` (a setting whose `max` is above it).
 - A duration or size typed with its unit, such as `sniffing_timeout` (`30s`) or `bandwidth_max_rx`.
 - A list, such as the values of a rule or group condition.
-- A stored global setting the number field cannot show, such as one written as `0x10`, until it is cleared.
+- A stored global setting the number field cannot show, such as one written as `0x10`, until a whole number or nothing is saved in its place; the stored value decides, so a field keeps its kind while it is edited.
 
 `src/features/config/formRules.test.ts` checks the first two rules.
 
