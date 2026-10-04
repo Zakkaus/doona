@@ -4,7 +4,9 @@ English / [简体中文](themes.zh-CN.md) / [繁體中文](themes.zh-TW.md)
 
 ## Palettes
 
-Twelve palettes support light and dark modes. Rosé Pine has two flavours and Catppuccin has three; the other seven are Nord, Kary Pro Colors, Ant Design, Arco Design, Semi Design, Glass and China. China's modes are Day shift and Night shift.
+Fifteen palettes support light and dark modes. Rosé Pine has two flavours, Catppuccin three and Glass four; the other six are Nord, Kary Pro Colors, Ant Design, Arco Design, Semi Design and China. China's modes are Day shift and Night shift.
+
+The Glass palettes are materials over a wallpaper. Glass follows Apple's Liquid Glass and, in Chrome and Edge, bends the page at the edges of the floating panel, menus and toasts. Frosted follows Microsoft's Acrylic, so only colour shows through. Float puts the top bar on a separate, inset layer with an even blur. Tinted follows Microsoft's Mica and draws nearly opaque surfaces without blur. With Reduce Transparency or Increase Contrast on, every Glass palette draws solid surfaces with clear edges.
 
 In the China palette, a healthy or running state reads Improving and an unavailable or degraded one Severe test. Use the palette picker in the top bar, or the sign-in page's Palette menu.
 
