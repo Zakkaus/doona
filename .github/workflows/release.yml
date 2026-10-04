@@ -149,7 +149,9 @@ jobs:
           doc=build/stage/doona/usr/share/doc/doona
           mkdir -p "$doc" build/stage/doona-fonts/usr/share/doc/doona
           mv "$program"/LICENSE "$program"/LICENSES "$program"/NOTICE "$program"/THIRD-PARTY-NOTICES.txt \
-            "$program"/README.md "$program"/CHANGELOG.md "$doc"/
+            "$program"/README.md "$doc"/
+          # The program archive leaves the changelog out; the packages take it from the checkout.
+          cp CHANGELOG.md "$doc"/
           # rpm takes the documentation files one by one from doona.yaml; a file it does not list would be missing.
           (cd "$doc" && find . -type f) | sort | while read -r file; do
             grep -qxF "    dst: /usr/share/doc/doona/${file#./}" install/nfpm/doona.yaml ||

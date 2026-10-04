@@ -24,9 +24,14 @@ KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~loong ~m68k ~mips ~ppc ~ppc64 ~riscv 
 IUSE="+fonts"
 
 src_install() {
-	dodoc NOTICE README.md CHANGELOG.md
+	dodoc NOTICE README.md
 	dodoc -r LICENSES
-	rm -r LICENSE LICENSES NOTICE README.md CHANGELOG.md || die
+	# Archives up to 0.1.0-beta.14 also carry the changelog.
+	if [[ -f CHANGELOG.md ]]; then
+		dodoc CHANGELOG.md
+		rm CHANGELOG.md || die
+	fi
+	rm -r LICENSE LICENSES NOTICE README.md || die
 	insinto /usr/share/"${PN}"
 	doins -r .
 }

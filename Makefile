@@ -19,7 +19,7 @@ check:
 	pnpm check
 
 # Everything in dist/ except the fonts and the Vite build manifest, plus the licence and notices. tools/notices.mjs
-# adds the licence texts NOTICE cites and THIRD-PARTY-NOTICES.txt, as tools/package.sh does for the archive.
+# adds the licence texts the program needs and THIRD-PARTY-NOTICES.txt, as tools/package.sh does for the archive.
 install:
 	@test -f dist/index.html || { echo 'run make build first' >&2; exit 1; }
 	find dist \( -path dist/fonts -o -path dist/.vite \) -prune -o -type f -print | while read -r f; do \
