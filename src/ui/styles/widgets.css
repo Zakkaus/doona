@@ -273,10 +273,6 @@
   cursor: default;
   padding-inline: 0;
 }
-.rp-dock-title {
-  margin: 0;
-  font: inherit;
-}
 .rp-side-dock .rp-widget-actions {
   gap: 0;
   margin-inline-end: calc(0px - var(--rp-space-2));

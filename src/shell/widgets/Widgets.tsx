@@ -8,6 +8,7 @@ import {TitlesShown} from '../../ui/Card';
 import {WidgetGrid, WidgetCell, cellSize} from '../../ui/WidgetGrid';
 import {WidgetChartInset} from '../../ui/charts/compact';
 import ChevronDown from '../../ui/icons/ChevronDown';
+import PictureInPicture from '../../ui/icons/PictureInPicture';
 import Pin from '../../ui/icons/Pin';
 import {BackendIndicator} from '../Backend';
 import type {BackendView} from '../view';
@@ -194,7 +195,7 @@ export function PanelHeader({
           </Button>
         )
       }
-      summary={collapsed ? <SpeedSummary /> : docked ? <h3 className="rp-dock-title">{t('widgets.title')}</h3> : undefined}
+      summary={collapsed ? <SpeedSummary /> : undefined}
       actions={
         <>
           <MoreMenu
@@ -202,7 +203,7 @@ export function PanelHeader({
             label={t('widgets.panelOptions')}
             actions={[
               {id: 'edit', label: t('widgets.edit'), onAction: () => editorState.set(true)},
-              ...(dockable && onDock ? [{id: 'dock', label: t(docked ? 'widgets.undock' : 'widgets.dock'), onAction: onDock}] : []),
+              ...(dockable && onDock && !docked ? [{id: 'dock', label: t('widgets.dock'), onAction: onDock}] : []),
               ...(docked
                 ? []
                 : [{id: 'edge', label: t('widgets.edgeHide'), checked: !!layout.edge, onAction: () => patchLayout({edge: !layout.edge || undefined})}]),
@@ -210,7 +211,12 @@ export function PanelHeader({
               {id: 'hide', label: t('widgets.hide'), onAction: () => patchLayout({visible: false})}
             ]}
           />
-          {!docked && (
+          {/* Docked, the pin's place undocks the panel. */}
+          {docked ? (
+            <Button quiet icon className="rp-widget-undock" label={t('widgets.undock')} onPress={onDock}>
+              <PictureInPicture />
+            </Button>
+          ) : (
             <Button
               quiet
               icon

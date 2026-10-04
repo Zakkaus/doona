@@ -660,7 +660,7 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
   const groupBox = await box(groupHeader);
   expect(Math.abs((await box(dockHeader)).height - groupBox.height)).toBeLessThanOrEqual(1);
   const groupStart = await groupHeader.evaluate(el => el.getBoundingClientRect().left + Number.parseFloat(getComputedStyle(el).paddingInlineStart));
-  expect(Math.abs((await box(dock.getByRole('heading', {name: 'Activity widgets', exact: true}))).x - groupStart)).toBeLessThanOrEqual(1);
+  await expect(dockHeader.getByRole('heading')).toHaveCount(0);
   expect(Math.abs((await box(dock.locator('.rp-widget').first())).x - groupStart)).toBeLessThanOrEqual(1);
   await expect.poll(() => dock.locator('.rp-widget-body').evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
   // The section chevron is drawn at S2's small icon size, its stroke thickened to the UI chevron's weight, in the
@@ -681,6 +681,11 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
     expect((await paint(icon)).color).toBe(subtle);
   }
   expect(await paint(dock.locator('.rp-widget-collapse > svg'))).toEqual({color: subtle, fill: subtle, stroke: subtle, width: '0.7px'});
+  // The undock icon is a line drawing, its 1.5-unit lines thickened by the chevron's 0.7 to the chevron's weight.
+  expect(await paint(dock.locator('.rp-widget-undock > svg'))).toEqual({color: subtle, fill: 'none', stroke: subtle, width: '2.2px'});
+  const middles = await dockHeader.locator('svg').evaluateAll(icons => icons.map(icon => icon.getBoundingClientRect()).map(r => r.top + r.height / 2));
+  expect(middles).toHaveLength(3);
+  for (const middle of middles) expect(Math.abs(middle - middles[0])).toBeLessThanOrEqual(0.5);
   const centre = (el: Locator) => box(el).then(b => b.x + b.width / 2);
   expect(Math.abs((await centre(groupHeader.locator('svg'))) - (await centre(dock.locator('.rp-widget-collapse > svg'))))).toBeLessThanOrEqual(1);
   // The group boundary resizes by keyboard and pointer, keeping the height after a reload.
@@ -699,7 +704,7 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
   await expect.poll(async () => Math.round((await box(dock)).height)).toBe(Math.round(docked.height) - 56);
   await page.reload();
   await expect.poll(async () => Math.round((await box(dock)).height)).toBe(Math.round(docked.height) - 56);
-  // Collapsed, the live rates take the title's place on the header's centre line, upload above download.
+  // Collapsed, the live rates sit on the header's centre line, upload above download.
   await dock.getByRole('button', {name: 'Collapse widgets', exact: true}).click();
   await expect(dock.getByRole('heading', {name: 'Activity widgets', exact: true})).toHaveCount(0);
   const dockSpeed = dock.locator('.rp-widget-speed');
@@ -712,8 +717,12 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
   expect(Math.abs(speedBox.y + speedBox.height / 2 - (collapsedHeader.y + collapsedHeader.height / 2))).toBeLessThanOrEqual(1);
   expect(Math.abs(speedBox.x - groupStart)).toBeLessThanOrEqual(1);
   await dock.getByRole('button', {name: 'Expand widgets', exact: true}).click();
-  await expect(dock.getByRole('heading', {name: 'Activity widgets', exact: true})).toBeVisible();
-  await moreAction(dock, 'Undock', 'Panel options');
+  const undock = dock.getByRole('button', {name: 'Undock', exact: true});
+  await expect(undock).not.toHaveAttribute('aria-pressed');
+  await dock.getByRole('button', {name: 'Panel options', exact: true}).click();
+  await expect(page.getByRole('menuitem', {name: 'Undock', exact: true})).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await undock.click();
   await expect(floating(page).locator('.rp-widget-cell').first()).toBeVisible();
   await expect(dock).toHaveCount(0);
   // A collapsed panel moved to the top edge expands downwards, whole inside the viewport, its chevron pointing down.
@@ -959,7 +968,7 @@ test.describe('header and edge at 1440', () => {
     await save(page, {...defaults(), pinned: false, docked: true, collapsed: true, edge: true});
     await page.goto('/#/settings');
     const row = await box(page.locator('.rp-side-dock .rp-widget-header'));
-    await moreAction(page.locator('.rp-side-dock'), 'Undock', 'Panel options');
+    await page.locator('.rp-side-dock').getByRole('button', {name: 'Undock', exact: true}).click();
     await expect(floating(page)).toBeHidden();
     const summary = await box(handle(page));
     expect(summary.width).toBeLessThan(row.width * 0.75);
@@ -1174,7 +1183,14 @@ for (const width of [1280, 390]) {
       const left = title.x;
       // The chevron grew about its centre to S2's 16px; content still ends where its former 10px box ended.
       const right = chevron.x + chevron.width / 2 + 5;
-      expect(Math.abs((await box(dock.locator('.rp-dock-title'))).x - left)).toBeLessThanOrEqual(1);
+      // The expanded header has no title, only its buttons on one line at the inline end: options, undock, collapse.
+      await expect(dock.locator('.rp-widget-header').getByRole('heading')).toHaveCount(0);
+      const buttons = await dock
+        .locator('.rp-widget-header button')
+        .evaluateAll(items => items.map(item => ({name: item.getAttribute('aria-label'), rect: item.getBoundingClientRect().toJSON() as DOMRect})));
+      expect(buttons.map(({name}) => name)).toEqual(['面板選項', '取消嵌入', '收起小工具']);
+      for (const {rect} of buttons) expect(Math.abs(rect.top + rect.height / 2 - (buttons[0].rect.top + buttons[0].rect.height / 2))).toBeLessThanOrEqual(0.5);
+      for (const [index, {rect}] of buttons.slice(1).entries()) expect(rect.left).toBeGreaterThanOrEqual(buttons[index].rect.right - 0.5);
       // The rates widget draws both directions in one chart.
       await expect(dock.locator('.rp-compact-chart svg.rp-activity-surface')).toHaveCount(1);
       for (const item of await dock

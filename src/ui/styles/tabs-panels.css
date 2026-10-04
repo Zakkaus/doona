@@ -206,6 +206,11 @@
   stroke-width: 0.7;
   stroke-linejoin: round;
 }
+/* The docked header's undock icon is drawn in 1.5-unit lines, the chevron's outline width: the same 0.7 units more
+   give it the chevron's weight. */
+.rp-side-dock .rp-widget-undock > svg {
+  stroke-width: calc(1.5 + 0.7);
+}
 .rp-disclosure[data-variant='nav'] .rp-disclosure-panel,
 .rp-disclosure[data-variant='nav'] .rp-disclosure-content {
   gap: var(--rp-space-1h);
