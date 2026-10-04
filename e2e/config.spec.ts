@@ -396,6 +396,64 @@ test('source application works without the optional full validation endpoint', a
   expect(validations).toBe(0);
 });
 
+// A draft's leave prompt cancels the reads in flight, so a reload cannot cut them off; declining it sends them again,
+// and the write in flight was never touched.
+test('declining the leave prompt keeps a save and its read-back going', async ({page}) => {
+  await mockBackend(page);
+  const prompts: string[] = [];
+  page.on('dialog', dialog => {
+    prompts.push(dialog.type());
+    void dialog.dismiss();
+  });
+  const sent: string[] = [];
+  page.on('request', request => sent.push(`${request.method()} ${request.url()}`));
+  let releaseWrite!: () => void;
+  const write = new Promise<void>(resolve => (releaseWrite = resolve));
+  let holdRead = false;
+  let releaseRead!: () => void;
+  const read = new Promise<void>(resolve => (releaseRead = resolve));
+  let reading!: (url: string) => void;
+  const readSent = new Promise<string>(resolve => (reading = resolve));
+  await page.route('**/api/v1/**', async route => {
+    const method = route.request().method();
+    if (method === 'PUT') await write;
+    if (method === 'GET' && holdRead) {
+      holdRead = false;
+      reading(route.request().url());
+      await read;
+    }
+    await route.fallback().catch(() => {});
+  });
+  const leave = async (count: number) => {
+    await page.evaluate(() => location.reload());
+    await expect.poll(() => prompts).toHaveLength(count);
+  };
+  await page.goto('/#/config?source=src-rules');
+  // The draft stays after the save, so the second leave asks as well. Added once the app has started, so it runs after
+  // doona's own listener, as a draft's prompt does.
+  await page.evaluate(() => addEventListener('beforeunload', event => event.preventDefault()));
+  const editor = page.locator('.cm-content');
+  await editor.fill((await editor.innerText()) + '\n# kept across a declined leave\n');
+  const writing = page.waitForRequest(request => request.method() === 'PUT');
+  await page.getByRole('button', {name: 'Apply', exact: true}).click();
+  await writing;
+  await leave(1);
+  holdRead = true;
+  releaseWrite();
+  const held = await readSent;
+  await leave(2);
+  releaseRead();
+  await expect(page.locator('.rp-toast.positive')).toContainText('configuration reloaded');
+  await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
+  await expect(editor).toContainText('# kept across a declined leave');
+  expect(prompts).toEqual(['beforeunload', 'beforeunload']);
+  // The leave cancelled the read, which was sent again once the page stayed; the save was sent once and went through.
+  // Chromium reports a request in flight across a declined reload as failed whether or not anything cancelled it, so
+  // the requests sent are what is counted.
+  expect(sent.filter(entry => entry.startsWith('PUT '))).toHaveLength(1);
+  expect(sent.filter(entry => entry === `GET ${held}`)).toHaveLength(2);
+});
+
 test('incomplete sources cannot be transformed by rule edits', async ({page}) => {
   const {api} = await mockBackend(page);
   const config = await api.config();

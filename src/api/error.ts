@@ -76,34 +76,28 @@ const networkError = (error: TypeError) => clientError(0, 'network_error', error
 const READ_DEADLINE_MS = 15000;
 const WRITE_DEADLINE_MS = 30000;
 
-// The caller's signal and the deadline as one. AbortSignal.any lets the browser drop the pair once both are gone; the
+// The caller's signals and the deadline as one. AbortSignal.any lets the browser drop them once all are gone; the
 // fallback forwards through listeners, which release removes once the request is over.
-function either(caller: AbortSignal, deadline: AbortSignal): {signal: AbortSignal; release: () => void} {
-  if (typeof AbortSignal.any === 'function') return {signal: AbortSignal.any([caller, deadline]), release: () => {}};
-  const both = new AbortController();
-  if (caller.aborted) {
-    both.abort(caller.reason);
-    return {signal: both.signal, release: () => {}};
+function either(signals: AbortSignal[]): {signal: AbortSignal; release: () => void} {
+  if (typeof AbortSignal.any === 'function') return {signal: AbortSignal.any(signals), release: () => {}};
+  const all = new AbortController();
+  const aborted = signals.find(signal => signal.aborted);
+  if (aborted) {
+    all.abort(aborted.reason);
+    return {signal: all.signal, release: () => {}};
   }
-  const fromCaller = () => both.abort(caller.reason);
-  const fromDeadline = () => both.abort(deadline.reason);
-  caller.addEventListener('abort', fromCaller, {once: true});
-  deadline.addEventListener('abort', fromDeadline, {once: true});
-  return {
-    signal: both.signal,
-    release: () => {
-      caller.removeEventListener('abort', fromCaller);
-      deadline.removeEventListener('abort', fromDeadline);
-    }
-  };
+  const forward = (event: Event) => all.abort((event.target as AbortSignal).reason);
+  for (const signal of signals) signal.addEventListener('abort', forward, {once: true});
+  return {signal: all.signal, release: () => signals.forEach(signal => signal.removeEventListener('abort', forward))};
 }
 
-// One request's deadline: `arm` starts the limit over, `over` stops it and releases the caller's signal once the
-// request has finished, failed or been cancelled.
-type Deadline = {signal: AbortSignal; arm: () => void; over: () => void};
-function deadlineFor(caller: AbortSignal | null, limit: number, timeout: ApiError): Deadline {
+// One request's deadline: `arm` starts the limit over, `join` adds one attempt's own signal to it, and `over` stops it
+// and releases the caller's signal and every attempt's once the request has finished, failed or been cancelled.
+type Deadline = {signal: AbortSignal; arm: () => void; join: (own: AbortSignal | undefined) => AbortSignal; over: () => void};
+function deadlineFor(callers: AbortSignal[], limit: number, timeout: ApiError): Deadline {
   const controller = new AbortController();
-  const joined = caller ? either(caller, controller.signal) : {signal: controller.signal, release: () => {}};
+  const joined = callers.length ? either([...callers, controller.signal]) : {signal: controller.signal, release: () => {}};
+  const releases = [joined.release];
   let timer: ReturnType<typeof setTimeout> | undefined;
   const arm = () => {
     clearTimeout(timer);
@@ -113,9 +107,15 @@ function deadlineFor(caller: AbortSignal | null, limit: number, timeout: ApiErro
   return {
     signal: joined.signal,
     arm,
+    join: own => {
+      if (!own) return joined.signal;
+      const attempt = either([joined.signal, own]);
+      releases.push(attempt.release);
+      return attempt.signal;
+    },
     over: () => {
       clearTimeout(timer);
-      joined.release();
+      releases.forEach(release => release());
     }
   };
 }
@@ -160,6 +160,47 @@ function bodyWithin(response: Response, caller: AbortSignal | null, deadline: De
   return rebuilt;
 }
 
+// A reload or navigation that cuts a fetch off before its response makes WebKit log it as an access-control failure.
+// On beforeunload every GET still waiting for its headers is cancelled instead; a write is never cancelled, since it
+// may already be applying. The page may stay, when a draft's leave prompt is declined, so the cancelled reads, and
+// any read started meanwhile, wait and are sent again once the page has stayed: at once when a prompt was asked for,
+// after a grace period otherwise, which a page that does unload never reaches. Callers see no failure either way.
+const LEAVE_GRACE_MS = 3000;
+const leaving = new Set<AbortController>();
+let stayed: {promise: Promise<void>; resume: () => void} | null = null;
+export function leavePage(event: Event) {
+  for (const controller of leaving) controller.abort(new DOMException('The page is being left', 'AbortError'));
+  leaving.clear();
+  if (!stayed) {
+    let resume!: () => void;
+    const promise = new Promise<void>(resolve => (resume = resolve));
+    stayed = {promise, resume};
+  }
+  const current = stayed;
+  const resume = () => {
+    if (stayed !== current) return;
+    stayed = null;
+    current.resume();
+  };
+  // Decided once the dispatch is over, so a prompt asked for by a listener that runs after this one counts.
+  setTimeout(() => {
+    if (event.defaultPrevented) resume();
+    else setTimeout(resume, LEAVE_GRACE_MS);
+  });
+}
+if (typeof window !== 'undefined') window.addEventListener('beforeunload', leavePage);
+// Waits for the page to have stayed; the caller's cancel and the deadline still end the wait.
+const stay = (resumed: Promise<void>, signal: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal.aborted) return reject(signal.reason);
+    const cancel = () => reject(signal.reason);
+    signal.addEventListener('abort', cancel, {once: true});
+    void resumed.then(() => {
+      signal.removeEventListener('abort', cancel);
+      resolve();
+    });
+  });
+
 // A request that gets no response at all fails with the browser's own words ("Failed to fetch", "Load failed"); it is
 // reported as a network failure in the page language instead. A cancelled request keeps its AbortError. A stalled
 // body read fails with the timeout error as well. A write that timed out may still have been applied, and its text
@@ -167,18 +208,32 @@ function bodyWithin(response: Response, caller: AbortSignal | null, deadline: De
 export async function send(input: RequestInfo | URL, init?: RequestInit, write?: boolean): Promise<Response> {
   const signal = init?.signal ?? (input instanceof Request ? input.signal : null);
   const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
+  const read = method === 'GET';
   const writes = write ?? (method !== 'GET' && method !== 'HEAD');
   const limit = writes ? WRITE_DEADLINE_MS : READ_DEADLINE_MS;
   const timeout = clientError(0, 'timeout', `No response within ${limit / 1000} seconds`, writes ? 'ui.errTimeoutWrite' : 'ui.errTimeout', {
     seconds: limit / 1000
   });
-  const deadline = deadlineFor(signal, limit, timeout);
+  // One deadline for the headers across every send of a read, running while it waits for the page to stay.
+  const deadline = deadlineFor(signal ? [signal] : [], limit, timeout);
   const url = input instanceof Request ? input.url : String(input);
   try {
-    const response = await fetch(input, {...init, signal: deadline.signal});
-    // The headers are in; from here the limit runs between chunks of the body.
-    deadline.arm();
-    return bodyWithin(response, signal, deadline, timeout, method, url);
+    for (;;) {
+      while (read && stayed) await stay(stayed.promise, deadline.signal);
+      const leave = read ? new AbortController() : null;
+      if (leave) leaving.add(leave);
+      try {
+        const response = await fetch(input, {...init, signal: deadline.join(leave?.signal)});
+        // The headers are in; from here the limit runs between chunks of the body.
+        deadline.arm();
+        return bodyWithin(response, signal, deadline, timeout, method, url);
+      } catch (error) {
+        // A read cancelled by a page leave is sent again once the page stays, unless the deadline has passed.
+        if (!leave?.signal.aborted || deadline.signal.aborted) throw error;
+      } finally {
+        if (leave) leaving.delete(leave);
+      }
+    }
   } catch (error) {
     deadline.over();
     if (signal?.aborted) throw error;
