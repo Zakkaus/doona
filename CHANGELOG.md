@@ -65,6 +65,7 @@ Entries live in [changes/](changes/) until release.
 - Switching between the Connections and Events pages no longer makes the browser tab run out of memory. Each switch reopens the event stream, and the event that opens it shares its id with the event before; the Events table and the notices now tell such events apart. (#502)
 - Live tables release old rows as new data arrives, keeping memory use bounded. (#503)
 - The line above the Appearance settings row in the palette menus no longer touches the row, so its focus ring stays clear. (#498)
+- Activity measures control-card widths after font-driven label updates are committed, so the first row keeps its final proportions when fonts finish loading. (#506)
 
 ## [0.1.0-beta.14] - 2026-10-04
 
