@@ -1,7 +1,7 @@
-/* The Glass family's tokens: Apple's published label, fill and system colours, shared by three materials. Glass is
-   Apple's Liquid Glass, Frosted is an evenly blurred layer after blowfish.page and Tinted is Microsoft's Mica;
-   ../glass.css draws them from the material tokens set here. Each material tunes its own wallpaper, fills and blur;
-   the blur and opacity values are doona's. */
+/* The Glass family's tokens: Apple's published label, fill and system colours, shared by four materials. Glass is
+   Apple's Liquid Glass, Clear is Glass without the lens, Frosted is an evenly blurred layer after blowfish.page and
+   Tinted is Microsoft's Mica; ../glass.css draws them from the material tokens set here. Each material tunes its own
+   wallpaper, fills and blur; the blur and opacity values are doona's. */
 :root[data-family='glass'] {
   /* Settings > Appearance > Blur multiplies every material's blur radius below by --rp-blur-scale, 0 to 1.5, which
      src/shell/useAppearance.ts sets on the root; each material keeps its own radii in proportion. Under 1 the
@@ -70,7 +70,7 @@
   --rp-solid-float: #ffffff;
   --rp-solid-edge: #c6c6c8;
 
-  /* Glass: clear cards and chrome over a bright wallpaper with hard shapes for the lens to bend. */
+  /* Glass and Clear: clear cards and chrome over a bright wallpaper with hard shapes for the lens to bend. */
   --rp-base: rgba(255, 255, 255, 0.4);
   --rp-surface: rgba(255, 255, 255, 0.4);
   --rp-overlay: rgba(255, 255, 255, 0.45);

@@ -14,6 +14,7 @@ const palettes = {
   'nord/nord': 1,
   'kary/kary': 1,
   'glass/glass': 0,
+  'glass/clear': 0,
   'glass/frosted': 0,
   'glass/tinted': 0,
   'antd/antd': 1,

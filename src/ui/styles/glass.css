@@ -1,5 +1,5 @@
-/* The Glass family's materials: Glass (Apple's Liquid Glass), Frosted (an evenly blurred layer) and Tinted
-   (Microsoft's Mica). The rules read only material tokens, set per flavour in palettes/glass.css: a wallpaper, the
+/* The Glass family's materials: Glass (Apple's Liquid Glass), Clear (Glass without the lens, as Firefox and Safari draw
+   it), Frosted (an evenly blurred layer) and Tinted (Microsoft's Mica). The rules read only material tokens, set per flavour in palettes/glass.css: a wallpaper, the
    chrome's fill and filter, and the fills and filters of cards, the floating panel and floating layers. A glass layer
    never sits inside another one: an ancestor with a backdrop-filter, an opacity, a filter or a mask would hide the
    page from it. */
@@ -55,7 +55,7 @@
    bar from below already tints it, as in Josh Comeau's taller backdrop. A clip-path polygon would cut the same shape,
    but Chrome stops applying a concave clip to the blur when an ancestor clips with rounded corners, such as a rounded
    iframe, and the sheet then covers the content. */
-:root[data-family='glass']:not([data-flavour='glass']) .rp-shell::after {
+:root[data-family='glass']:not([data-flavour='glass'], [data-flavour='clear']) .rp-shell::after {
   --rp-sheet-corner: var(--rp-r-xl);
   /* The sheet's width beside the content on each side; on narrow screens the content spans the viewport. */
   --rp-sheet-left: 0px;
@@ -85,13 +85,13 @@
 /* From 1024px the sidebar holds one side and the content keeps an end margin, inside the shell's centred maximum width.
    Percentages here are of the viewport, which the layer covers. */
 @media (min-width: 1024px) {
-  :root[data-family='glass']:not([data-flavour='glass']) .rp-shell::after {
+  :root[data-family='glass']:not([data-flavour='glass'], [data-flavour='clear']) .rp-shell::after {
     --rp-shell-inset: max(0px, (100% - 1600px) / 2);
     --rp-sheet-left: calc(var(--rp-shell-inset) + var(--rp-sidebar-width));
     --rp-sheet-right: calc(var(--rp-shell-inset) + var(--rp-space-4));
   }
   /* Right to left, the sidebar is on the right. */
-  :root[data-family='glass']:not([data-flavour='glass'])[dir='rtl'] .rp-shell::after {
+  :root[data-family='glass']:not([data-flavour='glass'], [data-flavour='clear'])[dir='rtl'] .rp-shell::after {
     --rp-sheet-left: calc(var(--rp-shell-inset) + var(--rp-space-4));
     --rp-sheet-right: calc(var(--rp-shell-inset) + var(--rp-sidebar-width));
   }
@@ -106,15 +106,15 @@
    buttons are two capsules of the cards' glass, as a toolbar's items are, each a ::before one --rp-space-1 outside its
    controls, so the controls keep their sizes and places. Being small, they keep the plain blur of controls on the
    wallpaper. */
-:root[data-flavour='glass'] :is(.rp-search, .rp-actions) {
+:root:is([data-flavour='glass'], [data-flavour='clear']) :is(.rp-search, .rp-actions) {
   position: relative;
   z-index: 0;
 }
-:root[data-flavour='glass'] .rp-search,
-:root[data-flavour='glass'] .rp-search[data-hovered] {
+:root:is([data-flavour='glass'], [data-flavour='clear']) .rp-search,
+:root:is([data-flavour='glass'], [data-flavour='clear']) .rp-search[data-hovered] {
   background: transparent;
 }
-:root[data-flavour='glass'] :is(.rp-search, .rp-actions)::before {
+:root:is([data-flavour='glass'], [data-flavour='clear']) :is(.rp-search, .rp-actions)::before {
   content: '';
   position: absolute;
   inset: calc(0px - var(--rp-space-1));
@@ -125,13 +125,13 @@
   box-shadow: var(--rp-shadow);
   pointer-events: none;
 }
-:root[data-flavour='glass'] .rp-search[data-hovered]::before {
+:root:is([data-flavour='glass'], [data-flavour='clear']) .rp-search[data-hovered]::before {
   background: linear-gradient(var(--rp-ctl-hover) 0 0), var(--rp-card-fill);
 }
 /* Apple's scroll edge: once the page scrolls, a progressive blur under the bar keeps the content passing beneath from
    colliding with its capsules. The layer masks only itself; a mask or opacity on an ancestor of the cards would hide the
    page from their glass. Hidden, it draws nothing. */
-:root[data-flavour='glass'] .rp-shell::after {
+:root:is([data-flavour='glass'], [data-flavour='clear']) .rp-shell::after {
   content: '';
   position: fixed;
   inset-inline: 0;
@@ -145,23 +145,23 @@
   opacity: 0;
   visibility: hidden;
 }
-:root[data-flavour='glass'][data-scrolled] .rp-shell::after {
+:root:is([data-flavour='glass'], [data-flavour='clear'])[data-scrolled] .rp-shell::after {
   opacity: 1;
   visibility: visible;
 }
 @media (prefers-reduced-motion: no-preference) {
-  :root[data-flavour='glass'] .rp-shell::after {
+  :root:is([data-flavour='glass'], [data-flavour='clear']) .rp-shell::after {
     transition:
       opacity var(--rp-duration-panel) var(--rp-ease-out),
       visibility 0s var(--rp-duration-panel);
   }
-  :root[data-flavour='glass'][data-scrolled] .rp-shell::after {
+  :root:is([data-flavour='glass'], [data-flavour='clear'])[data-scrolled] .rp-shell::after {
     transition: opacity var(--rp-duration-panel) var(--rp-ease-out);
   }
 }
 /* A landscape phone's bar scrolls away with the page, so nothing passes beneath it. */
 @media (max-width: 1023.98px) and (max-height: 500px) {
-  :root[data-flavour='glass'] .rp-shell::after {
+  :root:is([data-flavour='glass'], [data-flavour='clear']) .rp-shell::after {
     display: none;
   }
 }
@@ -169,7 +169,7 @@
    the card grid's gap, --rp-space-3. Its box is inset, so the links scroll inside the rounded corners and the shadow
    falls outside the box's clip; the material is ::before, so the sidebar's own content still samples the page. */
 @media (min-width: 1024px) {
-  :root[data-flavour='glass'] .rp-side {
+  :root:is([data-flavour='glass'], [data-flavour='clear']) .rp-side {
     --rp-sidebar-content-width: calc(
       var(--rp-sidebar-width) - 2 * var(--rp-space-3) - var(--rp-sidebar-padding) - var(--rp-sidebar-inset-end) - var(--rp-space-3) - var(--rp-space-2)
     );
@@ -180,7 +180,7 @@
     border-radius: var(--rp-r-2xl);
     box-shadow: var(--rp-shadow);
   }
-  :root[data-flavour='glass'] .rp-side::before {
+  :root:is([data-flavour='glass'], [data-flavour='clear']) .rp-side::before {
     content: '';
     position: absolute;
     inset: 0;

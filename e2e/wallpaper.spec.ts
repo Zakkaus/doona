@@ -145,7 +145,7 @@ test('the default veil keeps label and secondary text at 4.5:1 over a white and 
       return (hi + 0.05) / (lo + 0.05);
     };
     const failures: string[] = [];
-    for (const flavour of ['glass', 'frosted', 'tinted'])
+    for (const flavour of ['glass', 'clear', 'frosted', 'tinted'])
       for (const scheme of ['light', 'dark']) {
         Object.assign(root.dataset, {flavour, scheme});
         const veil = scheme === 'light' ? [255, 255, 255, alpha] : [0, 0, 0, alpha];
