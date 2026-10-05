@@ -1,4 +1,5 @@
 import type {ApiEvent, EventKind} from '../../api/model';
+import {eventKey} from '../../api/eventKey';
 import {enumLabel} from '../../i18n/enum';
 import {eventKindLabels, eventSummary} from '../../api/selectors';
 import {localTime} from '../../i18n/format';
@@ -50,7 +51,7 @@ function eventRow(event: ApiEvent, locale: string, t: LabelFn, lost: boolean): E
   if (hit && hit.locale === locale) return hit.row;
   const summary = lost ? {key: 'event.lostHistory' as const} : eventSummary(event, t);
   const row = {
-    id: event.id,
+    id: eventKey(event),
     timestamp: localTime(event.data.observed_at, locale),
     iso: event.data.observed_at,
     kind: event.event,

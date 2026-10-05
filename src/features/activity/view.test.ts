@@ -1,4 +1,5 @@
 import {expect, it} from 'vitest';
+import {eventKey} from '../../api/eventKey';
 import {connections, nodeFixtures, runtime, runtimeOutbounds} from '../../../mock/fixtures';
 import type {ApiEvent, Connection, ConnectionList, GroupSummary} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
@@ -174,7 +175,7 @@ const ready = (id: string): ApiEvent => ({id, event: 'stream.ready', data: at});
 it('localizes notice kinds and shortens UUIDs without changing event identity', () => {
   const event = operation('op', 'succeeded', '8936fe2c-bbbd-4c16-8336-7a5eb3119589');
   const [row] = noticeRows([event], t).rows;
-  expect(row.id).toBe(event.id);
+  expect(row.id).toBe(eventKey(event));
   expect(row.summaryText).toContain(t('event.k.operationUpdated'));
   expect(row.summaryText).toContain('8936fe2c');
   expect(row.summaryText).not.toContain('8936fe2c-bbbd');
@@ -214,7 +215,7 @@ it.each([
   {name: 'gaps on different records', events: [gap('a', '0', 'flow-a'), gap('b', '0', 'flow-b'), gap('a0', '0', 'flow-a')], ids: ['a', 'b'], counts: [2, 1]}
 ])('folds identical notices into one row at the latest position: $name', ({events, ids, counts}) => {
   const {rows, total} = noticeRows(events, t);
-  expect(rows.map(row => row.id)).toEqual(ids);
+  expect(rows.map(row => row.id)).toEqual(ids.map(id => eventKey(events.find(event => event.id === id)!)));
   expect(total).toBe(ids.length);
   rows.forEach((row, i) => expect(row.summaryText.endsWith(t('ui.aside', {text: '', note: t('act.noticeRepeat', {n: counts[i]})}))).toBe(counts[i] > 1));
 });

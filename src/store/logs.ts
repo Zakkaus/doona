@@ -1,4 +1,5 @@
 import {useContext, useEffect, useMemo, useRef, useSyncExternalStore} from 'react';
+import {eventKey} from '../api/eventKey';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
 import type {ApiEvent, LogLevel, LogRecord} from '../api/model';
@@ -8,7 +9,7 @@ import {createFeed} from './feed';
 import {ResourcePreview, ResourceSamples} from './preview';
 
 // A resumed stream's `stream.ready` carries the cursor it resumed from, the id of the last event already listed.
-export const eventFeed = () => createFeed<ApiEvent, Record<string, never>>(EVENT_FEED_LIMIT, {}, 'replace', {key: event => `${event.event} ${event.id}`});
+export const eventFeed = () => createFeed<ApiEvent, Record<string, never>>(EVENT_FEED_LIMIT, {}, 'replace', {key: eventKey});
 export const LOG_FEED_LIMIT = 1000;
 // Busy logs arrive every few milliseconds; publishing at most four times a second keeps the list live while
 // re-rendering it less than half as often as the 100 ms default.
@@ -44,7 +45,7 @@ export function useEventFeed(withRuntime: boolean) {
 const notices = new WeakMap<Api, ReturnType<typeof createFeed<ApiEvent, Record<string, never>>>>();
 export function noticeFeed(api: Api) {
   let feed = notices.get(api);
-  if (!feed) notices.set(api, (feed = createFeed<ApiEvent, Record<string, never>>(EVENT_FEED_LIMIT, {}, 'replace')));
+  if (!feed) notices.set(api, (feed = createFeed<ApiEvent, Record<string, never>>(EVENT_FEED_LIMIT, {}, 'replace', {key: eventKey})));
   return feed;
 }
 // The events `keep` accepts, including those the shared stream received before the page opened. The feed outlives

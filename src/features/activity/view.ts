@@ -1,4 +1,5 @@
 import type {ApiEvent, ConnectionList, Datapath, GroupSummary, Node, Runtime, RuntimeOutbounds} from '../../api/model';
+import {eventKey} from '../../api/eventKey';
 import {latencyTone} from '../../ui/ui';
 import {enumLabel} from '../../i18n/enum';
 import {backendCode} from '../../i18n/backend';
@@ -66,7 +67,7 @@ export function noticeRows(events: ApiEvent[], t: LabelFn): {rows: NoticeRow[]; 
     if (group) group.count += 1;
     else
       groups.set(key, {
-        row: {id: event.id, tone, kindText: t(tone === 'err' ? 'ui.error' : tone === 'warn' ? 'ui.warning' : 'ui.notice'), summaryText},
+        row: {id: eventKey(event), tone, kindText: t(tone === 'err' ? 'ui.error' : tone === 'warn' ? 'ui.warning' : 'ui.notice'), summaryText},
         count: 1
       });
   }
