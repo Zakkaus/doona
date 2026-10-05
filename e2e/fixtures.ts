@@ -41,7 +41,7 @@ export const offered = async (page: Page, route: string) => {
 };
 
 // A saved demo profile signs in first, as a password backend does. A spec about something else names the profile to
-// start with this tab already holding the demo's session.
+// start with this browser already holding the demo's session.
 export const demoSession = (profileId: string) =>
   JSON.stringify({profileId, api: 'mock', token: 'demo-session-e2e', expiresAt: new Date(Date.now() + 3600_000).toISOString()});
 
@@ -95,7 +95,7 @@ export const test = base.extend<{storage: Record<string, string>; signedIn: stri
     );
     if (signedIn !== null)
       await page.addInitScript(session => {
-        if (sessionStorage.getItem('doona-session') === null) sessionStorage.setItem('doona-session', session);
+        if (localStorage.getItem('doona-session') === null) localStorage.setItem('doona-session', session);
       }, demoSession(signedIn));
     await use(page);
     expect(controls, 'Live observation suite sent control requests').toEqual([]);

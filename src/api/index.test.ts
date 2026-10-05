@@ -115,3 +115,27 @@ it("keeps its backend when another tab edits the address or token of this tab's 
   await getApi().version();
   expect(fetches).toEqual([[expect.stringMatching(/^https:\/\/home\.example\//), 'Bearer a']]);
 });
+
+it('drops the password session another tab signed out of', async () => {
+  const values = new Map([
+    ['doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: 'https://home.example', token: ''}])],
+    ['doona-profile', 'home'],
+    ['doona-session', JSON.stringify({profileId: 'home', api: 'https://home.example', token: 'hnk1_x'})]
+  ]);
+  const window = new EventTarget();
+  vi.stubGlobal('localStorage', storage(values));
+  vi.stubGlobal('sessionStorage', storage(new Map()));
+  vi.stubGlobal('window', window);
+  const fetches: Array<string | null> = [];
+  vi.stubGlobal('fetch', async (input: RequestInfo, init?: RequestInit) => {
+    fetches.push(new Request(input, init).headers.get('Authorization'));
+    return Response.json({});
+  });
+  vi.resetModules();
+  const {getApi} = await import('./index');
+  await getApi().version();
+  values.delete('doona-session');
+  window.dispatchEvent(new Event('storage'));
+  await getApi().version();
+  expect(fetches).toEqual(['Bearer hnk1_x', null]);
+});

@@ -8,7 +8,7 @@ import {useLeave} from '../../shell/draft';
 import {replaceRoute} from '../../shell/route';
 import {defaultRoute} from '../../shell/routes';
 
-// Offered while this tab holds a password session for the saved active profile, or that profile keeps a saved token.
+// Offered while this browser holds a password session for the saved active profile, or that profile keeps a saved token.
 export function useSignOut() {
   const t = useT();
   const [busy, setBusy] = useState(false);
@@ -35,7 +35,7 @@ export function useSignOut() {
       }
       clearSession();
     }
-    // A saved token left behind would take over from the closed session and sign this tab straight back in.
+    // A saved token left behind would take over from the closed session and sign this browser straight back in.
     try {
       clearProfileToken(profile.id);
     } catch (error) {
