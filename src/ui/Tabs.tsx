@@ -16,7 +16,8 @@ export function Tabs({
   page
 }: {
   label: string;
-  items: Array<{id: string; label: string; content: ReactNode}>;
+  // onIntent: a tab pointed at or focused, for a panel that loads its code before it is chosen.
+  items: Array<{id: string; label: string; content: ReactNode; onIntent?: () => void}>;
   value: string;
   onChange: (id: string) => void;
   // Keep a panel mounted once opened, hidden while another is chosen, so coming back is instant. For panels that
@@ -47,7 +48,7 @@ export function Tabs({
       {pos && <span className="rp-slider" data-still={pos.still || undefined} style={{left: pos.x, width: pos.w}} />}
       <TabList aria-label={label} className="rp-tablist">
         {items.map(item => (
-          <Tab key={item.id} id={item.id} className="rp-tab">
+          <Tab key={item.id} id={item.id} className="rp-tab" onHoverStart={item.onIntent} onFocus={item.onIntent}>
             {item.label}
           </Tab>
         ))}

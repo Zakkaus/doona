@@ -47,6 +47,7 @@
     "locale": 38000,
     "fontCss": 36000,
     "route": 79500,
+    "routePart": 16000,
     "routeConfig": 195000,
     "mock": 38000
   },

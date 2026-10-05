@@ -28,7 +28,7 @@ const allowed = new Map(
     ['src/features/config/NewSource.tsx', 'placeholder', 'config.d/extra.dae', 'sample source path'],
     ['src/features/policies/group/IncludesEditor.tsx', 'placeholder', "name(keyword: 'HK')", 'sample dae condition'],
     ['src/features/dns/Dns.tsx', 'placeholder', 'example.com', 'sample domain'],
-    ['src/features/rules/Rules.tsx', 'placeholder', 'example.com', 'sample domain'],
+    ['src/features/rules/Trace.tsx', 'placeholder', 'example.com', 'sample domain'],
     ['src/features/nodes/SubscriptionFields.tsx', 'placeholder', 'https://example.org/sub?token=…', 'sample subscription URL'],
     ['src/features/nodes/Nodes.tsx', 'placeholder', 'vless://…', 'sample share link'],
     ['src/features/nodes/SubscriptionFields.tsx', 'placeholder', 'sub-a', 'sample subscription name'],

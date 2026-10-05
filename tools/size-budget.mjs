@@ -5,7 +5,7 @@ export const configKey = 'src/features/config/Config.tsx';
 // Config loads its editor on the source tab, the usual first one, so the editor counts towards Config.
 export const editorKey = 'src/ui/code/CodeEditor.tsx';
 export const mockKey = 'mock/index.ts';
-export const budgetNames = ['startupLogin', 'startupActivity', 'startupCss', 'locale', 'fontCss', 'route', 'routeConfig', 'mock'];
+export const budgetNames = ['startupLogin', 'startupActivity', 'startupCss', 'locale', 'fontCss', 'route', 'routePart', 'routeConfig', 'mock'];
 
 // Static import closure of a manifest key; dynamic imports are separate downloads and stay out.
 export function closure(manifest, key, seen = new Set()) {
@@ -59,10 +59,19 @@ export function measure(manifest, size) {
     if (/^src\/fonts-.*\.css$/.test(chunk.src ?? '')) result.push(entry('fontCss', key, [chunk.file], '.css', size));
   }
   for (const key of locales) result.push(entry('locale', key, [manifest[key].file], '.js', size));
+  // A page's own lazy part, such as the rules page's trace tab, counts what it adds to the page, under its own budget. A page that hands code
+  // to its part is keyed by its chunk file rather than its source, so the page is found as the part's importer.
+  const pageOf = key => entries.find(([other, chunk]) => other !== entryKey && chunk.isDynamicEntry && chunk.dynamicImports?.includes(key))?.[0];
+  const routes = new Map();
   for (const [key, chunk] of entries) {
     if (!chunk.isDynamicEntry || !key.startsWith('src/features/')) continue;
-    const own = [...withClosure(manifest, key === configKey ? [key, editorKey] : [key])].filter(file => !activity.has(file));
-    result.push(entry(key === configKey ? 'routeConfig' : 'route', key, own, '.js', size));
+    const page = pageOf(key);
+    if (page && !page.startsWith('src/features/')) routes.set(page, {label: `${manifest[page].name} (${manifest[page].file})`, loaded: activity});
+    routes.set(key, {label: key, loaded: page ? union(activity, withClosure(manifest, [page])) : activity, part: !!page});
+  }
+  for (const [key, {label, loaded, part}] of routes) {
+    const own = [...withClosure(manifest, key === configKey ? [key, editorKey] : [key])].filter(file => !loaded.has(file));
+    result.push(entry(key === configKey ? 'routeConfig' : part ? 'routePart' : 'route', label, own, '.js', size));
   }
   if (!result.some(({budget}) => budget === 'routeConfig')) throw new Error(`Manifest has no ${configKey}.`);
   return result;
