@@ -280,8 +280,10 @@ for (const lang of ['en', 'zh-TW', 'zh-CN'])
 
 test('the About dialog shows the doona version on a phone, where the top bar leaves it out', async ({page}) => {
   await page.goto('/#/overview');
-  await expect(page.locator('.rp-brand .rp-brand-version')).toBeHidden();
-  await page.locator('.rp-brand').click();
+  const brand = page.locator('button.rp-brand');
+  await expect(brand).toBeVisible();
+  await expect(brand.locator('.rp-brand-version')).toBeHidden();
+  await brand.click();
   const version = page.getByRole('dialog').locator('.rp-brand-version');
   await expect(version).toBeVisible();
   await expect(version).toHaveText(/^v\d+\.\d+\.\d+/);
