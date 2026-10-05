@@ -407,7 +407,9 @@ it('says why the add dialog cannot submit, first applicable, and nothing while i
   expect(nodeFormReason('provider', 'sub-a', 'https://example.org/sub', t)).toBeNull();
   expect(nodeFormReason('provider', 'sub-a', 'example.org/sub', t)).toBeNull();
   expect(nodeFormReason('provider', 'sub-a', "https://example.org/it's", t)).toBe(t('config.unquotable'));
-  expect(nodeFormReason('node', 'hk-03', 'vless:/broken', t)).toBe('The node link must look like vless://…');
+  expect(nodeFormReason('node', 'hk-03', 'vless:/broken', t)).toBe(
+    'The node link must be a protocol://… link, such as ss://, vmess://, vless://, trojan:// or hysteria2://'
+  );
   expect(nodeFormReason('node', 'hk 03', 'vless://id@host:443', t)).toBeNull();
   // A group name's problem is shown at its field.
   expect(nodeFormReason('group', 'bad name', '', t)).toBeNull();

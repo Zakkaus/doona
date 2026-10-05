@@ -191,9 +191,13 @@ test('a node link that cannot be read is explained at its field', async ({page})
   await page.goto('/#/nodes?provider=inline');
   await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.locator('.rp-field-error', {hasText: 'The node link must look like vless://…'})).toHaveCount(0);
+  await expect(
+    dialog.locator('.rp-field-error', {hasText: 'The node link must be a protocol://… link, such as ss://, vmess://, vless://, trojan:// or hysteria2://'})
+  ).toHaveCount(0);
   await dialog.getByLabel('Node link').fill('vless:/broken');
-  await expect(dialog.locator('.rp-field-error', {hasText: 'The node link must look like vless://…'})).toBeVisible();
+  await expect(
+    dialog.locator('.rp-field-error', {hasText: 'The node link must be a protocol://… link, such as ss://, vmess://, vless://, trojan:// or hysteria2://'})
+  ).toBeVisible();
 });
 
 test('an open source menu keeps Remove in place when its edit action becomes available', async ({page}) => {

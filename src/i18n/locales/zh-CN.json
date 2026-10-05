@@ -884,7 +884,7 @@
   "nodes.latency.unavailableList": "不可用（{n} 个）：{names}",
   "nodes.latency.unmeasuredList": "尚未测量（{n} 个）：{names}",
   "nodes.link": "节点链接",
-  "nodes.linkInvalid": "节点链接须为 vless://… 这类格式",
+  "nodes.linkInvalid": "节点链接须为 协议://… 格式，例如 ss://、vmess://、vless://、trojan://、hysteria2://",
   "nodes.manualOnly": "仅手动",
   "nodes.minutes": "分钟",
   "nodes.moreGroups": "另有 {n} 个组",
