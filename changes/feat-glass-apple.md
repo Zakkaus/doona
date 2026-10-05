@@ -1,4 +1,0 @@
-Added
-
-- The palette menu offers three Glass materials over a wallpaper with colour and shapes behind it. Glass follows Apple's Liquid Glass: in Chrome and Edge the cards, the phone's bottom bar, the floating panel, dialogs, menus and toasts are clear glass that bends the page at their edges and catch light on their rim. The sidebar floats as one more card, and the top bar draws no strip: its search field and buttons are glass capsules, with a soft blur under them once the page scrolls. Frosted draws one even blur on every surface, so the shapes behind stay softly recognisable. Tinted follows Microsoft's Mica, with nearly opaque surfaces and no blur.
-- Every Glass material has a soft shadow in place of the dark outline, with no line drawn round its edges, and Reduce Transparency, Increase Contrast and forced colours turn each one solid with clear edges. A Glass material chosen with the earlier Settings switch carries over to its palette.

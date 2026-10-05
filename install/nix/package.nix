@@ -6,7 +6,7 @@
   withFonts ? true,
 }:
 let
-  version = "0.1.0-beta.14";
+  version = "0.1.0-beta.15";
   fonts = fetchurl {
     url = "https://github.com/Zakkaus/doona/releases/download/v${version}/doona-fonts-${version}.tar.gz";
     hash = "sha256-IfqWbBZdFOC9+uCn5qFWZyZvqWjr7S3j42jauCu+LTk=";

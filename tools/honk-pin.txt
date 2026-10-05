@@ -1,2 +1,2 @@
-debug.2026.10.4.native-api.2
-5e726a9c0c98864d05550c235b326cad83abc006
+debug.2026.10.6.native-api.1
+a949f1f1ff7e8e8852e76e02b60870e6bb1fd440

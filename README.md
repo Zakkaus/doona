@@ -20,6 +20,10 @@ doona is a static web UI for the native API shared by daeuniverse engines. It sh
 
 ![The activity page](https://zakkaus.github.io/doona-docs/screenshots/en/activity-light.webp)
 
+The [beta.15 changelog](CHANGELOG.md) lists 6 additions, 23 changes and 20 fixes, including four Glass palettes, Appearance settings and bounded memory use for live event tables.
+
+![Configuration files with the editable source view](https://zakkaus.github.io/doona-docs/screenshots/en/config-source-light.webp)
+
 ## Install
 
 Download `doona-<version>.tar.gz` from the [releases page](https://github.com/Zakkaus/doona/releases).

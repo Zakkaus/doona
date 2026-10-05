@@ -20,6 +20,10 @@ doona 是 daeuniverse 引擎共用原生 API 的靜態 Web 介面，顯示引擎
 
 ![活動頁](https://zakkaus.github.io/doona-docs/screenshots/zh-TW/activity-light.webp)
 
+[beta.15 更新記錄](CHANGELOG.md)列出 6 項新增、23 項變更與 20 項修正，包括四種 Glass 配色、外觀設定，以及即時事件表格的記憶體洩漏修正。
+
+![組態檔與可編輯的原始文字檢視](https://zakkaus.github.io/doona-docs/screenshots/zh-TW/config-source-light.webp)
+
 ## 安裝
 
 從[發布頁](https://github.com/Zakkaus/doona/releases)下載 `doona-<version>.tar.gz`。
