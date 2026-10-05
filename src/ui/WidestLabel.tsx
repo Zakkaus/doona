@@ -1,4 +1,5 @@
 import {useLayoutEffect, useRef, useState, type ReactNode} from 'react';
+import {flushSync} from 'react-dom';
 
 // The text properties a label's width depends on, copied from the label onto the one measuring span.
 const textProps = [
@@ -53,8 +54,10 @@ export function WidestLabel({labels, children}: {labels: readonly string[]; chil
     if (!label) return;
     const measure = () => setWidth(widest(label, key ? key.split('\0') : []));
     measure();
-    document.fonts?.addEventListener('loadingdone', measure);
-    return () => document.fonts?.removeEventListener('loadingdone', measure);
+    // Packing listeners must read the new label width in the same font event.
+    const loaded = () => flushSync(measure);
+    document.fonts?.addEventListener('loadingdone', loaded);
+    return () => document.fonts?.removeEventListener('loadingdone', loaded);
   }, [key]);
   return (
     <span ref={ref} style={width ? {minInlineSize: width} : undefined}>
