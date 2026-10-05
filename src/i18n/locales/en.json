@@ -1031,7 +1031,7 @@
   "nodes.latency.unavailableList": "{n} unavailable: {names}",
   "nodes.latency.unmeasuredList": "{n} not measured: {names}",
   "nodes.link": "Node link",
-  "nodes.linkInvalid": "The node link must look like vless://…",
+  "nodes.linkInvalid": "The node link must be a protocol://… link, such as ss://, vmess://, vless://, trojan:// or hysteria2://",
   "nodes.manualOnly": "Manual only",
   "nodes.minutes": "Minutes",
   "nodes.moreGroups": {
