@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ChartWait, Meter, ProblemAlert, ProgressCircle, Skeleton, SkeletonBar, SkeletonBody, SkeletonGroup, TableSkeleton} from './Feedback';
+import {ChartWait, Meter, ProblemAlert, ProgressCircle, Skeleton, SkeletonBar, SkeletonBody, SkeletonCover, SkeletonGroup, TableSkeleton} from './Feedback';
 import {PageSkeleton} from './PageSkeleton';
 
 it.each([
@@ -88,6 +88,13 @@ it.each([
   expect(markup.match(/aria-hidden="true"/g)).toHaveLength(count);
 });
 
+it('waits before a cover shows and reads no status of its own', () => {
+  const markup = renderToStaticMarkup(<SkeletonCover />);
+  expect(markup).toContain('data-wait=""');
+  expect(markup).toContain('aria-hidden="true"');
+  expect(markup).not.toContain('role="status"');
+});
+
 it("lays ranking bars out as a wide card's list only when asked", () => {
   expect(renderToStaticMarkup(<SkeletonBody shape="bars" count={4} columns />)).toContain('rp-list rp-columns');
   expect(renderToStaticMarkup(<SkeletonBody shape="bars" count={4} />)).not.toContain('rp-columns');
@@ -108,4 +115,12 @@ it('keeps the progress circle to the waits on its list', () => {
   });
   const using = Object.keys(sources).filter(path => /<Loading\b/.test(sources[path]));
   expect(using.map(path => path.slice(1)).sort()).toEqual(Object.keys(progressCircleWaits).sort());
+});
+
+// Features draw a Skeleton only through the kit's parts, which wait 150ms and read one status; a raw placeholder class
+// in a feature shows at once and reads nothing.
+it('keeps raw skeleton and placeholder classes out of features', () => {
+  const sources = import.meta.glob<string>(['/src/features/**/*.tsx', '!/src/**/*.test.*'], {query: '?raw', import: 'default', eager: true});
+  const raw = Object.keys(sources).filter(path => /rp-wait-line|rp-skeleton|rp-table-skeleton|rp-page-skeleton/.test(sources[path]));
+  expect(raw).toEqual([]);
 });

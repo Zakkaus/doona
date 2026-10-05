@@ -31,6 +31,8 @@ import {
   Light,
   Segmented,
   PageSkeleton,
+  SkeletonBar,
+  SkeletonGroup,
   Empty,
   Tag,
   Tags,
@@ -54,34 +56,38 @@ import type {MainSourceEdit} from '../../store/mainSource';
 import type {OutboundCatalogue} from '../shared/groupText';
 import {isWritableName, quoteName} from '../../dae/groups';
 
+// The loaded tile's and scroll panel's heights (`.rp-node`, `.rp-nodegrid` in nodes.css).
+const nodeTileHeight = 56;
+const nodeGridHeight = 376;
 // Holds roughly the loaded card's height, so cards below do not move when the details arrive. A collapsed automatic
-// group holds its summary line alone.
+// group holds its summary line alone. With a `label` the drawing reads one loading status; without, it is a stand-in
+// inside a card that is not loading yet, which a list-wide Skeleton already announces.
 function PolicyWait({heading, members, label, collapsed}: {heading: ReactNode; members: number; label?: string; collapsed?: boolean}) {
-  if (collapsed)
-    return (
-      <>
-        <div className="rp-row">{heading}</div>
-        <div className="rp-wait-line" role={label ? 'status' : undefined} aria-label={label} />
-      </>
-    );
-  return (
+  const bars = collapsed ? (
+    <SkeletonBar />
+  ) : (
     <>
-      <div className="rp-row">{heading}</div>
-      <div className="rp-wait-line" />
-      <div className="rp-form" role={label ? 'status' : undefined} aria-label={label}>
+      <SkeletonBar />
+      <div className="rp-form">
         {members > 12 ? (
           <>
-            <div className="rp-wait-line" />
-            <div className="rp-nodegrid" />
+            <SkeletonBar />
+            <SkeletonBar height={nodeGridHeight} />
           </>
         ) : (
           <div className="rp-nodes">
             {Array.from({length: Math.max(members, 1)}, (_, i) => (
-              <span key={i} className="rp-node" />
+              <SkeletonBar key={i} height={nodeTileHeight} />
             ))}
           </div>
         )}
       </div>
+    </>
+  );
+  return (
+    <>
+      <div className="rp-row">{heading}</div>
+      {label ? <SkeletonGroup label={label}>{bars}</SkeletonGroup> : bars}
     </>
   );
 }
@@ -169,7 +175,7 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
             </h2>
           }
           members={props.members}
-          label={m.loadingText}
+          label={paused ? undefined : m.loadingText}
           collapsed={props.kind === 'auto' && !props.focused}
         />
       )}

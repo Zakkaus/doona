@@ -1,13 +1,63 @@
 import {useT} from '../../i18n';
-import {Button, PrimaryActions, Card, ErrorMessage, InlineAlert, LabeledSelect, NumberField, TextField, Toolbar, Form, textFromNumber} from '../../ui/ui';
+import {
+  Button,
+  PrimaryActions,
+  Card,
+  ErrorMessage,
+  InlineAlert,
+  LabeledSelect,
+  NumberField,
+  TextField,
+  Toolbar,
+  Form,
+  SkeletonBar,
+  SkeletonGroup,
+  textFromNumber
+} from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
 import {RestartNotice} from './RestartNotice';
 import {useGlobalSettings} from './useGlobalSettings';
+
+// The first read's Skeleton, drawn from the same groups and fields as the form: each real label, key and hint stays and
+// only the control is a bar, so nothing moves when the values arrive.
+function GlobalSkeleton({groups}: {groups: ReturnType<typeof useGlobalSettings>['groups']}) {
+  const t = useT();
+  return (
+    <div className="rp-page">
+      <SkeletonGroup>
+        <Toolbar page>
+          <span className="rp-cluster nowrap rp-source-pick">
+            <SkeletonBar width={240} />
+          </span>
+        </Toolbar>
+        <span className="rp-label">{t('config.globalNote')}</span>
+        {groups.map(group => (
+          <Card key={group.id} title={group.title}>
+            <Toolbar className="top rp-fieldgrid">
+              {group.fields.map(field => (
+                <div key={field.key} className="rp-field" inert aria-hidden="true">
+                  <span className="lbl">{field.label}</span>
+                  <SkeletonBar />
+                  <span className="rp-label rp-code">{field.key}</span>
+                  {field.hint && <span className="rp-label">{field.hint}</span>}
+                </div>
+              ))}
+            </Toolbar>
+          </Card>
+        ))}
+        <Toolbar page>
+          <SkeletonBar width={96} />
+        </Toolbar>
+      </SkeletonGroup>
+    </div>
+  );
+}
 
 export function GlobalSettings(props: PageProps) {
   const t = useT();
   const m = useGlobalSettings(props);
   if (!m.available) return null;
+  if (m.loading) return <GlobalSkeleton groups={m.groups} />;
   return (
     <Form
       id="config-global-form"
