@@ -120,16 +120,16 @@ export function useRoute(api: string | null, startPage: RoutePath = defaultRoute
   // An action that must not land before the drafts are answered for, as a profile switch or a sign-out.
   const [leaving, setLeaving] = useState<(() => void) | null>(null);
   const ask = useCallback((action: () => void) => setLeaving(() => action), []);
+  // The route the shell last accepted, set with each setLoc rather than on commit, so a route a page replaced in the
+  // same commit counts before it renders. `go` reads it to keep one identity across navigations, so memoised pages and
+  // tiles are not re-rendered by the callback alone.
+  const current = useRef(loc);
   const push = useCallback((next: Route, replace = false) => {
     if (replace) history.replaceState({...history.state, doonaPosition: position.current}, '', buildHash(next.route, next.query));
     else history.pushState({doonaPosition: ++position.current}, '', buildHash(next.route, next.query));
+    current.current = next;
     setLoc(next);
   }, []);
-  // `go` keeps one identity across navigations, so memoised pages and tiles are not re-rendered by the callback alone.
-  const current = useRef(loc);
-  useLayoutEffect(() => {
-    current.current = loc;
-  }, [loc]);
   // A layout effect, so it is in place before a page's own effects run on the first render.
   useLayoutEffect(() => {
     replaceShellRoute = next => push(updateRoute(current.current, buildHash(next.route, next.query)), true);
@@ -171,11 +171,15 @@ export function useRoute(api: string | null, startPage: RoutePath = defaultRoute
       } else {
         if (history.state?.doonaPosition === undefined) history.replaceState({...history.state, doonaPosition: nextPosition}, '', hash);
         position.current = nextPosition;
+        current.current = next;
         setLoc(next);
       }
     };
     // popstate, not hashchange: it also fires when two entries share a hash, so the cursor never drifts.
     addEventListener('popstate', on);
+    // The first render read the address before this listener existed, so a navigation in between fired no event. The
+    // address is compared with the accepted route, not `loc`: a page that replaced it in this commit is not navigating.
+    if (!restoring.current && updateRoute(current.current, location.hash) !== current.current) on();
     return () => removeEventListener('popstate', on);
   }, [api, loc]);
   const discard = () => {

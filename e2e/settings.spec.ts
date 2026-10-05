@@ -47,6 +47,19 @@ test('leaving a paired draft and staying does not write the token back into the 
   expect(page.url()).not.toContain('secret-token');
 });
 
+test('a pairing link followed on the open settings page removes its credentials without asking', async ({page}) => {
+  await page.goto('/#/settings');
+  await expect(page.locator('[name=api]')).toHaveValue('');
+  // The page strips the credentials in the same commit as the route change, before the shell has seen that route.
+  await page.evaluate(() => {
+    location.hash = '#/settings?api=http://router:9527&token=secret-token';
+  });
+  await expect(page.locator('[name=token]')).toHaveValue('secret-token');
+  await expect(page).toHaveURL(/#\/settings$/);
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  expect(page.url()).not.toContain('secret-token');
+});
+
 browserTest('paints a frame during discovery, then selects the hosted backend and asks for its token', async ({page}) => {
   const challenge = {
     status: 401,
