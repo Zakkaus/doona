@@ -82,11 +82,11 @@ for (const viewport of [
         expect(nextIndex - held.index - 1).toBeGreaterThan(1);
         expect(nextIndex - held.index - 1).toBeLessThanOrEqual(Math.ceil(viewport.height / 40));
         await page.keyboard.press('End');
-        const last = kind === 'logs' ? 'log:1002' : 'event:2';
+        const last = kind === 'logs' ? 'log:1002' : 'stream.ready:event:2';
         await expect(grid.locator(`[data-key="${last}"]`)).toBeInViewport();
         await expect.poll(() => page.evaluate(() => document.activeElement?.closest('[data-key]')?.getAttribute('data-key'))).toBe(last);
         await page.keyboard.press('Home');
-        const first = grid.locator(`[data-key="${kind === 'logs' ? 'log:2001' : 'event:2001'}"]`);
+        const first = grid.locator(`[data-key="${kind === 'logs' ? 'log:2001' : 'stream.ready:event:2001'}"]`);
         await expect(first).toBeInViewport();
         await expect.poll(async () => (await box(first)).y).toBeGreaterThanOrEqual(101);
         await page.keyboard.press('End');
@@ -109,11 +109,11 @@ for (const viewport of [
     for (const kind of ['events', 'logs'] as const) {
       test(`${kind} reveal End above the open detail`, async ({page}) => {
         const {grid} = await feed(page, kind, 200);
-        const selectedKey = kind === 'logs' ? 'log:200' : 'event:200';
+        const selectedKey = kind === 'logs' ? 'log:200' : 'stream.ready:event:200';
         const selected = grid.locator(`[data-key="${selectedKey}"]`);
         await selected.click();
         await page.keyboard.press('End');
-        const lastKey = kind === 'logs' ? 'log:1' : 'event:1';
+        const lastKey = kind === 'logs' ? 'log:1' : 'stream.ready:event:1';
         const last = grid.locator(`[data-key="${lastKey}"]`);
         await expect(last).toBeFocused();
         const detail = page.locator('.rp-table-detail');
@@ -127,11 +127,11 @@ for (const viewport of [
       });
       test(`${kind} restore focus after the selected row is unmounted`, async ({page}) => {
         const {grid} = await feed(page, kind, 200);
-        const selectedKey = kind === 'logs' ? 'log:200' : 'event:200';
+        const selectedKey = kind === 'logs' ? 'log:200' : 'stream.ready:event:200';
         const selected = grid.locator(`[data-key="${selectedKey}"]`);
         await selected.click();
         await page.keyboard.press('End');
-        await expect(grid.locator(`[data-key="${kind === 'logs' ? 'log:1' : 'event:1'}"]`)).toBeFocused();
+        await expect(grid.locator(`[data-key="${kind === 'logs' ? 'log:1' : 'stream.ready:event:1'}"]`)).toBeFocused();
         const detail = page.locator('.rp-table-detail');
         await expect(selected).toHaveCount(0);
         await page.keyboard.press('Tab');
@@ -142,7 +142,7 @@ for (const viewport of [
         await expect(selected).toHaveAttribute('data-focus-visible');
         await expect.poll(async () => (await box(selected)).y).toBeGreaterThanOrEqual(101);
         await page.keyboard.press('ArrowDown');
-        await expect(grid.locator(`[data-key="${kind === 'logs' ? 'log:199' : 'event:199'}"]`)).toBeFocused();
+        await expect(grid.locator(`[data-key="${kind === 'logs' ? 'log:199' : 'stream.ready:event:199'}"]`)).toBeFocused();
       });
     }
     test('logs return focus to the grid when the selected record is evicted', async ({page}) => {
