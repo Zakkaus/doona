@@ -225,6 +225,7 @@
   .rp-skeleton-cards,
   .rp-page-skeleton,
   .rp-skeleton-group,
+  .rp-skeleton-cover,
   .rp-facts
 )[data-wait] {
   visibility: hidden;

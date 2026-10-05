@@ -14,6 +14,7 @@ import {
   Kv,
   Card,
   SkeletonBar,
+  SkeletonGroup,
   type TableColumn,
   Toolbar
 } from '../../ui/ui';
@@ -168,9 +169,11 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         <p className="rp-label">{m.scope}</p>
       ) : (
         m.scopePending && (
-          <p className="rp-label">
-            <SkeletonBar line="caption" />
-          </p>
+          <SkeletonGroup>
+            <p className="rp-label">
+              <SkeletonBar line="caption" />
+            </p>
+          </SkeletonGroup>
         )
       )}
       <Toolbar page>

@@ -148,7 +148,13 @@ test('first loads draw skeletons on every page', async ({page}) => {
 const steadyBoxes: Array<{route: string; before: string; after: string; heights: (i: number) => boolean}> = [
   {route: 'activity', before: '.rp-dashboard-cell', after: '.rp-dashboard-cell', heights: i => i >= 3 && i <= 12},
   {route: 'policies', before: '.rp-policy-list .rp-page-skeleton .rp-card', after: '.rp-policy-list > .rp-col > .rp-card', heights: () => true},
-  {route: 'nodes?tab=list', before: '.rp-tabpanel[data-shown] > *', after: '.rp-tabpanel[data-shown] > *', heights: () => true},
+  // The provider line's group takes no box of its own, so its bar stands in for the line.
+  {
+    route: 'nodes?tab=list',
+    before: '.rp-tabpanel[data-shown] > *, .rp-tabpanel[data-shown] > .rp-skeleton-group > :not([role=status])',
+    after: '.rp-tabpanel[data-shown] > *',
+    heights: () => true
+  },
   {
     route: 'nodes?tab=latency',
     before: '.rp-tabpanel[data-shown] .rp-chart-page > *',

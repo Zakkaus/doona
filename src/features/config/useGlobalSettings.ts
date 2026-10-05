@@ -157,6 +157,8 @@ export function useGlobalSettings({query, go}: PageProps) {
   }, [params, source?.id, schema, writable]);
   return {
     available: available && !!schema,
+    // The first config read, before any source is known.
+    loading: !!config.loading && !config.data,
     fields,
     groups: Object.entries(settingGroups)
       .map(([id, title]) => ({id, title: t(title), fields: fields.filter(field => field.group === id)}))

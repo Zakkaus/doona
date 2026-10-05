@@ -184,9 +184,10 @@ export function SkeletonBar({line, width, height}: {line?: 'body' | 'caption'; w
   return <span className={cx('rp-skeleton-text', 'rp-skeleton-bar', line ?? 'control')} style={{width, height}} inert aria-hidden="true" />;
 }
 // A Skeleton block over its positioned parent's whole box, for a hold that lays out the loaded view hidden underneath
-// so the block takes its exact size.
+// so the block takes its exact size. It shows after the same 150ms; it reads no status, which a table or group beside
+// it already reads for the same load.
 export function SkeletonCover() {
-  return <span className="rp-skeleton-text rp-skeleton-cover" inert aria-hidden="true" />;
+  return <span className="rp-skeleton-text rp-skeleton-cover" data-wait={useWaitAttr()} inert aria-hidden="true" />;
 }
 // One card's surface `height` pixels tall with its Skeleton block, for a grid that places cards itself, such as the
 // dashboard's; inside a SkeletonGroup, which reads the status.

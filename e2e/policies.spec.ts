@@ -54,7 +54,7 @@ test('a group card mounted on screen shows its members in the first frame', asyn
   // Checked in the frame callback, which sees what is about to be painted.
   await page.addInitScript(() => {
     const check = () => {
-      for (const wait of document.querySelectorAll('.rp-content section.rp-card .rp-wait-line'))
+      for (const wait of document.querySelectorAll('.rp-content section.rp-card .rp-skeleton-bar'))
         if (wait.closest('section')!.getBoundingClientRect().top < innerHeight) document.documentElement.dataset.waited = '';
     };
     new MutationObserver(() => requestAnimationFrame(check)).observe(document, {childList: true, subtree: true});
