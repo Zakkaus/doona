@@ -100,14 +100,23 @@ jobs:
         env:
           PLAYWRIGHT_VERSION: 1.63.0
       - name: Run the browser shard
-        run: pnpm e2e --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=list,github,blob,json
+        # The shard sizes come from the recorded test times (tools/e2e-shards.mjs), so every shard takes about as long as the others.
+        # If they cannot be computed the shard runs with Playwright's default split instead of failing.
+        run: |
+          if weights=$(node tools/e2e-shards.mjs weights "${{ strategy.job-total }}"); then
+            export PWTEST_SHARD_WEIGHTS="$weights"
+          else
+            echo "::warning::Could not balance the e2e shards by test time; running Playwright's default split."
+          fi
+          pnpm e2e --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=list,github,blob,json
         env:
           DOONA_E2E_WEBKIT: '1'
-          PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ runner.temp }}/e2e-${{ matrix.shard }}.json
+          # Uploaded with test-results; `node tools/e2e-shards.mjs record` turns these reports into the recorded times.
+          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/e2e-${{ matrix.shard }}.json
       - name: Summarize the shard
         if: always()
         env:
-          REPORT: ${{ runner.temp }}/e2e-${{ matrix.shard }}.json
+          REPORT: test-results/e2e-${{ matrix.shard }}.json
           SHARD: ${{ matrix.shard }}
         run: |
           node <<'JS'
