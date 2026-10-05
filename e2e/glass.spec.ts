@@ -1,7 +1,9 @@
 import type {Page} from '@playwright/test';
 import {expect, test} from './fixtures';
 
-const flavours = ['glass', 'frosted', 'tinted'] as const;
+const flavours = ['glass', 'clear', 'frosted', 'tinted'] as const;
+// Glass and Clear draw the sidebar and the bar's capsules as glass of their own; Frosted and Tinted share one chrome sheet.
+const floats = (flavour: (typeof flavours)[number]) => flavour === 'glass' || flavour === 'clear';
 
 // The page's own cards: the startup screen and a loading page draw inert skeleton cards in the same classes.
 const pageCard = '.rp-card:not([inert] *)';
@@ -17,10 +19,10 @@ const surface = (page: Page, selector: string, pseudo?: string) =>
       return {filter: style.backdropFilter, alpha};
     }, pseudo);
 
-test('the palette menu offers the three Glass materials, and Settings has no material switch', async ({page}) => {
+test('the palette menu offers the four Glass materials in order, and Settings has no material switch', async ({page}) => {
   await page.goto('/#/settings');
   await page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true}).click();
-  for (const name of ['Glass', 'Frosted', 'Tinted']) await expect(page.getByRole('menuitemradio', {name: new RegExp(`^${name}`)})).toHaveCount(1);
+  await expect(page.getByRole('menuitemradio', {name: /^(Liquid Glass|Glass|Frosted|Tinted)/})).toContainText(['Liquid Glass', 'Glass', 'Frosted', 'Tinted']);
   await page.getByRole('menuitemradio', {name: /^Frosted/}).click();
   await expect(page.locator('html')).toHaveAttribute('data-flavour', 'frosted');
   const card = page.getByRole('region', {name: 'Appearance', exact: true});
@@ -53,8 +55,7 @@ for (const flavour of flavours)
     await page.addInitScript(value => localStorage.setItem('doona-palette', `glass/${value}`), flavour);
     await page.goto('/#/nodes?provider=harbor');
     await expect(page.locator(pageCard).first()).toBeVisible();
-    // Glass draws the sidebar as glass of its own; the other materials share one chrome sheet.
-    const chrome = flavour === 'glass' ? await surface(page, '.rp-side', '::before') : await surface(page, '.rp-shell', '::after');
+    const chrome = floats(flavour) ? await surface(page, '.rp-side', '::before') : await surface(page, '.rp-shell', '::after');
     // A card's material is its ::before.
     const card = await surface(page, pageCard, '::before');
     if (flavour === 'tinted') {
@@ -154,6 +155,70 @@ test.describe('glass lens', () => {
     }
   });
 });
+// Clear is Glass as Firefox and Safari draw it, offered in every browser: the lens is never loaded or marked.
+test.describe('clear glass', () => {
+  test.skip(({browserName}) => browserName !== 'chromium', 'the lens only exists in Chromium; elsewhere Glass already draws this');
+  test.use({widgets: true, storage: {'doona-palette': 'glass/clear'}});
+  test.beforeEach(async ({page}) =>
+    page.addInitScript(() => {
+      requestAnimationFrame(() => {
+        const d = document.documentElement;
+        (window as unknown as {firstFrame: string}).firstFrame = `${d.dataset.family}/${d.dataset.flavour} ${d.hasAttribute('data-lens')}`;
+      });
+    })
+  );
+  const appearance = (page: Page) => page.getByRole('region', {name: 'Appearance', exact: true});
+  test('draws blur and fill without the lens, with the wallpaper and blur settings', async ({page}) => {
+    await page.goto('/#/settings');
+    expect(await page.waitForFunction(() => (window as unknown as {firstFrame?: string}).firstFrame).then(value => value.jsonValue())).toBe(
+      'glass/clear false'
+    );
+    await expect(page.locator(pageCard).first()).toBeVisible();
+    await expect(page.locator('html')).not.toHaveAttribute('data-lens');
+    await expect(page.locator('svg filter')).toHaveCount(0);
+    for (const [selector, pseudo] of [
+      ['.rp-card', '::before'],
+      ['.rp-side', '::before'],
+      ['.rp-floating-frame .rp-floating-panel', undefined]
+    ] as const) {
+      const {filter} = await surface(page, selector, pseudo);
+      expect(filter, selector).toContain('blur');
+      expect(filter, selector).not.toContain('url(');
+    }
+    await expect(appearance(page).getByRole('group', {name: 'Wallpaper'})).toBeVisible();
+    await expect(appearance(page).getByRole('slider', {name: 'Blur'})).toBeVisible();
+    await page.reload();
+    expect(await page.waitForFunction(() => (window as unknown as {firstFrame?: string}).firstFrame).then(value => value.jsonValue())).toBe(
+      'glass/clear false'
+    );
+    await expect(page.locator('html')).toHaveAttribute('data-flavour', 'clear');
+  });
+  test('leaves no lens behind when Glass gives way to it', async ({page}) => {
+    await page.addInitScript(() => {
+      if (!sessionStorage.getItem('seeded')) {
+        sessionStorage.setItem('seeded', '1');
+        localStorage.setItem('doona-palette', 'glass/glass');
+      }
+    });
+    await page.goto('/#/settings');
+    await expect(page.locator('html')).toHaveAttribute('data-lens', '');
+    await appearance(page)
+      .getByRole('button', {name: /Palette$/})
+      .click();
+    await page.getByRole('option', {name: /^Glass/}).click();
+    await expect(page.locator('html')).toHaveAttribute('data-flavour', 'clear');
+    await expect(page.locator('html')).not.toHaveAttribute('data-lens');
+    expect((await surface(page, pageCard, '::before')).filter).not.toContain('url(');
+  });
+});
+
+// The palette menu says which browsers refract, on Liquid Glass itself, wherever it is picked.
+test('the palette menu notes that Liquid Glass refracts only in Chromium', async ({page}) => {
+  await page.goto('/#/settings');
+  await page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true}).click();
+  await expect(page.getByRole('menuitemradio', {name: /^Liquid Glass/})).toContainText('Needs a Chromium browser; Firefox and Safari show Glass');
+});
+
 test.describe('glass lens elsewhere', () => {
   test.use({widgets: true, storage: {'doona-palette': 'glass/frosted'}});
   test('stays off in the other materials', async ({page}) => {
@@ -176,6 +241,7 @@ test('glass floats the top bar capsules and the sidebar as the card glass', asyn
   };
   await page.goto('/#/activity');
   const frosted = await boxes('frosted');
+  expect(await boxes('clear')).toEqual(frosted);
   expect(await boxes('glass')).toEqual(frosted);
   const main = await page.locator('.rp-main').evaluate(element => {
     const style = getComputedStyle(element);
@@ -268,7 +334,7 @@ test.describe('reduce transparency and increase contrast', () => {
         await expect(page.locator(pageCard).first()).toBeVisible();
         const opaque = {filter: 'none', alpha: 1};
         // The sidebar and top bar sit on the shell's chrome sheet; in Glass the sidebar and the bar's capsules are glass of their own.
-        if (flavour === 'glass')
+        if (floats(flavour))
           for (const selector of ['.rp-side', '.rp-search', '.rp-actions']) expect(await surface(page, selector, '::before')).toMatchObject(opaque);
         else expect(await surface(page, '.rp-shell', '::after')).toMatchObject(opaque);
         expect(await surface(page, pageCard, '::before')).toMatchObject(opaque);

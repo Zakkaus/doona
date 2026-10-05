@@ -14,7 +14,7 @@ import {useMediaQuery, withCrossfade} from '../ui/hooks';
 import type {RoutePath} from './routes';
 import {setDateFormat, setTimeFormat} from '../i18n/format';
 
-// Glass's scroll edge shows while the root carries data-scrolled. The attribute changes only when the page leaves or
+// The scroll edge of Glass and Clear shows while the root carries data-scrolled. The attribute changes only when the page leaves or
 // returns to the top, so the passive listener costs one comparison per scroll event.
 let watchingScroll = false;
 function watchScroll() {
@@ -33,12 +33,14 @@ export function applyAppearance(dark: boolean, palette: PaletteId, wordmark: Wor
   d.flavour = flavour;
   d.wordmark = wordmark;
   document.documentElement.style.setProperty('--rp-blur-scale', String(blur));
-  // Glass's lens filters load with the palette, once; the stylesheet uses them while the root carries data-lens.
+  // Glass's lens filters load with the palette, once; the stylesheet uses them while the root carries data-lens. Clear
+  // is Glass's blur and fill without them, in every browser, so it loads none and leaves the root without data-lens.
   if (palette === 'glass/glass' && d.lens === undefined)
     void import('../ui/lens').then(({installLens}) => {
-      if (installLens()) d.lens = '';
+      if (installLens() && document.documentElement.dataset.flavour === 'glass') d.lens = '';
     });
-  if (palette === 'glass/glass') watchScroll();
+  if (palette !== 'glass/glass') delete d.lens;
+  if (palette === 'glass/glass' || palette === 'glass/clear') watchScroll();
 }
 export function useAppearance(stored: Settings) {
   const [scheme, setScheme] = useState<Scheme>(stored.scheme);

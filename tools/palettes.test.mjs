@@ -44,10 +44,14 @@ function declared(css) {
   return bySelector;
 }
 
-// Glass is written like the others, its light block after the dark one; its materials live in ../glass.css.
+// Glass is written like the others, its light block after the dark one; its materials live in ../glass.css. Clear takes
+// Glass's tokens as the family sets them, so it has no blocks of its own.
+const inherits = new Set(['glass/clear']);
 describe.each(families)('%s palette', family => {
   const blocks = declared(readFileSync(new URL(`palettes/${family}.css`, styles), 'utf8'));
-  const flavours = palettes.map(palette => palette.id.split('/')).filter(([f, flavour]) => f === family && flavour !== family);
+  const flavours = palettes
+    .map(palette => palette.id.split('/'))
+    .filter(([f, flavour]) => f === family && flavour !== family && !inherits.has(`${f}/${flavour}`));
   const selectors = [
     `:root[data-family='${family}']`,
     `:root[data-family='${family}'][data-scheme='dark']`,

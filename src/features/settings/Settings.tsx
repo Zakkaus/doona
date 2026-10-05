@@ -281,6 +281,7 @@ export function Settings({query}: PageProps) {
             />
           </div>
         </Toolbar>
+        {/* Under the row, not the picker: a description there would lift the Palette field above its neighbours. */}
         {ap.palette.startsWith('glass/') && <WallpaperSettings />}
         {/* Tinted draws no blur, so it has nothing to scale. */}
         {ap.palette.startsWith('glass/') && ap.palette !== 'glass/tinted' && <BlurSetting value={ap.blur} onChange={ap.pickBlur} />}
