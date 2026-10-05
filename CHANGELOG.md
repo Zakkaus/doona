@@ -6,6 +6,66 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Entries live in [changes/](changes/) until release.
 
+## [0.1.0-beta.15] - 2026-10-06
+
+### Added
+
+- The Glass section of the palettes offers four materials over a wallpaper with colour and shapes behind it. Liquid Glass follows Apple's Liquid Glass: in Chrome and Edge the cards, the phone's bottom bar, the floating panel, dialogs, menus and toasts are clear glass that bends the page at their edges and catch light on their rim. The sidebar floats as one more card, and the top bar draws no strip: its search field and buttons are glass capsules, with a soft blur under them once the page scrolls. Glass is the same material with blur and fill only, as Firefox and Safari draw Liquid Glass; the palette menus note that Liquid Glass refracts only in Chromium browsers. Frosted draws one even blur on every surface, so the shapes behind stay softly recognisable. Tinted follows Microsoft's Mica, with nearly opaque surfaces and no blur. (#471, #488)
+- Every Glass material has a soft shadow in place of the dark outline, with no line drawn round its edges, and Reduce Transparency, Increase Contrast and forced colours turn each one solid with clear edges. A Glass material chosen with the earlier Settings switch carries over to its palette. (#471)
+- Settings > Appearance can replace the Glass palettes' wallpaper with an image of your own, and Use default brings the built-in one back. The image is scaled to at most 2560 pixels on its long edge and kept only in this browser's IndexedDB; the app shell and the login page both show it. (#477)
+- A readability veil, on by default, lays white in light mode or black in dark mode over the image, with a Dim slider up to 60%. At its default of 60%, label and secondary text keep 4.5:1 over any image. Turned off, the image shows as it is. (#477)
+- A Blur slider in Settings > Appearance scales every Glass and Frosted surface's blur from none to 150%, with or without a custom image; below 100% the surfaces' fill thickens so text keeps 4.5:1. It is kept in this browser with the palette and applies before the first paint. (#477)
+- The Logs and Events tables have a Copy record button on each row, which copies the row as the page exports it. (#470)
+
+### Changed
+
+- The installation page lists every release file with what it is and who needs it, and the pages and themes docs describe the sign-in page's Language, Palette and Theme controls. (#464)
+- The program archive is smaller: NOTICE links the Creative Commons licences instead of shipping their texts, and THIRD-PARTY-NOTICES.txt prints each licence text once with every package and copyright line it covers. (#466)
+- CHANGELOG.md is no longer in the program archive; the deb, rpm, pacman and ipk packages install it in their documentation directory. (#466)
+- Global settings edits the transparent proxy and profiling ports in a number field with decrease and increase buttons, and a port reads 8080, not 8,080; clearing the field still writes it as unset. (#472)
+- Runtime recording limits, a policy group's check interval, tolerance and idle timeout, the routing trace's ports and DSCP, and a custom subscription interval are number fields too; Enter in the sign-in form, the runtime settings card and the new-source, node, subscription and check dialogs does what their main button does. (#472)
+- The sign-in page is one centred card over the theme background on every screen size, and the mini game beside it is gone. (#473)
+- Palettes are picked from swatches: Settings > Appearance shows each palette as a box with a small window drawn in its light and dark colours, and the palette menus in the top bar and on the sign-in page list one plain line per palette. The palettes alone in their family are listed together under Other. (#491, #495)
+- Tables show placeholder rows at the real row height under their header while the first data loads, instead of a spinner. (#474)
+- Every first load whose shape is known now shows a placeholder in that shape and size: each page's own tabs, toolbars, cards and tables while it opens, the Activity dashboard's saved cards, charts, rankings, settings forms, lists, fact strips, widget readings and flow details. The spinner stays for sign-in, search and pending buttons. (#474)
+- Buttons follow Spectrum 2's split: everyday actions use the action-button shape (8px corner, medium weight), while dialog footer actions, form action rows and accent and negative buttons are bold pills; secondary buttons have a 2px outline, negative buttons are filled, leading icons are larger, and keyboard focus shows the hover colour. (#469)
+- A button waiting on the backend shows a spinner in place of its label after one second and keeps its size. (#469)
+- The source editor keeps Validate, Cancel and Apply on their own row, above the find, go-to-line and command tools. (#469)
+- Page tabs and the Policies kind switch are drawn at M again, 32px with 14px labels like every other segmented control, and the New group button beside the switch is M. (#467)
+- Only the Glass palettes download Glass's styles and wallpaper code, so every other palette starts about 4.5 KB lighter. (#494)
+- A configuration refused because a file it needs is missing, such as geoip.dat or geosite.dat, now says which file in plain words. The routing mode dialog repairs a geodata file the backend has loaded with Download geodata, and otherwise links to the docs on installing geodata, since a geodata update replaces only loaded files. (#496)
+- Policies and Nodes open faster, and Logs keeps the space of its activity chart while the stream opens, so the list no longer moves down when the first records arrive. (#475)
+- Config loads its code editor with the source tab instead of with the page, and draws the editor's Skeleton until it arrives. (#479)
+- The sign-in page no longer downloads the signed-in frame: the top bar, sidebar, hub bar, shortcuts and widget host load with the Activity page, at startup when the tab holds a credential or runs the demo. (#482)
+- Policies and Nodes no longer redraw every card and row when a poll brings only new probe times; a card or row redraws when its own nodes change. (#478)
+- A Latency tab kept open behind another stops recomputing until it is shown again. (#478)
+- Settings puts Appearance on a tab of its own, beside General, with the palette boxes always shown; links and search hits for an appearance setting open that tab. (#495)
+- The top bar and phone palette menus end with an Appearance settings row that opens that tab. (#495)
+- The rules page loads the trace simulation when its tab is pointed at, focused or opened, so the page itself downloads about 13 KB less. (#492)
+
+### Fixed
+
+- Reloading or leaving the page no longer cuts off reads in flight, which Safari reported as access-control errors. Declining a draft's leave prompt sends those reads again, and saves in flight are never cancelled. (#483)
+- Typing a number below a field's minimum on the way to a valid one, such as 128 in a field from 64, keeps the typing instead of snapping it to the minimum; whole-number fields no longer take a decimal point. (#480)
+- A page that replaces its Skeleton twice in quick succession keeps its scroll height until the latest swap settles. (#480)
+- Enter in the profile name, custom geodata URL, rule condition and expression, quick rule and routing template dialogs does what the dialog's main button does. (#480)
+- A global setting no longer swaps between a number field and a text field, and loses focus, while it is edited. (#480)
+- Copying on a plain-HTTP address returns keyboard focus to the control that copied. (#480)
+- The global settings tab, the Logs chart, the policy cards and the node table's provider line draw their first-load Skeletons through the shared parts: the delay, one hidden status and the loaded height. (#481)
+- A chunk that fails to load no longer flashes the update message on the page that is already reloading itself; the message comes up only if the reload is cancelled or not allowed. (#481)
+- In the Glass theme the page content is visible again when doona runs in an iframe with rounded corners, such as the luci-app-honk dashboard; Chrome and Edge drew the frosted chrome over the whole content area. (#468)
+- A page change made while doona is still starting up is no longer lost, so the address and the page shown stay in step. (#493)
+- A password sign-in now lasts until you sign out or honk ends the session, instead of ending when the tab closes. (#499)
+- While a dialog is open, toasts show at the top centre of the window for every position setting, and the dialog starts below them, so a toast no longer covers the dialog's heading, Apply or Cancel buttons. (#485)
+- When the backend refuses a routing mode, its dialog stays open and lists each validation error with its line instead of a toast without detail. (#486)
+- A subscription URL typed without a scheme gets `https://` added when the field loses focus and when it is saved. (#487)
+- An unusable subscription URL or node link is explained under its field, not only in the disabled button's tooltip. (#487)
+- A dashboard row of one-line cards is measured again when a web font finishes loading, so each card keeps the width its line needs in that font rather than the fallback font. (#490)
+- The Run trace button sits level with the input boxes while it is disabled. (#484)
+- Switching between the Connections and Events pages no longer makes the browser tab run out of memory. Each switch reopens the event stream, and the event that opens it shares its id with the event before; the Events table and the notices now tell such events apart. (#502)
+- Live tables release old rows as new data arrives, keeping memory use bounded. (#503)
+- The line above the Appearance settings row in the palette menus no longer touches the row, so its focus ring stays clear. (#498)
+
 ## [0.1.0-beta.14] - 2026-10-04
 
 ### Added
@@ -667,7 +727,8 @@ Entries live in [changes/](changes/) until release.
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
-[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.14...HEAD
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.15...HEAD
+[0.1.0-beta.15]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.14...v0.1.0-beta.15
 [0.1.0-beta.14]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.13...v0.1.0-beta.14
 [0.1.0-beta.13]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.12...v0.1.0-beta.13
 [0.1.0-beta.12]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.11...v0.1.0-beta.12

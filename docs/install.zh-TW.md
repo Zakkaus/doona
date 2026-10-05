@@ -16,7 +16,7 @@ doona 需要 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 ## 發布檔案
 
-每次發布有 38 個檔案。大多數使用者只需兩個：適用於自己系統的程式檔案與 `SHA256SUMS`。下列為 v0.1.0-beta.14 的檔名，其他版本依相同的[命名方式](../install/README.md#version-spellings)。
+每次發布有 38 個檔案。大多數使用者只需兩個：適用於自己系統的程式檔案與 `SHA256SUMS`。下列為 v0.1.0-beta.15 的檔名，其他版本依相同的[命名方式](../install/README.md#version-spellings)。
 
 ### 程式
 
@@ -24,25 +24,25 @@ doona 需要 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 | 檔案                                  | 內容                                 | 適用系統或方式                  |
 | ------------------------------------- | ------------------------------------ | ------------------------------- |
-| `doona-0.1.0-beta.14.tar.gz`          | 建置好的 UI 與授權條款，不含安裝程式 | 手動安裝，由任一 Web 伺服器提供 |
-| `doona-web_0.1.0-beta.14-1_all.deb`   | Debian 套件                          | Debian 或 Ubuntu                |
-| `doona-0.1.0-beta.14-1.noarch.rpm`    | RPM 套件                             | Fedora 或 openSUSE              |
-| `doona-0.1.0beta14-1-any.pkg.tar.zst` | pacman 套件                          | Arch Linux                      |
-| `doona_0.1.0-beta.14-1_all.ipk`       | opkg 套件                            | OpenWrt 24.10 及更早版本        |
-| `doona-0.1.0_beta14-r1.apk`           | apk-tools 3 套件                     | OpenWrt 25.12                   |
-| `doona-0.1.0-beta.14-r0.alpine.apk`   | Alpine 套件                          | Alpine Linux                    |
+| `doona-0.1.0-beta.15.tar.gz`          | 建置好的 UI 與授權條款，不含安裝程式 | 手動安裝，由任一 Web 伺服器提供 |
+| `doona-web_0.1.0-beta.15-1_all.deb`   | Debian 套件                          | Debian 或 Ubuntu                |
+| `doona-0.1.0-beta.15-1.noarch.rpm`    | RPM 套件                             | Fedora 或 openSUSE              |
+| `doona-0.1.0beta15-1-any.pkg.tar.zst` | pacman 套件                          | Arch Linux                      |
+| `doona_0.1.0-beta.15-1_all.ipk`       | opkg 套件                            | OpenWrt 24.10 及更早版本        |
+| `doona-0.1.0_beta15-r1.apk`           | apk-tools 3 套件                     | OpenWrt 25.12                   |
+| `doona-0.1.0-beta.15-r0.alpine.apk`   | Alpine 套件                          | Alpine Linux                    |
 
 Debian 與 Ubuntu 內建一個無關的 `doona` 套件，因此 deb 名稱為 `doona-web`，安裝至 `/usr/share/doona-web`；請將 honk 的 `ui` 設為該路徑。其他套件格式保留 `doona` 名稱，安裝至 `/usr/share/doona`。Alpine 與 OpenWrt 的 apk 檔案不能混用。
 
 ### 選用附加套件
 
-每個附加套件都提供與程式相同的格式，名稱包含 `fonts` 或 `precompressed`，例如 `doona-fonts-0.1.0-beta.14.tar.gz`、`doona-web-fonts_0.1.0-beta.14-1_all.deb`、`doona-fonts_0.1.0-beta.14-1_all.ipk` 等。請安裝與程式相同格式、相同版本的附加套件。
+每個附加套件都提供與程式相同的格式，名稱包含 `fonts` 或 `precompressed`，例如 `doona-fonts-0.1.0-beta.15.tar.gz`、`doona-web-fonts_0.1.0-beta.15-1_all.deb`、`doona-fonts_0.1.0-beta.15-1_all.ipk` 等。請安裝與程式相同格式、相同版本的附加套件。
 
 | 名稱部分        | 新增的內容                                                                       | 何時安裝                                                   |
 | --------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | `fonts`         | Noto Sans TC 與 SC，約 8 MB                                                      | 要使用內建中文字型而非系統字型時。詳見[字型說明](fonts.md) |
 | `precompressed` | 文字資源的 `.br` 與 `.gz` 壓縮副本，約 1.6 MB                                    | 伺服器與桌面系統；路由器上選用                             |
-| `doc`（Alpine） | `doona-doc-0.1.0-beta.14-r0.alpine.apk`：NOTICE 檔案，依 Alpine 套件慣例單獨拆分 | 很少需要                                                   |
+| `doc`（Alpine） | `doona-doc-0.1.0-beta.15-r0.alpine.apk`：NOTICE 檔案，依 Alpine 套件慣例單獨拆分 | 很少需要                                                   |
 
 Precompressed 意為預先壓縮。瀏覽器接受壓縮內容時，honk 或 Web 伺服器傳送 `.br` 或 `.gz` 副本，無須在每次請求時重新壓縮，因此伺服器不必花 CPU 壓縮，在較慢的網路上頁面載入更快。壓縮副本針對至少 1 KiB 的文字資源，以 `brotli -q 11` 與 `gzip -9 -n` 產生，僅保留小於原始檔案的副本。手動安裝時，將封存檔解壓縮到存放 doona 檔案的目錄。
 

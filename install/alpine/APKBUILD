@@ -1,7 +1,7 @@
 # Contributor: Zakkaus <zakk@gentoozh.org>
 # Maintainer: Zakkaus <zakk@gentoozh.org>
 pkgname=doona
-pkgver=0.1.0_beta14
+pkgver=0.1.0_beta15
 pkgrel=0
 _pkgver=${pkgver/_beta/-beta.}
 pkgdesc="Web UI for the daeuniverse engines"
@@ -50,7 +50,7 @@ _precompressed() {
 }
 
 sha512sums="
-87692b4ee2ba35718d3e0acdc8a041bf4543557bb5b9b73cd924c62d05e8b20625d57a24f55bc55c92a375942db9ffd14392719d10da88134ff760be53bb6e4e  doona-0.1.0-beta.14.tar.gz
-c76a4980dece6d4439a64860e195f6be6ed9c88a3eed125826e61bc9530f1e1788f2b7fae6f9db3aed86194d39f8ea257f7d8ce4cd1893adc6f04c1731af4493  doona-fonts-0.1.0-beta.14.tar.gz
-021b49323333b4ca7806770d4eb7837c06e7a14233bfc45698fd9c71666dbd4ba78907c93f8117371e8df5009b44566fdf83d9ce83eee3e0cf25c72339f32885  doona-precompressed-0.1.0-beta.14.tar.gz
+87692b4ee2ba35718d3e0acdc8a041bf4543557bb5b9b73cd924c62d05e8b20625d57a24f55bc55c92a375942db9ffd14392719d10da88134ff760be53bb6e4e  doona-0.1.0-beta.15.tar.gz
+c76a4980dece6d4439a64860e195f6be6ed9c88a3eed125826e61bc9530f1e1788f2b7fae6f9db3aed86194d39f8ea257f7d8ce4cd1893adc6f04c1731af4493  doona-fonts-0.1.0-beta.15.tar.gz
+021b49323333b4ca7806770d4eb7837c06e7a14233bfc45698fd9c71666dbd4ba78907c93f8117371e8df5009b44566fdf83d9ce83eee3e0cf25c72339f32885  doona-precompressed-0.1.0-beta.15.tar.gz
 "
