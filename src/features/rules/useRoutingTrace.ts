@@ -9,45 +9,20 @@ import {routingTrace, type RoutingTraceRun} from '../../store/flows';
 import {queryTypes, useGroups, useNodeProbe, useNodes, useProviders, useRules} from '../../store';
 import {ipLiteral, resolveSelectedLeaf} from '../../api/selectors';
 import {useLang, useT} from '../../i18n';
-import {toast, toastErrorDetail, toastFailure, useLinked} from '../../ui/ui';
+import {toast, toastErrorDetail, toastFailure} from '../../ui/ui';
 import {chainLinks, dnsView, evaluationView, nameLinks, queryView, traceReason, traceSeed, traceStatusView} from './view';
 import {probeFallbackNotice, probeToast} from '../shared/probe';
 import {offered} from '../../api/capabilities';
 import type {PageProps} from '../../shell/routes';
 import {useQuickRule} from '../shared/useQuickRule';
-import {parseTraceLink, ruleHref} from '../shared/link';
+import {ruleHref} from '../shared/link';
 import {traceInput} from './traceInput';
+import type {TraceForm, TraceResolve} from './useTraceForm';
 const isPort = (value: string) => /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 65535;
 const isDscp = (value: string) => /^\d+$/.test(value) && Number(value) >= 0 && Number(value) <= 63;
 type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_ip' | 'src_port' | 'dscp'; key: Key};
-export type TraceResolve = 'none' | 'live' | 'query';
 const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
-const blankForm = {
-  network: 'tcp' as 'tcp' | 'udp',
-  domain: '',
-  dst_ip: '',
-  dst_port: '',
-  src_ip: '',
-  src_port: '',
-  pname: '',
-  dscp: '',
-  // Null until the backend says what it offers: live when it can resolve, else none.
-  resolve: null as TraceResolve | null
-};
-// Held by the rules page rather than the trace tab, so what was typed survives a tab switch. A link that names a
-// target fills the form in, opening the advanced fields when it names the source or process; it does not run the trace.
-export function useTraceForm(query: string) {
-  const linked = useMemo(() => parseTraceLink(query), [query]);
-  const [form, setForm] = useState(() => (linked ? {...blankForm, ...linked} : blankForm));
-  const [advanced, setAdvanced] = useState(!!(linked?.src_ip || linked?.src_port || linked?.pname));
-  useLinked(linked && JSON.stringify(linked), () => {
-    if (!linked) return;
-    setForm({...blankForm, ...linked});
-    setAdvanced(!!(linked.src_ip || linked.src_port || linked.pname));
-  });
-  return {form, setForm, advanced, setAdvanced};
-}
-export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnType<typeof useTraceForm>, go: PageProps['go']) {
+export function useRoutingTrace({form, setForm, advanced, setAdvanced, touched}: TraceForm, go: PageProps['go']) {
   const t = useT();
   const lang = useLang();
   const api = getApi();
@@ -92,7 +67,6 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced}: ReturnTy
                   : (form.resolve === 'live' || form.resolve === 'query') && form.dst_ip.trim()
                     ? {field: 'dst_ip', key: 'rule.invalidLive'}
                     : null;
-  const touched = (Object.keys(blankForm) as Array<keyof typeof blankForm>).some(key => key !== 'resolve' && key !== 'network' && form[key] !== blankForm[key]);
   const shown = touched ? invalid : null;
   const resource = capabilities.data?.resources.routing_trace;
   // DNS diagnostics supply query mode when the backend cannot resolve within a trace.

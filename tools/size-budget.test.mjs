@@ -23,7 +23,11 @@ const manifest = {
   'src/i18n/locales/zh-TW.json': chunk('locale-zh-TW.js', {src: 'src/i18n/locales/zh-TW.json', isDynamicEntry: true}),
   'src/fonts-sc.css': chunk('fonts-sc.css', {src: 'src/fonts-sc.css'}),
   'mock/index.ts': chunk('mock.js', {isDynamicEntry: true, imports: ['_vendor.js', '_shared.js', '_mockData.js']}),
-  '_mockData.js': chunk('mockData.js')
+  '_mockData.js': chunk('mockData.js'),
+  // A page that shares code with its lazy tab is keyed by its chunk file.
+  '_Flows-x.js': chunk('flows.js', {name: 'Flows', isDynamicEntry: true, imports: ['_vendor.js', '_table.js'], dynamicImports: ['src/features/flows/Tab.tsx']}),
+  'src/features/flows/Tab.tsx': chunk('tab.js', {isDynamicEntry: true, imports: ['_vendor.js', '_Flows-x.js', '_table.js', '_field.js']}),
+  '_field.js': chunk('field.js')
 };
 const bytes = {
   'entry.js': 100,
@@ -45,6 +49,9 @@ const bytes = {
   'locale-zh-TW.js': 9,
   'mock.js': 1100,
   'mockData.js': 1200,
+  'flows.js': 40,
+  'tab.js': 8,
+  'field.js': 90,
   'entry.css': 3,
   'activity.css': 4,
   'rules.css': 5,
@@ -75,6 +82,9 @@ it.each([
   ['startupCss', 'activity', 3 + 4],
   ['mock', 'mock/index.ts', 1100 + 1200],
   ['route', 'src/features/rules/Rules.tsx', 300 + 400],
+  // A lazy tab counts what it adds to its page under its own budget, and the page is still measured.
+  ['route', 'Flows (assets/flows.js)', 40 + 400],
+  ['routePart', 'src/features/flows/Tab.tsx', 8 + 90],
   // Config's editor loads on the source tab, so its chunk counts too.
   ['routeConfig', 'src/features/config/Config.tsx', 500 + 5 + 600],
   ['fontCss', 'src/fonts-sc.css', 6],

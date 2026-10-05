@@ -14,6 +14,12 @@ test('a trace link fills in the form without running it', async ({page}) => {
   await expect(page.getByLabel('Source IP', {exact: true})).toHaveValue('10.0.0.2');
   await expect(page.getByRole('button', {name: 'Run trace', exact: true})).toBeEnabled();
   expect(traced).toBe(false);
+  // The tab's code loads apart from the page; the form is the page's, so an edit survives a tab switch.
+  await page.getByLabel('Domain', {exact: true}).fill('edited.example.net');
+  await page.getByRole('tab', {name: 'Routing rules', exact: true}).click();
+  await page.getByRole('tab', {name: 'Trace simulation', exact: true}).click();
+  await expect(page.getByLabel('Domain', {exact: true})).toHaveValue('edited.example.net');
+  await expect(page.getByLabel('Source IP', {exact: true})).toHaveValue('10.0.0.2');
 });
 
 test('optional DSCP validates the contract bounds and reaches the trace evaluator', async ({page}) => {
