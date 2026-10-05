@@ -56,7 +56,7 @@ for (const flavour of flavours)
     // Glass draws the sidebar as glass of its own; the other materials share one chrome sheet.
     const chrome = flavour === 'glass' ? await surface(page, '.rp-side', '::before') : await surface(page, '.rp-shell', '::after');
     // A card's material is its ::before.
-    const card = await surface(page, '.rp-card', '::before');
+    const card = await surface(page, pageCard, '::before');
     if (flavour === 'tinted') {
       expect(chrome.filter).toBe('none');
       expect(card.filter).toBe('none');
@@ -136,7 +136,7 @@ test.describe('glass lens', () => {
     await expect(panel).toBeVisible();
     expect((await surface(page, '.rp-floating-frame .rp-floating-panel')).filter).toContain('url("#doona-lens")');
     // Cards and the sidebar are the panel's glass; the top bar's small capsules keep a plain blur.
-    expect((await surface(page, '.rp-content .rp-card', '::before')).filter).toContain('url("#doona-lens")');
+    expect((await surface(page, `.rp-content ${pageCard}`, '::before')).filter).toContain('url("#doona-lens")');
     expect((await surface(page, '.rp-side', '::before')).filter).toContain('url("#doona-lens")');
     for (const selector of ['.rp-search', '.rp-actions']) expect((await surface(page, selector, '::before')).filter).toMatch(/^blur\(/);
     await page.getByRole('button', {name: /Group$/}).click();
@@ -197,7 +197,7 @@ test('glass floats the top bar capsules and the sidebar as the card glass', asyn
       .first()
       .evaluate(element => getComputedStyle(element, '::before').backgroundColor);
   const card = await fill('.rp-content .rp-card');
-  const cardFilter = (await surface(page, '.rp-content .rp-card', '::before')).filter;
+  const cardFilter = (await surface(page, `.rp-content ${pageCard}`, '::before')).filter;
   for (const selector of ['.rp-search', '.rp-actions']) {
     expect(await fill(selector), selector).toBe(card);
     expect((await surface(page, selector, '::before')).filter, selector).toMatch(/^blur\(/);
@@ -271,7 +271,7 @@ test.describe('reduce transparency and increase contrast', () => {
         if (flavour === 'glass')
           for (const selector of ['.rp-side', '.rp-search', '.rp-actions']) expect(await surface(page, selector, '::before')).toMatchObject(opaque);
         else expect(await surface(page, '.rp-shell', '::after')).toMatchObject(opaque);
-        expect(await surface(page, '.rp-card', '::before')).toMatchObject(opaque);
+        expect(await surface(page, pageCard, '::before')).toMatchObject(opaque);
         // The card's edge is a solid border.
         expect(
           await page
