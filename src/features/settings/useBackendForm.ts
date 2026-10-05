@@ -61,13 +61,16 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
   const field = new URLSearchParams(query).get('field');
   // `field` focuses the control inside the card's `data-setting="{field}"` (settingsFields in nav.ts). A control that
   // renders once its data arrives is waited for a while with the card focused; a hidden or disabled one leaves it there.
+  // A listbox keeps no tab stop but its focused option, so its selected option is the one to land on.
   useEffect(() => {
     const section = card ? document.getElementById(cardHeadingId(card))?.closest('section') : null;
     if (!section) return;
     const land = () => {
       const control = field
-        ? Array.from(section.querySelectorAll<HTMLElement>(`[data-setting="${CSS.escape(field)}"] :is(input, button, textarea)`)).find(
-            element => element.tabIndex >= 0 && !element.matches(':disabled') && !element.closest('[aria-hidden="true"]')
+        ? Array.from(
+            section.querySelectorAll<HTMLElement>(`[data-setting="${CSS.escape(field)}"] :is(input, button, textarea, [role=option][aria-selected=true])`)
+          ).find(
+            element => (element.tabIndex >= 0 || element.matches('[role=option]')) && !element.matches(':disabled') && !element.closest('[aria-hidden="true"]')
           )
         : undefined;
       control?.focus({preventScroll: true});

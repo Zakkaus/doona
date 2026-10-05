@@ -81,6 +81,30 @@ test.describe('the demo', () => {
     await expect(page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true})).toBeVisible();
   });
 
+  // The sign-in page offers the top bar's palette menu: one line per palette, a round swatch before the name.
+  for (const viewport of [
+    {width: 1440, height: 920},
+    {width: 390, height: 844}
+  ]) {
+    test(`lists palettes one line each with round swatches at ${viewport.width}px`, async ({page}) => {
+      await page.setViewportSize(viewport);
+      await page.goto('/#/activity');
+      await page.locator('.rp-login-controls').getByRole('button', {name: 'Palette', exact: true}).click();
+      const items = page.getByRole('menuitemradio');
+      await expect(items.locator('.rp-dot')).toHaveCount(await items.count());
+      await expect(items.locator('.rp-swatch')).toHaveCount(0);
+      await expect(items.locator('.desc')).toHaveCount(1);
+      const heights = new Set(await items.evaluateAll(els => els.map(el => Math.round(el.getBoundingClientRect().height))));
+      expect(heights.size).toBe(1);
+      const {width, height} = (await items.first().locator('.rp-dot').boundingBox())!;
+      expect([Math.round(width), Math.round(height)]).toEqual([16, 16]);
+      // The whole menu fits the window, so nothing needs scrolling.
+      const menu = await page.getByRole('menu').boundingBox();
+      expect(menu!.y).toBeGreaterThanOrEqual(0);
+      expect(menu!.y + menu!.height).toBeLessThanOrEqual(viewport.height);
+    });
+  }
+
   // One card, centred both ways on a desktop and a phone, with its fields and its action at one height.
   for (const viewport of [
     {width: 1440, height: 920},

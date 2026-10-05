@@ -56,7 +56,7 @@ test('the wallpaper row shows only with a Glass palette', async ({page}) => {
   await expect(row(page)).toBeVisible();
   await page.evaluate(() => localStorage.setItem('doona-palette', 'rose-pine/moon'));
   await page.reload();
-  await expect(appearance(page).getByRole('button', {name: /Palette/})).toBeVisible();
+  await expect(appearance(page).getByRole('listbox', {name: 'Palette'})).toBeVisible();
   await expect(row(page)).toHaveCount(0);
 });
 
@@ -188,7 +188,7 @@ test('the blur slider shows for the blurred Glass palettes and scales every card
   for (const palette of ['glass/tinted', 'rose-pine/moon']) {
     await page.evaluate(palette => localStorage.setItem('doona-palette', palette), palette);
     await page.reload();
-    await expect(appearance(page).getByRole('button', {name: /Palette/})).toBeVisible();
+    await expect(appearance(page).getByRole('listbox', {name: 'Palette'})).toBeVisible();
     await expect(blurRow(page)).toHaveCount(0);
   }
 });

@@ -1,0 +1,102 @@
+/* Each half is clipped to the top-left triangle, the dark one turned into the bottom-right: the sidebar ::before, the
+   pill ::after, the card <i> with its text line and the status dot ::after, all sized as fractions of the window. */
+.rp-swatch {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 120px;
+  height: 72px;
+  overflow: hidden;
+  border: 1px solid var(--rp-line);
+  border-radius: var(--rp-r-md);
+}
+.rp-swatch > span {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+  background: var(--sw-bg);
+}
+.rp-swatch > span[data-dark] {
+  transform: rotate(180deg);
+}
+.rp-swatch > span::before,
+.rp-swatch > span::after,
+.rp-swatch i,
+.rp-swatch i::after {
+  content: '';
+  position: absolute;
+}
+.rp-swatch > span::before {
+  inset: 0 85% 0 0;
+  background: color-mix(in srgb, var(--sw-bg), var(--sw-text) 10%);
+}
+.rp-swatch i {
+  inset: 11% 45% 58% 20%;
+  border-radius: 12% / 20%;
+  background: linear-gradient(var(--sw-text) 0 0) 14% 50% / 50% 18% no-repeat var(--sw-surface);
+}
+.rp-swatch i::after {
+  inset: 36% 10% 36% 76%;
+  border-radius: 50%;
+  background: var(--sw-positive);
+}
+.rp-swatch > span::after {
+  inset: 50% 63% 41% 20%;
+  border-radius: var(--rp-r-pill);
+  background: var(--sw-accent);
+}
+/* Glass's sidebar and card are its translucent fill over the default wallpaper's main colours. */
+:is(.rp-swatch, .rp-dot)[data-look] > span {
+  --sw-wall:
+    radial-gradient(circle at 20% 25%, rgba(0, 122, 255, 0.6), transparent 60%), radial-gradient(circle at 85% 20%, rgba(255, 45, 85, 0.55), transparent 55%),
+    radial-gradient(circle at 70% 95%, rgba(255, 149, 0, 0.6), transparent 60%), linear-gradient(160deg, #e3eaf8, #f8eee2);
+
+  background: var(--sw-wall);
+}
+:is(.rp-swatch, .rp-dot)[data-look] > span[data-dark] {
+  --sw-wall:
+    radial-gradient(circle at 20% 25%, rgba(10, 132, 255, 0.5), transparent 60%), radial-gradient(circle at 85% 20%, rgba(255, 55, 95, 0.4), transparent 55%),
+    radial-gradient(circle at 70% 95%, rgba(255, 159, 10, 0.4), transparent 60%), linear-gradient(160deg, #070a17, #05131a);
+}
+.rp-swatch[data-look] > span::before {
+  background: var(--sw-surface);
+}
+/* Liquid Glass's lens: a specular rim on the card and the pill. */
+.rp-swatch[data-look='lens'] i,
+.rp-swatch[data-look='lens'] > span::after {
+  --sw-rim: rgba(255, 255, 255, 0.9);
+
+  box-shadow:
+    inset 1px 1px 0 var(--sw-rim),
+    inset -1px -1px 0 color-mix(in srgb, var(--sw-rim), transparent 45%);
+}
+/* A menu row's swatch: the same diagonal split as a dot, each half's accent at its own centre so neither crosses the split. */
+.rp-dot {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+  border: 1px solid var(--rp-line);
+  border-radius: 50%;
+}
+.rp-dot > span {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+  background: var(--sw-bg);
+}
+.rp-dot > span[data-dark] {
+  transform: rotate(180deg);
+}
+.rp-dot > span::after {
+  content: '';
+  position: absolute;
+  top: calc(33% - 2.5px);
+  left: calc(33% - 2.5px);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--sw-accent);
+}

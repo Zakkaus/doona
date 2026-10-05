@@ -2,6 +2,8 @@ import {test as browserTest, type Page} from '@playwright/test';
 import {expect, expectLoadFailures, loadCatalogues, mockBackend, moreAction, test} from './fixtures';
 import {translate} from '../src/i18n';
 import {capabilities} from '../mock/fixtures';
+import {swatches} from '../src/shell/swatches';
+import {palettes} from '../src/shell/palettes';
 
 // The specs read the catalogues the page loads on demand.
 test.beforeAll(loadCatalogues);
@@ -245,11 +247,117 @@ test('an unknown stored palette falls back to the supported moon palette', async
   await page.goto('/#/settings');
   await expect(page.locator('html')).toHaveAttribute('data-family', 'rose-pine');
   await expect(page.locator('html')).toHaveAttribute('data-flavour', 'moon');
-  await page
-    .getByRole('region', {name: 'Appearance', exact: true})
-    .getByRole('button', {name: /Palette$/})
-    .click();
-  await expect(page.getByRole('option', {name: /Moon/})).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('listbox', {name: 'Palette'}).getByRole('option', {name: 'Rosé Pine Moon'})).toHaveAttribute('aria-selected', 'true');
+});
+
+test('the Settings palette boxes pick, persist and show the palette', async ({page}) => {
+  await page.goto('/#/settings');
+  const group = page.getByRole('listbox', {name: 'Palette'});
+  // Nord sits under Other, which only gathers the palettes alone in their family, so the box names it alone.
+  await expect(group.getByText('Other', {exact: true})).toBeVisible();
+  await expect(group.getByText('Nord', {exact: true})).toHaveCount(1);
+  await group.getByRole('option', {name: 'Nord'}).click({force: true});
+  await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
+  await expect(group.getByRole('option', {name: 'Nord'})).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.rp-select-box[data-selected]')).toHaveCount(1);
+  await expect(page.locator('.rp-select-box[data-selected] .rp-select-box-check')).toBeVisible();
+  // S2's selected box: an accent border, and a check in the same colour.
+  const accent = await page.locator('.rp-select-box[data-selected] .rp-select-box-check').evaluate(el => getComputedStyle(el).color);
+  await expect(page.locator('.rp-select-box[data-selected]')).toHaveCSS('border-top-color', accent);
+});
+
+test('arrow keys move through the Settings palette boxes in two dimensions, and Enter or Space picks', async ({page}) => {
+  await page.goto('/#/settings');
+  const group = page.getByRole('listbox', {name: 'Palette'});
+  const option = (name: string) => group.getByRole('option', {name});
+  await option('Rosé Pine Moon').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(option('Catppuccin Frappé')).toBeFocused();
+  // Moving only focuses; the selection stays until a pick.
+  await expect(option('Rosé Pine Moon')).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Enter');
+  await expect(option('Catppuccin Frappé')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('html')).toHaveAttribute('data-flavour', 'frappe');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('Space');
+  await expect(option('Rosé Pine Moon')).toHaveAttribute('aria-selected', 'true');
+  // Down moves to the box below in the same column, not the next one in the list.
+  const left = async () => option('Rosé Pine Moon').evaluate(el => Math.round(el.getBoundingClientRect().left));
+  const start = await left();
+  await page.keyboard.press('ArrowDown');
+  const below = group.locator('[role=option]:focus');
+  expect(Math.round(await below.evaluate(el => el.getBoundingClientRect().left))).toBe(start);
+  expect(await below.evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThan(
+    await option('Rosé Pine Moon').evaluate(el => el.getBoundingClientRect().bottom)
+  );
+  // Tab leaves the group in one step.
+  await page.keyboard.press('Tab');
+  await expect(group.locator('[role=option]:focus')).toHaveCount(0);
+});
+
+test('the top bar palette menu is one line per palette with a round swatch, and a pick applies it', async ({page}) => {
+  await page.goto('/#/settings');
+  await page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true}).click();
+  const items = page.getByRole('menuitemradio');
+  await expect(items).toHaveCount(palettes.length);
+  await expect(items.locator('.rp-dot')).toHaveCount(palettes.length);
+  await expect(items.locator('.rp-swatch')).toHaveCount(0);
+  const mocha = page.getByRole('menuitemradio', {name: /^Mocha/});
+  const {width, height} = (await mocha.locator('.rp-dot').boundingBox())!;
+  expect([Math.round(width), Math.round(height)]).toEqual([16, 16]);
+  // Each row is as tall as any menu item, and only Liquid Glass keeps a note, on its own row.
+  const heights = new Set(await items.evaluateAll(els => els.map(el => Math.round(el.getBoundingClientRect().height))));
+  expect(heights.size).toBe(1);
+  await expect(items.locator('.desc')).toHaveCount(1);
+  await expect(page.getByRole('menuitemradio', {name: /^Liquid Glass/}).locator('.desc')).toHaveText('Chromium only');
+  await mocha.click();
+  await expect(page.locator('html')).toHaveAttribute('data-flavour', 'mocha');
+});
+
+test('every swatch matches the tokens it stands for, in both schemes', async ({page}) => {
+  await page.goto('/#/settings');
+  await expect(page.getByRole('listbox', {name: 'Palette'})).toBeVisible();
+  const mismatches = await page.evaluate(table => {
+    const probe = document.body.appendChild(document.createElement('i'));
+    const read = (colour: string) => ((probe.style.color = colour), getComputedStyle(probe).color);
+    const d = document.documentElement.dataset;
+    const wrong: string[] = [];
+    for (const [id, variants] of Object.entries(table))
+      variants.forEach((colours, index) => {
+        [d.family, d.flavour] = id.split('/');
+        d.scheme = index ? 'dark' : 'light';
+        ['base', 'surface', 'text', 'accent', 'positive'].forEach((token, i) => {
+          if (read(`var(--rp-${token})`) !== read(colours.split(' ')[i]!)) wrong.push(`${id} ${d.scheme} ${token}`);
+        });
+      });
+    return wrong;
+  }, swatches);
+  expect(mismatches).toEqual([]);
+  expect(Object.keys(swatches)).toEqual(palettes.map(palette => palette.id));
+  // The boxes draw those colours: each thumbnail's light and dark halves carry its row of the table, and glass its look.
+  const drawn = await page.locator('.rp-select-box .rp-swatch').evaluateAll(els =>
+    els.map(el => ({
+      look: el.getAttribute('data-look'),
+      halves: [...el.children].map(half =>
+        ['bg', 'surface', 'text', 'accent', 'positive'].map(n => (half as HTMLElement).style.getPropertyValue(`--sw-${n}`)).join(' ')
+      )
+    }))
+  );
+  expect(drawn).toEqual(palettes.map(({id}) => ({look: id === 'glass/glass' ? 'lens' : id.startsWith('glass/') ? 'glass' : null, halves: [...swatches[id]!]})));
+});
+
+test.describe('on a phone', () => {
+  test.use({viewport: {width: 390, height: 844}});
+  test('the Settings palette boxes sit in two columns without scrolling sideways', async ({page}) => {
+    await page.goto('/#/settings');
+    const boxes = page.locator('.rp-select-box');
+    await expect(boxes.first()).toBeVisible();
+    const lefts = new Set(await boxes.evaluateAll(els => els.map(el => Math.round(el.getBoundingClientRect().left))));
+    expect(lefts.size).toBe(2);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
 });
 
 async function twoProfiles(page: Page) {
@@ -369,8 +477,8 @@ test('About doona lists its links in full-width rows on a phone and keeps its fo
 test('appearance uses labeled pickers with balanced insets and matching type', async ({page}) => {
   await page.goto('/#/settings');
   const card = page.getByRole('region', {name: 'Appearance', exact: true});
-  const palette = card.getByRole('button', {name: /Palette/});
-  await expect(palette).toBeVisible();
+  const language = card.getByRole('button', {name: /Language/});
+  await expect(language).toBeVisible();
   const controls = await card.locator('.rp-selectbtn').evaluateAll(elements =>
     elements.map(el => {
       const s = getComputedStyle(el);
@@ -386,11 +494,11 @@ test('appearance uses labeled pickers with balanced insets and matching type', a
   }
   await card
     .locator('.lbl')
-    .filter({hasText: /^Palette$/})
+    .filter({hasText: /^Language$/})
     .click();
-  await expect(palette).toBeFocused();
+  await expect(language).toBeFocused();
   await page.keyboard.press('Space');
-  await expect(page.getByRole('listbox')).toBeVisible();
+  await expect(page.getByRole('listbox', {name: 'Language'})).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('region', {name: 'Backend', exact: true})).toBeVisible();
   await expect(page.getByRole('heading', {name: 'Backend', exact: true})).toHaveCount(0);

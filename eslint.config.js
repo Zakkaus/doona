@@ -14,7 +14,17 @@ const kit = 'belongs to src/ui; use or extend the kit component.';
 // The shell modules a page may use: links and URL state, the unsaved-draft guard, stored preferences, the install
 // offer, and the About and keyboard shortcuts dialogs that Settings opens too. Everything else in the shell is the
 // shell's own.
-const shellForFeatures = ['./route.ts', './routes.ts', './draft.ts', './preferences.ts', './install.ts', './About.tsx', './shortcuts.ts', './wallpaper.ts'];
+const shellForFeatures = [
+  './route.ts',
+  './routes.ts',
+  './draft.ts',
+  './preferences.ts',
+  './install.ts',
+  './About.tsx',
+  './shortcuts.ts',
+  './wallpaper.ts',
+  './swatches.ts'
+];
 // G4, G7 and G5 share no-restricted-syntax, so their selectors live in one list; the kit keeps the last two.
 const outsideUi = [
   {selector: 'JSXOpeningElement[name.name=/^(button|select|input|textarea)$/]', message: `A native control ${kit}`},
@@ -103,7 +113,7 @@ export default [
               target: './src/features',
               from: './src/shell',
               except: shellForFeatures,
-              message: 'From src/shell, features use only route, routes, draft, preferences, install, About, shortcuts and wallpaper.'
+              message: 'From src/shell, features use only route, routes, draft, preferences, install, About, shortcuts, wallpaper and swatches.'
             },
             {
               target: './src/shell',
@@ -160,6 +170,11 @@ export default [
     files: ['src/ui/**/*.{ts,tsx}'],
     ignores: ['src/ui/charts/**', 'src/ui/code/**', 'src/**/*.test.*'],
     rules: {'no-restricted-syntax': ['error', ...outsideUi.slice(2)]}
+  },
+  {
+    // The pickers' swatches mirror the palette tokens, and the settings spec checks them against the computed values.
+    files: ['src/shell/swatches.ts'],
+    rules: {'no-restricted-syntax': ['error', ...outsideUi.filter(rule => rule.message !== 'Colours come from tokens.'), ...engineChecks]}
   },
   {
     // Single-consumer collection compositions; one moves into src/ui when a second consumer appears.

@@ -84,8 +84,8 @@ test("search finds a Settings field by another language's label and focuses it",
   const dialog = await open(page, '配色');
   await dialog.getByRole('option', {name: /^Palette/}).click();
   await expect(page).toHaveURL(/#\/settings\?card=appearance&field=palette$/);
-  await expect(page.locator('[data-setting="palette"] button').first()).toBeFocused();
-  await expect(page.locator('[data-setting="palette"] button').first()).toBeInViewport();
+  await expect(page.locator('[data-setting="palette"]').getByRole('option', {selected: true})).toBeFocused();
+  await expect(page.locator('[data-setting="palette"] .rp-select-box[data-selected]')).toBeInViewport();
 });
 
 test('search respects destination capabilities, preserves loose-node ownership and qualifies partial results', async ({page}) => {

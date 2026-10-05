@@ -8,9 +8,11 @@ test('a bare URL opens the chosen nav page at its default view; explicit routes 
   const picker = page.getByRole('button', {name: /Open at startup$/});
   await expect(picker).toContainText('Activity');
   await picker.click();
-  await expect(page.getByRole('option')).toHaveCount(routes.length);
-  await expect(page.getByRole('option', {name: 'Last opened page', exact: true})).toHaveCount(0);
-  await page.getByRole('option', {name: 'Rules', exact: true}).click();
+  // Its own list, not the palette boxes on the same page.
+  const list = page.getByRole('listbox', {name: /Open at startup/});
+  await expect(list.getByRole('option')).toHaveCount(routes.length);
+  await expect(list.getByRole('option', {name: 'Last opened page', exact: true})).toHaveCount(0);
+  await list.getByRole('option', {name: 'Rules', exact: true}).click();
   await expect(picker).toContainText('Rules');
   expect(await page.evaluate(() => localStorage.getItem('doona-start-page'))).toBe('rules');
   await page.goto('/');
