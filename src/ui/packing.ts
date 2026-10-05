@@ -217,9 +217,13 @@ export function packSection(section: HTMLElement): () => void {
   // placeholder, pack before the next paint, so a card is never drawn at a stale size.
   const changes = new MutationObserver(pack);
   changes.observe(section, {childList: true, subtree: true, attributes: true, attributeFilter: ['data-size', 'data-width', 'data-height']});
+  // A web font that arrives after the first pack changes a line's natural width without resizing any box, so the row
+  // spans are read again; before fonts.ready resolves, so a reader waiting on it sees the final layout.
+  document.fonts?.addEventListener('loadingdone', pack);
   pack();
   return () => {
     cancelAnimationFrame(frame);
+    document.fonts?.removeEventListener('loadingdone', pack);
     sizes.disconnect();
     changes.disconnect();
     texts.disconnect();
