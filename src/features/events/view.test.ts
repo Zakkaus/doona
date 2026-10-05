@@ -11,12 +11,15 @@ it('exports only the selected event kind while preserving raw data', () => {
     {id: 'runtime', event: 'runtime.updated', data: {instance_id: 'instance', observed_at: '2026-01-01T00:00:01Z', href: '/api/v1/runtime'}}
   ];
   const view = eventsView(events, 'stream.ready', false, false, 200, 'en-US', t, ['stream.ready', 'runtime.updated']);
-  expect(view.rows.map(row => row.id)).toEqual(['ready']);
+  expect(view.rows.map(row => row.id)).toEqual(['stream.ready:ready']);
   expect(JSON.parse(eventsExport(view.shown))).toEqual([events[0]]);
   expect(eventText(view.rows[0].event)).toBe(JSON.stringify(events[0], null, 2));
   expect(view.rows[0].timestamp).toBe(localTime(events[0].data.observed_at, 'en-US'));
   expect(view.status.text).toBe(t('event.unavailable'));
-  expect(eventsView(events, 'all', true, true, 200, 'en-US', t, ['stream.ready', 'runtime.updated']).rows.map(row => row.id)).toEqual(['ready', 'runtime']);
+  expect(eventsView(events, 'all', true, true, 200, 'en-US', t, ['stream.ready', 'runtime.updated']).rows.map(row => row.id)).toEqual([
+    'stream.ready:ready',
+    'runtime.updated:runtime'
+  ]);
 });
 
 it('offers only advertised event kinds and resets an unsupported selection', () => {
@@ -34,7 +37,7 @@ it('filters runtime updates before limiting the default view and its export', ()
     ready
   ];
   const view = eventsView(events, 'without-runtime', true, true, 200, 'en-US', t, ['stream.ready', 'runtime.updated']);
-  expect(view.rows.map(row => row.id)).toEqual(['ready']);
+  expect(view.rows.map(row => row.id)).toEqual(['stream.ready:ready']);
   expect(JSON.parse(eventsExport(view.shown))).toEqual([ready]);
 });
 
