@@ -85,6 +85,24 @@ test('the outbound mode jump restores a removed card without changing the saved 
   expect(await page.evaluate(() => localStorage.getItem('doona-dashboard'))).toBe(saved);
 });
 
+test('a navigation while the shell first renders is not lost', async ({page}) => {
+  // The address moves after the shell has read it on its first render but before it listens for navigations.
+  await page.addInitScript(() => {
+    const add = window.addEventListener.bind(window);
+    let moved = false;
+    window.addEventListener = ((type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) => {
+      if (type === 'popstate' && !moved) {
+        moved = true;
+        location.hash = '#/activity?card=mode';
+      }
+      add(type, listener, options);
+    }) as typeof window.addEventListener;
+  });
+  await page.goto('/#/rules');
+  await expect(page.getByRole('region', {name: 'Outbound mode', exact: true})).toBeFocused();
+  await expect(page).toHaveURL(/#\/activity\?card=mode$/);
+});
+
 test('a stale token profile link cannot save a different profile', async ({page}) => {
   await mockBackend(page);
   await page.goto('/#/settings?card=backend&profile=missing&reason=rejected&return=%23%2Factivity');
