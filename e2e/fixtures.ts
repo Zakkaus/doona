@@ -194,8 +194,14 @@ export const setAppearance = (page: Page, lang: string, scheme: string) =>
   );
 // A reload or offline switch while lazy chunks are still loading cancels them, and the browser logs the cancelled imports.
 // A live backend streams events and logs for as long as the page is open, so the network never idles there; the load
-// event stands in, since the app's chunks come with the pages it opens.
-export const settle = (page: Page) => page.waitForLoadState(isLive ? 'load' : 'networkidle');
+// event stands in, since the app's chunks come with the pages it opens. Network idle alone is not enough: the idle
+// warm-up starts once the backend answers and spaces its chunks by idle slices, both of which a busy machine stretches
+// past the idle window, so the root's data-warm is waited on until the warm-up is done or will not run. A page that is
+// not the app, such as the blank one before the first visit, has no data-warm and nothing to wait for.
+export async function settle(page: Page) {
+  await page.waitForLoadState(isLive ? 'load' : 'networkidle');
+  await page.waitForFunction(() => ['done', 'skip', undefined].includes(document.documentElement.dataset.warm));
+}
 // Waits for painted frames, two unless a count says otherwise; a frame count does not shift with machine load as a sleep does.
 export const settleFrames = (page: Page, count = 2) =>
   page.evaluate(
