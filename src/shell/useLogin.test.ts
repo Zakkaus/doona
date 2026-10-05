@@ -140,7 +140,7 @@ it('stores a pasted token in its profile, and names a stale profile or blocked s
 
 it('reports a rejected sign-in, then keeps the session a retry opens', async () => {
   const session = storage();
-  vi.stubGlobal('sessionStorage', session);
+  vi.stubGlobal('localStorage', session);
   const fetcher = vi.fn(async (_input: URL) => json({error: {code: 'invalid_credentials', message: 'Invalid credentials'}}, 401));
   vi.stubGlobal('fetch', fetcher);
   const credentials = {username: 'admin', password: 'wrong'};
@@ -156,10 +156,10 @@ it('reports a rejected sign-in, then keeps the session a retry opens', async () 
   ]);
 });
 
-it('names a session the tab cannot store apart from a failed sign-in', async () => {
+it('names a session the browser cannot store apart from a failed sign-in', async () => {
   const session = storage();
   session.refuse = true;
-  vi.stubGlobal('sessionStorage', session);
+  vi.stubGlobal('localStorage', session);
   vi.stubGlobal(
     'fetch',
     vi.fn(async () => json({token: 'hnk1_x', expires_at: '2099-01-01T00:00:00Z'}))

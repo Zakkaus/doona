@@ -115,7 +115,7 @@ for (const chunk of ['Policies', 'AreaChart', 'Sparkline', 'Donut']) {
     await page.addInitScript(session => {
       localStorage.setItem('doona-api', 'mock');
       localStorage.setItem('doona-lang', 'en');
-      sessionStorage.setItem('doona-session', session);
+      localStorage.setItem('doona-session', session);
       // A reload just happened, so the failed chunk shows its message instead of reloading the page by itself.
       sessionStorage.setItem('doona-stale-reload', String(Date.now()));
     }, demoSession('legacy'));
@@ -332,7 +332,7 @@ test('a stale chunk whose reload is cancelled says doona was updated, and so doe
   await page.addInitScript(session => {
     localStorage.setItem('doona-api', 'mock');
     localStorage.setItem('doona-lang', 'en');
-    sessionStorage.setItem('doona-session', session);
+    localStorage.setItem('doona-session', session);
     // A draft on the page asks before it is left.
     addEventListener('beforeunload', event => event.preventDefault());
   }, demoSession('legacy'));

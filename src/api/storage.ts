@@ -28,8 +28,9 @@ export const storageKeys = {
   connectionsView: 'doona-connections-view',
   activityGroup: 'doona-activity-group',
   gettingStarted: 'doona-getting-started',
-  // sessionStorage
+  // The password session; see api/session.ts.
   session: 'doona-session',
+  // sessionStorage
   saved: 'doona-saved',
   hubPages: 'doona-hub-pages'
 } as const;

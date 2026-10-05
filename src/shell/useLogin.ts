@@ -76,7 +76,7 @@ export function storeToken(profileId: string, api: string, token: string): Key |
   return null;
 }
 
-// Opens a session and keeps it in this tab. Null once it is kept, else a refusal the form names or the error it
+// Opens a session and keeps it in this browser. Null once it is kept, else a refusal the form names or the error it
 // reports as a failed sign-in.
 export async function signIn(
   profileId: string,
@@ -93,7 +93,7 @@ export async function signIn(
   try {
     saveSession(profileId, api, session.token);
   } catch {
-    // The sign-in succeeded; only the tab's storage refused the session.
+    // The sign-in succeeded; only the browser's storage refused the session.
     return {key: 'settings.saveError'};
   }
   return null;
@@ -124,7 +124,7 @@ export function secondsLeft(until: number, now: number): number {
 export function useLogin(profileId: string, api: string, backend: string, rejected: boolean, missingApi: boolean) {
   const t = useT();
   const lang = useLang();
-  // A session this tab held and the backend no longer accepts has ended; it is dropped before asking again.
+  // A session this browser held and the backend no longer accepts has ended; it is dropped before asking again.
   // endSession is idempotent for the page load, so running it in the initializer is safe under StrictMode.
   const [ended] = useState(() => endSession(profileId, api));
   const [discovered, setKind] = useState<SignIn | 'no-api' | null>(null);

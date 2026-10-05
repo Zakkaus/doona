@@ -58,7 +58,7 @@ export async function openSession(base: string, kind: 'setup' | 'login', credent
 }
 
 export async function closeSession(base: string, token: string, signal?: AbortSignal): Promise<void> {
-  // The demo keeps no sessions to revoke; dropping the tab's token ends it.
+  // The demo keeps no sessions to revoke; dropping the stored token ends it.
   if (isDemoApi(base)) return;
   const response = await send(url(base, '/api/v1/auth/logout'), {
     method: 'POST',

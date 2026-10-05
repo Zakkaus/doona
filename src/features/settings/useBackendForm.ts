@@ -5,6 +5,7 @@ import type {Key} from '../../i18n';
 import {discoverAuth} from '../../api/auth';
 import {uuid} from '../../api/hash';
 import {DEMO_API, isDemoApi, normalizeApi, readProfiles, writeProfiles, type Profile} from '../../api/profiles';
+import {dropOrphanSession} from '../../api/session';
 import {storageKeys} from '../../api/storage';
 import {toast} from '../../ui/ui';
 import {readSettings} from '../../shell/preferences';
@@ -172,6 +173,7 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
     flushSync(() => setSaving(true));
     try {
       writeProfiles({profiles, activeId});
+      dropOrphanSession(profiles.map(profile => profile.id));
     } catch {
       setResult({key: 'settings.saveError', error: true, id: ++saveFailures.current});
       saveLock.current = false;

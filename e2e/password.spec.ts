@@ -124,7 +124,7 @@ test('login reports wrong credentials, then signs in; a refused session asks aga
   await settle(page);
   await page.reload();
   await expect(page.locator('.rp-login').getByRole('status')).toHaveText('The session has ended; sign in again.');
-  expect(await page.evaluate(() => sessionStorage.getItem('doona-session'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('doona-session'))).toBeNull();
 });
 
 test('a rate-limited sign-in keeps the button disabled and counts down the wait', async ({page}) => {
@@ -145,12 +145,12 @@ test('a rate-limited sign-in keeps the button disabled and counts down the wait'
   expect(state.attempts.filter(attempt => attempt.path === 'login')).toHaveLength(1);
 });
 
-test('a session the tab cannot store asks to allow storage instead of reporting a failed sign-in', async ({page}) => {
+test('a session the browser cannot store asks to allow storage instead of reporting a failed sign-in', async ({page}) => {
   await passwordBackend(page, false);
   await page.addInitScript(() => {
     const setItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function (this: Storage, key: string, value: string) {
-      if (this === sessionStorage) throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+      if (this === localStorage && key === 'doona-session') throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
       setItem.call(this, key, value);
     };
   });
@@ -163,7 +163,7 @@ test('a session the tab cannot store asks to allow storage instead of reporting 
   await expect(form.getByRole('button', {name: 'Sign in'})).toBeEnabled();
 });
 
-test('signing out ends the session on the backend and in the tab', async ({page}) => {
+test('signing out ends the session on the backend and in the browser', async ({page}) => {
   const state = await passwordBackend(page, false);
   const form = page.locator('.rp-login-page');
   await page.goto('/#/activity');
@@ -178,6 +178,37 @@ test('signing out ends the session on the backend and in the tab', async ({page}
   await expect(page.locator('.rp-login-page').getByRole('heading')).toHaveText('Sign in');
   // Signing out is not an ended session: no warning greets the next sign-in.
   await expect(page.locator('.rp-login .rp-alert')).toHaveCount(0);
+});
+
+test('a password sign-in lasts across tabs until it is signed out', async ({page}) => {
+  await passwordBackend(page, false);
+  const form = page.locator('.rp-login-page');
+  await page.goto('/#/activity');
+  await form.getByLabel('Username', {exact: true}).fill('admin');
+  await form.getByLabel('Password', {exact: true}).fill('correct horse battery');
+  await Promise.all([page.waitForEvent('load'), form.getByRole('button', {name: 'Sign in'}).click()]);
+  await expect(page.locator('.rp-nav').first()).toBeVisible();
+  // A new tab, like a browser opened again later, starts signed in.
+  const opened = async () => {
+    const tab = await page.context().newPage();
+    await passwordBackend(tab, false);
+    await tab.goto('/#/activity');
+    return tab;
+  };
+  const second = await opened();
+  await expect(second.locator('.rp-nav').first()).toBeVisible();
+  await expect(second.locator('.rp-login-page')).toHaveCount(0);
+  await second.close();
+  await page.goto('/#/settings');
+  await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Sign out', exact: true}).click()]);
+  await expect(form.getByRole('heading')).toHaveText('Sign in');
+  await settle(page);
+  await page.reload();
+  await expect(form.getByRole('heading')).toHaveText('Sign in');
+  // The sign-out is the browser's, so a tab opened after it asks again too.
+  const third = await opened();
+  await expect(third.locator('.rp-login-page').getByRole('heading')).toHaveText('Sign in');
+  await third.close();
 });
 
 test('settings offers no token field for a password backend', async ({page}) => {

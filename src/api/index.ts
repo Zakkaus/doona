@@ -20,9 +20,9 @@ export async function initializeApi(): Promise<Api> {
 // Whether this page loaded the mock backend at startup, so the service worker keeps it for offline use.
 export const startedOnMock = () => mockFactory !== undefined;
 
-// A password session opened in this tab takes the place of the profile's configured bearer.
+// A password session kept in this browser takes the place of the profile's configured bearer.
 const credential = (profile: Profile | undefined) => (profile?.api ? sessionToken(profile.id, profile.api) : null) ?? profile?.token;
-// Whether this tab holds a bearer: a password session in this tab or the profile's configured one.
+// Whether this tab holds a bearer: a password session kept in this browser or the profile's configured one.
 export const holdsCredential = () => !!credential(pinnedProfile());
 // Whether this tab expects to be let in before the backend has answered: it holds a bearer, or it has no profile and
 // runs the built-in demo, which asks for none. Read it after detectHostedBackend, which gives a hosted backend a profile.
@@ -41,7 +41,7 @@ export function getApi(): Api {
       selected = createApi(base, token ?? undefined, clock);
       selectServerClock(clock);
     } else if (mockFactory) {
-      // A saved demo profile asks for the demo account; the tab's session is its bearer, as for a password backend.
+      // A saved demo profile asks for the demo account; the stored session is its bearer, as for a password backend.
       selected = mockFactory(profile ? {signIn: true, session: token ?? null} : undefined);
       selectServerClock(createServerClock());
     } else if (selected) {

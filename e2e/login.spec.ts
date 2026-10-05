@@ -20,7 +20,7 @@ test.describe('the demo', () => {
     await Promise.all([page.waitForEvent('load'), login.getByRole('button', {name: 'Sign in', exact: true}).click()]);
     await expect(page.locator('.rp-nav[href="#/activity"]')).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('.rp-login-page')).toHaveCount(0);
-    // The session belongs to the tab and survives a reload.
+    // The session is kept in the browser and survives a reload.
     await settle(page);
     await page.reload();
     await expect(page.locator('.rp-nav[href="#/activity"]')).toHaveAttribute('aria-current', 'page');
