@@ -1,5 +1,16 @@
 import {useEffect, useRef, useState} from 'react';
-import {pendingRules, useCapabilities, useConfig, useDnsRules, useGroups, usePendingRules, useRules, type HeldRule, type PendingPlace} from '../../store';
+import {
+  pendingRules,
+  useCapabilities,
+  useConfig,
+  useDnsRules,
+  useGroups,
+  usePendingRules,
+  useRules,
+  type HeldRule,
+  type PendingFailure,
+  type PendingPlace
+} from '../../store';
 import {offered} from '../../api/capabilities';
 import {getApi} from '../../api/index';
 import {toast} from '../../ui/ui';
@@ -47,7 +58,7 @@ export function useQuickRule(go: PageProps['go'], {queryAgain}: {queryAgain?: (q
   const dnsListable = offered(resources, 'dns_rules', {whileLoading: false});
   const configWritable = offered(resources, 'config', {whileLoading: false}) && resources?.config.writable === true;
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [failure, setFailure] = useState<{id: number; text: string; lines: string[]} | null>(null);
+  const [failure, setFailure] = useState<(PendingFailure & {id: number}) | null>(null);
   const open = !!draft;
   const routing = draft?.list === 'routing';
   const dnsList = draft && draft.list !== 'routing' ? draft.list : null;

@@ -1,6 +1,7 @@
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {ApiError, failureNotice, noticeText} from '../../api/error';
-import {backendMessage, oneLine} from '../../i18n/backend';
+import {oneLine} from '../../i18n/backend';
+import {backendWords, explainDiagnostic} from './offlineDependency';
 import type {Translator} from '../../i18n';
 import type {PendingFailure, PendingRule} from '../../store';
 import {scanConfig} from '../../dae/text';
@@ -57,7 +58,8 @@ export function byFile(rules: PendingRule[]): PendingRule[][] {
 export const refusalDetails = (error: unknown): {diagnostics?: ConfigDiagnostic[]} | null =>
   error instanceof ApiError && error.status === 422 ? ((error.details as {diagnostics?: ConfigDiagnostic[]} | null) ?? {}) : null;
 
-// A refused write: the validation errors with their lines when the backend sent them, else what went wrong.
+// A refused write: the validation errors with their lines when the backend sent them, else what went wrong. The
+// backend's words a line leaves out go to `backend`.
 export function ruleFailure(error: unknown, diagnostics: ConfigDiagnostic[] | null, sources: ConfigSource[], t: Translator): PendingFailure {
   const found = diagnostics ?? refusalDetails(error)?.diagnostics ?? null;
   if (!found) {
@@ -71,13 +73,15 @@ export function ruleFailure(error: unknown, diagnostics: ConfigDiagnostic[] | nu
   }
   const errors = found.filter(item => item.level === 'error').length;
   const restart = restartRequired(found);
+  const shown = found.map(item => ({item, message: oneLine(explainDiagnostic(item, t), t)}));
+  const backend = backendWords(shown);
   return {
     text: restart ? t('config.writeRestart', {n: restart}) : errors ? t('ui.writeInvalid', {n: errors}) : t('rule.refused'),
-    lines: found.map(item => {
-      const message = oneLine(backendMessage(item.code, item.message, t), t);
+    lines: shown.map(({item, message}) => {
       const source = sources.find(source => source.id === item.source_id);
       return item.line === null ? message : t('config.atFile', {file: source ? fileName(source) : item.source_id, line: item.line, message});
-    })
+    }),
+    ...(backend.length ? {backend} : {})
   };
 }
 
@@ -116,6 +120,7 @@ export function partialFailure(failure: PendingFailure, written: number, held: n
     ? {
         text: t('rule.partial', {n: written, held}),
         lines: [failure.text, ...failure.lines],
+        ...(failure.backend ? {backend: failure.backend} : {}),
         ...(failure.requestId ? {requestId: failure.requestId} : {}),
         ...(failure.neutral && !held ? {neutral: true as const} : {})
       }

@@ -15,5 +15,6 @@
   "state-db": "troubleshooting",
   "no-native-api": "troubleshooting",
   "sign-in": "troubleshooting",
-  "read-only": "troubleshooting"
+  "read-only": "troubleshooting",
+  "offline-dependency": "troubleshooting"
 }

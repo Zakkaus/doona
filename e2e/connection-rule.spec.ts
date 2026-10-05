@@ -342,6 +342,18 @@ test('a matched rule gone after a reload is not retargeted until the dialog says
 test('an apply that fails in a later file keeps what it could not write and says what it wrote', async ({page}) => {
   const {api, handlers, requests} = await mockBackend(page, {includedRule: true});
   setupIncludedRouting({api, handlers}, {refuseWrite: true});
+  // A diagnostic explained in the page language keeps the backend's words under Details.
+  const offline = 'offline dependency /etc/dae/geosite.dat: No such file or directory';
+  const refuse = handlers['PUT config/sources/src-rules']!;
+  handlers['PUT config/sources/src-rules'] = async (...args) => {
+    try {
+      return await refuse(...args);
+    } catch (error) {
+      const details = (error as ApiError).details as {diagnostics: object[]};
+      const missing = {level: 'error', source_id: 'src-rules', line: null, column: null, span: null, code: 'missing-offline-dependency', message: offline};
+      throw new ApiError(422, 'validation_failed', 'invalid', null, {diagnostics: [...details.diagnostics, missing]});
+    }
+  };
   const connections = await createMockApi().connections();
   const inInclude = [...connections.tcp, ...connections.udp].find(row => row.rule_id === 'r7')!;
   await hold(page, '1');
@@ -353,6 +365,9 @@ test('an apply that fails in a later file keeps what it could not write and says
   await expect(page.locator('.rp-toast.negative', {hasText: '1 rule written; 1 still held'})).toBeVisible();
   const pending = page.getByRole('region', {name: 'Pending: 1'});
   await expect(pending).toContainText('rules.dae line 7: Backend message: no group proxy');
+  await expect(pending.locator('code', {hasText: offline})).toBeHidden();
+  await pending.getByRole('button', {name: 'Details', exact: true}).click();
+  await expect(pending.locator('code', {hasText: offline})).toBeVisible();
   expect(requests.filter(request => request.method() === 'PUT').map(request => new URL(request.url()).pathname)).toEqual([
     '/api/v1/config/sources/src-main',
     '/api/v1/config/sources/src-rules'

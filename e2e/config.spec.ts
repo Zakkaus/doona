@@ -292,6 +292,22 @@ test('identical diagnostics share one row with their count, and a known code kee
   await expect(page.getByRole('list', {name: 'Diagnostics'}).getByRole('listitem')).toHaveCount(1);
 });
 
+test('a missing offline dependency is explained in the diagnostics list, with the backend words under Details', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const config = await api.config();
+  const message = 'required offline configuration dependency is unavailable';
+  config.diagnostics = [{level: 'error', source_id: 'src-main', line: null, column: null, span: null, code: 'missing-offline-dependency', message}];
+  await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+  await page.goto('/#/config?tab=validate');
+  const rows = page.getByRole('list', {name: 'Diagnostics'}).getByRole('listitem');
+  await expect(rows).toHaveCount(1);
+  await expect(rows).toContainText('A file the configuration needs was not found. Usually this is geoip.dat or geosite.dat');
+  const backend = rows.getByText(message, {exact: true});
+  await expect(backend).toBeHidden();
+  await rows.getByRole('button', {name: 'Details', exact: true}).click();
+  await expect(backend).toBeVisible();
+});
+
 test('the level filter narrows the diagnostics list, each level counted', async ({page}) => {
   const {api} = await mockBackend(page);
   const config = await api.config();
