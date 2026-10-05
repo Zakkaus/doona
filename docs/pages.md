@@ -76,6 +76,8 @@ Configuration shows the version of the configuration in effect. Modules shows on
 
 ![Global settings form](https://zakkaus.github.io/doona-docs/screenshots/en/config-global-light.webp)
 
+Settings has General and Appearance tabs. General holds backend, runtime, geodata and probe settings; Appearance holds the palette, wallpaper and display preferences.
+
 Settings > Geodata lists the geodata files and shows status and update controls when supported. Reset to defaults asks for confirmation, then removes all geodata overrides and values taken from the configuration file so the built-in sources and defaults apply again. Reload, DNS cache, subscription and connection actions remain on their respective pages, not in Settings. Failure toasts and notices for unknown operation results offer Copy error; Settings > About copies the last 20 errors kept in memory, excluding secrets and request bodies.
 
 ### Widgets

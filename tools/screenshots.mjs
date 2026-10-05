@@ -259,6 +259,7 @@ async function recordPhones(browser, lang, path) {
       if (submenu) {
         await page.getByRole('menuitem').nth(2).click();
         await page.getByRole('menuitemradio').first().waitFor();
+        await page.getByRole('menuitem', {name: messages(lang)['ui.appearanceSettings'], exact: true}).scrollIntoViewIfNeeded();
       }
       await page.waitForTimeout(300);
     }
@@ -306,15 +307,18 @@ const captions = {
 };
 // The sign-in card, after `fill`, for a backend that answers discovery with `auth` and refuses every other read without
 // a session.
-async function signIn(browser, lang, auth, fill = async () => {}) {
+async function signIn(browser, lang, auth, fill = async () => {}, palette = 'rose-pine/moon') {
   const context = await browser.newContext({...desktop, colorScheme: 'light', reducedMotion: 'reduce', serviceWorkers: 'block', timezoneId: 'UTC'});
-  await context.addInitScript(lang => {
-    localStorage.setItem('doona-lang', lang);
-    localStorage.setItem('doona-scheme', 'light');
-    localStorage.setItem('doona-palette', 'rose-pine/moon');
-    localStorage.setItem('doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: location.origin, token: ''}]));
-    localStorage.setItem('doona-profile', 'home');
-  }, lang);
+  await context.addInitScript(
+    ([lang, palette]) => {
+      localStorage.setItem('doona-lang', lang);
+      localStorage.setItem('doona-scheme', 'light');
+      localStorage.setItem('doona-palette', palette);
+      localStorage.setItem('doona-profiles', JSON.stringify([{id: 'home', name: 'Home', api: location.origin, token: ''}]));
+      localStorage.setItem('doona-profile', 'home');
+    },
+    [lang, palette]
+  );
   const password = auth.mode === 'password';
   const links = {auth_setup: password ? '/api/v1/auth/setup' : null, auth_login: password ? '/api/v1/auth/login' : null};
   await context.route(/\/api$/, route => route.fulfill({json: {name: 'daeuniverse/native', api_major: 1, links, auth}}));
@@ -326,7 +330,7 @@ async function signIn(browser, lang, auth, fill = async () => {}) {
   await page.locator('.rp-login-page form input').first().waitFor();
   await page.evaluate(() => document.fonts.ready);
   await fill(page);
-  const png = await page.locator('.rp-login-card').screenshot();
+  const png = await (palette.startsWith('glass/') ? page : page.locator('.rp-login-card')).screenshot();
   await context.close();
   return png;
 }
@@ -392,6 +396,7 @@ async function panelPage(browser, lang, layout, options = desktop, palette = 'ro
 }
 // Each capture returns its stills; one is saved as it is, more become a strip.
 const captures = [
+  ['login-wallpaper', async (browser, lang) => [await signIn(browser, lang, {mode: 'password', setup_required: false}, undefined, 'glass/clear')]],
   ['login-setup', async (browser, lang) => [await signIn(browser, lang, {mode: 'password', setup_required: true})]],
   [
     'login-token',
@@ -526,11 +531,21 @@ const captures = [
     }
   ],
   [
+    'settings-general',
+    async (browser, lang, t) => {
+      const page = await openPage(browser, lang, '#/settings', '[role=tabpanel]', desktop);
+      await page.getByRole('tab', {name: t['settings.general'], exact: true}).waitFor();
+      return [page];
+    }
+  ],
+  [
     'settings-appearance',
     async (browser, lang) => {
       const page = await openPage(browser, lang, '#/settings?tab=appearance', '[data-setting="palette"]', desktop);
       await page.waitForTimeout(400);
-      return [page];
+      const png = await page.screenshot({fullPage: true});
+      await page.context().close();
+      return [png];
     }
   ],
   ['rules-advanced', async (browser, lang) => [await openPage(browser, lang, '#/rules?tab=list&view=advanced', '.rp-table [role=row] >> nth=2', desktop)]],
