@@ -1,4 +1,4 @@
-import {useId} from 'react';
+import {Fragment, useId} from 'react';
 import {useT, type Key} from '../../i18n';
 import {
   Button,
@@ -105,6 +105,16 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
               if (!model.applying) void model.confirm();
             }}
           >
+            {dialog.invalid && (
+              <InlineAlert key={dialog.invalid.id} title={t('ui.writeInvalid', {n: dialog.invalid.errors.length})} takeFocus>
+                {dialog.invalid.errors.map((text, index) => (
+                  <Fragment key={index}>
+                    {index > 0 && <br />}
+                    {text}
+                  </Fragment>
+                ))}
+              </InlineAlert>
+            )}
             <DialogSection>
               <p>{t('rule.template.scope', {file: dialog.file})}</p>
               {dialog.optionImpact.map(text => (

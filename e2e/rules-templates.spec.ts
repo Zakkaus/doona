@@ -4,7 +4,7 @@ import {allGroupNames} from '../src/dae/sources';
 import {writeTemplate} from '../src/dae/setup';
 import {scanConfig} from '../src/dae/text';
 import legacy from '../src/dae/templates.legacy.json' with {type: 'json'};
-import {box, expect, test, mockBackend, loadCatalogues} from './fixtures';
+import {box, expect, expectLoadFailures, test, mockBackend, loadCatalogues} from './fixtures';
 
 const templateShots = (globalThis as {process?: {env: Record<string, string | undefined>}}).process?.env.DOONA_TEMPLATE_SHOTS;
 const t: Translator = (key, params) => translate('en', key, params);
@@ -75,6 +75,69 @@ test('routing templates apply without the rules API and retain the distribution 
   await expect(page.locator('.rp-table')).toBeVisible();
   expect(requests.filter(request => new URL(request.url()).pathname.endsWith('/rules'))).toEqual([]);
 });
+
+const refusal = [
+  {source_id: 'src-main', line: 42, column: 7, span: null, level: 'error', code: 'honk-dns-routing', message: 'unknown upstream "alidns"'},
+  {source_id: 'src-rules', line: 3, column: 1, span: null, level: 'error', code: 'honk-rule', message: 'unknown group "proxy2"'},
+  {
+    source_id: 'src-rules',
+    line: null,
+    column: null,
+    span: null,
+    level: 'error',
+    code: 'unknown-dns-upstream',
+    message: 'DNS routing references an undeclared upstream'
+  },
+  {source_id: 'src-main', line: 3, column: 1, span: null, level: 'warning', code: 'legacy-config-warning', message: 'setting was removed'}
+];
+for (const side of ['check', 'write'] as const)
+  test(`a template refused by the ${side} stays in its dialog with each error and its place, and writes nothing`, async ({page}) => {
+    const {main, write} = await backend(page);
+    await write(text => noDns(oneFile(text)));
+    const before = (await main()).content;
+    if (side === 'check')
+      await page.route('**/api/v1/config/validate', route =>
+        route.fulfill({json: {valid: false, diagnostics: refusal, generation_id: 'g', validated_at: new Date().toISOString()}})
+      );
+    else
+      await page.route('**/api/v1/config/sources/*', route =>
+        route.request().method() === 'PUT'
+          ? route.fulfill({
+              status: 422,
+              json: {error: {code: 'unsupported_value', message: 'Invalid configuration', details: {diagnostics: refusal}}, request_id: 'r'}
+            })
+          : route.fallback()
+      );
+    // The refused write is the answer the case is about, not a browser error.
+    if (side === 'write') expectLoadFailures(page, /\/api\/v1\/config\/sources\//);
+    await page.goto('/#/rules?tab=list&view=simple');
+    await choose(page, 'Bypass mainland China');
+    await applyButton(page).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByRole('checkbox', {name: 'Also add DNS routing'})).toBeChecked();
+    await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+    const alert = dialog.getByRole('alert');
+    await expect(alert).toContainText('Validation found 3 errors');
+    await expect(alert).toContainText('Line 42: ');
+    await expect(alert).toContainText('unknown upstream "alidns"');
+    await expect(alert).toContainText('rules.dae line 3: ');
+    await expect(alert).toContainText('rules.dae: ');
+    await expect(alert).toContainText('DNS routing references an undeclared upstream');
+    await expect(alert).not.toContainText('setting was removed');
+    await expect(alert).toBeFocused();
+    await expect(page.locator('.rp-toast')).toHaveCount(0);
+    expect((await main()).content).toBe(before);
+    // The errors describe the write that was refused: another choice, or closing the dialog, clears them.
+    await dialog.getByText('Also add DNS routing', {exact: true}).click();
+    await expect(alert).toHaveCount(0);
+    await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+    await expect(alert).toBeVisible();
+    await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+    await expect(dialog).toHaveCount(0);
+    await applyButton(page).click();
+    await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeVisible();
+    await expect(alert).toHaveCount(0);
+  });
 
 test('ads are off by default and switching them alone can be applied in both directions', async ({page}) => {
   const {main, write} = await backend(page);

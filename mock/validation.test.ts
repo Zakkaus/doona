@@ -2,6 +2,13 @@ import {describe, expect, it} from 'vitest';
 import {createMockApi} from './index';
 import {validationSources} from '../src/dae/sources';
 import {diagnose, validate} from './config';
+import {configMain, configSources} from './fixtures/configuration';
+import type {Translator} from '../src/i18n';
+import {readGroupEntries} from '../src/dae/groups';
+import {dnsUpstreamNames} from '../src/dae/ruleText';
+import {writeTemplate} from '../src/dae/setup';
+import {templates, type RuleTemplate} from '../src/dae/templates';
+import {scanConfig} from '../src/dae/text';
 
 it.each([
   ['unknown_section', 'mystery {}\n', {name: 'mystery'}],
@@ -127,5 +134,44 @@ describe('the other global restart-only settings are refused as restart-required
       'Changing global.tproxy_port requires restarting honk',
       'Changing global.log_level requires restarting honk'
     ]);
+  });
+});
+
+// Every routing mode with every option, with and without the DNS split, writes a file the validator accepts: from a
+// file without groups or dns, and from the demo's main file with its dns block removed. The DNS split routes only to
+// upstreams it declares.
+describe('routing templates', () => {
+  const t = ((key: string) => key) as Translator;
+  const withoutDns = (text: string) => {
+    const block = scanConfig(text).blocks.find(item => item.name === 'dns');
+    return block ? text.slice(0, block.from) + text.slice(block.to) : text;
+  };
+  const bases = {
+    bare: 'global {\n  log_level: info\n}\nrouting {\n  domain(geosite:telegram) -> direct\n  fallback: direct\n}\n',
+    demo: withoutDns(configMain)
+  };
+  const flags = [false, true];
+  const cases = Object.entries(bases).flatMap(([base, text]) =>
+    (Object.keys(templates) as RuleTemplate[]).flatMap(template =>
+      flags.flatMap(dns =>
+        flags.flatMap(blockAds =>
+          flags.flatMap(blockQuic => flags.map(networkManagerDirect => ({base, text, template, dns, blockAds, blockQuic, networkManagerDirect})))
+        )
+      )
+    )
+  );
+  it.each(cases)('$template from $base with dns $dns, ads $blockAds, QUIC $blockQuic, NetworkManager $networkManagerDirect', ({text, ...options}) => {
+    const content = writeTemplate(text, options.template, readGroupEntries(text), {...options, t});
+    const local = configSources.filter(source => source.kind !== 'main').map(({id, path, content}) => ({id, path, content}));
+    const result = validate({sources: [{id: 'main', path: '/etc/honk/config.dae', content}], mode: 'full'}, 'generation', {local});
+    expect(result.diagnostics.filter(item => item.level === 'error')).toEqual([]);
+    const dnsBlocks = scanConfig(content).blocks.filter(block => block.name === 'dns');
+    expect(dnsBlocks).toHaveLength(options.dns ? 1 : 0);
+    if (!options.dns) return;
+    const sectionText = content.slice(dnsBlocks[0].from, dnsBlocks[0].to);
+    const declared = new Set(dnsUpstreamNames(sectionText));
+    const targets = [...sectionText.matchAll(/(?:->|fallback:)\s*([^\s;}]+)/g)].map(match => match[1]);
+    expect(targets.length).toBeGreaterThan(0);
+    for (const target of targets) expect(declared).toContain(target);
   });
 });
