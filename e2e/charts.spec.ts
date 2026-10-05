@@ -318,12 +318,14 @@ test('the latency axis keeps its last label inside the chart on a phone', async 
 test('the narrow latency plot keeps its annotations clear of axis labels', async ({page}) => {
   await page.setViewportSize({width: 320, height: 844});
   await page.goto('/#/dns');
+  // Network idle can come before the page's own chunks are asked for; a reload then would cancel them.
+  const chart = page.locator('.rp-swarm svg').first();
+  await expect(chart).toBeVisible();
   for (const lang of ['zh-TW', 'en']) {
     for (const scheme of ['light', 'dark']) {
       await setAppearance(page, lang, scheme);
       await settle(page);
       await page.reload();
-      const chart = page.locator('.rp-swarm svg').first();
       await expect(chart).toBeVisible();
       await expect(chart.locator('.mark line')).toHaveCount(2);
       await expect(chart.locator('.mark text')).toHaveCount(0);
@@ -339,6 +341,7 @@ test('the narrow latency plot keeps its annotations clear of axis labels', async
 test('DNS summaries use their card height at 1024 px', async ({page}) => {
   await page.setViewportSize({width: 1024, height: 900});
   await page.goto('/#/dns');
+  await expect(page.locator('.rp-waffle')).toBeVisible();
   for (const lang of ['zh-TW', 'en']) {
     for (const scheme of ['light', 'dark']) {
       await setAppearance(page, lang, scheme);

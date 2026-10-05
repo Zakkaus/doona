@@ -6,7 +6,7 @@ import {preloadable} from '../ui/preloadable';
 import type {PageShape} from '../ui/PageSkeleton';
 import type {Capabilities} from '../api/model';
 import type {PageProps, RoutePath} from './routes';
-import {preloadSearch} from './search/load';
+import {searchDialog} from './search/load';
 import Home from '../ui/icons/Home';
 import Link from '../ui/icons/Link';
 import Share from '../ui/icons/Share';
@@ -162,22 +162,32 @@ export function warmPage(id: string) {
     .catch(() => undefined);
 }
 // Once the backend accepts the tab: the default page at once, then the search dialog and the other pages, one per idle
-// slice (the callback may still run on its timeout while the page is busy). Later calls do nothing.
+// slice, all started within one shared deadline however busy the page is. Later calls do nothing. The root's data-warm
+// tells a reload when no chunk is in flight: pending until the backend answers, running, then done once every warmed
+// chunk has arrived or failed, or skip when the backend turned the tab away and nothing warms. index.html starts it at pending.
+const WARM_DEADLINE_MS = 3000;
 let warming = false;
 export function warmAllPages() {
   if (warming) return;
   warming = true;
-  void activity.preload().catch(() => undefined);
-  const queue = [preloadSearch, ...features.filter(feature => feature.warm !== 'intent').map(feature => () => warmPage(feature.id))];
-  const next = () => {
-    const warm = queue.shift();
-    if (!warm) return;
-    warm();
-    if ('requestIdleCallback' in window) requestIdleCallback(next, {timeout: 3000});
-    else setTimeout(next, 250);
+  const root = document.documentElement;
+  root.dataset.warm = 'running';
+  const loads: Array<Promise<unknown>> = [activity.preload().catch(() => undefined)];
+  const queue = [searchDialog.preload, ...features.filter(feature => feature.warm !== 'intent').map(feature => feature.preload)];
+  const deadline = performance.now() + WARM_DEADLINE_MS;
+  const schedule = (delay: number) => {
+    if ('requestIdleCallback' in window) requestIdleCallback(next, {timeout: Math.max(0, deadline - performance.now())});
+    else setTimeout(next, delay);
   };
-  if ('requestIdleCallback' in window) requestIdleCallback(next, {timeout: 3000});
-  else setTimeout(next, 1000);
+  const next = () => {
+    loads.push(queue.shift()!().catch(() => undefined));
+    if (queue.length) schedule(250);
+    else void Promise.all(loads).then(() => (root.dataset.warm = 'done'));
+  };
+  schedule(1000);
+}
+export function skipWarmUp() {
+  if (!warming) document.documentElement.dataset.warm = 'skip';
 }
 
 export function navAvailable(path: string, capabilities: Capabilities | undefined): boolean {

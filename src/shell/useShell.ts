@@ -5,7 +5,7 @@ import {useLang, useT} from '../i18n';
 import {toast, toastErrorDetail} from '../ui/ui';
 import {accessError, duckView, shellView, wordmark, type AboutView, type ShellView} from './view';
 import {docsHref} from '../features/shared/docs';
-import {warmAllPages} from './registry';
+import {skipWarmUp, warmAllPages} from './registry';
 
 export const AboutContext = createContext<AboutView | null>(null);
 export type ShellModel = ShellView & {
@@ -25,9 +25,11 @@ export function useShell(settings: Settings, route: string): ShellModel {
   const refreshLock = useRef(false);
   // Pages download once the backend accepts the tab, on a restored session or after signing in.
   const accepted = !!capabilities.data;
+  const turnedAway = !accepted && !!capabilityError;
   useEffect(() => {
     if (accepted) warmAllPages();
-  }, [accepted]);
+    else if (turnedAway) skipWarmUp();
+  }, [accepted, turnedAway]);
   const view = useMemo(
     () => shellView(settings, route, capabilities.data, capabilityError, version.data, version.error, t),
     [settings, route, capabilities.data, capabilityError, version.data, version.error, t]
