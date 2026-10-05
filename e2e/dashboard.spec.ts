@@ -63,7 +63,7 @@ test('drags a card into a new place, moves it by keyboard, resizes one card and 
   await page.mouse.move(target.x + target.width * 0.85, target.y + target.height / 2, {steps: 12});
   await expect(page.locator('.rp-canvas-drop[data-drop-target]')).toHaveCount(1);
   await page.mouse.up();
-  expect(await order(page)).toEqual(['upload', 'connections', 'download', 'latency', 'cpu']);
+  await expect.poll(() => order(page)).toEqual(['upload', 'connections', 'download', 'latency', 'cpu']);
   // The keyboard: Enter picks the card up, an arrow chooses the slot, Enter drops it.
   await tile(page, 'cpu').locator('[slot="drag"]').focus();
   await page.keyboard.press('Enter');
@@ -86,7 +86,7 @@ test('drags a card into a new place, moves it by keyboard, resizes one card and 
   // Cancel asks before dropping the changed draft and restores the saved page; Done keeps the draft through a reload.
   await page.getByRole('button', {name: 'Cancel', exact: true}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
-  expect(await order(page)).toEqual(['download', 'upload', 'connections', 'latency', 'cpu']);
+  await expect.poll(() => order(page)).toEqual(['download', 'upload', 'connections', 'latency', 'cpu']);
   await open(page);
   await (await settings(page, 'cpu')).getByRole('button', {name: 'Move up', exact: true}).click();
   await page.keyboard.press('Escape');
@@ -96,7 +96,7 @@ test('drags a card into a new place, moves it by keyboard, resizes one card and 
   // Restore defaults changes the draft only.
   await open(page);
   await page.getByRole('button', {name: 'Restore defaults', exact: true}).click();
-  expect(await order(page)).toEqual(['download', 'upload', 'connections', 'latency', 'cpu']);
+  await expect.poll(() => order(page)).toEqual(['download', 'upload', 'connections', 'latency', 'cpu']);
   await page.getByRole('button', {name: 'Done', exact: true}).click();
 });
 
