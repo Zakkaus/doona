@@ -37,6 +37,41 @@ async function feed(page: Page, kind: 'events' | 'logs', count: number) {
   return {grid, frame};
 }
 
+for (const kind of ['events', 'logs'] as const) {
+  test(`${kind} renew selection state when rows arrive`, async ({page}) => {
+    const {grid, frame} = await feed(page, kind, 200);
+    const freshSelection = () =>
+      grid.evaluate(element => {
+        // RAC passes this state to useGridState, which mutates its focus setter on every collection render.
+        type Fiber = {return: Fiber | null; child: Fiber | null; sibling: Fiber | null; stateNode: {current: Fiber}; memoizedProps?: {selectionState?: object}};
+        const key = Object.keys(element).find(key => key.startsWith('__reactFiber$'))!;
+        let root = (element as unknown as Record<string, Fiber>)[key];
+        while (root.return) root = root.return;
+        const pending = [root.stateNode.current];
+        const probe = window as unknown as {selectionStates?: WeakSet<object>};
+        probe.selectionStates ??= new WeakSet();
+        while (pending.length) {
+          const fiber = pending.pop()!;
+          const state = fiber.memoizedProps?.selectionState;
+          if (state) {
+            const fresh = !probe.selectionStates.has(state);
+            probe.selectionStates.add(state);
+            return fresh;
+          }
+          if (fiber.child) pending.push(fiber.child);
+          if (fiber.sibling) pending.push(fiber.sibling);
+        }
+        throw new Error('RAC selection state was not found');
+      });
+    expect(await freshSelection()).toBe(true);
+    for (let id = 201; id <= 208; id++) {
+      await page.evaluate(record => (window as unknown as {appendRecord: (record: unknown) => void}).appendRecord(record), frame(id));
+      await expect(grid.getByRole('rowheader').first()).toHaveText(`Record ${id}`);
+      expect(await freshSelection()).toBe(true);
+    }
+  });
+}
+
 for (const viewport of [
   {width: 1440, height: 900},
   {width: 1700, height: 1150},

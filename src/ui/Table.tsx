@@ -1,4 +1,16 @@
-import {createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject} from 'react';
+import {
+  cloneElement,
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+  type RefObject
+} from 'react';
 import {cx} from './cx';
 import {VisuallyHidden} from 'react-aria';
 import {
@@ -110,13 +122,24 @@ function useOpenerFocus(ref: RefObject<HTMLElement | null>) {
   }, [ref]);
 }
 const virtualiseFrom = 40;
-// The body takes its rows from context, so new rows re-render the collection but not the table around it. React Aria
-// renders the visible rows again for every new collection; a re-rendered table would render them once more before it.
+// Context commits new rows before the outer table refreshes its selection state below. Reusing its children
+// avoids a second collection update, which would render every visible row again.
 // Marked pure, so importing the UI module from the startup chunk does not pull the table code into it.
 const RowsContext = /* @__PURE__ */ createContext<readonly object[]>([]);
 const noGroups: never[] = [];
 function TableRows<T extends object>(props: Omit<TableBodyProps<T>, 'items'>) {
   return <TableBody<T> {...props} items={useContext(RowsContext) as T[]} />;
+}
+function TableSelection({table}: {table: ReactElement}) {
+  const rows = useContext(RowsContext);
+  // Refresh RAC's selection state after the hidden collection commits, breaking Stately 3.50's focus setter chain.
+  // Reuse its children to render rows once per batch, and keep the extra render local to this wrapper.
+  const [committedTable, setCommittedTable] = useState(table);
+  useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize with RAC's collection commit before paint.
+    setCommittedTable(cloneElement(table));
+  }, [rows, table]);
+  return committedTable;
 }
 const isGroup = <T extends object>(row: T | TableGroup<T>): row is TableGroup<T> => 'children' in row;
 // Plain text truncates with a tooltip.
@@ -404,7 +427,11 @@ export function DataTable<T extends {id: string}>({
     () => (multiline ? {estimatedRowHeight: tableLayout.rowHeight, headingHeight: tableLayout.headingHeight} : tableLayout),
     [multiline]
   );
-  const body = <RowsContext.Provider value={rows}>{table}</RowsContext.Provider>;
+  const body = (
+    <RowsContext.Provider value={rows}>
+      <TableSelection table={table} />
+    </RowsContext.Provider>
+  );
   const container = (
     <ResizableTableContainer
       ref={element => {
