@@ -54,8 +54,14 @@ const looks = [
   ['Arco Design Dark', 'arco/arco', 'dark'],
   ['Semi Design Light', 'semi/semi', 'light'],
   ['Semi Design Dark', 'semi/semi', 'dark'],
-  ['Glass Light', 'glass/glass', 'light'],
-  ['Glass Dark', 'glass/glass', 'dark'],
+  ['Liquid Glass Light', 'glass/glass', 'light'],
+  ['Liquid Glass Dark', 'glass/glass', 'dark'],
+  ['Glass Light', 'glass/clear', 'light'],
+  ['Glass Dark', 'glass/clear', 'dark'],
+  ['Frosted Light', 'glass/frosted', 'light'],
+  ['Frosted Dark', 'glass/frosted', 'dark'],
+  ['Tinted Light', 'glass/tinted', 'light'],
+  ['Tinted Dark', 'glass/tinted', 'dark'],
   ['China Day shift', 'qiangguo/qiangguo', 'light'],
   ['China Night shift', 'qiangguo/qiangguo', 'dark']
 ];
@@ -77,8 +83,14 @@ const gallery = new Map([
   ['Arco Design Dark', 'arco-dark'],
   ['Semi Design Light', 'semi-light'],
   ['Semi Design Dark', 'semi-dark'],
-  ['Glass Light', 'glass-light'],
-  ['Glass Dark', 'glass-dark'],
+  ['Liquid Glass Light', 'glass-light'],
+  ['Liquid Glass Dark', 'glass-dark'],
+  ['Glass Light', 'glass-clear-light'],
+  ['Glass Dark', 'glass-clear-dark'],
+  ['Frosted Light', 'glass-frosted-light'],
+  ['Frosted Dark', 'glass-frosted-dark'],
+  ['Tinted Light', 'glass-tinted-light'],
+  ['Tinted Dark', 'glass-tinted-dark'],
   ['China Day shift', 'qiangguo-light'],
   ['China Night shift', 'qiangguo-dark']
 ]);
@@ -399,7 +411,7 @@ const captures = [
       await hit.waitFor();
       const first = await page.screenshot();
       await hit.click();
-      await page.locator('[data-setting="palette"] button:focus').waitFor();
+      await page.locator('[data-setting="palette"] [role=option][aria-selected=true]:focus').waitFor();
       return [first, page];
     }
   ],
@@ -510,6 +522,14 @@ const captures = [
       await region.getByRole('button', {name: t['settings.geodataDetails']}).click();
       await region.locator('.rp-table').last().waitFor();
       await region.scrollIntoViewIfNeeded();
+      return [page];
+    }
+  ],
+  [
+    'settings-appearance',
+    async (browser, lang) => {
+      const page = await openPage(browser, lang, '#/settings?tab=appearance', '[data-setting="palette"]', desktop);
+      await page.waitForTimeout(400);
       return [page];
     }
   ],
