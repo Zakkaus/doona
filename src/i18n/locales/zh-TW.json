@@ -1503,6 +1503,7 @@
   "settings.firstRun": "尚未設定後端；現在顯示的是內建示範資料",
   "settings.flowsMax": "流程保留筆數",
   "settings.flowsRetention": "流程保留秒數",
+  "settings.general": "一般",
   "settings.geodata": "地理資料",
   "settings.geodataAsset": "資料",
   "settings.geodataAutoSaved": "自動更新設定已儲存",

@@ -845,7 +845,7 @@ test('the date format setting reorders a source expiry and the overview times at
   };
   const expires = () => sourceCards(page).first().locator('.rp-kv > div').filter({hasText: 'Expires'}).locator('.v');
   const pick = async (name: string) => {
-    await page.goto('/#/settings');
+    await page.goto('/#/settings?tab=appearance');
     await page.getByRole('button', {name: /Date format$/}).click();
     await page.getByRole('option', {name, exact: true}).click();
     await expect(page.getByRole('button', {name: /Date format$/})).toContainText(name);
@@ -893,7 +893,7 @@ test('the time format setting switches a source expiry and the log clock between
   const expiry = () => sourceCards(page).first().locator('.rp-kv > div').filter({hasText: 'Expires'}).locator('.v');
   const marks = page.locator('.rp-heatmap .times .ends span');
   const pick = async (name: string) => {
-    await page.goto('/#/settings');
+    await page.goto('/#/settings?tab=appearance');
     await page.getByRole('button', {name: /Time format$/}).click();
     await page.getByRole('option', {name, exact: true}).click();
     await expect(page.getByRole('button', {name: /Time format$/})).toContainText(name);

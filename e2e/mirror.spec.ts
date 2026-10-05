@@ -51,7 +51,7 @@ test.describe('mirrored layout at 1280px', () => {
   test.use({viewport: {width: 1280, height: 900}});
 
   test('the setting mirrors the page before first paint and turns back', async ({page}) => {
-    await page.goto('/#/settings');
+    await page.goto('/#/settings?tab=appearance');
     expect(await firstFrame(page)).toBe('ltr false');
     const toggle = mirrorSwitch(page);
     await expect(toggle).not.toBeChecked();

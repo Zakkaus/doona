@@ -177,7 +177,7 @@ test('a repeated actionable toast replaces its earlier copy', async ({page}) => 
 
 test('the notification position setting moves the toasts and survives a reload', async ({page}) => {
   await failingFirstFetch(page, 9);
-  await page.goto('/#/settings');
+  await page.goto('/#/settings?tab=appearance');
   await page.getByRole('button', {name: /Notification position/}).click();
   await page.getByRole('option', {name: 'Bottom corner', exact: true}).click();
   await page.reload();

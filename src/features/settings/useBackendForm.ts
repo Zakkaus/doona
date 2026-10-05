@@ -61,14 +61,15 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
   const field = new URLSearchParams(query).get('field');
   // `field` focuses the control inside the card's `data-setting="{field}"` (settingsFields in nav.ts). A control that
   // renders once its data arrives is waited for a while with the card focused; a hidden or disabled one leaves it there.
+  // A card on a tab opened for the first time mounts a render later, so it is waited for the same way.
   // A listbox keeps no tab stop but its focused option, so its selected option is the one to land on.
   useEffect(() => {
-    const section = card ? document.getElementById(cardHeadingId(card))?.closest('section') : null;
-    if (!section) return;
-    const land = () => {
+    if (!card) return;
+    let section: HTMLElement | null = null;
+    const land = (root: HTMLElement) => {
       const control = field
         ? Array.from(
-            section.querySelectorAll<HTMLElement>(`[data-setting="${CSS.escape(field)}"] :is(input, button, textarea, [role=option][aria-selected=true])`)
+            root.querySelectorAll<HTMLElement>(`[data-setting="${CSS.escape(field)}"] :is(input, button, textarea, [role=option][aria-selected=true])`)
           ).find(
             element => (element.tabIndex >= 0 || element.matches('[role=option]')) && !element.matches(':disabled') && !element.closest('[aria-hidden="true"]')
           )
@@ -77,15 +78,22 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
       control?.scrollIntoView({block: 'center'});
       return !!control;
     };
-    if (land()) return;
-    section.tabIndex = -1;
-    section.focus();
-    section.scrollIntoView({block: 'start'});
-    if (!field) return;
+    // Whether there is nothing left to wait for.
+    const settle = () => {
+      if (section) return land(section);
+      section = document.getElementById(cardHeadingId(card))?.closest('section') ?? null;
+      if (!section) return false;
+      if (land(section)) return true;
+      section.tabIndex = -1;
+      section.focus();
+      section.scrollIntoView({block: 'start'});
+      return !field;
+    };
+    if (settle()) return;
     const observer = new MutationObserver(() => {
-      if (land()) observer.disconnect();
+      if (settle()) observer.disconnect();
     });
-    observer.observe(section, {childList: true, subtree: true});
+    observer.observe(document.body, {childList: true, subtree: true});
     const stop = setTimeout(() => observer.disconnect(), 5000);
     return () => {
       observer.disconnect();

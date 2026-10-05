@@ -41,6 +41,7 @@ test.describe('translated configuration text', () => {
       .getByRole('alertdialog')
       .getByRole('button', {name: translate('zh-TW', 'config.discard'), exact: true})
       .click();
+    await page.getByRole('tab', {name: translate('zh-TW', 'settings.appearance'), exact: true}).click();
     await page
       .locator('.rp-content')
       .getByRole('button', {name: new RegExp(translate('zh-TW', 'ui.lang') + '$')})

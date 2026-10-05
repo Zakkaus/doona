@@ -1704,6 +1704,7 @@
   "settings.firstRun": "No backend configured; showing built-in demo data",
   "settings.flowsMax": "Flows kept",
   "settings.flowsRetention": "Flow retention (seconds)",
+  "settings.general": "General",
   "settings.geodata": "Geodata",
   "settings.geodataAsset": "Asset",
   "settings.geodataAutoSaved": "Automatic update settings saved",

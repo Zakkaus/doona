@@ -1,5 +1,5 @@
 import type {Page} from '@playwright/test';
-import {expect, test} from './fixtures';
+import {expect, paletteBoxes, test} from './fixtures';
 
 const flavours = ['glass', 'clear', 'frosted', 'tinted'] as const;
 // Glass and Clear draw the sidebar and the bar's capsules as glass of their own; Frosted and Tinted share one chrome sheet.
@@ -26,7 +26,7 @@ test('the palette menu offers the four Glass materials in order, and Settings ha
   await page.getByRole('menuitemradio', {name: /^Frosted/}).click();
   await expect(page.locator('html')).toHaveAttribute('data-flavour', 'frosted');
   const card = page.getByRole('region', {name: 'Appearance', exact: true});
-  await expect(card.getByRole('listbox', {name: 'Palette'}).getByRole('option', {name: 'Glass Frosted'})).toHaveAttribute('aria-selected', 'true');
+  await expect((await paletteBoxes(page)).getByRole('option', {name: 'Glass Frosted'})).toHaveAttribute('aria-selected', 'true');
   await expect(card.getByRole('radiogroup', {name: /material/i})).toHaveCount(0);
 });
 
@@ -172,7 +172,7 @@ test.describe('clear glass', () => {
   );
   const appearance = (page: Page) => page.getByRole('region', {name: 'Appearance', exact: true});
   test('draws blur and fill without the lens, with the wallpaper and blur settings', async ({page}) => {
-    await page.goto('/#/settings');
+    await page.goto('/#/settings?tab=appearance');
     expect(await page.waitForFunction(() => (window as unknown as {firstFrame?: string}).firstFrame).then(value => value.jsonValue())).toBe(
       'glass/clear false'
     );
@@ -205,7 +205,7 @@ test.describe('clear glass', () => {
     });
     await page.goto('/#/settings');
     await expect(page.locator('html')).toHaveAttribute('data-lens', '');
-    await appearance(page).getByRole('option', {name: 'Glass', exact: true}).click({force: true});
+    await (await paletteBoxes(page)).getByRole('option', {name: 'Glass', exact: true}).click({force: true});
     await expect(page.locator('html')).toHaveAttribute('data-flavour', 'clear');
     await expect(page.locator('html')).not.toHaveAttribute('data-lens');
     expect((await surface(page, pageCard, '::before')).filter).not.toContain('url(');
@@ -218,7 +218,7 @@ test('the palette pickers note that Liquid Glass refracts only in Chromium', asy
   await page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true}).click();
   await expect(page.getByRole('menuitemradio', {name: /^Liquid Glass/})).toContainText('Chromium only');
   await page.keyboard.press('Escape');
-  const group = page.getByRole('listbox', {name: 'Palette'});
+  const group = await paletteBoxes(page);
   const field = page.locator('[data-setting="palette"]');
   const liquid = group.getByRole('option', {name: 'Liquid Glass', exact: true});
   await expect(liquid).toHaveAccessibleDescription('Chromium only');

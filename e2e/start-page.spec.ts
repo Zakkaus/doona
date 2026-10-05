@@ -4,7 +4,7 @@ const demoProfile = {'doona-profiles': JSON.stringify([{id: 'demo', name: 'Demo'
 
 test('a bare URL opens the chosen nav page at its default view; explicit routes win', async ({page}) => {
   await mockBackend(page);
-  await page.goto('/#/settings');
+  await page.goto('/#/settings?tab=appearance');
   const picker = page.getByRole('button', {name: /Open at startup$/});
   await expect(picker).toContainText('Activity');
   await picker.click();
@@ -28,8 +28,10 @@ test('a bare URL opens the chosen nav page at its default view; explicit routes 
 test('first-run setup opens Settings and connects to the currently chosen page', async ({page}) => {
   await page.goto('/');
   await expect(page).toHaveURL(/#\/settings$/);
+  await page.getByRole('tab', {name: 'Appearance', exact: true}).click();
   await page.getByRole('button', {name: /Open at startup$/}).click();
   await page.getByRole('option', {name: 'Rules', exact: true}).click();
+  await page.getByRole('tab', {name: 'General', exact: true}).click();
   await page.locator('[name=api]').fill('mock');
   await Promise.all([page.waitForEvent('load'), page.getByRole('region', {name: 'Backend', exact: true}).locator('button[type=submit]').click()]);
   await expect(page).toHaveURL(/#\/rules$/);

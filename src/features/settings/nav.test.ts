@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import type {Capabilities} from '../../api/model';
 import {capabilities, capabilitiesBase} from '../../../mock/fixtures/capabilities';
-import {geodataConfigurable, settingsCardList} from './nav';
+import {geodataConfigurable, settingsCardList, settingsTab} from './nav';
 
 describe('capability', () => {
   it('shows available geodata files while gating source controls on configurable runtime settings', () => {
@@ -14,5 +14,15 @@ describe('capability', () => {
     expect(geodataConfigurable(capabilitiesBase.resources)).toBe(false);
     expect(settingsCardList({...capabilities.resources, geodata: {available: false}}).map(card => card.id)).not.toContain('geodata');
     expect(settingsCardList(undefined).map(card => card.id)).not.toContain('geodata');
+  });
+});
+
+describe('tabs', () => {
+  it('opens the tab of a linked card, else the one asked for, else General', () => {
+    expect(settingsTab('')).toBe('general');
+    expect(settingsTab('tab=appearance')).toBe('appearance');
+    expect(settingsTab('tab=unknown')).toBe('general');
+    expect(settingsTab('card=appearance&field=palette')).toBe('appearance');
+    expect(settingsTab('tab=appearance&card=backend')).toBe('general');
   });
 });
