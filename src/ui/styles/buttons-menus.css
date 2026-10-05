@@ -133,6 +133,11 @@
 section:not(:first-child) > .rp-sec-h {
   padding-block-start: var(--rp-space-4);
 }
+/* The rule before a menu's closing commands keeps clear of the rows on either side, so a focused row's ring does not
+   sit on it. */
+[role='menu'] > .rp-hrule {
+  margin-block: var(--rp-space-1);
+}
 .rp-popover [role='menu'],
 .rp-popover [role='listbox'],
 .rp-popover [role='dialog'] {
