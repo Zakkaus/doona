@@ -5,7 +5,9 @@ import {useT} from '../../i18n';
 import {ApiError} from '../../api/error';
 import {offered} from '../../api/capabilities';
 import {engineOf} from '../../api/engines';
-import type {ConfigSource} from '../../api/model';
+import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
+import {diagnosticMessage, oneLine} from '../../i18n/backend';
+import {refusalDetails} from '../shared/pending';
 import {toast, toastFailure} from '../../ui/ui';
 import {fileName} from '../../dae/sources';
 import type {RuleTemplate, TemplateOptions} from '../../dae/templates';
@@ -40,7 +42,8 @@ type Pending = {
   plain: TemplateWrite;
   withDns: TemplateWrite | null;
 };
-type Dialog = Omit<Pending, 'plain' | 'withDns'> & TemplateWrite & {file: string; dns: boolean | null};
+// `invalid` is the backend's refusal of the last Apply, one line per error, kept in the dialog until the write changes.
+type Dialog = Omit<Pending, 'plain' | 'withDns'> & TemplateWrite & {file: string; dns: boolean | null; invalid: {id: number; errors: string[]} | null};
 export type RuleTemplatesModel = TemplatesView & {
   // Whether the routing list offers the simple view: it reads the rules from the configuration text.
   available: boolean;
@@ -87,6 +90,11 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
   const [pickedOptions, setPickedOptions] = useState<Partial<TemplateOptions>>({});
   const [picked, setPicked] = useState<RuleTemplate | null>(null);
   const [addDns, setAddDns] = useState(true);
+  const [invalid, setInvalid] = useState<{id: number; errors: ConfigDiagnostic[]} | null>(null);
+  // A refusal keeps the dialog open with its errors, from the check before the write or from the write itself, which
+  // alone checks a file other than the main one.
+  const refuse = (diagnostics: ConfigDiagnostic[]) =>
+    setInvalid(current => ({id: (current?.id ?? 0) + 1, errors: diagnostics.filter(item => item.level === 'error')}));
   const target = templateTarget({
     sources,
     configWritable: resources?.config.writable === true,
@@ -122,6 +130,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
       const source = target.source;
       if (!canApply || !source || !selected) return;
       setAddDns(true);
+      setInvalid(null);
       setDialog({
         options,
         optionImpact: templateOptionKeys
@@ -147,14 +156,28 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
       impact: dialog.impact,
       ...(dialog.withDns && addDns ? dialog.withDns : dialog.plain),
       file: fileName(dialog.source),
-      dns: dialog.withDns ? addDns : null
+      dns: dialog.withDns ? addDns : null,
+      invalid: invalid && {
+        id: invalid.id,
+        // As the configuration editor lists them: a line in the file being written, another file by name.
+        errors: invalid.errors.map(item => {
+          const message = oneLine(diagnosticMessage(item, t), t);
+          if (item.source_id === dialog.source.id) return item.line === null ? message : t('config.atLine', {line: item.line, message});
+          const other = sources.find(source => source.id === item.source_id);
+          const file = other ? fileName(other) : item.source_id;
+          return item.line === null ? t('ui.valuePair', {label: file, value: message}) : t('config.atFile', {file, line: item.line, message});
+        })
+      }
     },
     // The write already holds the choice made before Apply, so the checkbox stays put until it settles.
     setDns: add => {
-      if (!applying) setAddDns(add);
+      if (applying) return;
+      setAddDns(add);
+      setInvalid(null);
     },
     close: () => {
       editor.cancel();
+      setInvalid(null);
       setDialog(null);
     },
     confirm: async () => {
@@ -164,7 +187,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
         const outcome = await editor.apply(dialog.source, after);
         if (!outcome) return;
         if (outcome.diagnostics) {
-          toast('negative', t('ui.writeInvalid', {n: outcome.diagnostics.filter(item => item.level === 'error').length}));
+          refuse(outcome.diagnostics);
           return;
         }
         toast('positive', t('rule.template.applied', {name: dialog.choice.name, file: fileName(dialog.source)}));
@@ -173,6 +196,11 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
         setPickedOptions({});
         go('rules', within(query, {view: 'simple'}));
       } catch (error) {
+        const refused = refusalDetails(error)?.diagnostics;
+        if (refused?.some(item => item.level === 'error')) {
+          refuse(refused);
+          return;
+        }
         // honk answers 403 when the sign-in lacks control permission or the file sets API listener settings.
         if (error instanceof ApiError && error.status === 403) setDenied(dialog.source.id);
         setDialog(null);
