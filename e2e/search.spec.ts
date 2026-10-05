@@ -86,6 +86,15 @@ test("search finds a Settings field by another language's label and focuses it",
   await expect(page).toHaveURL(/#\/settings\?card=appearance&field=palette$/);
   await expect(page.locator('[data-setting="palette"]').getByRole('option', {selected: true})).toBeFocused();
   await expect(page.locator('[data-setting="palette"] .rp-select-box[data-selected]')).toBeInViewport();
+  // From Settings' General tab, the hit opens the Appearance tab and lands on the selected box all the same.
+  await page.goto('/#/settings');
+  await page.reload();
+  const tab = page.getByRole('tab', {name: 'Appearance', exact: true});
+  await expect(tab).toHaveAttribute('aria-selected', 'false');
+  await (await open(page, 'palette')).getByRole('option', {name: /^Palette/}).click();
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('[data-setting="palette"]').getByRole('option', {selected: true})).toBeFocused();
+  await expect(page.locator('[data-setting="palette"] .rp-select-box[data-selected]')).toBeInViewport();
 });
 
 test('search respects destination capabilities, preserves loose-node ownership and qualifies partial results', async ({page}) => {

@@ -12,6 +12,7 @@ import {
   InlineAlert,
   ConfirmDialog,
   Switch,
+  Tabs,
   TextField,
   Toolbar,
   Form
@@ -29,7 +30,8 @@ import {useCopyDiagnostics, useDiagnostics} from '../shared/useCopyDiagnostics';
 import {About} from '../../shell/About';
 import {openShortcuts} from '../../shell/shortcuts';
 import type {PageProps, RoutePath} from '../../shell/routes';
-import {settingsCard, settingsCards, type SettingsCardId} from './nav';
+import {replaceRoute, within} from '../../shell/route';
+import {cardTab, settingsCard, settingsCards, settingsTab, settingsTabs, type SettingsCardId} from './nav';
 
 // A Glass palette applies once its stylesheet loads, so pointing at or focusing one of its boxes starts the load.
 const glassIntent = (event: React.SyntheticEvent) => {
@@ -96,6 +98,10 @@ export function Settings({query}: PageProps) {
   const mirrorHelpId = useId();
   const countryFlagsHelpId = useId();
   const sparklinesHelpId = useId();
+  const tab = settingsTab(query);
+  // Switching tabs replaces the address rather than adding a step: both tabs stay mounted, so a draft in either
+  // survives the switch and there is nothing to ask about. It drops the card a link landed on, which would pick the tab.
+  const changeTab = (next: string) => replaceRoute('settings', within(query, {tab: next === 'general' ? null : next, card: null, field: null}));
 
   const content: Record<SettingsCardId, ReactNode> = {
     backend: (
@@ -202,7 +208,7 @@ export function Settings({query}: PageProps) {
     runtime: <RuntimeSettingsCard />,
     geodata: <GeodataSettingsCard />,
     appearance: (
-      <Card level={2} title={t(cards.appearance.titleKey)} titleId={cards.appearance.headingId}>
+      <Card aria-label={t(cards.appearance.titleKey)} id={cards.appearance.headingId}>
         <Toolbar>
           <div className="rp-contents" data-setting="lang">
             <LabeledSelect label={t('ui.lang')} value={lang} onChange={value => pickLang(value as Lang)} items={LANGS.map(([id, label]) => ({id, label}))} />
@@ -345,9 +351,18 @@ export function Settings({query}: PageProps) {
     <div className="rp-page">
       {firstRun && <p className="rp-note">{t('settings.firstRun')}</p>}
       {paired && <p className="rp-note">{t('settings.paired')}</p>}
-      {settingsCards.map(card => (
-        <Fragment key={card.id}>{content[card.id]}</Fragment>
-      ))}
+      <Tabs
+        page
+        keepMounted
+        label={t('nav.settings')}
+        items={settingsTabs.map(id => ({
+          id,
+          label: t(id === 'general' ? 'settings.general' : 'settings.appearance'),
+          content: settingsCards.filter(card => cardTab(card.id) === id).map(card => <Fragment key={card.id}>{content[card.id]}</Fragment>)
+        }))}
+        value={tab}
+        onChange={changeTab}
+      />
       <ConfirmDialog
         title={t('config.discardTitle')}
         isOpen={switchPending}

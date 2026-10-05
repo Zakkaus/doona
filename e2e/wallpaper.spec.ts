@@ -1,5 +1,5 @@
 import type {Page} from '@playwright/test';
-import {expect, test} from './fixtures';
+import {expect, paletteBoxes, test} from './fixtures';
 
 // The Glass palettes take a custom wallpaper from Settings > Appearance; it stays in this browser's IndexedDB.
 test.beforeEach(async ({page}) => {
@@ -52,16 +52,16 @@ async function upload(page: Page, color = '#3a7bd5') {
 }
 
 test('the wallpaper row shows only with a Glass palette', async ({page}) => {
-  await page.goto('/#/settings');
+  await page.goto('/#/settings?tab=appearance');
   await expect(row(page)).toBeVisible();
   await page.evaluate(() => localStorage.setItem('doona-palette', 'rose-pine/moon'));
   await page.reload();
-  await expect(appearance(page).getByRole('listbox', {name: 'Palette'})).toBeVisible();
+  await expect(await paletteBoxes(page)).toBeVisible();
   await expect(row(page)).toHaveCount(0);
 });
 
 test('a chosen image becomes the wallpaper, survives a reload and gives way to the default', async ({page}) => {
-  await page.goto('/#/settings');
+  await page.goto('/#/settings?tab=appearance');
   const before = await wall(page);
   expect(before).toContain('radial-gradient');
   await upload(page);
@@ -81,7 +81,7 @@ test('a chosen image becomes the wallpaper, survives a reload and gives way to t
 });
 
 test('the veil switch removes the scrim and its slider, and the slider sets its strength', async ({page}) => {
-  await page.goto('/#/settings');
+  await page.goto('/#/settings?tab=appearance');
   await upload(page);
   const slider = row(page).getByRole('slider', {name: 'Dim'});
   await expect(slider).toHaveValue('0.6');
@@ -102,7 +102,7 @@ test('the veil switch removes the scrim and its slider, and the slider sets its 
 });
 
 test('a palette outside the Glass family never shows the image', async ({page}) => {
-  await page.goto('/#/settings');
+  await page.goto('/#/settings?tab=appearance');
   await upload(page);
   await page.evaluate(() => localStorage.setItem('doona-palette', 'rose-pine/moon'));
   await page.reload();
@@ -111,7 +111,7 @@ test('a palette outside the Glass family never shows the image', async ({page}) 
 });
 
 test('forced colours keep the solid recipe without the image', async ({page}) => {
-  await page.goto('/#/settings');
+  await page.goto('/#/settings?tab=appearance');
   await upload(page);
   await page.emulateMedia({forcedColors: 'active'});
   expect(await wall(page)).not.toContain('blob:');
@@ -121,7 +121,7 @@ test('forced colours keep the solid recipe without the image', async ({page}) =>
 // black image: the card over the content column over the veiled image, the chrome over the veiled image, and label
 // text on the column. Fills are composited as colours; the blur of a uniform image leaves its colour.
 test('the default veil keeps label and secondary text at 4.5:1 over a white and a black image', async ({page}) => {
-  await page.goto('/#/settings');
+  await page.goto('/#/settings?tab=appearance');
   await upload(page);
   const failures = await page.evaluate(() => {
     const root = document.documentElement;
@@ -173,7 +173,7 @@ const cardBlur = (page: Page) => page.evaluate(() => getComputedStyle(document.q
 const radius = (filter: string) => Number(/blur\(([\d.]+)px\)/.exec(filter)?.[1] ?? 0);
 
 test('the blur slider shows for the blurred Glass palettes and scales every card blur', async ({page}) => {
-  await page.goto('/#/settings');
+  await page.goto('/#/settings?tab=appearance');
   const slider = blurRow(page).getByRole('slider', {name: 'Blur'});
   await expect(slider).toHaveValue('1');
   const normal = radius(await cardBlur(page));
@@ -188,13 +188,13 @@ test('the blur slider shows for the blurred Glass palettes and scales every card
   for (const palette of ['glass/tinted', 'rose-pine/moon']) {
     await page.evaluate(palette => localStorage.setItem('doona-palette', palette), palette);
     await page.reload();
-    await expect(appearance(page).getByRole('listbox', {name: 'Palette'})).toBeVisible();
+    await expect(await paletteBoxes(page)).toBeVisible();
     await expect(blurRow(page)).toHaveCount(0);
   }
 });
 
 test('the slider keeps S2 geometry: a 4px track in a 32px box and a 20px thumb with a 2px ring', async ({page}) => {
-  await page.goto('/#/settings');
+  await page.goto('/#/settings?tab=appearance');
   const range = blurRow(page).locator('.rp-range');
   const sizes = await range.evaluate(range => {
     const track = range.querySelector('.track')!;

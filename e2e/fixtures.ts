@@ -183,6 +183,12 @@ export async function editorText(page: Page) {
   await page.keyboard.press('ControlOrMeta+C');
   return page.evaluate(() => navigator.clipboard.readText());
 }
+// Settings keeps its palette boxes on the Appearance tab: this opens the tab unless it is open, and returns the boxes' group.
+export async function paletteBoxes(page: Page) {
+  const tab = page.getByRole('tab', {name: 'Appearance', exact: true});
+  if ((await tab.getAttribute('aria-selected')) !== 'true') await tab.click();
+  return page.getByRole('region', {name: 'Appearance', exact: true}).getByRole('listbox', {name: 'Palette'});
+}
 // The language and scheme the page takes from its next load.
 export const setAppearance = (page: Page, lang: string, scheme: string) =>
   page.evaluate(

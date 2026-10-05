@@ -46,14 +46,14 @@
   background: var(--sw-accent);
 }
 /* Glass's sidebar and card are its translucent fill over the default wallpaper's main colours. */
-:is(.rp-swatch, .rp-dot)[data-look] > span {
+.rp-swatch[data-look] > span {
   --sw-wall:
     radial-gradient(circle at 20% 25%, rgba(0, 122, 255, 0.6), transparent 60%), radial-gradient(circle at 85% 20%, rgba(255, 45, 85, 0.55), transparent 55%),
     radial-gradient(circle at 70% 95%, rgba(255, 149, 0, 0.6), transparent 60%), linear-gradient(160deg, #e3eaf8, #f8eee2);
 
   background: var(--sw-wall);
 }
-:is(.rp-swatch, .rp-dot)[data-look] > span[data-dark] {
+.rp-swatch[data-look] > span[data-dark] {
   --sw-wall:
     radial-gradient(circle at 20% 25%, rgba(10, 132, 255, 0.5), transparent 60%), radial-gradient(circle at 85% 20%, rgba(255, 55, 95, 0.4), transparent 55%),
     radial-gradient(circle at 70% 95%, rgba(255, 159, 10, 0.4), transparent 60%), linear-gradient(160deg, #070a17, #05131a);
@@ -69,34 +69,4 @@
   box-shadow:
     inset 1px 1px 0 var(--sw-rim),
     inset -1px -1px 0 color-mix(in srgb, var(--sw-rim), transparent 45%);
-}
-/* A menu row's swatch: the same diagonal split as a dot, each half's accent at its own centre so neither crosses the split. */
-.rp-dot {
-  position: relative;
-  display: block;
-  flex: none;
-  width: 16px;
-  height: 16px;
-  overflow: hidden;
-  border: 1px solid var(--rp-line);
-  border-radius: 50%;
-}
-.rp-dot > span {
-  position: absolute;
-  inset: 0;
-  clip-path: polygon(0 0, 100% 0, 0 100%);
-  background: var(--sw-bg);
-}
-.rp-dot > span[data-dark] {
-  transform: rotate(180deg);
-}
-.rp-dot > span::after {
-  content: '';
-  position: absolute;
-  top: calc(33% - 2.5px);
-  left: calc(33% - 2.5px);
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--sw-accent);
 }

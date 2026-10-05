@@ -1,5 +1,5 @@
 import {test as browserTest, type Page} from '@playwright/test';
-import {expect, expectLoadFailures, loadCatalogues, mockBackend, moreAction, test} from './fixtures';
+import {expect, expectLoadFailures, loadCatalogues, mockBackend, moreAction, paletteBoxes, test} from './fixtures';
 import {translate} from '../src/i18n';
 import {capabilities} from '../mock/fixtures';
 import {swatches} from '../src/shell/swatches';
@@ -14,7 +14,8 @@ test('first run opens settings and preserves explicit deep links', async ({page}
   await page.goto('/');
   await expect(page).toHaveURL(/#\/settings$/);
   await expect(page.locator('.rp-nav[href="#/settings"]')).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('.rp-content .rp-card')).toHaveCount(6);
+  // The General tab's cards: every one but Appearance, which has its own tab.
+  await expect(page.locator('.rp-content .rp-card')).toHaveCount(5);
   await page.goto('/#/');
   await expect(page).toHaveURL(/#\/settings$/);
   await page.goto('/#/connections?src=192.168.1.2');
@@ -260,12 +261,12 @@ test('an unknown stored palette falls back to the supported moon palette', async
   await page.goto('/#/settings');
   await expect(page.locator('html')).toHaveAttribute('data-family', 'rose-pine');
   await expect(page.locator('html')).toHaveAttribute('data-flavour', 'moon');
-  await expect(page.getByRole('listbox', {name: 'Palette'}).getByRole('option', {name: 'Rosé Pine Moon'})).toHaveAttribute('aria-selected', 'true');
+  await expect((await paletteBoxes(page)).getByRole('option', {name: 'Rosé Pine Moon'})).toHaveAttribute('aria-selected', 'true');
 });
 
 test('the Settings palette boxes pick, persist and show the palette', async ({page}) => {
   await page.goto('/#/settings');
-  const group = page.getByRole('listbox', {name: 'Palette'});
+  const group = await paletteBoxes(page);
   // Nord sits under Other, which only gathers the palettes alone in their family, so the box names it alone.
   await expect(group.getByText('Other', {exact: true})).toBeVisible();
   await expect(group.getByText('Nord', {exact: true})).toHaveCount(1);
@@ -273,6 +274,7 @@ test('the Settings palette boxes pick, persist and show the palette', async ({pa
   await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
+  await paletteBoxes(page);
   await expect(group.getByRole('option', {name: 'Nord'})).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.rp-select-box[data-selected]')).toHaveCount(1);
   await expect(page.locator('.rp-select-box[data-selected] .rp-select-box-check')).toBeVisible();
@@ -281,9 +283,61 @@ test('the Settings palette boxes pick, persist and show the palette', async ({pa
   await expect(page.locator('.rp-select-box[data-selected]')).toHaveCSS('border-top-color', accent);
 });
 
+test('Settings keeps Appearance on its own tab, in the address and across a reload', async ({page}) => {
+  await page.goto('/#/settings');
+  const general = page.getByRole('tab', {name: 'General', exact: true});
+  const appearance = page.getByRole('tab', {name: 'Appearance', exact: true});
+  await expect(general).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('region', {name: 'Backend', exact: true})).toBeVisible();
+  await expect(page.getByRole('listbox', {name: 'Palette'})).toBeHidden();
+  await appearance.click();
+  await expect(page).toHaveURL(/#\/settings\?tab=appearance$/);
+  await expect(page.getByRole('listbox', {name: 'Palette'})).toBeVisible();
+  await expect(page.getByRole('region', {name: 'Backend', exact: true})).toBeHidden();
+  await page.reload();
+  await expect(appearance).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('listbox', {name: 'Palette'})).toBeVisible();
+  await general.click();
+  await expect(page).toHaveURL(/#\/settings$/);
+  await expect(page.getByRole('region', {name: 'Backend', exact: true})).toBeVisible();
+});
+
+test('a link to the Appearance card or one of its fields opens its tab', async ({page}) => {
+  await page.goto('/#/settings?card=appearance');
+  await expect(page.getByRole('tab', {name: 'Appearance', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('region', {name: 'Appearance', exact: true})).toBeFocused();
+  await page.goto('/#/settings?card=appearance&field=palette');
+  await expect(page.locator('[data-setting="palette"]').getByRole('option', {selected: true})).toBeFocused();
+  // From the General tab, a card's tab mounts a render after the link lands, and the field still takes focus.
+  await page.goto('/#/settings');
+  await page.reload();
+  await page.evaluate(() => {
+    location.hash = '#/settings?card=appearance&field=mirrored';
+  });
+  await expect(page.locator('[data-setting="mirrored"] input')).toBeFocused();
+  await page.evaluate(() => {
+    location.hash = '#/settings?card=backend&field=api';
+  });
+  await expect(page.getByRole('tab', {name: 'General', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('[name=api]')).toBeFocused();
+});
+
+test('a backend draft survives switching to Appearance and back', async ({page}) => {
+  await page.goto('/#/settings');
+  await page.locator('[name=api]').fill('http://router:9527');
+  await page.getByRole('tab', {name: 'Appearance', exact: true}).click();
+  await expect(page.getByRole('listbox', {name: 'Palette'})).toBeVisible();
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  await page.getByRole('tab', {name: 'General', exact: true}).click();
+  await expect(page.locator('[name=api]')).toHaveValue('http://router:9527');
+  // Leaving the page still answers for the draft.
+  await page.locator('.rp-nav[href="#/connections"]').click();
+  await expect(page.getByRole('alertdialog', {name: 'Discard changes not applied?'})).toBeVisible();
+});
+
 test('arrow keys move through the Settings palette boxes in two dimensions, and Enter or Space picks', async ({page}) => {
   await page.goto('/#/settings');
-  const group = page.getByRole('listbox', {name: 'Palette'});
+  const group = await paletteBoxes(page);
   const option = (name: string) => group.getByRole('option', {name});
   await option('Rosé Pine Moon').focus();
   await page.keyboard.press('ArrowRight');
@@ -310,16 +364,13 @@ test('arrow keys move through the Settings palette boxes in two dimensions, and 
   await expect(group.locator('[role=option]:focus')).toHaveCount(0);
 });
 
-test('the top bar palette menu is one line per palette with a round swatch, and a pick applies it', async ({page}) => {
+test('the top bar palette menu is one plain line per palette, and a pick applies it', async ({page}) => {
   await page.goto('/#/settings');
   await page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true}).click();
   const items = page.getByRole('menuitemradio');
   await expect(items).toHaveCount(palettes.length);
-  await expect(items.locator('.rp-dot')).toHaveCount(palettes.length);
-  await expect(items.locator('.rp-swatch')).toHaveCount(0);
+  await expect(items.locator('.ic, .rp-dot, .rp-swatch')).toHaveCount(0);
   const mocha = page.getByRole('menuitemradio', {name: /^Mocha/});
-  const {width, height} = (await mocha.locator('.rp-dot').boundingBox())!;
-  expect([Math.round(width), Math.round(height)]).toEqual([16, 16]);
   // Each row is as tall as any menu item, and only Liquid Glass keeps a note, on its own row.
   const heights = new Set(await items.evaluateAll(els => els.map(el => Math.round(el.getBoundingClientRect().height))));
   expect(heights.size).toBe(1);
@@ -331,7 +382,7 @@ test('the top bar palette menu is one line per palette with a round swatch, and 
 
 test('every swatch matches the tokens it stands for, in both schemes', async ({page}) => {
   await page.goto('/#/settings');
-  await expect(page.getByRole('listbox', {name: 'Palette'})).toBeVisible();
+  await expect(await paletteBoxes(page)).toBeVisible();
   // Glass's tokens load with its stylesheet, which pointing at a Glass box preloads.
   await page.getByRole('listbox', {name: 'Palette'}).getByRole('option', {name: 'Glass Frosted'}).hover();
   await page.waitForFunction(() => document.querySelector<HTMLLinkElement>('link[data-glass]')?.sheet);
@@ -368,6 +419,7 @@ test.describe('on a phone', () => {
   test.use({viewport: {width: 390, height: 844}});
   test('the Settings palette boxes sit in two columns without scrolling sideways', async ({page}) => {
     await page.goto('/#/settings');
+    await paletteBoxes(page);
     const boxes = page.locator('.rp-select-box');
     await expect(boxes.first()).toBeVisible();
     const lefts = new Set(await boxes.evaluateAll(els => els.map(el => Math.round(el.getBoundingClientRect().left))));
@@ -491,7 +543,7 @@ test('About doona lists its links in full-width rows on a phone and keeps its fo
 });
 
 test('appearance uses labeled pickers with balanced insets and matching type', async ({page}) => {
-  await page.goto('/#/settings');
+  await page.goto('/#/settings?tab=appearance');
   const card = page.getByRole('region', {name: 'Appearance', exact: true});
   const language = card.getByRole('button', {name: /Language/});
   await expect(language).toBeVisible();
@@ -516,6 +568,7 @@ test('appearance uses labeled pickers with balanced insets and matching type', a
   await page.keyboard.press('Space');
   await expect(page.getByRole('listbox', {name: 'Language'})).toBeVisible();
   await page.keyboard.press('Escape');
+  await page.getByRole('tab', {name: 'General', exact: true}).click();
   await expect(page.getByRole('region', {name: 'Backend', exact: true})).toBeVisible();
   await expect(page.getByRole('heading', {name: 'Backend', exact: true})).toHaveCount(0);
 });

@@ -1,5 +1,5 @@
 import type {Page} from '@playwright/test';
-import {demoSession, expect, expectLoadFailures, routes, test} from './fixtures';
+import {demoSession, expect, expectLoadFailures, paletteBoxes, routes, test} from './fixtures';
 
 // Keep install-time precaching out of the navigation request log.
 test.use({serviceWorkers: 'block', storage: {'doona-api': 'mock'}, signedIn: 'legacy'});
@@ -242,8 +242,7 @@ test('only a Glass palette loads Glass, before its look shows', async ({page}) =
       document.documentElement.dataset.switchedWall = getComputedStyle(document.body, '::before').backgroundImage;
     }).observe(document.documentElement, {attributeFilter: ['data-family']});
   });
-  const card = page.getByRole('region', {name: 'Appearance', exact: true});
-  await card.getByRole('listbox', {name: 'Palette'}).getByRole('option', {name: 'Glass Frosted'}).click();
+  await (await paletteBoxes(page)).getByRole('option', {name: 'Glass Frosted'}).click();
   await expect(page.locator('html')).toHaveAttribute('data-flavour', 'frosted');
   await expect(page.locator('html')).toHaveAttribute('data-switched-wall', /radial-gradient/);
   expect(glass.map(url => url.split('.').pop()).sort()).toEqual(['css', 'js']);
@@ -266,11 +265,11 @@ test('only a Glass palette loads Glass, before its look shows', async ({page}) =
 type PalettePicker = (page: Page) => Record<'glass' | 'moon' | 'shown', () => Promise<void>>;
 const palettePickers: Record<string, PalettePicker> = {
   Settings: page => {
-    const options = page.getByRole('region', {name: 'Appearance', exact: true}).getByRole('listbox', {name: 'Palette'});
+    const option = async (name: string) => (await paletteBoxes(page)).getByRole('option', {name});
     return {
-      glass: () => options.getByRole('option', {name: 'Glass Frosted'}).click(),
-      moon: () => options.getByRole('option', {name: 'Rosé Pine Moon'}).click(),
-      shown: () => expect(options.getByRole('option', {name: 'Glass Frosted'})).toHaveAttribute('aria-selected', 'true')
+      glass: async () => (await option('Glass Frosted')).click(),
+      moon: async () => (await option('Rosé Pine Moon')).click(),
+      shown: async () => expect(await option('Glass Frosted')).toHaveAttribute('aria-selected', 'true')
     };
   },
   'the top bar': page => {
