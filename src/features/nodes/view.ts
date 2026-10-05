@@ -14,7 +14,7 @@ import {
   type PseudoOwner
 } from '../../api/selectors';
 import type {TableSort} from '../../ui/ui';
-import {isSubscriptionUrl, urlHost, type SubscriptionOption, type SubscriptionText} from '../../dae/subscriptions';
+import {completeSubscriptionUrl, isSubscriptionUrl, urlHost, type SubscriptionOption, type SubscriptionText} from '../../dae/subscriptions';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
@@ -87,7 +87,7 @@ export function providerChanges(form: ProviderForm, entry: SubscriptionText, def
   const interval = draftInterval(form.interval);
   return {
     name: form.name.trim() !== entry.tag,
-    url: form.value.trim() !== entry.url,
+    url: completeSubscriptionUrl(form.value) !== entry.url,
     interval: form.interval !== '' && (interval === null || interval !== entry.interval),
     agent: form.agent !== (entry.ua ?? '') && (form.agent.trim() || null) !== (entry.ua ?? null),
     cache: form.cache !== null && form.cache !== (entry.cache ?? defaultCache),
@@ -270,7 +270,7 @@ export type ProviderForm = {name: string; value: string; interval: string; agent
 type CreateOptions = Capabilities['resources']['providers']['create_options'];
 // An option left at the backend's default is not sent, so the entry stays a one-line scalar.
 export function providerCreate(form: ProviderForm, options: CreateOptions): ProviderCreate {
-  const request: ProviderCreate = {name: form.name.trim(), kind: 'subscription', url: form.value.trim()};
+  const request: ProviderCreate = {name: form.name.trim(), kind: 'subscription', url: completeSubscriptionUrl(form.value)};
   const seconds = draftInterval(form.interval);
   if (options?.update_interval !== undefined && seconds != null && seconds !== options.update_interval) request.update_interval = seconds;
   const agent = form.agent.trim();
@@ -319,15 +319,27 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
   };
 }
 
+// The inline errors of the two value fields: shown once something is typed and it cannot be used, so an empty form
+// stays quiet.
+// The same criterion as the dialogs' submit: readable, and writable between quotes.
+export function subscriptionUrlError(value: string, t: Translator) {
+  const url = completeSubscriptionUrl(value);
+  return !url ? null : !isSubscriptionUrl(url) ? t('nodes.urlInvalid') : !isQuotable(url) ? t('config.unquotable') : null;
+}
+export function nodeLinkError(value: string, t: Translator) {
+  const link = value.trim();
+  return !link ? null : !isNodeLink(link) ? t('nodes.linkInvalid') : !isQuotable(link) ? t('config.unquotable') : null;
+}
+
 // Why the add dialog's submit is disabled, first applicable. Null while every required field is still empty, which
 // speaks for itself, and for a problem its own field already shows (the User-Agent, a group name).
 export function nodeFormReason(kind: string | undefined, name: string, value: string, t: Translator): string | null {
   const bare = name.trim();
   if ((kind !== 'provider' && kind !== 'node') || (!bare && !value.trim())) return null;
   if (!bare) return t('nodes.nameMissing');
-  if (kind === 'node') return isNodeLink(value) ? null : t('nodes.linkInvalid');
+  if (kind === 'node') return nodeLinkError(value, t) ?? (value.trim() ? null : t('nodes.linkInvalid'));
   if (!isBareName(bare)) return t('nodes.nameInvalid');
-  return isSubscriptionUrl(value) ? null : t('nodes.urlInvalid');
+  return subscriptionUrlError(value, t) ?? (value.trim() ? null : t('nodes.urlInvalid'));
 }
 
 // Joining opens the group's editor in the source that declares it, so only a group that editor can write is offered:

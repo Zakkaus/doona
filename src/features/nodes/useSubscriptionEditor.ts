@@ -2,11 +2,11 @@ import {useState} from 'react';
 import {formatList, type Lang, type Translator} from '../../i18n';
 import type {Capabilities, ConfigSource} from '../../api/model';
 import {addSubtagsToGroup, citingGroups, removeSubtagsFromGroup} from '../../dae/groups';
-import {isBareName, isQuotable} from '../../dae/text';
-import {agentProblem, isSubscriptionUrl, writeSubscriptionEntry, type SubscriptionChange, type SubscriptionText} from '../../dae/subscriptions';
+import {isBareName} from '../../dae/text';
+import {agentProblem, completeSubscriptionUrl, writeSubscriptionEntry, type SubscriptionChange, type SubscriptionText} from '../../dae/subscriptions';
 import {draftInterval} from './subscription';
 import type {SubscriptionFieldSet} from './SubscriptionFields';
-import {keptOptions, providerChanges, renameReferences, type ProviderForm, type ProviderRow} from './view';
+import {keptOptions, providerChanges, renameReferences, subscriptionUrlError, type ProviderForm, type ProviderRow} from './view';
 
 export type SubscriptionEdit = {kind: 'editProvider'; item: ProviderRow; source: ConfigSource; entry: SubscriptionText; focus?: 'interval'};
 type CreateOptions = Capabilities['resources']['providers']['create_options'] | undefined;
@@ -19,7 +19,7 @@ export function subscriptionChange(entry: SubscriptionText, form: ProviderForm, 
   const route = form.route || 'routing';
   return {
     ...(changed.name ? {tag: form.name.trim()} : {}),
-    ...(changed.url ? {url: form.value.trim()} : {}),
+    ...(changed.url ? {url: completeSubscriptionUrl(form.value)} : {}),
     ...(changed.interval && interval != null ? {interval} : {}),
     ...(changed.agent ? {ua: form.agent.trim() || null} : {}),
     ...(changed.cache ? {cache: form.cache} : {}),
@@ -58,7 +58,8 @@ export function useSubscriptionEditor(input: {
   // An entry's own User-Agent must also be written back as a quoted value; empty removes it, leaving the engine default.
   const agentKey = agentProblem(form.agent, true);
   const agentError = agentKey && t(agentKey);
-  const urlValid = isSubscriptionUrl(form.value) && isQuotable(form.value.trim());
+  const urlError = subscriptionUrlError(form.value, t);
+  const urlValid = !!form.value.trim() && urlError === null;
   const references = dialog && change.tag !== undefined ? renameReferences(sources, source ?? dialog.source, dialog.entry.tag) : {here: [], elsewhere: []};
   const fields: SubscriptionFieldSet | null = dialog && {
     interval: dialog.entry.interval,
@@ -79,8 +80,8 @@ export function useSubscriptionEditor(input: {
       agentError === null &&
       !references.elsewhere.length &&
       Object.keys(change).length > 0,
-    reason: !name ? t('nodes.nameMissing') : urlValid ? null : t('nodes.urlInvalid'),
-    errors: {name: name ? nameError : null, agent: agentError},
+    reason: !name ? t('nodes.nameMissing') : urlValid ? null : (urlError ?? t('nodes.urlInvalid')),
+    errors: {name: name ? nameError : null, agent: agentError, url: urlError},
     fields,
     options: dialog && fields ? keptOptions(dialog.entry.options, {cache: writtenCache !== undefined, route: !!fields.routes}) : [],
     // Renaming offers to carry the groups whose subtag filter names the old tag along in the same write,

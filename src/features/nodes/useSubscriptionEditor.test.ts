@@ -23,3 +23,9 @@ it('keeps a link updated in the source meanwhile when only the interval changes'
   const written = writeSubscriptionEntry(updated, 'paid', subscriptionChange(entry, {...form, interval: '2h'}, undefined));
   expect(readSubscriptionEntries(written)[0]).toMatchObject({url: 'https://example.com/rotated', interval: 7200});
 });
+
+it('writes an address typed without a scheme with https:// added', () => {
+  const change = subscriptionChange(entry, {...form, value: ' next.example.com/sub?t=1 '}, undefined);
+  expect(change).toEqual({url: 'https://next.example.com/sub?t=1'});
+  expect(readSubscriptionEntries(writeSubscriptionEntry(opened, 'paid', change))[0].url).toBe('https://next.example.com/sub?t=1');
+});

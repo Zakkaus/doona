@@ -46,6 +46,7 @@ export function Nodes(props: PageProps) {
     formValid,
     formReason,
     nodeNameError,
+    nodeLinkError,
     submit,
     pending,
     submitting,
@@ -147,6 +148,7 @@ export function Nodes(props: PageProps) {
               nameError={subscriptionErrors.name}
               agentError={subscriptionErrors.agent}
               intervalError={subscriptionErrors.interval}
+              urlError={subscriptionErrors.url}
             />
             {renameGroups && (
               <>
@@ -178,7 +180,14 @@ export function Nodes(props: PageProps) {
               placeholder="hk-03"
               onChange={name => setForm({...form, name})}
             />
-            <TextField isDisabled={pending} label={t('nodes.link')} value={form.value} placeholder="vless://…" onChange={value => setForm({...form, value})} />
+            <TextField
+              error={nodeLinkError ?? undefined}
+              isDisabled={pending}
+              label={t('nodes.link')}
+              value={form.value}
+              placeholder="vless://…"
+              onChange={value => setForm({...form, value})}
+            />
           </Form>
         )}
       </ModalDialog>

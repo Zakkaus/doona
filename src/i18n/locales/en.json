@@ -1091,6 +1091,7 @@
   "nodes.updated": "Updated",
   "nodes.url": "Subscription URL",
   "nodes.urlInvalid": "The subscription URL must be an HTTP or HTTPS URL",
+  "nodes.urlScheme": "Without a scheme, https:// is added.",
   "nodes.usage": "Usage",
   "nodes.viewNodes": "View nodes",
   "ov.attachments": "Attachments",

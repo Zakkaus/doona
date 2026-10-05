@@ -7,13 +7,12 @@ import {toast, toastFailure, type Problem} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {isWritableName, groupsNamingTag, readGroupEntries} from '../../dae/groups';
 import {isBareName} from '../../dae/text';
-import {agentProblem, isSubscriptionUrl, readSubscriptionEntries, type SubscriptionText} from '../../dae/subscriptions';
+import {agentProblem, readSubscriptionEntries, type SubscriptionText} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
 import {readNodeEntries, writeNodeEntry, type NodeEntry} from '../../dae/nodes';
 import type {PageProps} from '../../shell/routes';
 import {replaceRoute} from '../../shell/route';
 import {
-  isNodeLink,
   editableSource,
   joinableGroups,
   subscriptionPlace,
@@ -22,12 +21,14 @@ import {
   declaredInInclude,
   subscriptionRemoval,
   nodeFormReason,
+  nodeLinkError,
   nodeSource,
   ownedNodes,
   providerCreate,
   providerChanges,
   providerRows,
   selectedProvider,
+  subscriptionUrlError,
   type ProviderForm,
   type ProviderRow
 } from './view';
@@ -371,9 +372,9 @@ export function useNodesPage({go, query}: PageProps) {
       : dialog?.kind === 'editProvider'
         ? subscriptionEdit.valid
         : dialog?.kind === 'provider'
-          ? isBareName(form.name.trim()) && isSubscriptionUrl(form.value) && !agentError && intervalSeconds !== null
+          ? isBareName(form.name.trim()) && !!form.value.trim() && subscriptionUrlError(form.value, t) === null && !agentError && intervalSeconds !== null
           : dialog?.kind === 'node'
-            ? form.name.trim() !== '' && isNodeLink(form.value)
+            ? form.name.trim() !== '' && !!form.value.trim() && nodeLinkError(form.value, t) === null
             : true;
   const subscription: SubscriptionDraft = {name: form.name, url: form.value, interval: form.interval, agent: form.agent, cache: form.cache, route: form.route};
   // A new subscription shows each option the backend lists, with its default preselected or as the placeholder; an
@@ -477,6 +478,7 @@ export function useNodesPage({go, query}: PageProps) {
     dialogTitle,
     formValid,
     nodeNameError,
+    nodeLinkError: dialog?.kind === 'node' || dialog?.kind === 'editNode' ? nodeLinkError(form.value, t) : null,
     formReason:
       dialog?.kind === 'editNode'
         ? (nodeEditError ?? nodeFormReason('node', form.name, form.value, t))
@@ -508,7 +510,7 @@ export function useNodesPage({go, query}: PageProps) {
     },
     subscriptionFields,
     subscriptionErrors: {
-      ...(dialog?.kind === 'editProvider' ? subscriptionEdit.errors : {name: null, agent: agentError}),
+      ...(dialog?.kind === 'editProvider' ? subscriptionEdit.errors : {name: null, agent: agentError, url: subscriptionUrlError(form.value, t)}),
       interval: intervalError
     }
   };

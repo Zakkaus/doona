@@ -70,7 +70,18 @@ export function Switch({
 }
 type TextFieldProps = Pick<
   ComponentProps<typeof RTextField>,
-  'value' | 'onChange' | 'defaultValue' | 'name' | 'type' | 'isInvalid' | 'validationBehavior' | 'autoFocus' | 'isDisabled' | 'isRequired' | 'aria-describedby'
+  | 'value'
+  | 'onChange'
+  | 'onBlur'
+  | 'defaultValue'
+  | 'name'
+  | 'type'
+  | 'isInvalid'
+  | 'validationBehavior'
+  | 'autoFocus'
+  | 'isDisabled'
+  | 'isRequired'
+  | 'aria-describedby'
 > &
   Pick<ComponentProps<typeof RInput>, 'autoComplete' | 'spellCheck'> &
   Pick<FormFieldProps, 'necessityIndicator'> & {
