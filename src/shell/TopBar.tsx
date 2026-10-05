@@ -20,6 +20,7 @@ import type {Scheme} from './preferences';
 import type {AppearanceMenu, BackendView, PaletteSection, TopBarCommands} from './view';
 import {languageItems} from './view';
 import {preloadSearch} from './search/load';
+import {href} from './route';
 import {LanguageMenu, PaletteMenu, SchemeToggle, usePaletteChoices} from './AppearanceControls';
 
 type Appearance = NonNullable<React.ContextType<typeof SettingsContext>>['ap'];
@@ -70,6 +71,7 @@ export const TopBar = memo(function TopBar({
   const [backendOpen, setBackendOpen] = useState(false);
   const [confirmReload, setConfirmReload] = useState(false);
   const askReload = () => setConfirmReload(true);
+  const appearance = {label: t('ui.appearanceSettings'), onAction: () => location.assign(href('settings', {tab: 'appearance'}))};
   return (
     <header className="rp-top">
       <About
@@ -124,7 +126,7 @@ export const TopBar = memo(function TopBar({
           )}
           <Divider />
           <LanguageMenu lang={lang} pickLang={pickLang} />
-          <PaletteMenu ap={ap} paletteSections={paletteSections} />
+          <PaletteMenu ap={ap} paletteSections={paletteSections} more={appearance} />
           <SchemeToggle dark={ap.dark} label={menu.themeLabel} toggle={ap.toggle} />
         </span>
         <span className="rp-narrow-only" ref={narrowMenu}>
@@ -143,7 +145,7 @@ export const TopBar = memo(function TopBar({
                 icon: <Contrast />,
                 sections: [{title: t('ui.theme'), items: menu.schemes, value: ap.scheme, onChange: k => ap.pickScheme(k as Scheme)}]
               },
-              {label: t('ui.palette'), icon: <Color />, sections: palettes}
+              {label: t('ui.palette'), icon: <Color />, sections: palettes, actions: [appearance]}
             ]}
             actions={[
               ...(commands.reload ? [{label: commands.reload.label, icon: <Refresh />, onAction: askReload}] : []),

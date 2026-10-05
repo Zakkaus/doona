@@ -1747,6 +1747,7 @@
   "ui.all": "全部",
   "ui.allCount": "全部 {n}",
   "ui.apiVersion": "{name} v{major}（{status}）",
+  "ui.appearanceSettings": "外观设置",
   "ui.aside": "{text}（{note}）",
   "ui.back": "返回",
   "ui.backend.activationUnconfirmed": "后端无法确认配置是否已生效",
