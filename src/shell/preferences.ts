@@ -108,6 +108,8 @@ type Appearance = {
   toggle: () => void;
   pickScheme: (value: Scheme) => void;
   palette: PaletteId;
+  // The palette the pickers show: a Glass palette still loading, else the applied one.
+  shownPalette: PaletteId;
   pickPalette: (value: PaletteId) => void;
   blur: number;
   pickBlur: (value: number) => void;

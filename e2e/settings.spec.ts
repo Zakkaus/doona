@@ -332,6 +332,9 @@ test('the top bar palette menu is one line per palette with a round swatch, and 
 test('every swatch matches the tokens it stands for, in both schemes', async ({page}) => {
   await page.goto('/#/settings');
   await expect(page.getByRole('listbox', {name: 'Palette'})).toBeVisible();
+  // Glass's tokens load with its stylesheet, which pointing at a Glass box preloads.
+  await page.getByRole('listbox', {name: 'Palette'}).getByRole('option', {name: 'Glass Frosted'}).hover();
+  await page.waitForFunction(() => document.querySelector<HTMLLinkElement>('link[data-glass]')?.sheet);
   const mismatches = await page.evaluate(table => {
     const probe = document.body.appendChild(document.createElement('i'));
     const read = (colour: string) => ((probe.style.color = colour), getComputedStyle(probe).color);

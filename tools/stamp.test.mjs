@@ -105,3 +105,25 @@ it('stamps the mirrored layout right to left in every language before first pain
     expect(html.dataset).not.toHaveProperty('mirror');
   }
 });
+
+it('links the Glass stylesheet before first paint for the Glass palettes only', () => {
+  const linked = stampScript({
+    palettes: palettes.map(palette => palette.id),
+    defaultPalette: DEFAULT_PALETTE,
+    locales: LOCALE,
+    referenceLocale: LOCALE.en,
+    rtlScripts,
+    glassStylesheet: './assets/glass-hash.css'
+  });
+  for (const {id} of palettes) {
+    const written = [];
+    const document = {documentElement: {dataset: {}, lang: '', dir: ''}, write: html => written.push(html)};
+    runInNewContext(linked, {
+      document,
+      navigator: {languages: [], language: ''},
+      localStorage: {getItem: key => (key === 'doona-palette' ? id : null)},
+      matchMedia: () => ({matches: false})
+    });
+    expect(written).toEqual(id.startsWith('glass/') ? ['<link rel="stylesheet" data-glass href="./assets/glass-hash.css">'] : []);
+  }
+});

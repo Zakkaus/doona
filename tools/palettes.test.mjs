@@ -13,8 +13,9 @@ it('has one stylesheet per palette family and none without a palette', () => {
   expect(files.sort()).toEqual(families);
 });
 
+// Glass's tokens load with its materials, only for the Glass palettes.
 it('imports every family stylesheet', () => {
-  const index = readFileSync(new URL('palettes.css', styles), 'utf8');
+  const index = ['palettes.css', 'glass.css'].map(file => readFileSync(new URL(file, styles), 'utf8')).join('\n');
   expect([...index.matchAll(/@import '\.\/palettes\/(.+)\.css';/g)].map(match => match[1]).sort()).toEqual(families);
 });
 

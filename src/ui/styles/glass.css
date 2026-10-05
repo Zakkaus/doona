@@ -2,7 +2,8 @@
    it), Frosted (an evenly blurred layer) and Tinted (Microsoft's Mica). The rules read only material tokens, set per flavour in palettes/glass.css: a wallpaper, the
    chrome's fill and filter, and the fills and filters of cards, the floating panel and floating layers. A glass layer
    never sits inside another one: an ancestor with a backdrop-filter, an opacity, a filter or a mask would hide the
-   page from it. */
+   page from it. Only the Glass palettes load this file, with the tokens it imports (src/shell/glass.ts). */
+@import './palettes/glass.css';
 
 :root[data-family='glass'] {
   /* A fine noise tile: grey at about 4% average opacity, for the wallpaper. */

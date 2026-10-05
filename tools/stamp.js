@@ -29,6 +29,10 @@
   d.dataset.scheme = dark ? 'dark' : 'light';
   d.dataset.family = parts[0];
   d.dataset.flavour = parts[1];
+  // Only the Glass palettes load Glass's stylesheet. Written by the parser, it holds the first paint as the main one
+  // does, and it lands before the main one, where src/shell/glass.ts links it for a palette picked later.
+  var glass = '__GLASS_STYLESHEET__';
+  if (parts[0] === 'glass' && glass) document.write('<link rel="stylesheet" data-glass href="' + glass + '">');
   d.dataset.wordmark = read('doona-wordmark') === 'plain' ? 'plain' : 'gradient';
   var locales = '__LOCALES__';
   // No saved language doona has: the browser's preferences, picked as browserLang in src/i18n/languages.ts picks them.

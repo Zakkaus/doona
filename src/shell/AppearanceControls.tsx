@@ -8,9 +8,10 @@ import {Button, ChoiceMenu} from '../ui/ui';
 import {LoadBoundary} from '../ui/LoadBoundary';
 import {preloadable} from '../ui/preloadable';
 import type {PaletteId, SettingsContext} from './preferences';
+import {preloadGlass} from './useAppearance';
 import {languageItems, type PaletteSection} from './view';
 
-type PaletteControls = Pick<NonNullable<React.ContextType<typeof SettingsContext>>['ap'], 'palette' | 'pickPalette'>;
+type PaletteControls = Pick<NonNullable<React.ContextType<typeof SettingsContext>>['ap'], 'palette' | 'shownPalette' | 'pickPalette'>;
 export type PaletteMenuProps = {ap: PaletteControls; paletteSections: PaletteSection[]};
 
 // The language and palette menus and the light and dark toggle, shared by the top bar and the sign-in page.
@@ -42,10 +43,13 @@ export function SchemeToggle({dark, label, toggle}: {dark: boolean; label: strin
   );
 }
 
-// Each row's swatch loads when a palette menu's button is first pointed at or focused. The menu works without it, so a
-// swatch that fails to load leaves its row without one.
+// Each row's swatch loads when a palette menu's button is first pointed at or focused, and so does Glass's stylesheet,
+// which a Glass palette waits for. The menu works without a swatch, so one that fails to load leaves its row without it.
 const swatch = preloadable(() => import('./PaletteSwatch'));
-const preloadSwatch = () => void swatch.preload().catch(() => undefined);
+const preloadPalettes = () => {
+  void swatch.preload().catch(() => undefined);
+  preloadGlass();
+};
 
 // The palette sections, as the menus list them: one line each, a swatch before the name. Only a note the palette needs
 // stays, at the end of its row; the variant names live in Settings.
@@ -65,7 +69,7 @@ export function usePaletteChoices({ap, paletteSections}: PaletteMenuProps) {
           </LoadBoundary>
         )
       })),
-      value: ap.palette,
+      value: ap.shownPalette,
       onChange: (k: string) => ap.pickPalette(k as PaletteId)
     }))
   };
@@ -78,7 +82,7 @@ export function PaletteMenu(props: PaletteMenuProps) {
   // The icon turns in when the palette changes, like the scheme icon; not on first paint.
   const [first] = useState(palette);
   return (
-    <ChoiceMenu quiet chevron={false} label={t('ui.palette')} sections={palettes} onIntent={preloadSwatch}>
+    <ChoiceMenu quiet chevron={false} label={t('ui.palette')} sections={palettes} onIntent={preloadPalettes}>
       <Color key={palette} className={palette !== first ? 'rp-icon-in' : undefined} />
     </ChoiceMenu>
   );
