@@ -41,6 +41,7 @@ test('home charts collect memory polls and change the traffic history range', as
       return route.fulfill({json: await api.trafficHistory({window_seconds: Number(url.searchParams.get('window_seconds'))})});
     await route.fulfill({json: responses[path]});
   });
+  const memoryRead = page.waitForEvent('requestfinished', request => new URL(request.url()).pathname === '/api/v1/runtime/memory');
   await page.goto('/#/activity');
   const memory = page.locator('main').getByRole('region', {name: 'Memory', exact: true});
   await memory.scrollIntoViewIfNeeded();
@@ -50,7 +51,10 @@ test('home charts collect memory polls and change the traffic history range', as
   // One sample is not a curve yet; a later poll draws it. The card is in view from the start, so the first polls may
   // run before the nodes arrive.
   await expect.poll(() => memoryPoll).toBeGreaterThan(0);
-  await page.clock.fastForward(5100);
+  await memoryRead;
+  // The handler counts requests before the browser consumes them. Tick through frames and timers so the first
+  // sample can settle and schedule its next poll, rather than jumping past a timer that does not exist yet.
+  await page.clock.runFor(5100);
   await expect(memory.locator('.rp-activity-surface')).toBeVisible();
   // The legend reads the latest poll; how many polls ran before the card came into view depends on its place.
   await expect.poll(async () => (await memory.locator('.rp-legend').textContent())?.includes(`Resident memory ${memoryPoll} MB`)).toBe(true);
