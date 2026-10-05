@@ -167,6 +167,35 @@ test('a subscription is added, refreshed at once, and removed with its nodes', a
   await expect(sources.filter({hasText: 'sub-d'})).toHaveCount(0);
 });
 
+test('a subscription URL without a scheme gets https:// and an unusable value is explained at its field', async ({page}) => {
+  const {api} = await mockBackend(page);
+  await page.goto('/#/nodes?tab=list');
+  await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
+  const dialog = page.getByRole('dialog');
+  const url = dialog.getByLabel('Subscription URL');
+  await expect(dialog.locator('.rp-field-error', {hasText: 'The subscription URL must be an HTTP or HTTPS URL'})).toHaveCount(0);
+  await dialog.getByLabel('Name').fill('sub-d');
+  await url.fill('ftp://a.com');
+  await expect(dialog.locator('.rp-field-error', {hasText: 'The subscription URL must be an HTTP or HTTPS URL'})).toBeVisible();
+  await url.fill('example.org/sub?token=x');
+  await url.blur();
+  await expect(url).toHaveValue('https://example.org/sub?token=x');
+  await expect(dialog.locator('.rp-field-error', {hasText: 'The subscription URL must be an HTTP or HTTPS URL'})).toHaveCount(0);
+  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-d added'})).toBeVisible();
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  expect(main.content).toContain('https://example.org/sub?token=x');
+});
+
+test('a node link that cannot be read is explained at its field', async ({page}) => {
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.locator('.rp-field-error', {hasText: 'The node link must look like vless://…'})).toHaveCount(0);
+  await dialog.getByLabel('Node link').fill('vless:/broken');
+  await expect(dialog.locator('.rp-field-error', {hasText: 'The node link must look like vless://…'})).toBeVisible();
+});
+
 test('an open source menu keeps Remove in place when its edit action becomes available', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
@@ -1170,6 +1199,17 @@ test("a subscription's URL is edited where its entry is written", async ({page})
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('.rp-toast.positive')).toContainText('Saved harbor');
+  await page.goto('/#/config?tab=source');
+  await expect(page.locator('.cm-content')).toContainText("harbor: 'https://updated.example.net/sub?token=new'");
+});
+
+test('an edited subscription URL without a scheme is saved with https:// when Enter submits it', async ({page}) => {
+  await page.goto('/#/nodes?tab=list');
+  await moreAction(page.locator('body'), 'Edit harbor', 'More actions for harbor');
+  const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
+  await dialog.getByRole('textbox', {name: 'Subscription URL', exact: true}).fill('updated.example.net/sub?token=new');
+  await dialog.getByRole('textbox', {name: 'Subscription URL', exact: true}).press('Enter');
+  await expect(dialog).toHaveCount(0);
   await page.goto('/#/config?tab=source');
   await expect(page.locator('.cm-content')).toContainText("harbor: 'https://updated.example.net/sub?token=new'");
 });

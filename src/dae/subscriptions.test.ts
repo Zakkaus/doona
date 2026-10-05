@@ -1,5 +1,13 @@
 import {describe, expect, it} from 'vitest';
-import {agentProblem, parseInterval, readSubscriptionEntries, writeSubscriptionEntry, type SubscriptionChange} from './subscriptions';
+import {
+  agentProblem,
+  completeSubscriptionUrl,
+  isSubscriptionUrl,
+  parseInterval,
+  readSubscriptionEntries,
+  writeSubscriptionEntry,
+  type SubscriptionChange
+} from './subscriptions';
 import {addSubtagsToGroup, classifyFilters, readGroupEntries, removeSubtagsFromGroup} from './groups';
 import {LocalError} from '../api/error';
 
@@ -365,4 +373,39 @@ it("reads and writes the download route, replacing the old block form's download
   expect(old).not.toContain('download_detour');
   expect(readSubscriptionEntries(writeSubscriptionEntry(source, 'old', {route: null})).find(entry => entry.tag === 'old')!.route).toBeNull();
   expect(writeSubscriptionEntry(source, 'opts', {route: 'direct'})).toBe(source);
+});
+
+describe('completeSubscriptionUrl', () => {
+  it.each([
+    ['xxx.com/sub?t=1', 'https://xxx.com/sub?t=1'],
+    ['  xxx.com  ', 'https://xxx.com'],
+    ['http://a.com', 'http://a.com'],
+    ['HTTPS://a.com', 'https://a.com'],
+    ['Http://a.com/Path', 'http://a.com/Path'],
+    ['mailto:user@example.com', 'mailto:user@example.com'],
+    ['vless:id@a.com:443', 'vless:id@a.com:443'],
+    ['user:pw@a.com', 'user:pw@a.com'],
+    ['a.com:443/x', 'https://a.com:443/x'],
+    ['abc:123', 'abc:123'],
+    ['vless://id@a.com:443', 'vless://id@a.com:443'],
+    ['ftp://a.com', 'ftp://a.com'],
+    ['abc', 'abc'],
+    ['localhost:8080/s', 'https://localhost:8080/s'],
+    ['192.168.1.1/s', 'https://192.168.1.1/s'],
+    ['[::1]:8080/s', 'https://[::1]:8080/s'],
+    ['', '']
+  ])('completes %j to %j', (value, expected) => {
+    expect(completeSubscriptionUrl(value)).toBe(expected);
+  });
+
+  it('accepts a completed address and still refuses other schemes and bare words', () => {
+    expect(isSubscriptionUrl('xxx.com/sub')).toBe(true);
+    expect(isSubscriptionUrl('http://a.com')).toBe(true);
+    expect(isSubscriptionUrl('HTTPS://a.com')).toBe(true);
+    expect(isSubscriptionUrl('mailto:user@example.com')).toBe(false);
+    expect(isSubscriptionUrl('ftp://a.com')).toBe(false);
+    expect(isSubscriptionUrl('vless://id@a.com:443')).toBe(false);
+    expect(isSubscriptionUrl('abc')).toBe(false);
+    expect(isSubscriptionUrl('')).toBe(false);
+  });
 });

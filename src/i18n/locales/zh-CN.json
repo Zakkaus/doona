@@ -938,6 +938,7 @@
   "nodes.updated": "更新时间",
   "nodes.url": "订阅网址",
   "nodes.urlInvalid": "订阅网址须为 HTTP 或 HTTPS 网址",
+  "nodes.urlScheme": "未填写协议时自动补上 https://。",
   "nodes.usage": "用量",
   "nodes.viewNodes": "查看节点",
   "ov.attachments": "挂载点",

@@ -1,5 +1,6 @@
 import {useT, useLang, LOCALE} from '../../i18n';
 import {LabeledSelect, NumberField, Switch, TextField, Toolbar, numberFromText, textFromNumber} from '../../ui/ui';
+import {completeSubscriptionUrl} from '../../dae/subscriptions';
 import {changeTypedInterval, intervalItems, intervalTyped, startTyping} from './subscription';
 
 // A subscription as typed. An empty interval, a null cache and an empty route leave that option to what applies
@@ -25,6 +26,7 @@ export function SubscriptionFields({
   nameError,
   agentError,
   intervalError,
+  urlError,
   focusInterval
 }: {
   value: SubscriptionDraft;
@@ -34,6 +36,7 @@ export function SubscriptionFields({
   nameError?: string | null;
   agentError?: string | null;
   intervalError?: string | null;
+  urlError?: string | null;
   focusInterval?: boolean;
 }) {
   const t = useT();
@@ -59,8 +62,14 @@ export function SubscriptionFields({
         label={t('nodes.url')}
         value={value.url}
         placeholder="https://example.org/sub?token=…"
+        description={t('nodes.urlScheme')}
+        error={urlError ?? undefined}
         spellCheck={false}
         onChange={url => set({url})}
+        onBlur={() => {
+          const url = completeSubscriptionUrl(value.url);
+          if (url !== value.url) set({url});
+        }}
       />
       {fields.interval !== undefined && (
         <>

@@ -359,6 +359,10 @@ describe('providerCreate', () => {
   const form = {name: ' sub-a ', value: ' https://example.org/sub ', interval: '', agent: '', cache: null, route: ''};
   const options = {update_interval: 86400, user_agent: 'honk/1.0', cache: true};
 
+  it('adds https:// to an address typed without a scheme', () => {
+    expect(providerCreate({...form, value: ' xxx.com/sub?t=1 '}, undefined).url).toBe('https://xxx.com/sub?t=1');
+  });
+
   it('sends only the options that differ from the backend default', () => {
     const base = {name: 'sub-a', kind: 'subscription', url: 'https://example.org/sub'};
     expect(providerCreate(form, options)).toEqual(base);
@@ -401,6 +405,8 @@ it('says why the add dialog cannot submit, first applicable, and nothing while i
   expect(nodeFormReason('provider', 'sub a', 'ftp://x', t)).toBe(t('nodes.nameInvalid'));
   expect(nodeFormReason('provider', 'sub-a', 'ftp://x', t)).toBe(t('nodes.urlInvalid'));
   expect(nodeFormReason('provider', 'sub-a', 'https://example.org/sub', t)).toBeNull();
+  expect(nodeFormReason('provider', 'sub-a', 'example.org/sub', t)).toBeNull();
+  expect(nodeFormReason('provider', 'sub-a', "https://example.org/it's", t)).toBe(t('config.unquotable'));
   expect(nodeFormReason('node', 'hk-03', 'vless:/broken', t)).toBe('The node link must look like vless://…');
   expect(nodeFormReason('node', 'hk 03', 'vless://id@host:443', t)).toBeNull();
   // A group name's problem is shown at its field.

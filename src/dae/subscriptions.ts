@@ -9,7 +9,21 @@ import {isBareName, isQuotable, quote, scanConfig, unquote, type TextBlock, type
 type SubscriptionForm = 'bare' | 'short' | 'agent' | 'block' | 'options';
 type SubscriptionNaming = 'tag' | 'embedded' | 'host';
 export type SubscriptionOption = {name: string; value: string};
-export const isSubscriptionUrl = (value: string) => /^https?:\/\/\S+$/.test(value.trim());
+// A URL typed without a scheme gets `https://`, when it then has a host a subscription can live on: a dotted name,
+// `localhost` or an IP literal. A word and a colon is a scheme unless a port follows (`localhost:8080`), so
+// `mailto:` and `vless:` stay as typed, and so does `user:pw@host`, which needs its scheme written. The scheme
+// of an http or https URL is lowercased, as schemes are case-insensitive.
+export function completeSubscriptionUrl(value: string) {
+  const text = value.trim();
+  const scheme = /^([a-z][a-z0-9+.-]*):(?!\d+(?:[/?#]|$))/i.exec(text)?.[1];
+  if (scheme) return /^https?$/i.test(scheme) ? scheme.toLowerCase() + text.slice(scheme.length) : text;
+  if (!text) return text;
+  const completed = `https://${text}`;
+  if (!URL.canParse(completed)) return text;
+  const {hostname} = new URL(completed);
+  return hostname.includes('.') || hostname === 'localhost' || hostname.startsWith('[') ? completed : text;
+}
+export const isSubscriptionUrl = (value: string) => /^https?:\/\/\S+$/.test(completeSubscriptionUrl(value));
 type Range = {from: number; to: number};
 type Field = SubscriptionOption & {key: Range; at: Range};
 export type SubscriptionText = {

@@ -938,6 +938,7 @@
   "nodes.updated": "更新時間",
   "nodes.url": "訂閱網址",
   "nodes.urlInvalid": "訂閱網址須為 HTTP 或 HTTPS 網址",
+  "nodes.urlScheme": "未填寫協定時會自動補上 https://。",
   "nodes.usage": "用量",
   "nodes.viewNodes": "檢視節點",
   "ov.attachments": "掛載點",
