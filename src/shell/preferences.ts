@@ -6,6 +6,7 @@ import {storageKeys} from '../api/storage';
 import {readDateFormat, readTimeFormat, type DateFormat, type TimeFormat} from '../i18n/format';
 import {DEFAULT_PALETTE, isPaletteId, type PaletteId} from './palettes';
 import type {ToastPlacement} from '../ui/ui';
+import type {PaletteSection} from './view';
 import {defaultRoute, hasRoute, isRoutePath, type RoutePath} from './routes';
 export type Scheme = 'system' | 'light' | 'dark';
 export type Wordmark = 'gradient' | 'plain';
@@ -133,7 +134,7 @@ export const SettingsContext = createContext<{
   lang: Lang;
   pickLang: (value: Lang) => void;
   ap: Appearance;
-  paletteSections: Array<{title: string; items: Array<{id: PaletteId; label: string; desc?: string}>}>;
+  paletteSections: PaletteSection[];
   startPageItems: Array<{id: RoutePath; label: string}>;
 } | null>(null);
 

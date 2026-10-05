@@ -125,9 +125,11 @@ export function MenuButton({
   );
 }
 
+// `plain` marks a section whose title only gathers its items, so a chosen item is not named with it.
 export type ChoiceSection = {
   title: string;
   hideHeader?: boolean;
+  plain?: boolean;
   items: Item[];
   value: string;
   selectionMode?: 'single' | 'none';
@@ -206,7 +208,10 @@ const itemCount = (sections: ChoiceSection[]) => sections.reduce((n, section) =>
 export function chosen(sections: ChoiceSection[], t: Translator) {
   for (const section of sections) {
     const item = section.items.find(i => i.id === section.value);
-    if (item) return sections.length > 1 && item.label !== section.title ? t('ui.sectionChoice', {section: section.title, item: item.label}) : item.label;
+    if (item)
+      return sections.length > 1 && !section.plain && item.label !== section.title
+        ? t('ui.sectionChoice', {section: section.title, item: item.label})
+        : item.label;
   }
   return '';
 }
@@ -401,7 +406,7 @@ export function ChoiceMenu({
   searchLabel,
   triggerLabel,
   ...props
-}: Omit<MenuButtonProps, 'content' | 'onIntent'> & {searchLabel?: string; triggerLabel?: string} & (
+}: Omit<MenuButtonProps, 'content'> & {searchLabel?: string; triggerLabel?: string} & (
     | {
         items: Items;
         selectionMode?: 'single';
@@ -435,7 +440,7 @@ export function ChoiceMenu({
     <MenuButton
       {...props}
       label={triggerLabel ?? props.label}
-      onIntent={searchLabel && long ? preloadSearchList : undefined}
+      onIntent={props.onIntent ?? (searchLabel && long ? preloadSearchList : undefined)}
       content={
         submenus ? (
           <SubmenuMenu label={props.label} submenus={submenus} actions={actions} />

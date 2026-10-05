@@ -16,7 +16,8 @@ import {
   Toolbar,
   Form
 } from '../../ui/ui';
-import {SearchSelect} from '../../ui/SearchSelect';
+import {SelectBoxGroup} from '../../ui/SelectBoxGroup';
+import {swatchSections} from '../../shell/swatches';
 import {BlurSetting, WallpaperSettings} from './WallpaperSettings';
 import type {DateFormat, PaletteId, Scheme, TimeFormat, ToastPlacement, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
@@ -227,15 +228,6 @@ export function Settings({query}: PageProps) {
               ]}
             />
           </div>
-          <div className="rp-contents" data-setting="palette">
-            <SearchSelect
-              label={t('ui.palette')}
-              searchLabel={t('shell.shortcutSearch')}
-              sections={paletteSections.map(section => ({...section, id: section.title}))}
-              value={ap.palette}
-              onChange={value => ap.pickPalette(value as PaletteId)}
-            />
-          </div>
           <div className="rp-contents" data-setting="scheme">
             <LabeledSelect
               label={t('settings.scheme')}
@@ -281,7 +273,15 @@ export function Settings({query}: PageProps) {
             />
           </div>
         </Toolbar>
-        {/* Under the row, not the picker: a description there would lift the Palette field above its neighbours. */}
+        <div data-setting="palette">
+          <SelectBoxGroup
+            label={t('ui.palette')}
+            sections={swatchSections(paletteSections, t)}
+            value={ap.palette}
+            onChange={value => ap.pickPalette(value as PaletteId)}
+            help={ap.palette === 'glass/glass' ? t('palette.glassNote') : undefined}
+          />
+        </div>
         {ap.palette.startsWith('glass/') && <WallpaperSettings />}
         {/* Tinted draws no blur, so it has nothing to scale. */}
         {ap.palette.startsWith('glass/') && ap.palette !== 'glass/tinted' && <BlurSetting value={ap.blur} onChange={ap.pickBlur} />}

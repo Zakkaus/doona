@@ -26,7 +26,7 @@ test('the palette menu offers the four Glass materials in order, and Settings ha
   await page.getByRole('menuitemradio', {name: /^Frosted/}).click();
   await expect(page.locator('html')).toHaveAttribute('data-flavour', 'frosted');
   const card = page.getByRole('region', {name: 'Appearance', exact: true});
-  await expect(card.getByRole('button', {name: /Palette/})).toBeVisible();
+  await expect(card.getByRole('listbox', {name: 'Palette'}).getByRole('option', {name: 'Glass Frosted'})).toHaveAttribute('aria-selected', 'true');
   await expect(card.getByRole('radiogroup', {name: /material/i})).toHaveCount(0);
 });
 
@@ -202,21 +202,28 @@ test.describe('clear glass', () => {
     });
     await page.goto('/#/settings');
     await expect(page.locator('html')).toHaveAttribute('data-lens', '');
-    await appearance(page)
-      .getByRole('button', {name: /Palette$/})
-      .click();
-    await page.getByRole('option', {name: /^Glass/}).click();
+    await appearance(page).getByRole('option', {name: 'Glass', exact: true}).click({force: true});
     await expect(page.locator('html')).toHaveAttribute('data-flavour', 'clear');
     await expect(page.locator('html')).not.toHaveAttribute('data-lens');
     expect((await surface(page, pageCard, '::before')).filter).not.toContain('url(');
   });
 });
 
-// The palette menu says which browsers refract, on Liquid Glass itself, wherever it is picked.
-test('the palette menu notes that Liquid Glass refracts only in Chromium', async ({page}) => {
+// Liquid Glass says it refracts only in Chromium wherever it is offered, and Settings spells it out once it is picked.
+test('the palette pickers note that Liquid Glass refracts only in Chromium', async ({page}) => {
   await page.goto('/#/settings');
   await page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true}).click();
-  await expect(page.getByRole('menuitemradio', {name: /^Liquid Glass/})).toContainText('Needs a Chromium browser; Firefox and Safari show Glass');
+  await expect(page.getByRole('menuitemradio', {name: /^Liquid Glass/})).toContainText('Chromium only');
+  await page.keyboard.press('Escape');
+  const group = page.getByRole('listbox', {name: 'Palette'});
+  const field = page.locator('[data-setting="palette"]');
+  const liquid = group.getByRole('option', {name: 'Liquid Glass', exact: true});
+  await expect(liquid).toHaveAccessibleDescription('Chromium only');
+  const note = 'Needs a Chromium browser; Firefox and Safari show Glass';
+  await expect(field.getByText(note)).toHaveCount(0);
+  await liquid.click({force: true});
+  await expect(field.getByText(note)).toBeVisible();
+  await expect(group).toHaveAccessibleDescription(note);
 });
 
 test.describe('glass lens elsewhere', () => {

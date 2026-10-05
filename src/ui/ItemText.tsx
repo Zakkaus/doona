@@ -3,7 +3,7 @@ import {Text} from 'react-aria-components';
 import {TextTooltip} from './Tooltip';
 import {NodeName} from './NodeName';
 
-export type Item = {id: string; label: string; desc?: string; icon?: ReactNode; nodeName?: boolean; flag?: string | null};
+export type Item = {id: string; label: string; desc?: string; icon?: ReactNode; nodeName?: boolean; flag?: string | null; aside?: boolean};
 export const ItemLabel = ({i, cut, reserveFlag = false}: {i: Item; reserveFlag?: boolean; cut?: 'start' | 'path'}) => {
   const split = cut === 'path' ? i.label.lastIndexOf('/') + 1 : 0;
   return (
@@ -28,7 +28,7 @@ export const ItemLabel = ({i, cut, reserveFlag = false}: {i: Item; reserveFlag?:
   );
 };
 // S2 descriptions sit below the label and grow with their content. The label slot names the item apart from its
-// description, which is announced as the description.
+// description, which is announced as the description. An `aside` description stays on the label's row, at its end.
 export const ItemText = ({i, children}: {i: Item; children?: ReactNode}) => (
   <span className="rp-item-text">
     <Text slot="label" elementType="span">
@@ -36,7 +36,7 @@ export const ItemText = ({i, children}: {i: Item; children?: ReactNode}) => (
     </Text>
     {children ??
       (i.desc && (
-        <Text slot="description" className="desc">
+        <Text slot="description" className={i.aside ? 'desc aside' : 'desc'}>
           {i.desc}
         </Text>
       ))}

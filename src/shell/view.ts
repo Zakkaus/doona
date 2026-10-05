@@ -50,7 +50,7 @@ export type BackendView = {
   about: string;
   edit: {href: string; label: string};
 };
-export type PaletteSection = {title: string; items: Array<{id: string; label: string; desc?: string; className?: string}>};
+export type PaletteSection = {title: string; plain?: boolean; items: Array<{id: PaletteId; label: string; desc?: string}>};
 export type AppearanceMenu = ReturnType<typeof appearanceMenu>;
 export type ShellView = {
   groups: NavGroup[];
@@ -228,16 +228,17 @@ export function duckView(taps: number) {
   const painted = honked && (taps - 5) % 2 === 1;
   return {honked, painted, hop: taps > 0 && !painted, wordmark: wordmark(honked)};
 }
-// The appearance menu: one section per run of palettes that share a group.
-export function paletteMenu(t: Translator): Array<{title: string; items: Array<{id: PaletteId; label: string; desc?: string}>}> {
-  const sections: Array<{group: string; title: string; items: Array<{id: PaletteId; label: string; desc?: string}>}> = [];
+// The appearance menu: one section per run of palettes that share a group. Other only gathers its palettes, so their
+// names do not start with it.
+export function paletteMenu(t: Translator): PaletteSection[] {
+  const sections: Array<PaletteSection & {group: string}> = [];
   for (const palette of palettes) {
-    const item = {id: palette.id, label: t(palette.label), desc: t(palette.desc)};
+    const item = {id: palette.id, label: t(palette.label), desc: 'desc' in palette ? t(palette.desc) : undefined};
     const last = sections.at(-1);
     if (last?.group === palette.group) last.items.push(item);
-    else sections.push({group: palette.group, title: t(palette.group), items: [item]});
+    else sections.push({group: palette.group, title: t(palette.group), plain: palette.group === 'palette.other', items: [item]});
   }
-  return sections.map(({title, items}) => ({title, items}));
+  return sections;
 }
 
 export const languageItems = LANGS.map(([id, label]) => ({id, label}));
