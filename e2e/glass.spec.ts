@@ -250,6 +250,8 @@ test('glass floats the top bar capsules and the sidebar as the card glass', asyn
     return page.locator(pageCard).evaluateAll(cards => cards.slice(0, 8).map(card => JSON.stringify(card.getBoundingClientRect())));
   };
   await page.goto('/#/activity');
+  // Activity must finish startup before the first palette reload.
+  await expect(page.locator(pageCard).first()).toBeVisible();
   const frosted = await boxes('frosted');
   expect(await boxes('clear')).toEqual(frosted);
   expect(await boxes('glass')).toEqual(frosted);
