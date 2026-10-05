@@ -46,6 +46,9 @@ for (const [material, flavour] of [
     await page.goto('/#/activity');
     await expect(page.locator('html')).toHaveAttribute('data-flavour', flavour);
     expect(await page.evaluate(() => [localStorage.getItem('doona-palette'), localStorage.getItem('doona-glass')])).toEqual([`glass/${flavour}`, null]);
+    // The first-paint script sets the palette before the app's modules load; reloading while WebKit is still fetching
+    // them interrupts the reload and fails those imports, so the page starts fully first.
+    await expect(page.locator(pageCard).first()).toBeVisible();
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-flavour', flavour);
   });
