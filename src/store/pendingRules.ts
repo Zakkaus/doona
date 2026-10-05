@@ -11,7 +11,7 @@ export type PendingPlace = {list: 'routing'; before: RoutingRule} | {list: 'requ
 export type HeldRule = PendingPlace & {condition: string; outbound: string; must: boolean; sourceId: string};
 export type PendingRule = HeldRule & {id: number};
 // `neutral`: the write's outcome is unknown rather than failed, which the toast reports neutrally.
-export type PendingFailure = {text: string; lines: string[]; toastText?: string; requestId?: string; neutral?: true};
+export type PendingFailure = {text: string; lines: string[]; backend?: string[]; toastText?: string; requestId?: string; neutral?: true};
 // `applying`: one apply at a time, whichever button started it.
 type State = {rules: PendingRule[]; failure: PendingFailure | null; applying: boolean};
 

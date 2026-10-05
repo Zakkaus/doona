@@ -186,7 +186,9 @@ export function useGeodata(enabled = true) {
   const api = getApi();
   const resource = useResource({key: ['geodata'], every: 0, fetch: signal => api.geodata(signal)}, {enabled});
   const {refetch} = resource;
-  const {busy, run} = useAction<'update'>({rethrow: true});
+  // One update per backend: the Settings card and a refused write's repair show the same one busy, and it outlives
+  // the page that started it.
+  const {busy, run} = useAction<'update'>({rethrow: true, shared: 'geodata-update'});
   const update = useCallback(
     () =>
       run('update', async signal => {

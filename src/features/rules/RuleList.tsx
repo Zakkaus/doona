@@ -23,6 +23,7 @@ import Close from '../../ui/icons/Close';
 import Edit from '../../ui/icons/Edit';
 import FileText from '../../ui/icons/FileText';
 import {Coverage} from '../shared/Coverage';
+import {BackendText} from '../shared/BackendText';
 import type {PageProps} from '../../shell/routes';
 import {useRuleList, type DictionaryModel, type RuleListModel as Model} from './useRuleList';
 import {useRuleTemplates} from './useRuleTemplates';
@@ -207,6 +208,7 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
                   {line}
                 </span>
               ))}
+              <BackendText texts={view.held.failure.backend} />
             </InlineAlert>
           )}
           {view.held.rows.map(row => (

@@ -151,6 +151,11 @@ h3.rp-label {
 .rp-alert-title {
   font-weight: 600;
 }
+/* Many dark palettes give links the text colour, so a link inside an alert keeps S2's underline to read as a link. */
+.rp-alert .rp-link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 /* The backend's own words under the message, as a toast's detail. */
 .rp-alert-detail {
   display: block;
@@ -397,8 +402,10 @@ h3.rp-label {
   padding: 0;
   vertical-align: baseline;
 }
-/* A link standing on its own in a card keeps its text on the card's edge; the padding only backs hover and focus. */
-.rp-card > .rp-link {
+/* A link standing on its own in a card or an alert keeps its text on the content's edge; the padding only backs hover
+   and focus. */
+.rp-card > .rp-link,
+.rp-alert .rp-link:not([data-layout]) {
   margin-inline-start: -8px;
 }
 /* A tile whose value opens what it measures behaves like a linked card: the value's link covers the card, so the whole

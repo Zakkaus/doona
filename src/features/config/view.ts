@@ -3,7 +3,8 @@ import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {localTime, formatBytes} from '../../i18n/format';
 import {formatNumber, type Translator} from '../../i18n';
-import {diagnosticMessage, refusalMessage, type BackendMessage} from '../../i18n/backend';
+import {refusalMessage, type BackendMessage} from '../../i18n/backend';
+import {explainDiagnostic} from '../shared/offlineDependency';
 import type {Key} from '../../i18n';
 import {fileName, redacted, sourceKinds} from '../../dae/sources';
 import {blockFields, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
@@ -31,7 +32,7 @@ function sectionRange(source: ConfigSource, block: TextBlock): string {
 export function sourceMarks(diagnostics: ConfigDiagnostic[], sourceId: string, t: Translator): EditorMark[] {
   return diagnostics
     .filter(d => d.source_id === sourceId && d.line !== null)
-    .map(d => ({line: d.line!, column: d.column, level: d.level, message: diagnosticText(diagnosticMessage(d, t), t)}));
+    .map(d => ({line: d.line!, column: d.column, level: d.level, message: diagnosticText(explainDiagnostic(d, t), t)}));
 }
 
 // A diagnostic's words in its editor mark, where the row's backend disclosure has no room. A translated code keeps the
@@ -249,7 +250,7 @@ export function diagnosticRows(
   }
   return [...groups].map(([key, {item, count}]) => {
     const path = paths.get(item.source_id) ?? item.source_id;
-    const text = diagnosticMessage(item, t).summary;
+    const text = explainDiagnostic(item, t).summary;
     const message = count > 1 ? t('config.repeated', {text, n: formatNumber(count, locale)}) : text;
     const own = item.source_id === current;
     const line = item.line === null ? null : formatNumber(item.line, locale);

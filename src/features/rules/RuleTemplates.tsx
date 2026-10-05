@@ -12,6 +12,7 @@ import {
   Form,
   InlineAlert,
   Light,
+  Link,
   HelpRow,
   Radio,
   RadioGroup,
@@ -21,7 +22,10 @@ import {
 import type {RuleTemplate} from '../../dae/templates';
 import {templateOptionKeys, templateOptionText, type TemplateChoice} from './template';
 import type {RuleTemplatesModel} from './useRuleTemplates';
+import type {OfflineFix} from '../shared/useOfflineFix';
+import {BackendText} from '../shared/BackendText';
 import '../../ui/styles/impact.css';
+import LinkOut from '../../ui/icons/LinkOut';
 
 // The simple view of the routing list: the routing modes as one choice, the detected one selected, and Apply to write
 // another.
@@ -106,13 +110,19 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
             }}
           >
             {dialog.invalid && (
-              <InlineAlert key={dialog.invalid.id} title={t('ui.writeInvalid', {n: dialog.invalid.errors.length})} takeFocus>
+              <InlineAlert
+                key={dialog.invalid.id}
+                title={t('ui.writeInvalid', {n: dialog.invalid.errors.length})}
+                takeFocus
+                action={dialog.invalid.fix && <OfflineAction fix={dialog.invalid.fix} />}
+              >
                 {dialog.invalid.errors.map((text, index) => (
                   <Fragment key={index}>
                     {index > 0 && <br />}
                     {text}
                   </Fragment>
                 ))}
+                <BackendText texts={dialog.invalid.backend} />
               </InlineAlert>
             )}
             <DialogSection>
@@ -165,6 +175,21 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
 }
 
 type ImpactRow = {name: string; label: string | null; warning: string | null};
+// The way out of a missing offline file: repair the loaded geodata in place, or read how to install it.
+function OfflineAction({fix}: {fix: OfflineFix}) {
+  const t = useT();
+  return fix.kind === 'download' ? (
+    <Button isPending={fix.busy} onPress={() => void fix.run()}>
+      {t('config.diagnostic.downloadGeodata')}
+    </Button>
+  ) : (
+    <Link appearance="link" external href={fix.href}>
+      {t('config.diagnostic.geodataDocs')}
+      <LinkOut />
+    </Link>
+  );
+}
+
 // A titled list of groups in the apply dialog: each name with its label, and a warning light under it. `columns` lays
 // a long list out in as many columns as fit.
 function ImpactList({title, description, empty, columns, rows}: {title: string; description?: string; empty?: string; columns?: boolean; rows: ImpactRow[]}) {

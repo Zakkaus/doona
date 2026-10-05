@@ -6,8 +6,11 @@ import {ApiError} from '../../api/error';
 import {offered} from '../../api/capabilities';
 import {engineOf} from '../../api/engines';
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
-import {diagnosticMessage, oneLine} from '../../i18n/backend';
+import {oneLine} from '../../i18n/backend';
 import {refusalDetails} from '../shared/pending';
+import {useOfflineFix, type OfflineFix} from '../shared/useOfflineFix';
+import {backendWords, explainDiagnostic} from '../shared/offlineDependency';
+import {geodataKinds} from '../shared/geodataUpdate';
 import {toast, toastFailure} from '../../ui/ui';
 import {fileName} from '../../dae/sources';
 import type {RuleTemplate, TemplateOptions} from '../../dae/templates';
@@ -42,8 +45,10 @@ type Pending = {
   plain: TemplateWrite;
   withDns: TemplateWrite | null;
 };
-// `invalid` is the backend's refusal of the last Apply, one line per error, kept in the dialog until the write changes.
-type Dialog = Omit<Pending, 'plain' | 'withDns'> & TemplateWrite & {file: string; dns: boolean | null; invalid: {id: number; errors: string[]} | null};
+// `invalid` is the backend's refusal of the last Apply, one line per error, kept in the dialog until the write changes;
+// `backend` holds the backend's words the lines leave out, for a bug report.
+type Dialog = Omit<Pending, 'plain' | 'withDns'> &
+  TemplateWrite & {file: string; dns: boolean | null; invalid: {id: number; errors: string[]; backend: string[]; fix: OfflineFix | null} | null};
 export type RuleTemplatesModel = TemplatesView & {
   // Whether the routing list offers the simple view: it reads the rules from the configuration text.
   available: boolean;
@@ -95,6 +100,23 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
   // alone checks a file other than the main one.
   const refuse = (diagnostics: ConfigDiagnostic[]) =>
     setInvalid(current => ({id: (current?.id ?? 0) + 1, errors: diagnostics.filter(item => item.level === 'error')}));
+  const write = dialog && (dialog.withDns && addDns ? dialog.withDns : dialog.plain);
+  const offline = useOfflineFix(invalid?.errors, write ? geodataKinds(write.after) : null);
+  // Once the downloaded geodata is in, the errors describe a write that may now pass, so Apply is offered clean. Only
+  // the refusal the download answered goes: the dialog may have been closed and opened on another one since.
+  const download = offline.fix?.kind === 'download' ? offline.fix : null;
+  const answered = invalid;
+  const fix: OfflineFix | null = download
+    ? {
+        ...download,
+        run: async () => {
+          const done = await download.run();
+          if (done) setInvalid(current => (current === answered ? null : current));
+          return done;
+        }
+      }
+    : offline.fix;
+  const lines = (invalid?.errors ?? []).map(item => ({item, message: oneLine(explainDiagnostic(item, t, offline.missingFiles), t)}));
   const target = templateTarget({
     sources,
     configWritable: resources?.config.writable === true,
@@ -154,19 +176,20 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
       choice: dialog.choice,
       source: dialog.source,
       impact: dialog.impact,
-      ...(dialog.withDns && addDns ? dialog.withDns : dialog.plain),
+      ...write!,
       file: fileName(dialog.source),
       dns: dialog.withDns ? addDns : null,
       invalid: invalid && {
         id: invalid.id,
         // As the configuration editor lists them: a line in the file being written, another file by name.
-        errors: invalid.errors.map(item => {
-          const message = oneLine(diagnosticMessage(item, t), t);
+        errors: lines.map(({item, message}) => {
           if (item.source_id === dialog.source.id) return item.line === null ? message : t('config.atLine', {line: item.line, message});
           const other = sources.find(source => source.id === item.source_id);
           const file = other ? fileName(other) : item.source_id;
           return item.line === null ? t('ui.valuePair', {label: file, value: message}) : t('config.atFile', {file, line: item.line, message});
-        })
+        }),
+        backend: backendWords(lines),
+        fix
       }
     },
     // The write already holds the choice made before Apply, so the checkbox stays put until it settles.
@@ -182,7 +205,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
     },
     confirm: async () => {
       if (!dialog) return;
-      const {after} = dialog.withDns && addDns ? dialog.withDns : dialog.plain;
+      const {after} = write!;
       try {
         const outcome = await editor.apply(dialog.source, after);
         if (!outcome) return;

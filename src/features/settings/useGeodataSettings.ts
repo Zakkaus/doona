@@ -4,7 +4,8 @@ import {useCapabilities, useGeodata, useGroups, useRuntimeSettings, useVersion} 
 import {offered} from '../../api/capabilities';
 import {useNow} from '../../ui/clock';
 import {LOCALE, formatList, formatNumber, useLang, useT} from '../../i18n';
-import {toast, toastErrorDetail, toastFailure} from '../../ui/ui';
+import {toast, toastErrorDetail} from '../../ui/ui';
+import {announceGeodataUpdate} from '../shared/geodataUpdate';
 import {geodataPresets, type GeodataPreset, type GeodataPresetId} from '../../dae/geodata';
 import {geodataConfigurable} from './nav';
 import {geodataFromConfig, geodataRows, geodataUpdateReason} from './view';
@@ -59,13 +60,7 @@ export function useGeodataSettings() {
   const checksum = geodataCaps?.checksum ?? null;
   const lifecycle = geodataCaps?.lifecycle;
 
-  const update = () =>
-    geodata.update().then(
-      result => {
-        if (result) toast('positive', t('settings.geodataUpdated'));
-      },
-      (error: unknown) => toastFailure(error, t, t('settings.geodataFailed'))
-    );
+  const update = () => announceGeodataUpdate(geodata.update(), t);
   // Resolves true once stored; a URL change then starts the update and leaves its outcome to the status row.
   // One save at a time: a second press while one is in flight, or while an update runs, does nothing.
   const inflight = useRef(false);

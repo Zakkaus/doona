@@ -14,7 +14,7 @@ test.use({viewport: {width: 1440, height: 1000}});
 
 // The demo backend served over HTTP, so a spec can change its files as another client would.
 async function backend(page: Page, lang = 'en') {
-  const {api} = await mockBackend(page);
+  const {api, capabilities} = await mockBackend(page);
   await page.addInitScript(l => localStorage.setItem('doona-lang', l), lang);
   const main = async () => (await api.config()).sources.find(source => source.kind === 'main')!;
   // Writes the main file as another client would and waits for the reload to take it in.
@@ -24,7 +24,7 @@ async function backend(page: Page, lang = 'en') {
     await api.replaceConfigSource(source.id, next, `"${source.content_sha256}"`);
     await expect.poll(async () => (await main()).content).toBe(next);
   };
-  return {api, main, write};
+  return {api, capabilities, main, write};
 }
 const oneFile = (text: string) => {
   const block = scanConfig(text).blocks.find(block => block.name === 'routing')!;
@@ -138,6 +138,113 @@ for (const side of ['check', 'write'] as const)
     await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeVisible();
     await expect(alert).toHaveCount(0);
   });
+
+// honk's answer when the rules need a geodata file the device lacks: one diagnostic that names neither the file nor the setting.
+const offlineMessage = 'required offline configuration dependency is unavailable';
+const offlineRefusal = [
+  {source_id: 'src-main', line: null, column: null, span: null, level: 'error', code: 'missing-offline-dependency', message: offlineMessage}
+];
+type Loaded = Partial<Record<'geosite' | 'geoip', 'empty' | 'ok'>>;
+// honk lists and updates only the geodata files it has loaded, and cannot update with none loaded; an empty file stays
+// listed with size 0 until an update replaces it. Every validation is refused for the missing file, and each POST to
+// geodata/update waits for `release` when one is held.
+async function offline(page: Page, loaded: Loaded, {hold = false} = {}) {
+  const {api, capabilities} = await backend(page);
+  const kinds = Object.keys(loaded) as (keyof Loaded)[];
+  Object.assign(capabilities.resources.geodata, {assets: kinds, can_update: kinds.length > 0});
+  const updates: string[] = [];
+  await page.route('**/api/v1/config/validate', route =>
+    route.fulfill({json: {valid: false, diagnostics: offlineRefusal, generation_id: 'g', validated_at: new Date().toISOString()}})
+  );
+  await page.route('**/api/v1/geodata', async route => {
+    const read = await api.geodata();
+    const assets = read.assets
+      .filter(asset => asset.kind in loaded)
+      .map(asset => (loaded[asset.kind as keyof Loaded] === 'empty' && !updates.length ? {...asset, size_bytes: '0'} : asset));
+    await route.fulfill({json: {...read, assets}});
+  });
+  let release = () => {};
+  const held = new Promise<void>(resolve => (release = resolve));
+  await page.route('**/api/v1/geodata/update', async route => {
+    updates.push(route.request().url());
+    if (hold) await held;
+    await route.fallback();
+  });
+  const dialog = page.getByRole('dialog');
+  const refuse = async () => {
+    await choose(page, 'Bypass mainland China');
+    await applyButton(page).click();
+    await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+    await expect(dialog.getByRole('alert')).toContainText('A file the configuration needs was not found.');
+  };
+  return {dialog, alert: dialog.getByRole('alert'), updates, release, refuse};
+}
+const download = (page: Page) => page.getByRole('dialog').getByRole('alert').getByRole('button', {name: 'Download geodata', exact: true});
+const updated = (page: Page) => page.locator('.rp-toast.positive', {hasText: 'Geodata updated and reloaded'});
+
+for (const [loaded, files] of [
+  [{geoip: 'ok'}, 'geosite.dat'],
+  [{}, 'geosite.dat, geoip.dat']
+] as const)
+  test(`a template needing geodata honk never loaded (${files}) names it and links to the install docs, without a download`, async ({page}) => {
+    const {alert, updates, refuse} = await offline(page, loaded);
+    await page.goto('/#/rules?tab=list&view=simple');
+    await refuse();
+    await expect(alert).toContainText(`Missing or unusable: ${files}.`);
+    const docs = alert.getByRole('link', {name: 'How to install geodata'});
+    await expect(docs).toHaveAttribute('href', /\/en\/troubleshooting\.html#offline-dependency$/);
+    await expect(download(page)).toHaveCount(0);
+    // The backend's words stay under Details for a bug report.
+    const backendWords = alert.getByText(offlineMessage, {exact: true});
+    await expect(backendWords).toBeHidden();
+    await alert.getByRole('button', {name: 'Details', exact: true}).click();
+    await expect(backendWords).toBeVisible();
+    expect(updates).toHaveLength(0);
+  });
+
+test('a loaded geodata file left empty is repaired in place, and Apply is offered again', async ({page}) => {
+  const {dialog, alert, updates, refuse} = await offline(page, {geosite: 'empty', geoip: 'ok'});
+  await page.goto('/#/rules?tab=list&view=simple');
+  await refuse();
+  await expect(alert).toContainText('Missing or unusable: geosite.dat.');
+  await expect(alert.getByRole('link')).toHaveCount(0);
+  await download(page).click();
+  await expect(updated(page)).toBeVisible();
+  expect(updates).toHaveLength(1);
+  // The errors described the write before the download, so the dialog offers Apply again without them.
+  await expect(alert).toHaveCount(0);
+  await expect(dialog.getByRole('button', {name: 'Apply', exact: true})).toBeEnabled();
+});
+
+test('a download finishing after the dialog was closed and opened again leaves the new refusal', async ({page}) => {
+  const {dialog, alert, release, refuse} = await offline(page, {geosite: 'empty', geoip: 'ok'}, {hold: true});
+  await page.goto('/#/rules?tab=list&view=simple');
+  await refuse();
+  await download(page).click();
+  await expect(download(page)).toHaveAttribute('data-pending');
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await applyButton(page).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(alert).toBeVisible();
+  release();
+  await expect(updated(page)).toBeVisible();
+  await expect(alert).toBeVisible();
+});
+
+test('a geodata update started in Settings shows the repair busy, and its result toasts once', async ({page}) => {
+  const {release, refuse, updates} = await offline(page, {geosite: 'empty', geoip: 'ok'}, {hold: true});
+  await page.goto('/#/settings');
+  await page.getByRole('region', {name: 'Geodata', exact: true}).getByRole('button', {name: 'Update now', exact: true}).click();
+  await expect.poll(() => updates.length).toBe(1);
+  await page.evaluate(() => (location.hash = '#/rules?tab=list&view=simple'));
+  await refuse();
+  await expect(download(page)).toHaveAttribute('data-pending');
+  release();
+  await expect(updated(page)).toHaveCount(1);
+  await expect(download(page)).not.toHaveAttribute('data-pending');
+  expect(updates).toHaveLength(1);
+});
 
 test('ads are off by default and switching them alone can be applied in both directions', async ({page}) => {
   const {main, write} = await backend(page);

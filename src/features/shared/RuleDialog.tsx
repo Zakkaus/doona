@@ -5,6 +5,7 @@ import AddCircle from '../../ui/icons/AddCircle';
 import {SearchSelect} from '../../ui/SearchSelect';
 import {Button, ErrorMessage, Form, InlineAlert, LabeledSelect, Link, ModalDialog, StaticField, Switch, Toolbar} from '../../ui/ui';
 import type {QuickRuleDialog} from './useQuickRule';
+import {BackendText} from './BackendText';
 
 export function QuickRuleButton({label, disabled, tip, onPress}: {label: string; disabled: boolean; tip?: string; onPress: () => void}) {
   return (
@@ -64,6 +65,7 @@ export function RuleDialog({dialog}: {dialog: QuickRuleDialog}) {
               {line}
             </span>
           ))}
+          <BackendText texts={dialog.failure?.backend} />
           <ErrorMessage error={dialog.loadError} onRetry={dialog.retry} />
           <span className="rp-label">{t('rule.holdHelp')}</span>
           {dialog.lists && <LabeledSelect isDisabled={dialog.busy} label={t('rule.list')} value={dialog.list} onChange={dialog.setList} items={dialog.lists} />}

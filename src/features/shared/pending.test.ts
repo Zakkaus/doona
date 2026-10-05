@@ -116,6 +116,17 @@ it('groups held rules by file and says so only when there is more than one', asy
   expect(pendingView([dns], 'request', null, sources, t)).toBeNull();
 });
 
+it('keeps the backend words an explained diagnostic leaves out, through a partial failure', async () => {
+  const {sources} = await createMockApi().config();
+  const raw = 'offline dependency /etc/dae/geosite.dat: No such file or directory';
+  const missing = {level: 'error' as const, source_id: 'src-main', line: null, column: null, span: null, code: 'missing-offline-dependency', message: raw};
+  const failure = ruleFailure(null, [missing], sources, t);
+  expect(failure.lines.join()).not.toContain(raw);
+  expect(failure.backend).toEqual([raw]);
+  expect(partialFailure(failure, 1, 1, t).backend).toEqual([raw]);
+  expect(ruleFailure(null, [{...missing, code: 'unknown-outbound'}], sources, t)).not.toHaveProperty('backend');
+});
+
 it('explains a refused write with its diagnostics, restart-only settings or the failure itself', async () => {
   const {sources} = await createMockApi().config();
   const diagnostic = {level: 'error' as const, source_id: 'src-main', line: 44, column: 3, span: null, code: 'unknown-outbound', message: 'no group nope'};
