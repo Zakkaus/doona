@@ -3,6 +3,9 @@ import type {SwatchColours, SwatchProps} from '../ui/Swatch';
 import type {PaletteId} from './palettes';
 import type {PaletteSection} from './view';
 
+// The Settings picker preloads Glass's stylesheet when a Glass box is pointed at or focused, as the palette menus do.
+export {preloadGlass} from './useAppearance';
+
 // Each palette's light and dark variant as the pickers draw them, each one string of --rp-base, --rp-surface, --rp-text,
 // --rp-accent and --rp-positive. The settings spec checks every entry against the computed tokens. Glass draws these
 // over its wallpaper.

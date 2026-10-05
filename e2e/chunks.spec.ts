@@ -220,6 +220,98 @@ test('a signed-in start requests the frame before the shell can render', async (
   await expect(page.locator("[data-profile='metrics']")).toBeVisible();
 });
 
+// Only the Glass palettes load Glass's stylesheet and wallpaper chunk: the stylesheet before the first paint when one is
+// stored, and both before it applies when one is picked, so the look changes in one step.
+test('only a Glass palette loads Glass, before its look shows', async ({page}) => {
+  const glass: string[] = [];
+  page.on('request', request => {
+    if (/\/assets\/glass-[\w-]{8}\.(js|css)$/.test(new URL(request.url()).pathname)) glass.push(request.url());
+  });
+  const wall = () => page.evaluate(() => getComputedStyle(document.body, '::before').backgroundImage);
+  await page.goto('/#/settings');
+  await expect(page.locator('#settings-backend')).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  expect(glass).toEqual([]);
+  expect(await wall()).toBe('none');
+
+  // The wallpaper as it stood when the root took the Glass family.
+  await page.evaluate(() => {
+    new MutationObserver((_, observer) => {
+      if (document.documentElement.dataset.family !== 'glass') return;
+      observer.disconnect();
+      document.documentElement.dataset.switchedWall = getComputedStyle(document.body, '::before').backgroundImage;
+    }).observe(document.documentElement, {attributeFilter: ['data-family']});
+  });
+  const card = page.getByRole('region', {name: 'Appearance', exact: true});
+  await card.getByRole('listbox', {name: 'Palette'}).getByRole('option', {name: 'Glass Frosted'}).click();
+  await expect(page.locator('html')).toHaveAttribute('data-flavour', 'frosted');
+  await expect(page.locator('html')).toHaveAttribute('data-switched-wall', /radial-gradient/);
+  expect(glass.map(url => url.split('.').pop()).sort()).toEqual(['css', 'js']);
+
+  glass.length = 0;
+  await page.addInitScript(() => {
+    new MutationObserver((_, observer) => {
+      if (!document.querySelector('.rp-top')) return;
+      observer.disconnect();
+      document.documentElement.dataset.firstWall = getComputedStyle(document.body, '::before').backgroundImage;
+    }).observe(document, {childList: true, subtree: true});
+  });
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-first-wall', /radial-gradient/);
+  expect(glass.map(url => url.split('.').pop()).sort()).toEqual(['css', 'js']);
+});
+
+// While Glass loads, its pick shows selected and the page keeps its palette, so picking that palette again is a change,
+// and it wins over the Glass still loading.
+type PalettePicker = (page: Page) => Record<'glass' | 'moon' | 'shown', () => Promise<void>>;
+const palettePickers: Record<string, PalettePicker> = {
+  Settings: page => {
+    const options = page.getByRole('region', {name: 'Appearance', exact: true}).getByRole('listbox', {name: 'Palette'});
+    return {
+      glass: () => options.getByRole('option', {name: 'Glass Frosted'}).click(),
+      moon: () => options.getByRole('option', {name: 'Rosé Pine Moon'}).click(),
+      shown: () => expect(options.getByRole('option', {name: 'Glass Frosted'})).toHaveAttribute('aria-selected', 'true')
+    };
+  },
+  'the top bar': page => {
+    const item = (name: RegExp) => page.getByRole('menuitemradio', {name});
+    const open = () => page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true}).click();
+    return {
+      glass: () => open().then(() => item(/^Frosted/).click()),
+      moon: () => open().then(() => item(/^Moon/).click()),
+      shown: () =>
+        open()
+          .then(() => expect(item(/^Frosted/)).toHaveAttribute('aria-checked', 'true'))
+          .then(() => page.keyboard.press('Escape'))
+    };
+  }
+};
+for (const [where, picker] of Object.entries(palettePickers)) {
+  test(`a palette picked again in ${where} while Glass loads stays applied`, async ({page}) => {
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => (release = resolve));
+    await page.route('**/assets/glass-*.{js,css}', async route => {
+      await gate;
+      await route.continue();
+    });
+    await page.goto('/#/settings');
+    await expect(page.locator('#settings-backend')).toBeVisible();
+    const html = page.locator('html');
+    await expect(html).toHaveAttribute('data-flavour', 'moon');
+    const pick = picker(page);
+    await pick.glass();
+    await pick.shown();
+    await expect(html).toHaveAttribute('data-family', 'rose-pine');
+    await pick.moon();
+    release();
+    await page.waitForFunction(() => document.querySelector<HTMLLinkElement>('link[data-glass]')?.sheet);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    expect(await html.getAttribute('data-family')).toBe('rose-pine');
+    expect(await html.getAttribute('data-flavour')).toBe('moon');
+    expect(await page.evaluate(() => localStorage.getItem('doona-palette'))).toBe('rose-pine/moon');
+  });
+}
+
 test('a frame chunk that fails to load says so with Reload, and the reload recovers once it loads', async ({page}) => {
   expectLoadFailures(page, /\/assets\/activity-[\w-]{8}\.js$/);
   const frame = '**/assets/activity-*.js';

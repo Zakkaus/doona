@@ -2,7 +2,7 @@ import {afterEach, expect, it, vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToString} from 'react-dom/server';
 import {readSettings, type Scheme} from './preferences';
-import {useAppearance} from './useAppearance';
+import {loadGlass, useAppearance} from './useAppearance';
 
 const media = vi.hoisted(() => ({dark: false}));
 vi.mock('../ui/hooks', () => ({useMediaQuery: () => media.dark, withCrossfade: (change: () => void) => change()}));
@@ -39,4 +39,28 @@ it.each([
   expect(appearance.dark).toBe(!systemDark);
   appearance.toggle();
   expect(readSettings(storage).scheme).toBe('system');
+});
+
+// A Glass palette waits for its stylesheet; a palette picked meanwhile wins.
+vi.mock('./glass', () => ({linkStylesheet: () => Promise.resolve()}));
+it('applies a Glass palette once its stylesheet loads, unless another palette was picked meanwhile', async () => {
+  const stored = new Map<string, string>();
+  const storage = {getItem: (key: string) => stored.get(key) ?? null, setItem: (key: string, value: string) => stored.set(key, value), removeItem: vi.fn()};
+  vi.stubGlobal('localStorage', storage);
+  let appearance!: ReturnType<typeof useAppearance>;
+  function Probe() {
+    appearance = useAppearance(readSettings(storage));
+    return null;
+  }
+  const render = () => renderToString(createElement(Probe));
+  render();
+  appearance.pickPalette('glass/frosted');
+  appearance.pickPalette('nord/nord');
+  await loadGlass();
+  render();
+  expect(appearance.palette).toBe('nord/nord');
+  expect(readSettings(storage).palette).toBe('nord/nord');
+  appearance.pickPalette('glass/tinted');
+  render();
+  expect(appearance.palette).toBe('glass/tinted');
 });

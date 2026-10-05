@@ -1,4 +1,4 @@
-import {useCallback, useLayoutEffect, useMemo, useState} from 'react';
+import {useCallback, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {
   updateFlagOverride,
   writeSetting,
@@ -13,6 +13,7 @@ import {
 import {useMediaQuery, withCrossfade} from '../ui/hooks';
 import type {RoutePath} from './routes';
 import {setDateFormat, setTimeFormat} from '../i18n/format';
+import {isChunkLoadError, reloadForStaleChunk} from '../ui/staleChunk';
 
 // The scroll edge of Glass and Clear shows while the root carries data-scrolled. The attribute changes only when the page leaves or
 // returns to the top, so the passive listener costs one comparison per scroll event.
@@ -24,6 +25,25 @@ function watchScroll() {
   addEventListener('scroll', update, {passive: true});
   update();
 }
+
+// Glass's stylesheet and wallpaper load only for the Glass palettes (glass.ts); a failed load is tried again next time.
+let glass: Promise<void> | undefined;
+let glassLoaded = false;
+export function loadGlass(): Promise<void> {
+  glass ??= import('./glass')
+    .then(module => module.linkStylesheet())
+    .then(
+      () => {
+        glassLoaded = true;
+      },
+      error => {
+        glass = undefined;
+        throw error;
+      }
+    );
+  return glass;
+}
+export const preloadGlass = () => void loadGlass().catch(() => undefined);
 
 export function applyAppearance(dark: boolean, palette: PaletteId, wordmark: Wordmark, blur: number) {
   const [family, flavour] = palette.split('/');
@@ -64,10 +84,31 @@ export function useAppearance(stored: Settings) {
   }, []);
   // A system preference toggles to its opposite; an override toggles back to system.
   const toggle = useCallback(() => pickScheme(scheme === 'system' ? (sysDark ? 'light' : 'dark') : 'system'), [pickScheme, scheme, sysDark]);
+  // A Glass palette applies once its stylesheet has loaded, so the page changes in one step, and only if no other
+  // palette was picked meanwhile. The pickers show it selected while it loads, so picking the current palette again is a
+  // change that wins. A tab left from an older build reloads into the palette instead.
+  const picked = useRef(stored.palette);
+  const [pending, setPending] = useState<PaletteId>();
   const pickPalette = useCallback((next: PaletteId) => {
-    withCrossfade(() => setPalette(next));
-    writeSetting('palette', next);
+    picked.current = next;
+    const apply = () => {
+      if (picked.current !== next) return;
+      withCrossfade(() => {
+        setPending(undefined);
+        setPalette(next);
+      });
+      writeSetting('palette', next);
+    };
+    if (!next.startsWith('glass/') || glassLoaded) return apply();
+    setPending(next);
+    loadGlass().then(apply, error => {
+      if (picked.current !== next) return;
+      if (!isChunkLoadError(error)) return setPending(undefined);
+      writeSetting('palette', next);
+      reloadForStaleChunk();
+    });
   }, []);
+  const shownPalette = pending ?? palette;
   const pickBlur = useCallback((next: number) => {
     setBlur(next);
     writeSetting('blur', String(next));
@@ -123,6 +164,7 @@ export function useAppearance(stored: Settings) {
       toggle,
       pickScheme,
       palette,
+      shownPalette,
       pickPalette,
       blur,
       pickBlur,
@@ -151,6 +193,7 @@ export function useAppearance(stored: Settings) {
       toggle,
       pickScheme,
       palette,
+      shownPalette,
       pickPalette,
       blur,
       pickBlur,

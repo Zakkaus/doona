@@ -17,7 +17,7 @@ import {
   Form
 } from '../../ui/ui';
 import {SelectBoxGroup} from '../../ui/SelectBoxGroup';
-import {swatchSections} from '../../shell/swatches';
+import {preloadGlass, swatchSections} from '../../shell/swatches';
 import {BlurSetting, WallpaperSettings} from './WallpaperSettings';
 import type {DateFormat, PaletteId, Scheme, TimeFormat, ToastPlacement, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
@@ -31,6 +31,10 @@ import {openShortcuts} from '../../shell/shortcuts';
 import type {PageProps, RoutePath} from '../../shell/routes';
 import {settingsCard, settingsCards, type SettingsCardId} from './nav';
 
+// A Glass palette applies once its stylesheet loads, so pointing at or focusing one of its boxes starts the load.
+const glassIntent = (event: React.SyntheticEvent) => {
+  if (event.target instanceof Element && event.target.closest('[data-key^="glass/"]')) preloadGlass();
+};
 const cards = {backend: settingsCard('backend'), appearance: settingsCard('appearance'), about: settingsCard('about')};
 
 export function Settings({query}: PageProps) {
@@ -273,13 +277,13 @@ export function Settings({query}: PageProps) {
             />
           </div>
         </Toolbar>
-        <div data-setting="palette">
+        <div data-setting="palette" onPointerOver={glassIntent} onFocus={glassIntent}>
           <SelectBoxGroup
             label={t('ui.palette')}
             sections={swatchSections(paletteSections, t)}
-            value={ap.palette}
+            value={ap.shownPalette}
             onChange={value => ap.pickPalette(value as PaletteId)}
-            help={ap.palette === 'glass/glass' ? t('palette.glassNote') : undefined}
+            help={ap.shownPalette === 'glass/glass' ? t('palette.glassNote') : undefined}
           />
         </div>
         {ap.palette.startsWith('glass/') && <WallpaperSettings />}
