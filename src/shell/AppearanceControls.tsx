@@ -4,7 +4,7 @@ import Contrast from '../ui/icons/Contrast';
 import Lighten from '../ui/icons/Lighten';
 import Translate from '../ui/icons/Translate';
 import {useT, type Lang} from '../i18n';
-import {Button, ChoiceMenu} from '../ui/ui';
+import {Button, ChoiceMenu, type ChoiceAction} from '../ui/ui';
 import type {PaletteId, SettingsContext} from './preferences';
 import {preloadGlass} from './useAppearance';
 import {languageItems, type PaletteSection} from './view';
@@ -57,14 +57,15 @@ export function usePaletteChoices({ap, paletteSections}: PaletteMenuProps) {
   };
 }
 
-export function PaletteMenu(props: PaletteMenuProps) {
+// `more` is a closing row that opens the rest of the appearance settings; the sign-in page has none to open.
+export function PaletteMenu({more, ...props}: PaletteMenuProps & {more?: ChoiceAction}) {
   const t = useT();
   const {palettes} = usePaletteChoices(props);
   const palette = props.ap.palette;
   // The icon turns in when the palette changes, like the scheme icon; not on first paint.
   const [first] = useState(palette);
   return (
-    <ChoiceMenu quiet chevron={false} label={t('ui.palette')} sections={palettes} onIntent={preloadPalettes}>
+    <ChoiceMenu quiet chevron={false} label={t('ui.palette')} sections={palettes} actions={more && [more]} onIntent={preloadPalettes}>
       <Color key={palette} className={palette !== first ? 'rp-icon-in' : undefined} />
     </ChoiceMenu>
   );

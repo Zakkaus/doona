@@ -415,8 +415,24 @@ test('every swatch matches the tokens it stands for, in both schemes', async ({p
   expect(drawn).toEqual(palettes.map(({id}) => ({look: id === 'glass/glass' ? 'lens' : id.startsWith('glass/') ? 'glass' : null, halves: [...swatches[id]!]})));
 });
 
+test('the top bar palette menu ends with a row that opens the Appearance tab', async ({page}) => {
+  await page.goto('/#/activity');
+  await page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true}).click();
+  await page.getByRole('menuitem', {name: 'Appearance settings'}).click();
+  await expect(page).toHaveURL(/#\/settings\?tab=appearance$/);
+  await expect(page.getByRole('tab', {name: 'Appearance', exact: true})).toHaveAttribute('aria-selected', 'true');
+});
+
 test.describe('on a phone', () => {
   test.use({viewport: {width: 390, height: 844}});
+  test('the palette list in the overflow menu ends with a row that opens the Appearance tab', async ({page}) => {
+    await page.goto('/#/activity');
+    await page.locator('.rp-top').getByRole('button', {name: 'More options'}).click();
+    await page.getByRole('menuitem', {name: 'Palette'}).click();
+    await page.getByRole('menuitem', {name: 'Appearance settings'}).click();
+    await expect(page).toHaveURL(/#\/settings\?tab=appearance$/);
+    await expect(page.getByRole('tab', {name: 'Appearance', exact: true})).toHaveAttribute('aria-selected', 'true');
+  });
   test('the Settings palette boxes sit in two columns without scrolling sideways', async ({page}) => {
     await page.goto('/#/settings');
     await paletteBoxes(page);

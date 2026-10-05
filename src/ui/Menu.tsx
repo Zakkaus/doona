@@ -427,7 +427,7 @@ export function ChoiceMenu({
         submenus?: never;
       })
     | (NoActions & {items: Items; onAction: (key: string) => void; selectionMode?: never; value?: never; onChange?: never; sections?: never; submenus?: never})
-    | (NotFlat & NoActions & {sections: ChoiceSection[] | (() => ChoiceSection[]); onAction?: (key: string) => void; submenus?: never})
+    | (NotFlat & {sections: ChoiceSection[] | (() => ChoiceSection[]); actions?: ChoiceAction[]; onAction?: (key: string) => void; submenus?: never})
     | (NotFlat & {submenus: SubmenuEntries | (() => SubmenuEntries); actions?: ChoiceAction[]; onAction?: never; sections?: never})
   )) {
   // A list read only once the menu opens is not counted ahead; its search loads when it first opens long.
@@ -445,7 +445,7 @@ export function ChoiceMenu({
         submenus ? (
           <SubmenuMenu label={props.label} submenus={submenus} actions={actions} />
         ) : sections ? (
-          <SectionMenu label={props.label} sections={sections} onAction={onAction} searchLabel={searchLabel} />
+          <SectionMenu label={props.label} sections={sections} onAction={onAction} searchLabel={searchLabel} actions={actions} />
         ) : (
           <FlatMenu
             label={props.label}

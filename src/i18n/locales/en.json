@@ -1954,6 +1954,7 @@
   "ui.all": "All",
   "ui.allCount": "All {n}",
   "ui.apiVersion": "{name} v{major} ({status})",
+  "ui.appearanceSettings": "Appearance settings",
   "ui.aside": "{text} ({note})",
   "ui.back": "Back",
   "ui.backend.activationUnconfirmed": "The backend could not confirm whether the configuration is active",
