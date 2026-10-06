@@ -242,6 +242,10 @@
   backdrop-filter: var(--rp-card-filter);
   box-shadow: none;
 }
+/* Page-flow tables can be thousands of pixels tall; keep their blur without processing an SVG lens over the full surface. */
+:root[data-family='glass'] .rp-table[data-flow] {
+  backdrop-filter: var(--rp-flow-table-filter, var(--rp-card-filter));
+}
 /* Inside a card or a floating layer the material is already there, so a table takes no second blur or fill. A tile
    inside a card or the floating panel, such as a chart's figures, sits on that glass too; menus and dialogs keep a
    tile's fill to group their sections. */
