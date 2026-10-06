@@ -46,7 +46,9 @@
 
 统计标签页显示解析时间的中位数与 P95、缓存命中率、失败率、各上游在延迟刻度上的查询分布，以及查询的结果分类。缓存和解析记录各行的新建规则图标用于该行域名。后端提供 DNS 规则时，图标打开 DNS 请求规则编辑器；否则打开路由规则编辑器。保存须有可写的配置来源。默认条件精确匹配域名；要包含子域名，须选择后缀条件。
 
-查询标签页的自动选项遵循 `dns.routing`；配置可读时，也可选择 `dns.upstream` 中定义的上游。后端支持删除时，缓存标签页可按全名、后缀、关键词或正则表达式、记录类型，或两者的组合删除记录，确认前会显示匹配数量。
+查询标签页的自动选项遵循 `dns.routing`；配置可读时，也可选择 `dns.upstream` 中定义的上游。缓存标签页可按全名、后缀、关键词或正则表达式、记录类型，或两者的组合筛选条目，不要求后端支持删除。后端支持删除时，可在确认后删除匹配的条目。
+
+关键词匹配域名中任意位置的文字，例如 `cdn` 会匹配 `cdn.example.com`。后缀 `cdn` 只匹配 `cdn` 或以 `.cdn` 结尾的域名。选择记录类型可进一步缩小结果范围。清除筛选会重置匹配条件，并移除页面网址中的域名筛选条件。
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/zh-CN/dns.webp" alt="DNS 页的统计标签页" width="100%">
 
@@ -71,6 +73,8 @@
 ### 配置与设置
 
 配置页显示当前生效的配置版本。模块标签页为每个配置块显示一行摘要，并链接到管理该配置块的页面。后端支持时，全局设置编辑引擎的持久设置；配置文件标签页编辑选中的可写来源，并导出显示的内容，导出文件可能包含凭据。若写入涉及必须重启才能生效的设置，则整次写入被拒绝；提示会列出设置，并提供重启命令和安装指南链接。
+
+honk 的保存订阅内容（`global.store_subscribe`）将成功获取并通过检查的订阅内容保存到 `<data_dir>/state/honk.db` 的 `subscription_body` 表，默认路径为 `/var/lib/honk/state/honk.db`。更改这项设置须重启 honk；订阅的 `cache: false` 会禁用其内容保存与恢复。独立的 `.sub` 文件属于旧版存储格式，启动时的迁移规则见[固定版本的 honk 参考文档](https://github.com/Glassyiris/honk/blob/a949f1f1ff7e8e8852e76e02b60870e6bb1fd440/doc/en/reference/subscription.md#fetch-persistence-and-recovery)。
 
 ![配置文件与来源编辑器](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/config-source-light.webp)
 

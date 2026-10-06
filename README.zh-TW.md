@@ -20,7 +20,7 @@ doona 是 daeuniverse 引擎共用原生 API 的靜態 Web 介面，顯示引擎
 
 ![活動頁](https://zakkaus.github.io/doona-docs/screenshots/zh-TW/activity-light.webp)
 
-[beta.15 更新記錄](CHANGELOG.md)列出 6 項新增、23 項變更與 21 項修正，包括四種 Glass 配色、外觀設定，以及即時事件表格的記憶體洩漏修正。
+[beta.16 更新記錄](CHANGELOG.md)列出 1 項變更、8 項修正與 1 項套件維護。事件與日誌表格在捲動時保留閱讀位置，Liquid Glass 表格保留模糊但省略折射；小工具編輯器修正圖庫捲軸與預覽縮放，DNS 快取篩選也會更新表格。Glass 按鈕顯示選取狀態，空表格沿用相同材質。登入與管理員建立遭拒時保留後端請求 ID，不再將原因誤判為用戶端網路位址。
 
 ![組態檔與可編輯的原始文字檢視](https://zakkaus.github.io/doona-docs/screenshots/zh-TW/config-source-light.webp)
 

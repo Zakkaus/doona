@@ -46,7 +46,9 @@
 
 統計分頁顯示解析時間的中位數與 P95、快取命中率、失敗率、各上游在延遲刻度上的查詢分布，以及查詢的結果分類。快取與解析記錄各列的新增規則圖示用於該列網域。後端提供 DNS 規則時，圖示開啟 DNS 請求規則編輯器；否則開啟路由規則編輯器。儲存須有可寫入的組態來源。預設條件精確比對網域；要包含子網域，須選擇後綴條件。
 
-查詢分頁的自動選項遵循 `dns.routing`；組態可讀取時，也可選擇 `dns.upstream` 中定義的上游。後端支援刪除時，快取分頁可依全名、後綴、關鍵字或正規表示式、記錄類型，或兩者的組合刪除記錄，確認前會顯示符合條件的數量。
+查詢分頁的自動選項遵循 `dns.routing`；組態可讀取時，也可選擇 `dns.upstream` 中定義的上游。快取分頁可依全名、後綴、關鍵字或正規表示式、記錄類型，或兩者的組合篩選項目，不要求後端支援刪除。後端支援刪除時，可在確認後刪除符合條件的項目。
+
+關鍵字會比對網域名稱中任意位置的文字，例如 `cdn` 會比對到 `cdn.example.com`。後綴 `cdn` 只比對 `cdn` 或以 `.cdn` 結尾的網域。選擇記錄類型可進一步縮小結果範圍。清除篩選會重設比對條件，並移除頁面網址中的網域篩選條件。
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/zh-TW/dns.webp" alt="DNS 頁的統計分頁" width="100%">
 
@@ -71,6 +73,8 @@
 ### 組態與設定
 
 組態頁顯示目前生效的組態版本。模組分頁為每個組態區塊顯示一行摘要，並連結到管理該區塊的頁面。後端支援時，全域設定編輯引擎的持久設定；設定檔分頁編輯選取的可寫入來源，並匯出顯示的內容，匯出檔案可能包含憑證。若寫入涉及必須重新啟動才能生效的設定，則整次寫入遭拒；提示會列出設定，並提供重新啟動指令及安裝指南連結。
+
+honk 的儲存訂閱內容（`global.store_subscribe`）將成功取得並通過檢查的訂閱內容儲存到 `<data_dir>/state/honk.db` 的 `subscription_body` 表，預設路徑為 `/var/lib/honk/state/honk.db`。變更這項設定須重新啟動 honk；訂閱的 `cache: false` 會停用其內容儲存與還原。獨立的 `.sub` 檔案屬於舊版儲存格式，啟動時的遷移規則見[固定版本的 honk 參考文件](https://github.com/Glassyiris/honk/blob/a949f1f1ff7e8e8852e76e02b60870e6bb1fd440/doc/en/reference/subscription.md#fetch-persistence-and-recovery)。
 
 ![設定檔與來源編輯器](https://zakkaus.github.io/doona-docs/screenshots/zh-TW/config-source-light.webp)
 

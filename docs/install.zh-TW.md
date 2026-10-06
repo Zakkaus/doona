@@ -12,11 +12,30 @@ doona 需要 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 將 `doona-<version>.tar.gz` 解壓縮到 honk `native_api` 組態區塊中 `ui` 指定的目錄，honk 即在 `/ui/` 提供 doona。選用封存檔也解壓縮到同一目錄。
 
+### 透過網域名稱存取
+
+透過 `http://owrt.lan:9527/ui/` 存取時，將以下兩個值加入現有 `experimental` → `native_api` 組態區塊的允許清單。這是組態片段，不可用它取代完整組態；保留清單中的其他值，以及現有的 `listen`、`secret`、`password_auth` 和 `ui` 設定。
+
+```dae
+experimental {
+    native_api {
+        allowed_hosts: 'owrt.lan:9527'
+        allow_origins: 'http://owrt.lan:9527'
+    }
+}
+```
+
+`allowed_hosts` 允許請求的 `Host`，值為網域名稱和連接埠，不含協定或路徑；它不會自動允許 `Origin`。`allow_origins` 允許 HTTP 來源，值包含協定、網域名稱和連接埠，不含 `/ui/`、其他路徑或末尾的斜線。填寫多個值時，每個值分別加上引號，以逗號分隔；不要使用 JSON 方括號，也不要把整個清單放在同一對引號內。
+
+HTML 可以開啟，但 JavaScript 或 CSS 請求回傳 403 時，在瀏覽器的網路面板查看這些請求。核對 `Host`、`Origin` 及其連接埠是否符合上述設定。修改後須重新啟動 honk，僅重新載入組態不足以生效。然後重新載入頁面，檢查原先失敗的請求是否成功。
+
+建立管理員另有限制：honk 檢查實際連線來源是否為本機、私有網路或鏈路本地位址。Host 和 Origin 允許清單不會改變這項限制。
+
 [文件](https://zakkaus.github.io/doona-docs/zh-TW/)涵蓋系統需求、honk 與 doona 的安裝、範例組態、首次登入、逐項檢查功能與疑難排解。
 
 ## 發布檔案
 
-每次發布有 38 個檔案。大多數使用者只需兩個：適用於自己系統的程式檔案與 `SHA256SUMS`。下列為 v0.1.0-beta.15 的檔名，其他版本依相同的[命名方式](../install/README.md#version-spellings)。
+每次發布有 38 個檔案。大多數使用者只需兩個：適用於自己系統的程式檔案與 `SHA256SUMS`。下列為 v0.1.0-beta.16 的檔名，其他版本依相同的[命名方式](../install/README.md#version-spellings)。
 
 ### 程式
 
@@ -24,25 +43,25 @@ doona 需要 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api
 
 | 檔案                                  | 內容                                 | 適用系統或方式                  |
 | ------------------------------------- | ------------------------------------ | ------------------------------- |
-| `doona-0.1.0-beta.15.tar.gz`          | 建置好的 UI 與授權條款，不含安裝程式 | 手動安裝，由任一 Web 伺服器提供 |
-| `doona-web_0.1.0-beta.15-1_all.deb`   | Debian 套件                          | Debian 或 Ubuntu                |
-| `doona-0.1.0-beta.15-1.noarch.rpm`    | RPM 套件                             | Fedora 或 openSUSE              |
-| `doona-0.1.0beta15-1-any.pkg.tar.zst` | pacman 套件                          | Arch Linux                      |
-| `doona_0.1.0-beta.15-1_all.ipk`       | opkg 套件                            | OpenWrt 24.10 及更早版本        |
-| `doona-0.1.0_beta15-r1.apk`           | apk-tools 3 套件                     | OpenWrt 25.12                   |
-| `doona-0.1.0-beta.15-r0.alpine.apk`   | Alpine 套件                          | Alpine Linux                    |
+| `doona-0.1.0-beta.16.tar.gz`          | 建置好的 UI 與授權條款，不含安裝程式 | 手動安裝，由任一 Web 伺服器提供 |
+| `doona-web_0.1.0-beta.16-1_all.deb`   | Debian 套件                          | Debian 或 Ubuntu                |
+| `doona-0.1.0-beta.16-1.noarch.rpm`    | RPM 套件                             | Fedora 或 openSUSE              |
+| `doona-0.1.0beta16-1-any.pkg.tar.zst` | pacman 套件                          | Arch Linux                      |
+| `doona_0.1.0-beta.16-1_all.ipk`       | opkg 套件                            | OpenWrt 24.10 及更早版本        |
+| `doona-0.1.0_beta16-r1.apk`           | apk-tools 3 套件                     | OpenWrt 25.12                   |
+| `doona-0.1.0-beta.16-r0.alpine.apk`   | Alpine 套件                          | Alpine Linux                    |
 
 Debian 與 Ubuntu 內建一個無關的 `doona` 套件，因此 deb 名稱為 `doona-web`，安裝至 `/usr/share/doona-web`；請將 honk 的 `ui` 設為該路徑。其他套件格式保留 `doona` 名稱，安裝至 `/usr/share/doona`。Alpine 與 OpenWrt 的 apk 檔案不能混用。
 
 ### 選用附加套件
 
-每個附加套件都提供與程式相同的格式，名稱包含 `fonts` 或 `precompressed`，例如 `doona-fonts-0.1.0-beta.15.tar.gz`、`doona-web-fonts_0.1.0-beta.15-1_all.deb`、`doona-fonts_0.1.0-beta.15-1_all.ipk` 等。請安裝與程式相同格式、相同版本的附加套件。
+每個附加套件都提供與程式相同的格式，名稱包含 `fonts` 或 `precompressed`，例如 `doona-fonts-0.1.0-beta.16.tar.gz`、`doona-web-fonts_0.1.0-beta.16-1_all.deb`、`doona-fonts_0.1.0-beta.16-1_all.ipk` 等。請安裝與程式相同格式、相同版本的附加套件。
 
 | 名稱部分        | 新增的內容                                                                       | 何時安裝                                                   |
 | --------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | `fonts`         | Noto Sans TC 與 SC，約 8 MB                                                      | 要使用內建中文字型而非系統字型時。詳見[字型說明](fonts.md) |
 | `precompressed` | 文字資源的 `.br` 與 `.gz` 壓縮副本，約 1.6 MB                                    | 伺服器與桌面系統；路由器上選用                             |
-| `doc`（Alpine） | `doona-doc-0.1.0-beta.15-r0.alpine.apk`：NOTICE 檔案，依 Alpine 套件慣例單獨拆分 | 很少需要                                                   |
+| `doc`（Alpine） | `doona-doc-0.1.0-beta.16-r0.alpine.apk`：NOTICE 檔案，依 Alpine 套件慣例單獨拆分 | 很少需要                                                   |
 
 Precompressed 意為預先壓縮。瀏覽器接受壓縮內容時，honk 或 Web 伺服器傳送 `.br` 或 `.gz` 副本，無須在每次請求時重新壓縮，因此伺服器不必花 CPU 壓縮，在較慢的網路上頁面載入更快。壓縮副本針對至少 1 KiB 的文字資源，以 `brotli -q 11` 與 `gzip -9 -n` 產生，僅保留小於原始檔案的副本。手動安裝時，將封存檔解壓縮到存放 doona 檔案的目錄。
 

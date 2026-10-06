@@ -12,11 +12,30 @@ doona needs honk's native API, which only the `debug` release of [Glassyiris/hon
 
 Extract `doona-<version>.tar.gz` into the directory that honk's `native_api` block names in `ui`, and honk serves doona at `/ui/`. Extract optional archives into the same directory.
 
+### Access through a hostname
+
+For `http://owrt.lan:9527/ui/`, add the following entries to the allowlists in your existing `experimental` → `native_api` block. This is an excerpt, not a replacement configuration: retain other list entries and the existing `listen`, `secret`, `password_auth` and `ui` settings.
+
+```dae
+experimental {
+    native_api {
+        allowed_hosts: 'owrt.lan:9527'
+        allow_origins: 'http://owrt.lan:9527'
+    }
+}
+```
+
+`allowed_hosts` permits the request's `Host`: hostname and port, without a scheme or path. It does not automatically permit an `Origin`. `allow_origins` permits an HTTP origin: scheme, hostname and port, without `/ui/`, another path or a trailing slash. For multiple entries, quote each value separately and separate them with commas; do not use JSON brackets or quote the entire list.
+
+If the HTML opens but JavaScript or CSS requests return 403, inspect those requests in the browser's Network panel. Compare `Host` and `Origin`, including their ports, with these settings. Restart honk after changing them; a configuration reload is insufficient. Reload the page and check that the failed requests succeed.
+
+Administrator creation has a separate restriction: honk checks the actual connection peer for a loopback, private or link-local address. The Host and Origin allowlists do not change that restriction.
+
 The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the requirements, installing honk and doona, an example configuration, the first sign-in, checking each feature and troubleshooting.
 
 ## Release files
 
-A release has 38 files. Most people need two: the program file for their system and `SHA256SUMS`. The names below are for v0.1.0-beta.15; other versions follow the same [spellings](../install/README.md#version-spellings).
+A release has 38 files. Most people need two: the program file for their system and `SHA256SUMS`. The names below are for v0.1.0-beta.16; other versions follow the same [spellings](../install/README.md#version-spellings).
 
 ### Program
 
@@ -24,25 +43,25 @@ Choose one, for a manual install or for your system's package manager.
 
 | File                                  | What it is                              | Choose for                              |
 | ------------------------------------- | --------------------------------------- | --------------------------------------- |
-| `doona-0.1.0-beta.15.tar.gz`          | The built UI and licences, no installer | Manual installation with any web server |
-| `doona-web_0.1.0-beta.15-1_all.deb`   | Debian package                          | Debian or Ubuntu                        |
-| `doona-0.1.0-beta.15-1.noarch.rpm`    | RPM package                             | Fedora or openSUSE                      |
-| `doona-0.1.0beta15-1-any.pkg.tar.zst` | pacman package                          | Arch Linux                              |
-| `doona_0.1.0-beta.15-1_all.ipk`       | opkg package                            | OpenWrt 24.10 and earlier               |
-| `doona-0.1.0_beta15-r1.apk`           | apk-tools 3 package                     | OpenWrt 25.12                           |
-| `doona-0.1.0-beta.15-r0.alpine.apk`   | Alpine package                          | Alpine Linux                            |
+| `doona-0.1.0-beta.16.tar.gz`          | The built UI and licences, no installer | Manual installation with any web server |
+| `doona-web_0.1.0-beta.16-1_all.deb`   | Debian package                          | Debian or Ubuntu                        |
+| `doona-0.1.0-beta.16-1.noarch.rpm`    | RPM package                             | Fedora or openSUSE                      |
+| `doona-0.1.0beta16-1-any.pkg.tar.zst` | pacman package                          | Arch Linux                              |
+| `doona_0.1.0-beta.16-1_all.ipk`       | opkg package                            | OpenWrt 24.10 and earlier               |
+| `doona-0.1.0_beta16-r1.apk`           | apk-tools 3 package                     | OpenWrt 25.12                           |
+| `doona-0.1.0-beta.16-r0.alpine.apk`   | Alpine package                          | Alpine Linux                            |
 
 Debian and Ubuntu ship an unrelated `doona` package, so their deb is named `doona-web` and installs into `/usr/share/doona-web`; set honk's `ui` to that path. The other package formats keep the name `doona` and install into `/usr/share/doona`. Alpine and OpenWrt apk files are not interchangeable.
 
 ### Optional add-ons
 
-Each add-on comes in the same formats as the program, with `fonts` or `precompressed` in its name: `doona-fonts-0.1.0-beta.15.tar.gz`, `doona-web-fonts_0.1.0-beta.15-1_all.deb`, `doona-fonts_0.1.0-beta.15-1_all.ipk` and so on. Install the add-on in the same format and version as the program.
+Each add-on comes in the same formats as the program, with `fonts` or `precompressed` in its name: `doona-fonts-0.1.0-beta.16.tar.gz`, `doona-web-fonts_0.1.0-beta.16-1_all.deb`, `doona-fonts_0.1.0-beta.16-1_all.ipk` and so on. Install the add-on in the same format and version as the program.
 
 | Name part       | What it adds                                                                              | When to install                                                                   |
 | --------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `fonts`         | Noto Sans TC and SC, about 8 MB                                                           | You want the bundled Chinese fonts instead of the system's. See [Fonts](fonts.md) |
 | `precompressed` | `.br` and `.gz` copies of the text assets, about 1.6 MB                                   | Servers and desktops; optional on a router                                        |
-| `doc` (Alpine)  | `doona-doc-0.1.0-beta.15-r0.alpine.apk`: the NOTICE file, split off as Alpine packages do | Rarely needed                                                                     |
+| `doc` (Alpine)  | `doona-doc-0.1.0-beta.16-r0.alpine.apk`: the NOTICE file, split off as Alpine packages do | Rarely needed                                                                     |
 
 Precompressed means compressed in advance. When a browser accepts compression, honk or a web server sends the `.br` or `.gz` copy instead of compressing the file for each request, so it spends no CPU on compression and pages load faster on a slow link. The copies are made with `brotli -q 11` and `gzip -9 -n` for text assets of at least 1 KiB; only copies smaller than the original are kept. For a manual install, extract the archive into the directory holding doona's files.
 

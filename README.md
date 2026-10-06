@@ -20,7 +20,7 @@ doona is a static web UI for the native API shared by daeuniverse engines. It sh
 
 ![The activity page](https://zakkaus.github.io/doona-docs/screenshots/en/activity-light.webp)
 
-The [beta.15 changelog](CHANGELOG.md) lists 6 additions, 23 changes and 21 fixes, including four Glass palettes, Appearance settings and bounded memory use for live event tables.
+The [beta.16 changelog](CHANGELOG.md) lists 1 change, 8 fixes and 1 packaging update. Events and Logs preserve reading position while scrolling; their Liquid Glass tables retain blur without refraction. The widget editor fixes its gallery scrollbar and preview resizing, and DNS cache filters now narrow the table. Glass buttons show their selected state, and empty tables keep the same material. Login and setup permission refusals retain the backend request ID without blaming the client's network address.
 
 ![Configuration files with the editable source view](https://zakkaus.github.io/doona-docs/screenshots/en/config-source-light.webp)
 

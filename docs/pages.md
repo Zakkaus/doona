@@ -46,7 +46,9 @@ The Traffic tab of Connections plots each connection's upload against its downlo
 
 The Statistics tab shows the median and P95 resolution time, the cache hit rate and the failure rate. The charts below place each upstream's lookups on a latency scale and count how the queries ended. Each cache and resolution log row has an add-rule icon for its domain. It opens a DNS request rule when DNS rules are available, or a routing rule otherwise; saving requires a writable configuration source. The default condition matches the exact domain; select a suffix condition to include subdomains.
 
-Query offers Automatic, which follows `dns.routing`, or a named upstream from `dns.upstream` when the configuration is readable. Cache filters entries by full name, suffix, keyword or regex, by record type, or both. When the backend supports deletion, it can remove the matching entries and shows their count before confirmation.
+Query offers Automatic, which follows `dns.routing`, or a named upstream from `dns.upstream` when the configuration is readable. Cache filters entries by full name, suffix, keyword or regex, by record type, or both, even when the backend does not support deletion. When the backend supports deletion, you can delete matching entries after confirmation.
+
+Keywords match text anywhere in the name: `cdn` matches `cdn.example.com`. The suffix `cdn` matches only `cdn` or names ending in `.cdn`. A record type further narrows the results. Clear filters resets the matching criteria and removes any domain filter from the page URL.
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/en/dns.webp" alt="The Statistics tab of the DNS page" width="100%">
 
@@ -71,6 +73,8 @@ The Latency tab of Nodes plots each node's latest latency, and its moving averag
 ### Configuration and settings
 
 Configuration shows the version of the configuration in effect. Modules shows one summary per configuration section and links to the page that manages it. Global settings edits the engine's persistent settings when supported; Config files edits the selected writable source and exports its displayed content, which may contain credentials. A write that changes settings requiring a restart is refused without writing; the notice lists the settings and provides a restart command and an install-guide link.
+
+With honk, Store subscriptions (`global.store_subscribe`) stores successfully fetched and accepted subscription bodies in the `subscription_body` table of `<data_dir>/state/honk.db`, normally `/var/lib/honk/state/honk.db`. Changing this setting requires restarting honk; a subscription with `cache: false` skips storage and recovery. Separate `.sub` files belong to legacy storage; see the [pinned honk reference](https://github.com/Glassyiris/honk/blob/a949f1f1ff7e8e8852e76e02b60870e6bb1fd440/doc/en/reference/subscription.md#fetch-persistence-and-recovery) for startup migration.
 
 ![Config files with the source editor](https://zakkaus.github.io/doona-docs/screenshots/en/config-source-light.webp)
 
