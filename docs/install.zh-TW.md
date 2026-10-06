@@ -35,7 +35,7 @@ HTML 可以開啟，但 JavaScript 或 CSS 請求回傳 403 時，在瀏覽器�
 
 ## 發布檔案
 
-每次發布有 38 個檔案。大多數使用者只需兩個：適用於自己系統的程式檔案與 `SHA256SUMS`。下列為 v0.1.0-beta.16 的檔名，其他版本依相同的[命名方式](../install/README.md#version-spellings)。
+每次發布有 36 個檔案。大多數使用者只需兩個：適用於自己系統的程式檔案與 `SHA256SUMS`。下列為 v0.1.0-beta.16 的檔名，其他版本依相同的[命名方式](../install/README.md#version-spellings)。
 
 ### 程式
 

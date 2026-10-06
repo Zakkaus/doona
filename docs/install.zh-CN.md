@@ -35,7 +35,7 @@ HTML 可以打开，但 JavaScript 或 CSS 请求返回 403 时，在浏览器�
 
 ## 发布文件
 
-每次发布有 38 个文件。大多数用户只需两个：适用于自己系统的程序文件与 `SHA256SUMS`。下列为 v0.1.0-beta.16 的文件名，其他版本遵循相同的[命名方式](../install/README.md#version-spellings)。
+每次发布有 36 个文件。大多数用户只需两个：适用于自己系统的程序文件与 `SHA256SUMS`。下列为 v0.1.0-beta.16 的文件名，其他版本遵循相同的[命名方式](../install/README.md#version-spellings)。
 
 ### 程序
 
