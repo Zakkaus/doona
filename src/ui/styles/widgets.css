@@ -207,6 +207,7 @@
   }
   .rp-widget-editor-grid[data-three-columns] > .rp-widget-gallery {
     grid-row: auto;
+    padding-inline-end: var(--rp-space-3);
   }
   .rp-widget-editor-grid[data-three-columns] > .rp-widget-inspector {
     grid-column: 3;
@@ -220,6 +221,10 @@
   }
   .rp-widget-panel[data-kind='gallery'] > .rp-widget-body {
     overflow: visible;
+  }
+  /* The section scrolls here, past the body's box, so the horizontal fade would mask every card beyond it. */
+  .rp-widget-editor-grid[data-three-columns] .rp-widget-panel[data-kind='gallery'][data-more] > .rp-widget-body {
+    mask-image: none;
   }
   .rp-widget-editor-grid[data-three-columns] {
     flex: 1 1 auto;
@@ -236,6 +241,7 @@
   .rp-widget-editor-grid[data-three-columns] > .rp-widget-canvas {
     padding-inline: calc(var(--rp-control) / 2);
     margin-inline: calc(var(--rp-control) / -2);
+    scrollbar-gutter: stable;
   }
 }
 /* Three columns fill the dialog body, and each column scrolls on its own beside the others. */
