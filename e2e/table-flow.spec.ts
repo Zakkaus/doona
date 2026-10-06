@@ -1,4 +1,4 @@
-import {expect, fulfillStream, mockBackend, test, box} from './fixtures';
+import {expect, fulfillStream, mockBackend, test, box, settleFrames} from './fixtures';
 import type {Page} from '@playwright/test';
 
 async function feed(page: Page, kind: 'events' | 'logs', count: number) {
@@ -69,6 +69,61 @@ for (const kind of ['events', 'logs'] as const) {
       await expect(grid.getByRole('rowheader').first()).toHaveText(`Record ${id}`);
       expect(await freshSelection()).toBe(true);
     }
+  });
+}
+
+test('events yield prepend anchoring to upward wheel scrolling', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  const {grid, frame} = await feed(page, 'events', 200);
+  await page.mouse.move(1000, 400);
+  await page.mouse.wheel(0, 4000);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(3500);
+  await settleFrames(page);
+  const before = await page.evaluate(() => scrollY);
+  const held = await grid.locator('[role=row][data-key]').evaluateAll(rows => {
+    const row = rows.find(row => row.getBoundingClientRect().top >= 110 && row.getBoundingClientRect().bottom <= innerHeight)!;
+    return {key: row.getAttribute('data-key')!, index: Number(row.getAttribute('aria-rowindex'))};
+  });
+  await page.mouse.wheel(0, -240);
+  await page.evaluate(
+    records => {
+      for (const record of records) (window as unknown as {appendRecord: (record: unknown) => void}).appendRecord(record);
+    },
+    Array.from({length: 8}, (_, index) => frame(201 + index))
+  );
+  await expect(grid.locator(`[data-key="${held.key}"]`)).toHaveAttribute('aria-rowindex', String(held.index + 8));
+  await settleFrames(page);
+  expect(await page.evaluate(() => scrollY)).toBeLessThan(before);
+
+  // Let the wheel gesture settle before checking that reading-position anchoring resumes.
+  await page.waitForTimeout(300);
+  const resting = await grid.locator('[role=row][data-key]').evaluateAll(rows => {
+    const row = rows.find(row => row.getBoundingClientRect().top >= 110 && row.getBoundingClientRect().bottom <= innerHeight)!;
+    return {key: row.getAttribute('data-key')!, top: row.getBoundingClientRect().top, index: Number(row.getAttribute('aria-rowindex'))};
+  });
+  await page.evaluate(record => (window as unknown as {appendRecord: (record: unknown) => void}).appendRecord(record), frame(209));
+  const restingRow = grid.locator(`[data-key="${resting.key}"]`);
+  await expect(restingRow).toHaveAttribute('aria-rowindex', String(resting.index + 1));
+  await expect.poll(() => restingRow.evaluate(el => el.getBoundingClientRect().top)).toBe(resting.top);
+});
+
+for (const kind of ['events', 'logs'] as const) {
+  test(`${kind} retain prepend anchoring during horizontal wheel input`, async ({page}) => {
+    await page.setViewportSize({width: 1440, height: 900});
+    const {grid, frame} = await feed(page, kind, 200);
+    await page.evaluate(() => window.scrollTo(0, 4000));
+    await settleFrames(page);
+    const held = await grid.locator('[role=row][data-key]').evaluateAll(rows => {
+      const row = rows.find(row => row.getBoundingClientRect().top >= 110 && row.getBoundingClientRect().bottom <= innerHeight)!;
+      return {key: row.getAttribute('data-key')!, top: row.getBoundingClientRect().top, index: Number(row.getAttribute('aria-rowindex'))};
+    });
+    await page.mouse.move(1000, 400);
+    await page.mouse.wheel(240, 0);
+    await page.evaluate(record => (window as unknown as {appendRecord: (record: unknown) => void}).appendRecord(record), frame(201));
+    const row = grid.locator(`[data-key="${held.key}"]`);
+    await expect(row).toHaveAttribute('aria-rowindex', String(held.index + 1));
+    await settleFrames(page);
+    expect(await row.evaluate(element => element.getBoundingClientRect().top)).toBe(held.top);
   });
 }
 

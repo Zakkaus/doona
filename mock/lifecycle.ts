@@ -18,6 +18,7 @@ import {found} from './common';
 import {eventKinds, logLevels} from '../src/api/selectors';
 import {instanceId} from './fixtures/clock';
 import {logSeed} from './fixtures/lifecycle';
+import {flows} from './fixtures/network';
 import type {MockRecording} from './recording';
 
 const MAX_FINISHED_OPERATIONS = 128;
@@ -182,7 +183,7 @@ export function createLifecycle(
   // A four-hour ring has routine traffic and busy periods; the faults scenario adds a stale subscription and a short
   // health-check incident.
   const started = Date.now();
-  for (let minute = 240; minute > 0; minute -= 2) {
+  for (let minute = faults ? 240 : 0; minute > 0; minute -= 2) {
     const at = started - minute * 60000;
     const trouble = faults && minute >= 34 && minute <= 48;
     const busy = (minute >= 72 && minute <= 116) || (minute >= 164 && minute <= 188);
@@ -196,13 +197,22 @@ export function createLifecycle(
       log('error', 'honk::group', 'Health check failed.', {node: 'us-01', error: 'connect timeout'}, at + 50000);
     }
   }
-  for (const record of logSeed)
-    if (faults || (record.level !== 'warn' && record.level !== 'error')) log(record.level, record.target, record.message, record.fields ?? null);
-  // Recorder gaps and a failed operation belong to the faults scenario.
-  for (let i = 28; i > 0; i--) {
-    const data = {instance_id: instanceId, observed_at: new Date(started - i * 10000).toISOString()};
+  const examples = logSeed.filter(record => faults || (record.level !== 'warn' && record.level !== 'error'));
+  // The healthy ring is 200 info records, the default Logs level, so the page opens full at either filter.
+  const routine = faults ? 0 : 200 - examples.length;
+  for (let n = routine; n > 0; n--) {
+    const at = started - Math.round((n * 4 * 3600000) / routine);
+    if (n % 2) log('info', 'honk::group', 'Health check finished.', {group: 'auto', healthy: 3, unavailable: 0}, at);
+    else log('info', 'honk::dns', 'Query answered.', {queries: 12 + (n % 15)}, at);
+  }
+  for (const record of examples) log(record.level, record.target, record.message, record.fields ?? null);
+  // Healthy history fills the default Events view; faults retain gaps and a failed operation.
+  for (let i = faults ? 28 : 200; i > 0; i--) {
+    const data = {instance_id: instanceId, observed_at: new Date(started - i * (faults ? 10000 : 1000)).toISOString()};
+    const flowId = faults ? `flow-r${String(i).padStart(2, '0')}` : flows[i % flows.length].id;
+    const flowUpdated: ApiEvent = {id: '', event: 'flow.updated', data: {...data, resource_id: flowId, revision: 1, href: `/api/v1/flows/${flowId}`}};
     if (!faults && i >= 4 && i <= 7) {
-      publish({id: '', event: 'runtime.updated', data: {...data, href: '/api/v1/runtime'}});
+      publish(flowUpdated);
       continue;
     }
     if (i === 21) publish({id: '', event: 'generation.changed', data: {...data, previous_generation_id: '39', generation_id: '40'}});
@@ -213,12 +223,7 @@ export function createLifecycle(
     else if (i === 5)
       publish({id: '', event: 'operation.updated', data: {...data, resource_id: 'op-1183', status: 'failed', href: '/api/v1/operations/op-1183'}});
     else if (i === 4) publish({id: '', event: 'flow.gap', data: {...data, resource_id: null, reason: 'recording_changed', dropped_records: '0'}});
-    else if (i % 3 === 0)
-      publish({
-        id: '',
-        event: 'flow.updated',
-        data: {...data, resource_id: `flow-r${String(i).padStart(2, '0')}`, revision: 1, href: `/api/v1/flows/flow-r${String(i).padStart(2, '0')}`}
-      });
+    else if (!faults || i % 3 === 0) publish(flowUpdated);
     else publish({id: '', event: 'runtime.updated', data: {...data, href: '/api/v1/runtime'}});
   }
   let logTimer: ReturnType<typeof setInterval> | undefined;
