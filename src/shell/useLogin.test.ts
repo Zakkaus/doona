@@ -1,8 +1,8 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {credentialProblems, loginAlert, loginProfiles, predatesAuth, resolveSignInKind, secondsLeft, signIn, signInRefusal, storeToken} from './useLogin';
-import {ApiError} from '../api/error';
+import {ApiError, errorText} from '../api/error';
 import {signInKind} from '../api/auth';
-import {translate, type Translator} from '../i18n';
+import {LANGS, translate, type Translator} from '../i18n';
 
 const challenged = {id: 'router', name: 'Router', api: 'https://router.test/api-prefix', token: ''};
 
@@ -154,6 +154,24 @@ it('reports a rejected sign-in, then keeps the session a retry opens', async () 
     'https://router.test/api-prefix/api/v1/auth/login',
     'https://router.test/api-prefix/api/v1/auth/login'
   ]);
+});
+
+it.each(['login', 'setup'] as const)('keeps a %s permission refusal without inferring a setup restriction', async mode => {
+  const session = storage();
+  vi.stubGlobal('localStorage', session);
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => json({error: {code: 'permission_denied', message: 'A policy refusal', details: null}, request_id: 'policy-403'}, 403))
+  );
+  const result = await signIn(challenged.id, challenged.api, mode, {username: 'admin', password: 'secret'});
+  expect(result).toEqual({error: expect.any(ApiError)});
+  const error = (result as {error: ApiError}).error;
+  expect(error).toMatchObject({status: 403, code: 'permission_denied', message: 'A policy refusal', details: null, requestId: 'policy-403'});
+  for (const [lang] of LANGS) {
+    const t: Translator = (key, params) => translate(lang, key, params);
+    expect(errorText(error, t)).toBe(t('ui.backend.permissionDenied') + t('ui.requestNote', {requestId: 'policy-403'}));
+  }
+  expect(session.store.size).toBe(0);
 });
 
 it('names a session the browser cannot store apart from a failed sign-in', async () => {

@@ -36,7 +36,6 @@ export function signInRefusal(error: unknown): Refusal | null {
   if (error.code === 'invalid_credentials') return {key: 'login.invalidCredentials'};
   if (error.code === 'setup_required') return {key: 'login.needsSetup', switchTo: 'setup'};
   if (error.code === 'setup_already_completed') return {key: 'login.alreadySetUp', switchTo: 'login'};
-  if (error.code === 'permission_denied') return {key: 'login.setupPeer'};
   if (error.code === 'rate_limited') {
     const wait = error.retryAfter ?? 60;
     return {key: 'login.rateLimited', params: {n: wait}, wait};
