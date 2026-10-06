@@ -1,7 +1,7 @@
 #!/bin/sh
 # Builds the OpenWrt apk packages from install/openwrt/doona/Makefile and the archives in release/, in the OpenWrt SDK
 # container (any target: the packages are PKGARCH all):
-#   docker run --rm -v "$PWD:/src" -w /src openwrt/sdk:x86-64-25.12.5 sh tools/package-openwrt.sh 0.1.0-beta.15
+#   docker run --rm -v "$PWD:/src" -w /src openwrt/sdk:x86-64-25.12.5 sh tools/package-openwrt.sh 0.1.0-beta.16
 # The SDK signs only the package index, with a key generated for this run. release/openwrt/ receives the packages
 # under the names that index records, the index as doona-openwrt.adb and its public key as doona-openwrt.pem;
 # release/openwrt-recipe/ receives the Makefile with this version and the hashes of these archives.

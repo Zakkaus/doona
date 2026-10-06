@@ -27,7 +27,7 @@ gh run download <run-id> -n alpine-recipe -D install/alpine
 ```
 
 Before submitting the Gentoo and Nix recipes, generate the Gentoo `Manifest` with
-`ebuild doona-0.1.0_beta15.ebuild manifest` and replace both Nix `lib.fakeHash` values using `SHA256SUMS`.
+`ebuild doona-0.1.0_beta16.ebuild manifest` and replace both Nix `lib.fakeHash` values using `SHA256SUMS`.
 
 The release workflow builds Alpine and OpenWrt 25.12 apk packages from the APKBUILD and the OpenWrt Makefile, using the
 archives of the same run instead of the download URLs: `tools/package-alpine.sh` runs `abuild` in an Alpine 3.24
@@ -37,25 +37,25 @@ The Gentoo template keeps the existing `metadata.xml`; no version-specific metad
 
 ## Version spellings
 
-The recipes use tag `v0.1.0-beta.15`. Release assets keep the upstream version without the tag's `v`;
+The recipes use tag `v0.1.0-beta.16`. Release assets keep the upstream version without the tag's `v`;
 package metadata follows each package manager's ordering rules. The same names and versions apply to `doona-fonts` and
 `doona-precompressed`, which the deb names `doona-web-fonts` and `doona-web-precompressed`.
 
 | Format                                | `doona` asset                                 | Version in package or recipe                        |
 | ------------------------------------- | --------------------------------------------- | --------------------------------------------------- |
-| Program archive                       | `doona-0.1.0-beta.15.tar.gz`                  | n/a                                                 |
-| Fonts archive                         | `doona-fonts-0.1.0-beta.15.tar.gz`            | n/a                                                 |
-| Precompressed archive                 | `doona-precompressed-0.1.0-beta.15.tar.gz`    | n/a                                                 |
-| Debian                                | `doona-web_0.1.0-beta.15-1_all.deb`           | `0.1.0~beta.15-1`                                   |
-| RPM                                   | `doona-0.1.0-beta.15-1.noarch.rpm`            | Version `0.1.0~beta.15`, Release `1`                |
-| OpenWrt ipk (24.10 and earlier, opkg) | `doona_0.1.0-beta.15-1_all.ipk`               | `0.1.0~beta.15-1`                                   |
-| OpenWrt apk (25.12, apk-tools 3)      | `doona-0.1.0_beta15-r1.apk`                   | `0.1.0_beta15-r1`                                   |
-| Alpine apk                            | `doona-0.1.0-beta.15-r0.alpine.apk`           | `0.1.0_beta15-r0`                                   |
-| Arch                                  | `doona-0.1.0beta15-1-any.pkg.tar.zst`         | pkgver `0.1.0beta15`, pkgrel `1`, default epoch `0` |
-| Alpine APKBUILD                       | Download the three archives above             | pkgver `0.1.0_beta15`, pkgrel `0`                   |
-| Gentoo ebuild                         | Download the program and fonts archives above | PV `0.1.0_beta15`                                   |
-| OpenWrt Makefile                      | Download the three archives above             | PKG_VERSION `0.1.0_beta15`, PKG_RELEASE `1`         |
-| Nix recipe                            | Download the program and fonts archives above | `0.1.0-beta.15`                                     |
+| Program archive                       | `doona-0.1.0-beta.16.tar.gz`                  | n/a                                                 |
+| Fonts archive                         | `doona-fonts-0.1.0-beta.16.tar.gz`            | n/a                                                 |
+| Precompressed archive                 | `doona-precompressed-0.1.0-beta.16.tar.gz`    | n/a                                                 |
+| Debian                                | `doona-web_0.1.0-beta.16-1_all.deb`           | `0.1.0~beta.16-1`                                   |
+| RPM                                   | `doona-0.1.0-beta.16-1.noarch.rpm`            | Version `0.1.0~beta.16`, Release `1`                |
+| OpenWrt ipk (24.10 and earlier, opkg) | `doona_0.1.0-beta.16-1_all.ipk`               | `0.1.0~beta.16-1`                                   |
+| OpenWrt apk (25.12, apk-tools 3)      | `doona-0.1.0_beta16-r1.apk`                   | `0.1.0_beta16-r1`                                   |
+| Alpine apk                            | `doona-0.1.0-beta.16-r0.alpine.apk`           | `0.1.0_beta16-r0`                                   |
+| Arch                                  | `doona-0.1.0beta16-1-any.pkg.tar.zst`         | pkgver `0.1.0beta16`, pkgrel `1`, default epoch `0` |
+| Alpine APKBUILD                       | Download the three archives above             | pkgver `0.1.0_beta16`, pkgrel `0`                   |
+| Gentoo ebuild                         | Download the program and fonts archives above | PV `0.1.0_beta16`                                   |
+| OpenWrt Makefile                      | Download the three archives above             | PKG_VERSION `0.1.0_beta16`, PKG_RELEASE `1`         |
+| Nix recipe                            | Download the program and fonts archives above | `0.1.0-beta.16`                                     |
 
 The beta binary recipes were last exercised against a local `pnpm package` build: `abuild -r` in an Alpine 3.22
 container, the OpenWrt SDK for 24.10 (ipk) and 25.12 (apk), and nfpm 2.47 for deb, rpm, ipk and Arch, each
@@ -65,7 +65,7 @@ The ebuild keywords the architectures listed in `KEYWORDS`; only amd64 was exerc
 Replace placeholder hashes and generate the required checksums or manifests before submission.
 
 The overlay's `AGENTS.md` governs the ebuild's submission: commit with `pkgdev commit --scan false --signoff`
-under the subject `net-proxy/doona: new package, add 0.1.0_beta15`, keep the `Manifest` in the same commit, and add
+under the subject `net-proxy/doona: new package, add 0.1.0_beta16`, keep the `Manifest` in the same commit, and add
 a `.github/workflows/overlay.toml` entry in `category/package` order. The semver beta tag maps onto the
 ebuild's pre-release version with this overlay rule:
 

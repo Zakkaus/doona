@@ -6,6 +6,28 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Entries live in [changes/](changes/) until release.
 
+## [0.1.0-beta.16] - 2026-10-07
+
+### Changed
+
+- Liquid Glass Events and Logs tables omit the lens refraction and rim to reduce scroll rendering work. Their blur, saturation and brightness remain. (#512)
+
+### Fixed
+
+- Streamed Events and Logs tables no longer push the page back down while you scroll up with the wheel or by touch; reading-position anchoring resumes once scrolling settles. (#510)
+- The demo Events and Logs tables open with 200 records each at their default filters, providing enough history to try scrolling. (#510)
+- The widget gallery's scrollbar in the three-column Edit widgets dialog no longer touches the widget cards, and the cards stay visible after scrolling. (#511)
+- The preview in the three-column Edit widgets dialog no longer shrinks and grows repeatedly when its column is only a few pixels taller than the dialog. (#511)
+
+- DNS cache matching controls filter the displayed entries and keep bulk deletion aligned with the results. (#514)
+- Empty Glass tables use the table's material without an extra background behind the empty message. (#514)
+- Glass palettes show the selected state of the panel pin and widgets buttons, including while hovered. (#514)
+- Login and administrator setup show permission refusals without incorrectly attributing them to the client's network address, and retain the backend request ID. (#514)
+
+### Internal
+
+- Refresh Gentoo and Alpine checksums for the published 0.1.0-beta.15 archives. (#508)
+
 ## [0.1.0-beta.15] - 2026-10-06
 
 ### Added
@@ -728,7 +750,8 @@ Entries live in [changes/](changes/) until release.
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
-[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.15...HEAD
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.16...HEAD
+[0.1.0-beta.16]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.15...v0.1.0-beta.16
 [0.1.0-beta.15]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.14...v0.1.0-beta.15
 [0.1.0-beta.14]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.13...v0.1.0-beta.14
 [0.1.0-beta.13]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.12...v0.1.0-beta.13
