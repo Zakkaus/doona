@@ -800,7 +800,6 @@
   "login.sessionEnded": "工作階段已結束，請重新登入。",
   "login.settings": "變更後端網址",
   "login.setupNote": "{backend} 尚未設定管理員，建立後即登入。僅接受來自本機、私有網路或鏈路本地位址的建立請求。",
-  "login.setupPeer": "後端只接受來自本機、私有網路或鏈路本地位址的管理員建立請求。",
   "login.setupTitle": "建立管理員",
   "login.showPassword": "顯示密碼",
   "login.signIn": "登入",
