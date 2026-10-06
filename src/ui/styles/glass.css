@@ -273,9 +273,6 @@
 :root[data-family='glass'] .rp-heatmap .cell.t0 {
   background: var(--rp-ctl);
 }
-:root[data-family='glass'] .rp-table-empty {
-  background: var(--rp-table-head);
-}
 :root[data-family='glass'] .rp-table [role='row'][data-hovered]:not([data-selected]) {
   background: var(--rp-fill);
 }
@@ -383,6 +380,9 @@
 }
 :root[data-family='glass'] .rp-btn.quiet[data-pressed] {
   background: var(--rp-ctl-pressed);
+}
+:root[data-family='glass'] .rp-btn.quiet[data-toggle-selected] {
+  background: var(--rp-hl-high);
 }
 /* Glass fills a negative button, the quiet one included, with the increased-contrast red, as the accent one is with the
    increased-contrast blue: red text is faint over its gradient. */

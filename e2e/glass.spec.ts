@@ -73,6 +73,10 @@ for (const flavour of flavours)
     await page.getByRole('button', {name: /Group$/}).click();
     await expect(page.locator('.rp-popover').first()).toBeVisible();
     expect((await surface(page, '.rp-popover')).filter === 'none').toBe(flavour === 'tinted');
+    await page.goto('/#/dns?tab=log&domain=doona-no-match.invalid');
+    await expect(page.locator('.rp-table-empty .rp-empty')).toBeVisible();
+    expect((await surface(page, '.rp-table-empty')).alpha).toBe(0);
+    expect((await surface(page, '.rp-table [role="columnheader"]')).alpha).toBeGreaterThan(0);
   });
 
 // Nothing is drawn round a card's edge: no rim layer over the backdrop, and no border, inset shadow or gradient, any of
@@ -123,6 +127,38 @@ for (const flavour of flavours)
     // The lower half thickens towards the solid chrome, where the blur fades at the viewport's edge.
     expect(await page.locator('.rp-hubbar').evaluate(element => getComputedStyle(element).backgroundImage)).toContain('linear-gradient(');
   });
+
+test.describe('glass quiet toggles', () => {
+  test.use({
+    widgets: true,
+    storage: {'doona-widgets': JSON.stringify({version: 4, items: [{id: 'speed', form: 'kv', size: 'medium'}], visible: true, collapsed: true, pinned: false})}
+  });
+  for (const flavour of flavours)
+    test(`${flavour} keeps the selected pin and widgets buttons visibly distinct, including under the pointer`, async ({page}) => {
+      await page.addInitScript(value => localStorage.setItem('doona-palette', `glass/${value}`), flavour);
+      await page.goto('/#/activity');
+      await expect(page.locator(pageCard).first()).toBeVisible();
+      const pin = page.locator('.rp-floating-panel').getByRole('button', {name: /^(Pin|Unpin) panel$/});
+      await expect(pin).toHaveAttribute('aria-pressed', 'false');
+      await page.mouse.move(0, 0);
+      const idle = await pin.evaluate(element => getComputedStyle(element).backgroundColor);
+      const widgets = page.locator('.rp-top').getByRole('button', {name: 'Hide widgets', exact: true});
+      await expect(widgets).toBeVisible();
+      const selected = await widgets.evaluate(element => getComputedStyle(element).backgroundColor);
+      expect(selected).not.toBe(idle);
+      await pin.click();
+      await expect(pin).toHaveAttribute('aria-pressed', 'true');
+      await expect(pin).toHaveCSS('background-color', selected);
+      await page.mouse.move(0, 0);
+      await expect(pin).toHaveCSS('background-color', selected);
+      await pin.hover();
+      await expect(pin).toHaveCSS('background-color', selected);
+      await pin.press('Space');
+      await expect(pin).toHaveAttribute('aria-pressed', 'false');
+      await page.mouse.move(0, 0);
+      await expect(pin).toHaveCSS('background-color', idle);
+    });
+});
 
 // Chromium refracts through the lens filters; cards, the floating panel and menus reference them, and they exist once.
 test.describe('glass lens', () => {
