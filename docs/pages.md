@@ -46,7 +46,7 @@ The Traffic tab of Connections plots each connection's upload against its downlo
 
 The Statistics tab shows the median and P95 resolution time, the cache hit rate and the failure rate. The charts below place each upstream's lookups on a latency scale and count how the queries ended. Each cache and resolution log row has an add-rule icon for its domain. It opens a DNS request rule when DNS rules are available, or a routing rule otherwise; saving requires a writable configuration source. The default condition matches the exact domain; select a suffix condition to include subdomains.
 
-Query offers Automatic, which follows `dns.routing`, or a named upstream from `dns.upstream` when the configuration is readable. When the backend supports deletion, Cache can remove entries by full name, suffix, keyword or regex, by record type, or both; it shows the matching count before confirmation.
+Query offers Automatic, which follows `dns.routing`, or a named upstream from `dns.upstream` when the configuration is readable. Cache filters entries by full name, suffix, keyword or regex, by record type, or both. When the backend supports deletion, it can remove the matching entries and shows their count before confirmation.
 
 <img src="https://zakkaus.github.io/doona-docs/screenshots/en/dns.webp" alt="The Statistics tab of the DNS page" width="100%">
 

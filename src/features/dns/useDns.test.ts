@@ -1,9 +1,10 @@
 import {beforeEach, expect, it, vi} from 'vitest';
 import type * as React from 'react';
 import type * as I18n from '../../i18n';
-import {capabilities} from '../../../mock/fixtures';
+import {capabilities, dnsCache} from '../../../mock/fixtures';
 import {hookHarness} from '../../store/testHelpers';
 import {useDnsCacheTab} from './useDns';
+import type {DnsCacheList} from '../../api/model';
 
 vi.mock('react', async original => ({
   ...(await original<typeof React>()),
@@ -24,7 +25,7 @@ vi.mock('../../i18n', async original => {
 
 const dns = {
   capabilities: {data: structuredClone(capabilities), loading: false},
-  cache: {data: undefined, loading: false, error: null, refetch: vi.fn()},
+  cache: {data: undefined as DnsCacheList | undefined, loading: false, error: null, refetch: vi.fn()},
   busy: null,
   remove: vi.fn(),
   removeName: vi.fn(),
@@ -32,10 +33,11 @@ const dns = {
   flush: vi.fn(),
   cancel: vi.fn()
 };
-const read = () => hookHarness.render(() => useDnsCacheTab(''));
+const read = (domain = '') => hookHarness.render(() => useDnsCacheTab(domain));
 beforeEach(() => {
   hookHarness.reset();
   dns.capabilities.data = structuredClone(capabilities);
+  dns.cache.data = undefined;
   dns.removeName.mockReset().mockResolvedValue({deleted: 0});
   dns.removeMany.mockReset();
 });
@@ -63,4 +65,46 @@ it.each(['full', 'suffix', 'keyword'] as const)('requires listed matches for per
   read().setMatchKind(kind);
   read().setMatchText('example.com');
   expect(read().matchDisabled).toBe(true);
+});
+
+const cache = () => ({
+  ...dnsCache,
+  entries: [
+    {...dnsCache.entries[0], entry_id: 'cdn-a', domain: 'cdn.bilibili.com.', type: 'A'},
+    {...dnsCache.entries[0], entry_id: 'cdn-aaaa', domain: 'cdn.bilibili.com.', type: 'AAAA'},
+    {...dnsCache.entries[0], entry_id: 'other-a', domain: 'api.telegram.org.', type: 'A'}
+  ]
+});
+it('shares displayed rows and deletion candidates across name, type and clear criteria', async () => {
+  dns.cache.data = cache();
+  expect(read().rows).toHaveLength(3);
+  expect(read().matchDisabled).toBe(true);
+  read().setMatchText('cdn');
+  expect(read().rows).toEqual([]);
+  read().setMatchKind('keyword');
+  expect(read().rows.map(row => row.id)).toEqual(['cdn-a', 'cdn-aaaa']);
+  read().setMatchType('A');
+  const filtered = read();
+  expect(filtered.rows.map(row => row.id)).toEqual(filtered.matchListed.map(entry => entry.entry_id));
+  await filtered.removeMatching();
+  expect(dns.removeMany).toHaveBeenCalledWith(['cdn-a']);
+  read().setMatchText('  ');
+  expect(read().rows.map(row => row.id)).toEqual(['cdn-a', 'other-a']);
+  read().clearMatches();
+  expect(read().rows).toHaveLength(3);
+  expect(read().filtered).toBe(false);
+  expect(read().matchDisabled).toBe(true);
+});
+
+it('adopts a linked domain as a visible keyword criterion and offers filtering without deletion', () => {
+  dns.cache.data = cache();
+  Object.assign(dns.capabilities.data.resources.dns_cache, {delete_name: false, delete_entry: false});
+  const linked = read('cdn');
+  expect(linked.matchKind).toBe('keyword');
+  expect(linked.matchText).toBe('cdn');
+  expect(linked.rows.map(row => row.id)).toEqual(['cdn-a', 'cdn-aaaa']);
+  expect(linked.matchAvailable).toBe(true);
+  expect(linked.matchDisabled).toBe(true);
+  linked.clearMatches();
+  expect(read().rows).toHaveLength(3);
 });

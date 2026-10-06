@@ -95,16 +95,14 @@ export function dnsQueryView(
 export function dnsCacheView(
   data: DnsCacheList | undefined,
   resources: Capabilities['resources'] | undefined,
-  domain: string,
   busy: string | null,
   locale: string,
   t: LabelFn,
-  // Matches as the other filters do, ignoring case and accents.
-  contains: (value: string, query: string) => boolean
+  entries = data?.entries ?? []
 ) {
   const cache = resources?.dns_cache;
-  const rows = (data?.entries ?? []).filter(entry => !domain || contains(entry.domain, domain));
   return {
+    readable: !!cache?.available && cache.read === true,
     fields: [[t('dns.entries'), data ? formatNumber(data.total, locale) : '—']] as Array<[string, string]>,
     coverage: data
       ? (['positive', 'negative', 'persistent'] as const)
@@ -119,14 +117,13 @@ export function dnsCacheView(
       : [],
     // What the pattern deletion can use: one request for an exact name, or the entries one by one.
     deleteBy: {name: !!cache?.available && cache.delete_name === true, entry: !!cache?.available && cache.delete_entry === true},
-    filterText: domain ? t('dns.cacheFilter', {domain}) : '',
     confirmationText: data ? t('dns.flushConfirm', {n: data.total}) : t('dns.flushConfirmAll'),
     flushDisabled: !!busy || !resources?.dns_cache.available || !resources.dns_cache.flush,
     // Why Clear all cache and the rows' Delete are disabled, when the backend does not support them.
     flushReason: cache && !busy && (!cache.available || !cache.flush) ? t('dns.flushUnsupported') : null,
-    deleteReason: cache && !busy && rows.length > 0 && (!cache.available || !cache.delete_entry) ? t('dns.deleteUnsupported') : null,
+    deleteReason: cache && !busy && entries.length > 0 && (!cache.available || !cache.delete_entry) ? t('dns.deleteUnsupported') : null,
     empty: t(resources?.dns_cache.available && resources.dns_cache.read ? 'dns.empty' : 'dns.cacheUnavailable'),
-    rows: rows.map(entry => ({
+    rows: entries.map(entry => ({
       id: entry.entry_id,
       domain: entry.domain,
       type: entry.type,

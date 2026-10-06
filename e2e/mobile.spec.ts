@@ -394,7 +394,7 @@ for (const [scheme, palette] of [
       expect(prose.contained).toBe(true);
       await page.goto('/#/dns?tab=cache');
       const table = page.locator('.rp-table');
-      const empty = table.getByText('No cache entries', {exact: true});
+      const empty = table.getByText('No matching cache entries', {exact: true});
       await expect(empty).toBeVisible();
       for (const scroll of [false, true]) {
         if (scroll)

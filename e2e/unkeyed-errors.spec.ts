@@ -102,7 +102,7 @@ for (const how of Object.keys(failures) as Failure[])
       expect(counted).toHaveLength(1);
       await expect(confirm).toBeEnabled();
       await confirm.click();
-      await expect(page.getByText('No cache entries', {exact: true})).toBeVisible();
+      await expect(page.getByText('No matching cache entries', {exact: true})).toBeVisible();
       expect(counted).toHaveLength(2);
     });
 

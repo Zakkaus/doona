@@ -1,5 +1,4 @@
 import {useCallback, useEffect, useEffectEvent, useMemo, useState} from 'react';
-import {useFilter} from 'react-aria-components';
 import {getApi} from '../../api';
 import {queryTypes, useCapabilities, useConfig, useDnsCacheUsage, useDnsControl, useDnsLog} from '../../store';
 import {offered} from '../../api/capabilities';
@@ -139,25 +138,28 @@ export function useDnsCacheTab(domain: string) {
   const [includeExpired, setIncludeExpired] = useState(false);
   // A kept tab stays mounted while hidden; the full listing is walked only while its tab is on screen.
   const dns = useDnsControl(!useTabShown(), includeExpired);
-  const {contains} = useFilter({sensitivity: 'base'});
-  const view = useMemo(
-    () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, domain, dns.busy, locale, t, contains),
-    [dns.cache.data, dns.capabilities.data, domain, dns.busy, locale, t, contains]
-  );
-  const [matchKind, setMatchKind] = useState<MatchKind>('suffix');
+  const [matchKind, setMatchKind] = useState<MatchKind>(domain ? 'keyword' : 'suffix');
   const [matchText, setMatchText] = useState(domain);
   const [matchType, setMatchType] = useState('all');
-  useLinked(domain, setMatchText);
+  useLinked(domain, value => {
+    setMatchText(value);
+    setMatchKind(value ? 'keyword' : 'suffix');
+    setMatchType('all');
+  });
   const types = [...new Set([...(dns.capabilities.data?.resources.dns_query.record_types ?? []), ...(dns.cache.data?.entries ?? []).map(entry => entry.type)])];
   const pattern = useMemo(() => ({kind: matchKind, text: matchText}), [matchKind, matchText]);
   // The cache is matched once typing pauses; regex execution stays off the rendering thread.
   const settled = useDebounced(pattern, 250);
   const settling = settled !== pattern;
   const entries = dns.cache.data?.entries;
-  // Every listed entry the pattern and type pick, whatever the table's own filter shows.
-  // An exact name goes in one request; anything else deletes the listed entries one by one.
-  const byName = matchKind === 'full' && !!matchText.trim() && view.deleteBy.name;
   const {matches: matched, error: matchError, pending: matching} = useCacheMatches(entries, settled, matchType);
+  // The table and per-entry deletion share one result, including bounded regex matching.
+  const view = useMemo(
+    () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, dns.busy, locale, t, settling ? [] : matched),
+    [dns.cache.data, dns.capabilities.data, dns.busy, locale, t, settling, matched]
+  );
+  // An exact name still works when the backend cannot list its cache.
+  const byName = matchKind === 'full' && !!matchText.trim() && view.deleteBy.name;
   const {remove: removeEntry} = dns;
   // Stable, so the cache table's columns, which call it, stay the same across polls.
   const remove = useCallback(
@@ -183,6 +185,13 @@ export function useDnsCacheTab(domain: string) {
     matchKind,
     matchText,
     matchType,
+    matchAvailable: view.readable || view.deleteBy.name || view.deleteBy.entry,
+    filtered: !!matchText.trim() || matchType !== 'all' || !!domain,
+    clearMatches: () => {
+      setMatchText('');
+      setMatchType('all');
+      setMatchKind('suffix');
+    },
     setMatchType,
     setMatchKind,
     // `*.` in front of a name picks the suffix kind and drops the shorthand.
@@ -231,7 +240,7 @@ export function useDnsCacheTab(domain: string) {
     // Delete failures arrive as toasts, flush failures in its dialog, and the shell reports the capabilities.
     error: dns.cache.error,
     retry: dns.cache.refetch,
-    loading: (dns.cache.loading || dns.capabilities.loading) && !dns.cache.data,
+    loading: ((dns.cache.loading || dns.capabilities.loading) && !dns.cache.data) || settling || matching,
     flushPending: dns.busy === 'flush',
     remove,
     flush,
