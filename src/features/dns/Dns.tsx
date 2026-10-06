@@ -177,7 +177,16 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
             {badge.text}
           </Badge>
         ))}
-        {vm.filterText && <Button onPress={clearFilter}>{vm.filterText}</Button>}
+        {vm.filtered && (
+          <Button
+            onPress={() => {
+              vm.clearMatches();
+              clearFilter();
+            }}
+          >
+            {t('ui.clearFilters')}
+          </Button>
+        )}
         <Switch isSelected={vm.includeExpired} onChange={vm.setIncludeExpired}>
           {t('dns.includeExpired')}
         </Switch>
@@ -195,7 +204,7 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
           </ActionHelp>
         </div>
       </Toolbar>
-      {(vm.deleteBy.name || vm.deleteBy.entry) && (
+      {vm.matchAvailable && (
         <ActionHelp reason={vm.matchReason}>
           <Toolbar page>
             <LabeledSelect side label={t('rule.kind')} value={vm.matchKind} onChange={k => vm.setMatchKind(k as MatchKind)} items={vm.matchKinds} />
@@ -210,27 +219,29 @@ function DnsCache({domain, clearFilter, rule}: {domain: string; clearFilter: () 
               placeholder="example.com"
             />
             <LabeledSelect side label={t('ui.type')} value={vm.matchType} onChange={vm.setMatchType} items={vm.matchTypes} />
-            <ConfirmButton
-              label={t('dns.deleteMatching')}
-              confirmationText={vm.matchConfirmation}
-              details={
-                <ul className="rp-impact">
-                  {vm.matchListed.map(entry => (
-                    <li key={entry.entry_id}>
-                      <span className="rp-cluster nowrap">
-                        <TextTooltip className="rp-code">{entry.domain}</TextTooltip>
-                        <span className="rp-note">{entry.type}</span>
-                      </span>
-                    </li>
-                  ))}
-                  {vm.matchMore && <li className="rp-note">{vm.matchMore}</li>}
-                </ul>
-              }
-              isPending={vm.matchPending}
-              isDisabled={vm.matchDisabled}
-              onConfirm={vm.removeMatching}
-              onAbort={vm.abortFlush}
-            />
+            {(vm.deleteBy.name || vm.deleteBy.entry) && (
+              <ConfirmButton
+                label={t('dns.deleteMatching')}
+                confirmationText={vm.matchConfirmation}
+                details={
+                  <ul className="rp-impact">
+                    {vm.matchListed.map(entry => (
+                      <li key={entry.entry_id}>
+                        <span className="rp-cluster nowrap">
+                          <TextTooltip className="rp-code">{entry.domain}</TextTooltip>
+                          <span className="rp-note">{entry.type}</span>
+                        </span>
+                      </li>
+                    ))}
+                    {vm.matchMore && <li className="rp-note">{vm.matchMore}</li>}
+                  </ul>
+                }
+                isPending={vm.matchPending}
+                isDisabled={vm.matchDisabled}
+                onConfirm={vm.removeMatching}
+                onAbort={vm.abortFlush}
+              />
+            )}
           </Toolbar>
         </ActionHelp>
       )}

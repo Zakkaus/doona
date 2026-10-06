@@ -26,7 +26,7 @@ test('cache deletion removes one entry and flushing requires confirmation', asyn
   await expect(grid).toHaveAttribute('aria-rowcount', String(entries.length));
   await page.getByRole('button', {name: 'Clear all cache', exact: true}).click();
   await dialog.getByRole('button', {name: 'Clear all cache', exact: true}).click();
-  await expect(page.getByText('No cache entries', {exact: true})).toBeVisible();
+  await expect(page.getByText('No matching cache entries', {exact: true})).toBeVisible();
   await expect(page.locator('.rp-toast.positive').last()).toContainText(`matched: ${cached - 1}, deleted: ${cached - 1}`);
   expect(requests.filter(request => request.method() !== 'GET').map(request => [request.method(), new URL(request.url()).pathname])).toEqual([
     ['DELETE', `/api/v1/dns/cache/${encodeURIComponent(entries[0].entry_id)}`],
@@ -226,7 +226,7 @@ test('Cancel on a pending flush reads the cache again, since the flush may alrea
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   // The cache polls every 15 s; the empty table must come from the read that Cancel starts.
-  await expect(page.getByText('No cache entries', {exact: true})).toBeVisible();
+  await expect(page.getByText('No matching cache entries', {exact: true})).toBeVisible();
 });
 
 test('the cache table fits its entries instead of holding a page of empty space', async ({page}) => {
@@ -286,6 +286,48 @@ const listed = (dialog: Locator) =>
 const named = (entries: Array<{domain: string; type: string}>) => entries.map(entry => `${entry.domain} ${entry.type}`);
 const deletes = (requests: Request[]) => requests.filter(request => request.method() === 'DELETE');
 
+test('cache criteria filter the table, clear linked state and work without deletion', async ({page}) => {
+  const {api, capabilities} = await mockBackend(page);
+  const entries = (await api.dnsCache()).entries;
+  const matches = entries.filter(entry => entry.domain.toLowerCase().includes('cdn'));
+  const grid = page.getByRole('grid', {name: 'Cache', exact: true});
+  const count = async (n: number) =>
+    expect
+      .poll(async () => {
+        const total = await grid.getAttribute('aria-rowcount');
+        return total === null ? grid.getByRole('rowheader').count() : Number(total) - 1;
+      })
+      .toBe(n);
+  await page.goto('/#/dns?tab=cache');
+  await count(entries.length);
+  const pattern = page.getByRole('textbox', {name: 'Pattern', exact: true});
+  await pattern.fill('cdn');
+  await expect(page.getByText('No matching cache entries', {exact: true})).toBeVisible();
+  await expect(page.getByRole('button', {name: 'Delete matching', exact: true})).toBeDisabled();
+  await pick(page, 'Domain suffix', 'Match by', 'Domain keyword');
+  await count(matches.length);
+  await pick(page, 'All supported types', 'Type', 'A');
+  await count(matches.filter(entry => entry.type === 'A').length);
+  await pattern.fill('');
+  await count(entries.filter(entry => entry.type === 'A').length);
+  await page.getByRole('button', {name: 'Clear filters', exact: true}).click();
+  await count(entries.length);
+  capabilities.resources.dns_cache.delete_name = false;
+  capabilities.resources.dns_cache.delete_entry = false;
+  await page.goto('/#/dns?tab=cache&domain=cdn');
+  await page.reload();
+  await expect(page.getByRole('button', {name: 'Domain keyword Match by', exact: true})).toBeVisible();
+  await expect(pattern).toHaveValue('cdn');
+  await count(matches.length);
+  await expect(page.getByRole('button', {name: 'Delete matching', exact: true})).toHaveCount(0);
+  await pattern.fill('telegram');
+  await count(entries.filter(entry => entry.domain.includes('telegram')).length);
+  await page.getByRole('button', {name: 'Clear filters', exact: true}).click();
+  await expect(page).toHaveURL(/#\/dns\?tab=cache$/);
+  await expect(pattern).toHaveValue('');
+  await count(entries.length);
+});
+
 test('pattern deletion shows how many entries match and deletes them one by one', async ({page}) => {
   const {api, requests} = await mockBackend(page);
   const entries = (await api.dnsCache()).entries;
@@ -317,6 +359,8 @@ test('pattern deletion shows how many entries match and deletes them one by one'
   await dialog.getByRole('button', {name: 'Delete matching', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('.rp-toast.positive')).toContainText(`Deleted ${matches.length} cache entries`);
+  await expect(page.getByText('No matching cache entries', {exact: true})).toBeVisible();
+  await page.getByRole('button', {name: 'Clear filters', exact: true}).click();
   await expect(page.getByRole('grid', {name: 'Cache', exact: true})).toHaveAttribute('aria-rowcount', String(entries.length - matches.length + 1));
   expect(deletes(requests).map(request => new URL(request.url()).pathname)).toEqual(
     expect.arrayContaining(matches.map(entry => `/api/v1/dns/cache/${encodeURIComponent(entry.entry_id)}`))
@@ -432,6 +476,8 @@ test('an empty pattern with a record type deletes that whole type', async ({page
   expect(await listed(dialog)).toEqual(named(matches));
   await dialog.getByRole('button', {name: 'Delete matching', exact: true}).click();
   await expect(dialog).toHaveCount(0);
+  await expect(page.getByText('No matching cache entries', {exact: true})).toBeVisible();
+  await page.getByRole('button', {name: 'Clear filters', exact: true}).click();
   await expect(page.getByRole('grid', {name: 'Cache', exact: true})).toHaveAttribute('aria-rowcount', String(entries.length - matches.length + 1));
   await expect(page.getByRole('button', {name: new RegExp(`^Delete the ${type} cache entry`)})).toHaveCount(0);
   expect(deletes(requests)).toHaveLength(matches.length);
@@ -452,6 +498,7 @@ test('an exact name goes in one request, and the row needs a delete capability',
   await dialog.getByRole('button', {name: 'Delete matching', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole('button', {name: `Delete the ${entry.type} cache entry for ${entry.domain}`, exact: true})).toHaveCount(0);
+  await page.getByRole('button', {name: 'Clear filters', exact: true}).click();
   await expect(page.getByRole('button', {name: `Delete the A cache entry for ${entry.domain}`, exact: true})).toBeVisible();
   const sent = deletes(requests);
   expect(sent).toHaveLength(1);
