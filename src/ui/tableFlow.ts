@@ -13,6 +13,8 @@ export function revealFlowRow(box: HTMLElement, top: number, bottom: number) {
   else if (bounds.top + bottom > end) window.scrollBy(0, bounds.top + bottom - end);
 }
 
+const scrollSettle = 250;
+
 // RAC virtualises against the window; its horizontal scrollport still contains the sticky heading.
 export function useTableFlow(
   enabled: boolean | undefined,
@@ -85,12 +87,33 @@ export function useTableFlow(
     };
   }, [enabled, ref, detailRef, heading]);
 
+  // Until when the person's own scrolling holds the view: vertical wheel and touch movement start it, and scroll events
+  // during it, such as momentum, extend it. A prepend then leaves the view to them instead of fighting their movement.
+  // A click or a zoom wheel is not scrolling, so a stationary view keeps its anchor.
+  const scrolling = useRef(0);
+  useEffect(() => {
+    if (!enabled || !stream) return;
+    const hold = () => (scrolling.current = performance.now() + scrollSettle);
+    const wheel = (event: WheelEvent) => event.deltaY && !event.ctrlKey && hold();
+    const extend = () => performance.now() < scrolling.current && hold();
+    window.addEventListener('wheel', wheel, {passive: true});
+    window.addEventListener('touchmove', hold, {passive: true});
+    window.addEventListener('scroll', extend, {passive: true});
+    return () => {
+      window.removeEventListener('wheel', wheel);
+      window.removeEventListener('touchmove', hold);
+      window.removeEventListener('scroll', extend);
+      scrolling.current = 0;
+    };
+  }, [enabled, stream]);
+
   const previous = useRef(rows);
   useLayoutEffect(() => {
     const before = previous.current;
     previous.current = rows;
     const box = ref.current;
     if (!enabled || !stream || !box || before === rows || !before.length || before[0]?.id === rows[0]?.id) return;
+    if (performance.now() < scrolling.current) return;
     // Filtering starts a new view; a prepend keeps the record beneath the heading at the same screen position.
     if (!rows.some(row => row.id === before[0].id)) return;
     const top = box.getBoundingClientRect().top;

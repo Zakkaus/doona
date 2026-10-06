@@ -1,4 +1,4 @@
-import {afterEach, expect, it, vi} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import {createMockApi} from './index';
 import type {ApiEvent, LogRecord} from '../src/api/model';
 import {eventKinds} from '../src/api/selectors';
@@ -139,4 +139,43 @@ it("repeats the first stream's opening ready a second later, outside the replay 
   expect(resumed.map(event => event.event)).toEqual(['stream.ready', 'runtime.updated', 'runtime.updated']);
   replay.abort();
   await resumedStream;
+});
+
+const open = async <T>(start: (signal: AbortSignal, push: (record: T) => void) => Promise<void>) => {
+  const records: T[] = [];
+  const controller = new AbortController();
+  const stream = start(controller.signal, record => records.push(record));
+  controller.abort();
+  await stream;
+  return records;
+};
+
+describe.each([{}, {isolated: true}])('healthy seed (%o)', options => {
+  it.each([{kinds: undefined}, {kinds: eventKinds.filter(kind => kind !== 'runtime.updated')}])(
+    'opens Events with 200 records and resumes only the tail',
+    async ({kinds}) => {
+      const api = createMockApi(options);
+      const subscribe = (lastEventId?: string) =>
+        open<ApiEvent>((signal, onEvent) => api.subscribeEvents({kinds, lastEventId, signal, onEvent})).then(events =>
+          events.filter(event => event.event !== 'stream.ready')
+        );
+      const history = await subscribe();
+      expect(history).toHaveLength(200);
+      expect(new Set(history.map(event => event.id)).size).toBe(200);
+      expect(history.filter(event => event.event === 'runtime.updated')).toHaveLength(0);
+      expect((await subscribe(history[149].id)).map(event => event.id)).toEqual(history.slice(150).map(event => event.id));
+    }
+  );
+
+  it('opens Logs with 200 records unfiltered and at info and resumes only the tail', async () => {
+    const api = createMockApi(options);
+    const subscribe = (level?: LogRecord['level'], lastEventId?: string) =>
+      open<LogRecord & {id: string}>((signal, onRecord) => api.subscribeLogs({level, lastEventId, signal, onRecord}));
+    const all = await subscribe();
+    const info = await subscribe('info');
+    expect(all).toHaveLength(200);
+    expect(info).toHaveLength(200);
+    expect(new Set(all.map(record => record.id)).size).toBe(200);
+    expect((await subscribe('info', info[149].id)).map(record => record.id)).toEqual(info.slice(150).map(record => record.id));
+  });
 });
