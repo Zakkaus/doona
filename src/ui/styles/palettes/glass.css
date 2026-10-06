@@ -276,6 +276,7 @@
 :root[data-flavour='glass'][data-lens] {
   --rp-panel-filter: blur(calc(4px * var(--rp-blur-scale))) url(#doona-lens) saturate(1.8) brightness(1.04);
   --rp-card-filter: var(--rp-panel-filter);
+  --rp-flow-table-filter: blur(calc(4px * var(--rp-blur-scale))) saturate(1.8) brightness(1.04);
   --rp-hubbar-filter: var(--rp-card-filter);
   --rp-lens-sm: blur(calc(6px * var(--rp-blur-scale))) url(#doona-lens-sm) saturate(1.8) brightness(1.04);
   --rp-ctl-filter: blur(calc(12px * var(--rp-blur-scale))) saturate(1.7);
@@ -296,6 +297,7 @@
     --rp-column: var(--rp-solid-wall);
     --rp-card-fill: var(--rp-solid-card);
     --rp-card-filter: none;
+    --rp-flow-table-filter: none;
     --rp-panel-fill: var(--rp-solid-float);
     --rp-panel-filter: none;
     --rp-float-fill: var(--rp-solid-float);

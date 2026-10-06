@@ -157,6 +157,25 @@ test.describe('glass lens', () => {
       expect(filter, selector).not.toContain('url(');
     }
   });
+  test('keeps page-flow tables to the lens blur and colour treatment', async ({page}) => {
+    for (const route of ['logs', 'events']) {
+      await page.goto(`/#/${route}`);
+      await expect(page.locator('html')).toHaveAttribute('data-lens', '');
+      await expect(page.locator('.rp-table[data-flow]')).toBeVisible();
+      await expect(page.locator('.rp-floating-frame .rp-floating-panel')).toBeVisible();
+      const panel = (await surface(page, '.rp-floating-frame .rp-floating-panel')).filter;
+      expect(panel).toContain('url("#doona-lens")');
+      expect((await surface(page, '.rp-table[data-flow]')).filter).toBe(panel.replace(/url\([^)]*\)\s*/g, ''));
+      expect((await surface(page, '.rp-side', '::before')).filter).toBe(panel);
+      expect((await surface(page, '.rp-table [role="columnheader"]')).filter).toBe('blur(12px)');
+    }
+    await page.goto('/#/nodes?provider=harbor');
+    await expect(page.locator('.rp-table:not([data-flow])')).toBeVisible();
+    expect((await surface(page, '.rp-table:not([data-flow])')).filter).toContain('url("#doona-lens")');
+    await page.goto('/#/overview');
+    await expect(page.locator('.rp-card .rp-table')).toBeVisible();
+    expect((await surface(page, '.rp-card .rp-table')).filter).toBe('none');
+  });
 });
 // Clear is Glass as Firefox and Safari draw it, offered in every browser: the lens is never loaded or marked.
 test.describe('clear glass', () => {
@@ -360,5 +379,10 @@ test.describe('reduce transparency and increase contrast', () => {
         await page.getByRole('button', {name: /Group$/}).click();
         await expect(page.locator('.rp-popover').first()).toBeVisible();
         expect(await surface(page, '.rp-popover')).toMatchObject(opaque);
+        if (flavour === 'glass') {
+          await page.goto('/#/logs');
+          await expect(page.locator('.rp-table[data-flow]')).toBeVisible();
+          expect(await surface(page, '.rp-table[data-flow]')).toMatchObject(opaque);
+        }
       });
 });
