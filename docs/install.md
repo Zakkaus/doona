@@ -35,7 +35,7 @@ The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the require
 
 ## Release files
 
-A release has 38 files. Most people need two: the program file for their system and `SHA256SUMS`. The names below are for v0.1.0-beta.16; other versions follow the same [spellings](../install/README.md#version-spellings).
+A release has 36 files. Most people need two: the program file for their system and `SHA256SUMS`. The names below are for v0.1.0-beta.16; other versions follow the same [spellings](../install/README.md#version-spellings).
 
 ### Program
 
