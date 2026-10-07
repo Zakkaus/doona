@@ -31,13 +31,31 @@ test('one pencil opens the visual editor, no-op saves preserve bytes and tag rem
   await card.scrollIntoViewIfNeeded();
   await card.getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group visual', exact: true});
+  const regions = dialog.getByRole('button', {name: 'Regions', exact: true});
+  const hongKong = dialog.getByRole('checkbox', {name: /^Hong Kong/});
+  await expect(regions).toHaveAttribute('aria-expanded', 'false');
+  await expect(hongKong).toBeHidden();
+  await expect(dialog.getByRole('button', {name: 'Remove Hong Kong', exact: true})).toBeVisible();
+  await regions.focus();
+  await regions.press('Enter');
+  await expect(regions).toHaveAttribute('aria-expanded', 'true');
+  const regionGroup = dialog.getByRole('group', {name: 'Regions', exact: true}).and(dialog.locator('.rp-checkbox-set'));
+  await expect(regionGroup).toHaveAccessibleName('Regions');
+  await expect(regionGroup.locator(':scope > span')).toBeHidden();
   await expect(dialog.getByRole('checkbox', {name: /^Hong Kong/})).toBeChecked();
+  await regions.press('Space');
+  await expect(regions).toHaveAttribute('aria-expanded', 'false');
+  await expect(hongKong).toBeHidden();
+  await regions.press('Enter');
+  await expect(hongKong).toBeChecked();
   const before = (await api.config()).sources.find(source => source.kind === 'main')!.content;
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toBe(before);
   await card.scrollIntoViewIfNeeded();
   await card.getByRole('button', {name: 'Edit group', exact: true}).click();
+  await expect(regions).toHaveAttribute('aria-expanded', 'false');
+  await regions.click();
   await dialog
     .locator('label')
     .filter({has: page.getByRole('checkbox', {name: /^Japan/})})
@@ -45,14 +63,30 @@ test('one pencil opens the visual editor, no-op saves preserve bytes and tag rem
   const nodes = (await api.nodes({limit: 1000})).nodes;
   await expect(dialog.getByRole('status')).toContainText(`${nodes.filter(compileFilters([hk, jp])).length} node`);
   await dialog.getByRole('group', {name: 'Subscriptions', exact: true}).locator('label').first().click();
+  await regions.press('Space');
+  await expect(regions).toHaveAttribute('aria-expanded', 'false');
+  await expect(dialog.getByRole('button', {name: 'Remove Japan', exact: true})).toBeVisible();
   await dialog.getByRole('button', {name: 'Remove Hong Kong', exact: true}).click();
   await expect(dialog.getByText(/still match another filter/)).toBeVisible();
-  await expect(dialog.getByRole('checkbox', {name: /^Hong Kong/})).not.toBeChecked();
+  await expect(dialog.getByRole('button', {name: 'Remove Hong Kong', exact: true})).toHaveCount(0);
+  await regions.press('Enter');
+  await expect(hongKong).not.toBeChecked();
+  await regions.press('Space');
   await dialog.getByRole('button', {name: 'Undo', exact: true}).click();
+  await expect(dialog.getByRole('button', {name: 'Remove Hong Kong', exact: true})).toBeVisible();
+  await regions.press('Enter');
   await expect(dialog.getByRole('checkbox', {name: /^Hong Kong/})).toBeChecked();
+  await expect(dialog.getByRole('checkbox', {name: /^Japan/})).toBeChecked();
   await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   await expect(card.getByRole('group', {name: 'Includes'})).toContainText('Japan');
+  await card.scrollIntoViewIfNeeded();
+  await card.getByRole('button', {name: 'Edit group', exact: true}).click();
+  await expect(regions).toHaveAttribute('aria-expanded', 'false');
+  await regions.click();
+  await expect(hongKong).toBeChecked();
+  await expect(dialog.getByRole('checkbox', {name: /^Japan/})).toBeChecked();
+  await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
 });
 
 test('Nodes creates through the shared editor with region and subscription selections for an automatic policy', async ({page}) => {
@@ -69,6 +103,10 @@ test('Nodes creates through the shared editor with region and subscription selec
   const dialog = page.getByRole('dialog', {name: 'New group', exact: true});
   await dialog.getByRole('textbox', {name: 'Group name', exact: true}).fill('visual');
   await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('Fastest on average');
+  const regions = dialog.getByRole('button', {name: 'Regions', exact: true});
+  await expect(regions).toHaveAttribute('aria-expanded', 'false');
+  await expect(dialog.getByRole('checkbox', {name: /^Hong Kong/})).toBeHidden();
+  await regions.click();
   await dialog
     .locator('label')
     .filter({has: page.getByRole('checkbox', {name: /^Hong Kong/})})
@@ -352,6 +390,7 @@ for (const width of [1440, 390]) {
     await page.goto('/#/policies');
     await page.getByRole('button', {name: 'New group', exact: true}).click();
     const dialog = page.getByRole('dialog', {name: 'New group', exact: true});
+    await dialog.getByRole('button', {name: 'Regions', exact: true}).click();
     const labels = dialog.getByRole('group', {name: 'Regions', exact: true}).locator(':scope > span');
     await expect(labels).toHaveCSS('font-size', '12px');
     await dialog.getByRole('button', {name: 'Nodes', exact: true}).click();
@@ -413,6 +452,7 @@ test('legacy region counts agree on the card, checkbox, tag and summary before a
   await expect(card.getByRole('group', {name: 'Includes', exact: true})).toHaveText('Hong Kong, 12 nodes');
   await card.getByRole('button', {name: 'Edit group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Edit group hk', exact: true});
+  await dialog.getByRole('button', {name: 'Regions', exact: true}).click();
   await expect(dialog.getByRole('checkbox', {name: 'Hong Kong, 12 nodes', exact: true})).toBeChecked();
   await expect(dialog.getByRole('group', {name: 'Includes', exact: true})).toContainText('Hong Kong, 12 nodes');
   await expect(dialog.getByRole('status')).toHaveText('12 nodes');
@@ -426,6 +466,7 @@ test('legacy region counts agree on the card, checkbox, tag and summary before a
   await card.getByRole('button', {name: 'Edit group', exact: true}).click();
   await dialog.getByRole('button', {name: 'Remove Hong Kong', exact: true}).click();
   await expect(dialog.getByRole('status')).toHaveText('0 nodes');
+  await dialog.getByRole('button', {name: 'Regions', exact: true}).click();
   await dialog
     .locator('label')
     .filter({has: page.getByRole('checkbox', {name: /^Hong Kong/})})
