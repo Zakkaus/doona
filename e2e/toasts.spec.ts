@@ -163,6 +163,51 @@ test('an expanded stack and its underlay close when the page changes', async ({p
   await expect(page.locator('.rp-toasts')).not.toHaveClass(/expanded/);
 });
 
+test('Glass toasts overlap when collapsed and remain readable when expanded', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 844});
+  await page.addInitScript(() => localStorage.setItem('doona-palette', 'glass/glass'));
+  await failingFirstFetch(page, 9);
+  await page.goto('/#/nodes?tab=list');
+  await expect(page.locator('html')).toHaveAttribute('data-flavour', 'glass');
+  for (const name of ['sub-a', 'sub-b', 'sub-c']) await addSubscription(page, name);
+  const region = page.locator('.rp-toasts');
+  const front = page.locator('.rp-toast:not(.background)');
+  const behind = page.locator('.rp-toast.background');
+  const expectCollapsed = async (count: number) => {
+    await expect(region).not.toHaveClass(/expanded/);
+    await expect(behind).toHaveCount(count);
+    await page
+      .locator('.rp-toast')
+      .evaluateAll(toasts => Promise.all(toasts.flatMap(toast => toast.getAnimations({subtree: true}).map(animation => animation.finished))));
+    const foreground = await box(front);
+    for (const toast of await behind.all()) {
+      await expect(toast).toHaveAttribute('inert', '');
+      await expect(toast.locator('[slot="title"]')).toBeHidden();
+      const background = await box(toast);
+      const overlap = Math.min(foreground.y + foreground.height, background.y + background.height) - Math.max(foreground.y, background.y);
+      expect(overlap / background.height).toBeGreaterThan(0.75);
+    }
+    expect((await box(region)).height).toBeLessThanOrEqual(foreground.height + 1);
+  };
+  await expectCollapsed(2);
+  await front.getByRole('button', {name: /^Show all/}).click();
+  await expect(region).toHaveClass(/expanded/);
+  await expect(page.locator('.rp-toast-underlay')).toBeVisible();
+  await expect(behind).toHaveCount(0);
+  for (const name of ['sub-a', 'sub-b', 'sub-c']) {
+    const toast = page.locator('.rp-toast', {hasText: `${name} was written to the configuration`});
+    await expect(toast.locator('[slot="title"]')).toBeVisible();
+    await expect(toast.locator('[slot="description"]')).toHaveText('Backend message: Subscription server unreachable');
+  }
+  const toasts = await page.locator('.rp-toast').all();
+  for (let i = 1; i < toasts.length; i++) await expectApart(toasts[i - 1], toasts[i]);
+  await page.locator('.rp-toast', {hasText: 'sub-a was written to the configuration'}).getByRole('button', {name: 'Close', exact: true}).click();
+  await expect(page.locator('.rp-toast')).toHaveCount(2);
+  await page.locator('.rp-toast-controls').getByRole('button', {name: 'Collapse', exact: true}).click();
+  await expect(page.locator('.rp-toast-underlay')).toHaveCount(0);
+  await expectCollapsed(1);
+});
+
 test('a repeated actionable toast replaces its earlier copy', async ({page}) => {
   await failingFirstFetch(page, 2);
   await page.goto('/#/nodes?tab=list');

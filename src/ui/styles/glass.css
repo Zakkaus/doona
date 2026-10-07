@@ -319,7 +319,6 @@
 
 /* Toasts float like menus, tinted by their tone over the floating fill. */
 :root[data-family='glass'] .rp-toast {
-  position: relative;
   background: color-mix(in srgb, var(--rp-text) 86%, var(--rp-float-fill));
   backdrop-filter: var(--rp-lens-sm, var(--rp-float-filter));
   box-shadow: var(--rp-shadow-lg);
