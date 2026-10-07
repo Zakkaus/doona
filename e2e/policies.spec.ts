@@ -110,6 +110,53 @@ test('rapid node switches paint only the current selection with ordinary motion'
   }
 });
 
+test('manual node outlines follow keyboard focus despite stale focus-visible attributes', async ({page}) => {
+  const {api} = await mockBackend(page);
+  await api.selectGroup('proxy', {member_id: 'sg-01', network: 'both'});
+  await page.goto('/#/policies');
+  for (const palette of ['rose-pine/moon', 'glass/glass']) {
+    await page.evaluate(value => localStorage.setItem('doona-palette', value), palette);
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-family', palette.split('/')[0]);
+    const card = page.getByRole('region', {name: 'proxy', exact: true});
+    const filter = card.getByRole('searchbox', {name: 'Filter nodes'});
+    await filter.fill('-0');
+    const rows = card.getByRole('row');
+    await expect(rows).toHaveCount(5);
+    const first = card.getByRole('row', {name: 'sg-01', exact: true});
+    const second = card.getByRole('row', {name: 'hk-01', exact: true});
+    const selected = first;
+    await expect(selected).toHaveAttribute('aria-selected', 'true');
+    const selectedBorder = await selected.evaluate(el => getComputedStyle(el).borderTopColor);
+    await first.focus();
+    await page.keyboard.press('Home');
+    await expect(first).toBeFocused();
+    await expect(first).toHaveAttribute('data-focused', 'true');
+    await expect(first).toHaveCSS('outline-style', 'solid');
+    await expect(first).toHaveCSS('outline-width', '2px');
+    await page.keyboard.press('ArrowDown');
+    await expect(second).toBeFocused();
+    await expect(second).toHaveCSS('outline-style', 'solid');
+    await expect(first).toHaveCSS('outline-style', 'none');
+
+    // Defensive CSS regression: retain the independently observed stale attribute on unfocused rows.
+    await rows.evaluateAll(nodes => {
+      for (const node of nodes.filter(n => !n.hasAttribute('data-focused') && !n.hasAttribute('data-selected')).slice(0, 2))
+        node.setAttribute('data-focus-visible', 'true');
+    });
+    const stale = rows.and(page.locator('[data-focus-visible]:not([data-focused])'));
+    await expect(stale).toHaveCount(2);
+    for (const row of await stale.all()) await expect(row).toHaveCSS('outline-style', 'none');
+    await expect(second).toHaveCSS('outline-style', 'solid');
+    await filter.click();
+    await expect(second).not.toHaveAttribute('data-focused', 'true');
+    for (const row of await rows.all()) await expect(row).toHaveCSS('outline-style', 'none');
+    await expect(selected).toHaveAttribute('data-selected', 'true');
+    await expect(selected).toHaveAttribute('aria-selected', 'true');
+    await expect(selected).toHaveCSS('border-top-color', selectedBorder);
+  }
+});
+
 test('a group card mounted on screen shows its members in the first frame', async ({page}) => {
   // Checked in the frame callback, which sees what is about to be painted.
   await page.addInitScript(() => {
