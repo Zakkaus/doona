@@ -6,10 +6,10 @@
   withFonts ? true,
 }:
 let
-  version = "0.1.0-beta.16";
+  version = "0.1.0-beta.17";
   fonts = fetchurl {
     url = "https://github.com/Zakkaus/doona/releases/download/v${version}/doona-fonts-${version}.tar.gz";
-    hash = "sha256-0Y8miIfFs+adrLNJQFNg5lcp6yR5jFSgNwPuCJ0gTTA=";
+    hash = lib.fakeHash;
   };
 in
 stdenvNoCC.mkDerivation (finalAttrs: {
@@ -18,7 +18,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
 
   src = fetchurl {
     url = "https://github.com/Zakkaus/doona/releases/download/v${finalAttrs.version}/doona-${finalAttrs.version}.tar.gz";
-    hash = "sha256-XopdscEuu3gK3ykyFPaLjBn4VzjLmgFbpOo8D5YUx6Y=";
+    hash = lib.fakeHash;
   };
 
   dontUnpack = true;
