@@ -4,31 +4,49 @@
 
 # doona
 
-**Web UI for the [daeuniverse](https://github.com/daeuniverse) engines: manage nodes, groups, rules and configuration in a browser.**
+**Static web UI for the [daeuniverse](https://github.com/daeuniverse) engines: manage nodes, groups, rules and configuration in a browser.**
 
 **[Live demo](https://demo.daeuniverse.org/)** / **[Documentation](https://zakkaus.github.io/doona-docs/en/)**
 
 English / [简体中文](README.zh-CN.md) / [繁體中文](README.zh-TW.md)
 
-[Install](#install) / [Documentation](#documentation) / [Development](#development)
+[Try the demo](#try-the-demo) / [Install](#install) / [Backend protocols](#backend-protocols) / [Documentation](#documentation)
 
 </div>
 
-doona is a static web UI for the native API shared by daeuniverse engines. It shows engine state and manages nodes, groups, routing rules and configuration files. It supports honk; dae can use it once it implements the same contract. The engine or any web server can serve it.
+doona is a static web UI for managing a proxy backend. Real data requires a compatible running backend with its native API enabled; currently, doona supports [honk](https://github.com/daeuniverse/honk). dae is not supported yet; compatibility depends on a future implementation of the same API contract. honk or another web server can serve the UI.
 
-[Try the demo with sample data](https://demo.daeuniverse.org/). To see the error states, open it with [`?scenario=faults`](https://demo.daeuniverse.org/?scenario=faults); `?scenario=` returns to the healthy demo.
+Depending on the features exposed by your backend, doona lets you:
 
-![The activity page](https://zakkaus.github.io/doona-docs/screenshots/en/activity-light.webp)
+- Monitor traffic, connections, events and logs.
+- Manage nodes and subscriptions, refresh subscriptions and inspect probe results.
+- Manage groups, their members and node selection.
+- Inspect routing and DNS rules, and edit rules in writable sources.
+- Edit configuration source files, validate changes and export sources.
 
-The [beta.17 changelog](CHANGELOG.md) lists 1 change and 4 fixes. Group editors start with region choices collapsed while selected tags remain visible. Policy node borders update immediately during rapid switches, and keyboard focus outlines appear only on the focused node. Glass notifications stack correctly, and rule template help sits beside the title.
+## Try the demo
 
-![Configuration files with the editable source view](https://zakkaus.github.io/doona-docs/screenshots/en/config-source-light.webp)
+[Open the demo](https://demo.daeuniverse.org/) to try the UI with sample data; no backend is needed. To see error states, use [`?scenario=faults`](https://demo.daeuniverse.org/?scenario=faults); `?scenario=` returns to the healthy demo.
 
 ## Install
 
-Download `doona-<version>.tar.gz` from the [releases page](https://github.com/Zakkaus/doona/releases).
+Start with a honk build that provides the native API; the [installation guide](https://zakkaus.github.io/doona-docs/en/install.html#install) lists compatible builds and setup steps. Then download `doona-<version>.tar.gz` from the [releases page](https://github.com/Zakkaus/doona/releases).
 Extract it into the directory that honk's `native_api` block names in `ui`; honk serves doona at `/ui/`.
-See [installation details and package choices](docs/install.md) and the [installation guide](https://zakkaus.github.io/doona-docs/en/install.html#install).
+Editing settings and configuration requires write permission on the backend. See [package details](docs/install.md) for archive contents.
+
+## Backend protocols
+
+honk handles proxying, so protocol support depends on the backend version and build. Its proxy protocols include SOCKS5, Shadowsocks/2022, Trojan, VMess, VLESS, AnyTLS, Hysteria2, TUIC and Juicity; see the [honk node reference](https://github.com/daeuniverse/honk/blob/main/doc/en/reference/nodes.md#protocols) for supported options and limits.
+
+WebSocket, gRPC and XHTTP are stream transports, separate from proxy protocols. On honk versions with XHTTP support, Trojan/VMess/VLESS use the [H2 XHTTP profile](https://github.com/daeuniverse/honk/blob/main/doc/en/reference/nodes.md#xhttp-over-h2), with no H1/H3 fallback; the reference lists supported combinations and limitations.
+
+![The activity page](https://zakkaus.github.io/doona-docs/screenshots/en/activity-light.webp)
+
+![Configuration files with the editable source view](https://zakkaus.github.io/doona-docs/screenshots/en/config-source-light.webp)
+
+## Latest release
+
+[beta.17](CHANGELOG.md) contains 1 change and 4 fixes.
 
 ## Documentation
 
