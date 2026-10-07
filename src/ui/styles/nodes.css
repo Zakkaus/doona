@@ -93,7 +93,7 @@ button.rp-node {
   cursor: default;
   outline: none;
 }
-.rp-nodegrid .rp-node[data-focus-visible] {
+.rp-nodegrid .rp-node[data-focused][data-focus-visible] {
   outline: 2px solid var(--rp-accent);
   outline-offset: -2px;
 }
