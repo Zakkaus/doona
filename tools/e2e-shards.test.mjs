@@ -3,7 +3,7 @@ import {mkdtempSync, readdirSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {expect, it} from 'vitest';
+import {beforeAll, describe, expect, it} from 'vitest';
 import {listGroups, recordDurations, shardWeights} from './e2e-shards.mjs';
 
 const test = (projectName, ...seconds) => ({projectName, results: seconds.map(duration => ({duration: duration * 1000}))});
@@ -54,8 +54,13 @@ const title = entry => `${entry.project}:${entry.title}`;
 
 // Playwright's sharding is internal: PWTEST_SHARD_WEIGHTS sizes the slices and whole groups of tests are dealt out. If an upgrade stops honouring
 // the variable or regroups the tests, the shards would silently go back to uneven or mismatched slices.
-it('puts the fixture tests in the shards that the group order and the weights predict', () => {
-  const groups = listGroups(2, ['-c', fixture]);
+describe('fixture sharding', () => {
+  let groups;
+
+  beforeAll(() => {
+    groups = listGroups(2, ['-c', fixture]);
+  });
+
   const shardTitles = (current, weights) => {
     const env = {...process.env, PWTEST_SHARD_WEIGHTS: weights};
     if (!weights) delete env.PWTEST_SHARD_WEIGHTS;
@@ -71,16 +76,24 @@ it('puts the fixture tests in the shards that the group order and the weights pr
     JSON.parse(listed).suites.forEach(visit);
     return titles.sort();
   };
-  const project = [1, 1, 1, 1, 1, 1, 2, 2, 1, 1];
   const slice = (from, to) => groups.slice(from, to).flat().map(title).sort();
-  // Each project lists a1-a3 and b1-b3, the two chunks of the hooked c1-c4, then d1 and d2 with the other worker hash.
-  expect(groups.map(group => group.length)).toEqual([...project, ...project]);
-  expect(groups[6].map(title)).toEqual(['one:c1', 'one:c2']);
-  expect(groups[8].map(title)).toEqual(['one:d1']);
-  expect(shardTitles(1)).toEqual(slice(0, 10));
+
+  it('keeps the fixture group order and worker hashes', () => {
+    const project = [1, 1, 1, 1, 1, 1, 2, 2, 1, 1];
+    // Each project lists a1-a3 and b1-b3, the two chunks of the hooked c1-c4, then d1 and d2 with the other worker hash.
+    expect(groups.map(group => group.length)).toEqual([...project, ...project]);
+    expect(groups[6].map(title)).toEqual(['one:c1', 'one:c2']);
+    expect(groups[8].map(title)).toEqual(['one:d1']);
+  });
+
   // The border at 7 tests falls inside the chunk c1-c2, which starts at the sixth test and so goes whole to the first shard.
-  expect(shardTitles(1, '7:17')).toEqual(slice(0, 7));
-  expect(shardTitles(2, '7:17')).toEqual(slice(7, 20));
+  it.each([
+    ['unweighted first', 1, undefined, 0, 10],
+    ['weighted first', 1, '7:17', 0, 7],
+    ['weighted second', 2, '7:17', 7, 20]
+  ])('puts the %s shard in the predicted group slice', (label, current, weights, from, to) => {
+    expect(shardTitles(current, weights)).toEqual(slice(from, to));
+  });
 });
 
 it('lists the groups although the workflow sets the JSON reporter variables', () => {
