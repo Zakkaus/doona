@@ -132,6 +132,22 @@ it('preserves group policies across an unchanged reload', async () => {
   expect((await api.group('backup')).capabilities).toEqual(controls);
 });
 
+it('projects the configured stream transport on create and after link edits', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const link = 'vless://demo@example.com:443?type=xhttp&path=%2Fx%252Fy#transport-test';
+  const created = (await api.createNode({name: 'transport-test', link})) as Node;
+  expect(created.stream_transport).toBe('xhttp');
+  let main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await api.replaceConfigSource(main.id, main.content!.replace(link, link.replace('type=xhttp', 'type=ws')), `"${main.content_sha256}"`);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.nodes({limit: 1000})).nodes.find(node => node.id === created.id)?.stream_transport).toBe('ws');
+  main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await api.replaceConfigSource(main.id, main.content!.replace('type=ws&', ''), `"${main.content_sha256}"`);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await api.nodes({limit: 1000})).nodes.find(node => node.id === created.id)?.stream_transport).toBeNull();
+});
+
 it('admits AnyTLS share links and retains their protocol through reload', async () => {
   vi.useFakeTimers();
   const api = createMockApi();

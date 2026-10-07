@@ -182,21 +182,20 @@ function SectionMenu({
       {sections.map(section => (
         <MenuSection
           key={section.title}
-          id={section.title}
           aria-label={headers && !section.hideHeader ? undefined : section.title}
           selectionMode={section.selectionMode ?? 'single'}
-          selectedKeys={[section.value]}
-          onSelectionChange={section.onChange && pickMenuKey(section.onChange)}
+          selectedKeys={[`/choice-${section.value}`]}
+          onSelectionChange={section.onChange && pickMenuKey(key => section.onChange!(key.slice(8)))}
         >
           {headers && !section.hideHeader && <Header className="rp-sec-h">{section.title}</Header>}
           {section.items.map(item => (
-            <MenuChoice key={item.id} item={item} onAction={onAction && (() => onAction(item.id))} />
+            <MenuChoice key={item.id} item={{...item, id: `/choice-${item.id}`}} onAction={onAction && (() => onAction(item.id))} />
           ))}
         </MenuSection>
       ))}
       {actions.length > 0 && <Separator className="rp-hrule" />}
-      {actions.map((action, index) => (
-        <ActionItem key={action.label} id={actionKey(index)} {...action} />
+      {actions.map(action => (
+        <ActionItem key={action.label} {...action} />
       ))}
     </Menu>
   );
@@ -216,13 +215,12 @@ export function chosen(sections: ChoiceSection[], t: Translator) {
   return '';
 }
 
-const ActionItem = ({id, label, icon, onAction}: ChoiceAction & {id: string}) => (
-  <MenuItem id={id} className="rp-item rp-subitem" textValue={label} onAction={onAction} shouldCloseOnSelect>
+const ActionItem = ({label, icon, onAction}: ChoiceAction) => (
+  <MenuItem className="rp-item rp-subitem" textValue={label} onAction={onAction} shouldCloseOnSelect>
     <span className="ic">{icon}</span>
     <TextTooltip>{label}</TextTooltip>
   </MenuItem>
 );
-const actionKey = (index: number) => `/action-${index}`;
 
 const SubmenuItem = ({id, label, icon, sections}: ChoiceSubmenu & {id?: string}) => {
   const t = useT();
@@ -247,11 +245,11 @@ function SubmenuMenu({label, submenus: source, actions = []}: {label: string; su
   const inline = useMediaQuery(smallQuery);
   const [into, back] = useLocale().direction === 'rtl' ? ['ArrowLeft', 'ArrowRight'] : ['ArrowRight', 'ArrowLeft'];
   // The open submenu, and the row just left, which takes focus back.
-  const [{open, left}, setView] = useState<{open: number | null; left: number | null}>({open: null, left: null});
+  const [{open, left}, setView] = useState<{open: string | null; left: string | null}>({open: null, left: null});
   const root = useRef<HTMLDivElement>(null);
   const title = useId();
   // The wrapper holds focus while one view replaces the other, so the popover does not see focus lost and move it.
-  const go = (to: number | null) => {
+  const go = (to: string | null) => {
     root.current?.focus();
     setView({open: to, left: to == null ? open : null});
   };
@@ -261,7 +259,7 @@ function SubmenuMenu({label, submenus: source, actions = []}: {label: string; su
   useEffect(() => {
     const el = root.current;
     if (!el || (open == null && left == null)) return;
-    const target = open == null ? `[data-key="${left}"]` : '[aria-checked="true"], [role="menuitem"]';
+    const target = open == null ? `[data-key="${CSS.escape(`/submenu-${left!}`)}"]` : '[aria-checked="true"], [role="menuitem"]';
     const frame = requestAnimationFrame(() => {
       if (document.activeElement === el) el.querySelector<HTMLElement>(target)?.focus();
     });
@@ -270,24 +268,24 @@ function SubmenuMenu({label, submenus: source, actions = []}: {label: string; su
   if (!inline)
     return (
       <Menu aria-label={label} aria-labelledby="">
-        {submenus.map((submenu, index) =>
+        {submenus.map(submenu =>
           'sections' in submenu ? (
             <SubmenuTrigger key={submenu.label}>
-              <SubmenuItem {...submenu} />
+              <SubmenuItem id={`/submenu-${submenu.label}`} {...submenu} />
               <Popover className="rp-popover rp-list-popover" offset={-4} crossOffset={-9}>
                 <SectionMenu {...submenu} headers={submenu.sections.length > 1} />
               </Popover>
             </SubmenuTrigger>
           ) : (
-            <ActionItem key={submenu.label} id={String(index)} {...submenu} />
+            <ActionItem key={submenu.label} {...submenu} />
           )
         )}
-        {actions.map((action, index) => (
-          <ActionItem key={action.label} id={actionKey(index)} {...action} />
+        {actions.map(action => (
+          <ActionItem key={action.label} {...action} />
         ))}
       </Menu>
     );
-  const submenu = open == null ? null : submenus[open];
+  const submenu = open == null ? null : submenus.find(submenu => submenu.label === open);
   if (submenu && 'sections' in submenu) {
     const leave = () => go(null);
     const onKey = (e: KeyboardEvent) => {
@@ -307,10 +305,10 @@ function SubmenuMenu({label, submenus: source, actions = []}: {label: string; su
       </div>
     );
   }
-  // An action row's key is not a submenu index; the row runs its own command.
-  const index = (key: string | undefined) => (key != null && submenus[Number(key)] && 'sections' in submenus[Number(key)] ? Number(key) : null);
+  // An action row runs its own command rather than opening a submenu.
+  const submenuKey = (key: string | undefined) => submenus.find(submenu => `/submenu-${submenu.label}` === key && 'sections' in submenu)?.label ?? null;
   const onKey = (e: KeyboardEvent) => {
-    const key = index((e.target as HTMLElement).dataset.key);
+    const key = submenuKey((e.target as HTMLElement).dataset.key);
     if (e.key !== into || key == null) return;
     e.preventDefault();
     go(key);
@@ -324,19 +322,19 @@ function SubmenuMenu({label, submenus: source, actions = []}: {label: string; su
         autoFocus={left == null ? undefined : false}
         shouldCloseOnSelect={false}
         onAction={key => {
-          const open = index(String(key));
+          const open = submenuKey(String(key));
           if (open != null) go(open);
         }}
       >
-        {submenus.map((submenu, index) =>
+        {submenus.map(submenu =>
           'sections' in submenu ? (
-            <SubmenuItem key={submenu.label} id={String(index)} {...submenu} />
+            <SubmenuItem key={submenu.label} id={`/submenu-${submenu.label}`} {...submenu} />
           ) : (
-            <ActionItem key={submenu.label} id={String(index)} {...submenu} />
+            <ActionItem key={submenu.label} {...submenu} />
           )
         )}
-        {actions.map((action, index) => (
-          <ActionItem key={action.label} id={actionKey(index)} {...action} />
+        {actions.map(action => (
+          <ActionItem key={action.label} {...action} />
         ))}
       </Menu>
     </div>

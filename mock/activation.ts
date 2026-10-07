@@ -9,6 +9,16 @@ import {displayUrl} from './common';
 import {groupCapabilities, groupConfig} from './groupDefaults';
 import {resolveLeaf} from './control';
 
+function streamTransport(link: string, protocol: string) {
+  if (!['vless', 'vmess', 'trojan'].includes(protocol)) return null;
+  try {
+    const transport = new URL(link).searchParams.get('type');
+    return transport === 'splithttp' ? 'xhttp' : transport;
+  } catch {
+    return null;
+  }
+}
+
 export function activateInventory(
   text: string,
   revision: string,
@@ -25,10 +35,13 @@ export function activateInventory(
   const inlineNames = new Set(inline.map(field => field.name));
   const nextNodes = nodes.filter(node => (node.provider_id === 'inline' ? inlineNames.has(node.name) : providerIds.has(node.provider_id!)));
   for (const field of inline) {
-    const protocol = unquote(field.value).split(':')[0];
+    const link = unquote(field.value);
+    const protocol = link.split(':')[0];
+    const stream_transport = streamTransport(link, protocol);
     const existing = nextNodes.find(node => node.provider_id === 'inline' && node.name === field.name);
-    if (existing) existing.protocol = protocol;
-    else nextNodes.push({id: field.name, name: field.name, protocol, provider_id: 'inline', subscription_tag: null, group_ids: [], health: []});
+    if (existing) Object.assign(existing, {protocol, stream_transport});
+    else
+      nextNodes.push({id: field.name, name: field.name, protocol, stream_transport, provider_id: 'inline', subscription_tag: null, group_ids: [], health: []});
   }
   const nextProviders = providers.filter(provider => provider.kind === 'inline' || providerIds.has(provider.name));
   // A block entry (`tag: {url: …}`) carries its URL as a field of that block.

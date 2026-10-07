@@ -15,6 +15,8 @@ Entries live in [changes/](changes/) until release.
 ### Fixed
 
 - Bundle honk only after the standalone doona release is public, and require its embedded UI version, revision and program hash to match that release. (#523)
+- Keep node action menus usable immediately after adding a node. (#525)
+- Display configured stream transports for dynamically created demo nodes. (#525)
 
 ### Internal
 

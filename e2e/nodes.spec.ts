@@ -111,7 +111,20 @@ test('a share link becomes an inline node and can be removed again', async ({pag
 for (const transport of ['xhttp', 'splithttp'])
   test(`raw ${transport} links reach create and edit API payloads unchanged`, async ({page}) => {
     const {api, handlers, requests} = await mockBackend(page);
-    handlers['POST nodes'] = request => api.createNode(request.postDataJSON());
+    let added = false;
+    let releaseConfig!: () => void;
+    const refreshed = new Promise<void>(resolve => {
+      releaseConfig = resolve;
+    });
+    handlers['GET config'] = async () => {
+      if (added) await refreshed;
+      return api.config();
+    };
+    handlers['POST nodes'] = async request => {
+      const result = await api.createNode(request.postDataJSON());
+      added = true;
+      return result;
+    };
     const link = `vless://00000000-0000-4000-8000-000000000001@example.com:443?security=tls&type=${transport}&path=%2Fx%252Fy&extra=%7B%22headers%22%3A%7B%22X-Test%22%3A%22a%2Bb%22%7D%7D#edge`;
     await page.goto('/#/nodes?provider=inline');
     await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
@@ -126,9 +139,10 @@ for (const transport of ['xhttp', 'splithttp'])
     });
     const source = (await api.config()).sources.find(source => source.kind === 'main')!;
     expect(source.content).toContain(link);
-    await page.reload();
     const row = nodeRows(page).filter({hasText: 'edge'});
     await row.getByRole('button', {name: 'Node actions', exact: true}).click();
+    await expect(page.getByRole('menu', {name: 'Node actions', exact: true})).toBeVisible();
+    releaseConfig();
     await page.getByRole('menuitem', {name: 'Edit…', exact: true}).click();
     const edit = page.getByRole('dialog', {name: 'Edit node edge'});
     await expect(edit.getByLabel('Node link', {exact: true})).toHaveValue(link);
@@ -1146,6 +1160,27 @@ for (const width of [1440, 390])
     const dialog = page.getByRole('dialog', {name: 'New group', exact: true});
     await expect(dialog.getByRole('button', {name: 'Remove hk-01', exact: true})).toBeVisible();
   });
+
+test('quoted config group names cannot collide with menu commands', async ({page}) => {
+  const {api} = await mockBackend(page);
+  const config = await api.config();
+  const main = config.sources.find(source => source.kind === 'main')!;
+  const name = '/action-New group…';
+  const content = main.content.replace('group {', `group {\n  '${name}' { filter: name(jp-01) policy: min_last_delay }\n`);
+  await api.pollOperation(await api.replaceConfigSource(main.id, content, `"${main.content_sha256}"`));
+  await page.goto('/#/nodes?provider=inline');
+  await page
+    .getByRole('row')
+    .filter({has: page.getByRole('rowheader', {name: 'hk-01', exact: true})})
+    .getByRole('button', {name: 'Node actions', exact: true})
+    .click();
+  await page.getByRole('menuitem', {name: 'Add to group', exact: true}).click();
+  const submenu = page.getByRole('menu', {name: 'Add to group', exact: true});
+  await expect(submenu.getByRole('menuitem', {name: 'New group…', exact: true})).toBeVisible();
+  await submenu.getByRole('menuitem', {name, exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: `Edit group ${name}`, exact: true});
+  await expect(dialog.getByRole('group', {name: 'Includes', exact: true})).toContainText('hk-01');
+});
 
 test('long group lists scroll inside the submenu and omit existing memberships', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 900});

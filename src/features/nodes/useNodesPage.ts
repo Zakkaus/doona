@@ -100,12 +100,15 @@ export function useNodesPage({go, query}: PageProps) {
   const nodes = useNodes(offered(resources, 'nodes', {whileLoading: true}));
   const nodeList = useSteadyNodes(nodes.data);
   const names = useOutboundNames();
+  const config = useConfig(offered(resources, 'config', {whileLoading: false}));
+  const {refetch: refetchConfig} = config;
   const {refetch: refetchProviders} = providers;
   const {refetch: refetchNodes} = nodes;
   const reload = useCallback(() => {
     refetchProviders();
     refetchNodes();
-  }, [refetchProviders, refetchNodes]);
+    refetchConfig();
+  }, [refetchProviders, refetchNodes, refetchConfig]);
   const manage = useNodeManage(reload);
   const refreshing = useProviderRefresh(reload);
   const refreshAll = useRefreshAll(providers, refreshing);
@@ -113,7 +116,6 @@ export function useNodesPage({go, query}: PageProps) {
   // A subscription is edited in whichever source declares it, and only in dae text this page knows how to write.
   const version = useVersion().data;
   const daeText = engineOf(version).daeText;
-  const config = useConfig(offered(resources, 'config', {whileLoading: false}));
   const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
   const isComplete = useCompleteness(sources);
   const declared = useMemo(() => {
