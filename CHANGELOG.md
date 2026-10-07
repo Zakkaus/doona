@@ -6,6 +6,20 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Entries live in [changes/](changes/) until release.
 
+## [0.1.0-beta.18] - 2026-10-08
+
+### Added
+
+- Nodes show the configured stream transport when the backend reports it, including XHTTP. (#524)
+
+### Fixed
+
+- Bundle honk only after the standalone doona release is public, and require its embedded UI version, revision and program hash to match that release. (#523)
+
+### Internal
+
+- Update Alpine, OpenWrt, Nix and Gentoo source checksums from the beta.17 release archives. (#522)
+
 ## [0.1.0-beta.17] - 2026-10-07
 
 ### Changed
@@ -767,7 +781,8 @@ Entries live in [changes/](changes/) until release.
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
-[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.17...HEAD
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.18...HEAD
+[0.1.0-beta.18]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.17...v0.1.0-beta.18
 [0.1.0-beta.17]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.16...v0.1.0-beta.17
 [0.1.0-beta.16]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.15...v0.1.0-beta.16
 [0.1.0-beta.15]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.14...v0.1.0-beta.15
