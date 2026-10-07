@@ -6,6 +6,23 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Entries live in [changes/](changes/) until release.
 
+## [0.1.0-beta.17] - 2026-10-07
+
+### Changed
+
+- Group editors start with the region checklist collapsed and keep selected region tags visible. (#516)
+
+### Fixed
+
+- Glass notifications overlap in a collapsed stack and expand into readable cards. (#519)
+- Manual node grids show a keyboard focus outline only on the focused node, even when another node retains a stale focus-visible attribute. (#520)
+- Policy node selection borders update immediately during rapid switches. (#518)
+- Rule template info buttons sit directly after the title, with descriptions beneath it. (#517)
+
+### Internal
+
+- Update source package checksums for the beta.16 release archives. (#515)
+
 ## [0.1.0-beta.16] - 2026-10-07
 
 ### Changed
@@ -750,7 +767,8 @@ Entries live in [changes/](changes/) until release.
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
-[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.16...HEAD
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.17...HEAD
+[0.1.0-beta.17]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.16...v0.1.0-beta.17
 [0.1.0-beta.16]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.15...v0.1.0-beta.16
 [0.1.0-beta.15]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.14...v0.1.0-beta.15
 [0.1.0-beta.14]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.13...v0.1.0-beta.14
