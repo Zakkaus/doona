@@ -86,3 +86,11 @@ it.each([
   expect(out).toMatch(/^::warning::Could not balance the e2e shards by test time/);
   expect(out).toMatch(/ran e2e --shard=3\/9 --reporter=list,github,blob,json with weights unset\n$/);
 });
+
+it('publishes standalone assets before honk is available', () => {
+  for (const name of ['build', 'sums', 'release']) expect(JSON.stringify(release.jobs[name])).not.toMatch(/honk|HONK-SOURCE/);
+  const files = uses(release.jobs.release, 'softprops/action-gh-release').with.files;
+  expect(files).toContain('release/SHA256SUMS');
+  expect(files).toContain('release/*-${{ env.NPM }}.tar.gz');
+  expect(release.jobs.sums.steps.some(step => step.run?.includes('sha256sum -- *'))).toBe(true);
+});
