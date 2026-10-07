@@ -189,6 +189,36 @@
   gap: var(--rp-space-half);
   min-width: 0;
 }
+.rp-radio-option {
+  display: grid;
+  grid-template-columns: auto max-content minmax(0, 1fr);
+  row-gap: var(--rp-space-half);
+}
+.rp-radio-option > .rp-radio {
+  display: grid;
+  grid-area: 1 / 1 / 3 / 4;
+  grid-template-columns: subgrid;
+  grid-template-rows: subgrid;
+  gap: normal;
+}
+.rp-radio-option .rp-radio-mark {
+  margin-inline-end: var(--rp-space-2h);
+}
+.rp-radio-option .rp-radio-text {
+  display: contents;
+}
+.rp-radio-option .rp-radio-text > span {
+  grid-column: 2;
+}
+.rp-radio-option .rp-radio-text > .rp-label {
+  grid-column: 2 / -1;
+}
+.rp-radio-option .rp-help {
+  position: relative;
+  grid-area: 1 / 3 / 3 / 4;
+  align-self: start;
+  margin-block-start: var(--rp-space-1);
+}
 /* S2 Checkbox: the radio's row with a 14px box of 2px radius; checked, it fills with the accent colour under a
    checkmark in the colour text on the accent takes. */
 .rp-checkbox-mark {

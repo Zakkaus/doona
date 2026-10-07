@@ -1,5 +1,6 @@
 import {useId, type ReactNode} from 'react';
 import {RadioGroup as RRadioGroup, Radio as RRadio, Label, Text} from 'react-aria-components';
+import {ContextualHelp, type Help} from './ContextualHelp';
 
 // One choice from a vertical list, after S2's RadioGroup: a label (or the id of a heading that names the group), the
 // radios, then help text for the whole group. Arrow keys move the selection and Tab leaves the group. `value` null
@@ -35,10 +36,10 @@ export function RadioGroup({
 }
 
 // A radio with its label and an optional line of help under it. The label alone names it; the help describes it.
-export function Radio({value, label, description, isDisabled}: {value: string; label: string; description?: string; isDisabled?: boolean}) {
+export function Radio({value, label, description, help, isDisabled}: {value: string; label: string; description?: string; help?: Help; isDisabled?: boolean}) {
   const labelId = useId();
   const descriptionId = useId();
-  return (
+  const radio = (
     <RRadio className="rp-radio" value={value} isDisabled={isDisabled} aria-labelledby={labelId} aria-describedby={description ? descriptionId : undefined}>
       <span className="rp-radio-mark" />
       <span className="rp-radio-text">
@@ -50,5 +51,13 @@ export function Radio({value, label, description, isDisabled}: {value: string; l
         )}
       </span>
     </RRadio>
+  );
+  return help ? (
+    <span className="rp-radio-option">
+      {radio}
+      <ContextualHelp {...help} />
+    </span>
+  ) : (
+    radio
   );
 }

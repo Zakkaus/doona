@@ -13,7 +13,6 @@ import {
   InlineAlert,
   Light,
   Link,
-  HelpRow,
   Radio,
   RadioGroup,
   Switch,
@@ -44,9 +43,13 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
     choices.map(choice => {
       const summary = summaries[choice.id];
       return (
-        <HelpRow key={choice.id} help={summary ? {title: choice.name, text: choice.help} : undefined}>
-          <Radio value={choice.id} label={choice.name} description={summary ? t(summary) : choice.help} />
-        </HelpRow>
+        <Radio
+          key={choice.id}
+          value={choice.id}
+          label={choice.name}
+          description={summary ? t(summary) : choice.help}
+          help={summary ? {title: choice.name, text: choice.help} : undefined}
+        />
       );
     });
   return (

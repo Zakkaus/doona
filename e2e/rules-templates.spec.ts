@@ -352,16 +352,19 @@ test('changing templates lists only options changed from the detected routing', 
 });
 
 for (const variant of [
-  {lang: 'en', scheme: 'light', width: 1440, height: 1000, more: 'More templates'},
-  {lang: 'zh-TW', scheme: 'dark', width: 1440, height: 1000, more: '更多範本'},
-  {lang: 'zh-CN', scheme: 'light', width: 390, height: 844, more: '更多模板'}
+  {lang: 'en', scheme: 'light', width: 1280, height: 1000, more: 'More templates'},
+  {lang: 'zh-TW', scheme: 'dark', width: 1280, height: 1000, more: '更多範本'},
+  {lang: 'zh-CN', scheme: 'light', width: 390, height: 844, more: '更多模板'},
+  {lang: 'en', scheme: 'light', width: 390, height: 844, more: 'More templates'},
+  {lang: 'zh-TW', scheme: 'dark', width: 390, height: 844, more: '更多範本'}
 ] as const)
-  test(`template switches share their size and left edge in ${variant.lang}`, async ({page}) => {
+  test(`template switches share their size and left edge and help follows the first line in ${variant.lang} at ${variant.width}`, async ({page}) => {
     await page.setViewportSize({width: variant.width, height: variant.height});
     await backend(page, variant.lang);
     await page.addInitScript(scheme => localStorage.setItem('doona-scheme', scheme), variant.scheme);
     await page.goto('/#/rules?tab=list&view=simple');
-    await page.getByRole('button', {name: variant.more, exact: true}).click();
+    const more = page.getByRole('button', {name: variant.more, exact: true});
+    if ((await more.getAttribute('aria-expanded')) !== 'true') await more.click();
     const switches = page.locator('.rp-switch');
     await expect(switches).toHaveCount(3);
     const tracks = switches.locator('.track');
@@ -372,6 +375,56 @@ for (const variant of [
       expect(measured.height).toBe(boxes[0].height);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(variant.width);
+    await page.evaluate(() => document.fonts.ready);
+    const helpRows = page.locator('.rp-radios .rp-radio-option');
+    await expect(helpRows).toHaveCount(4);
+    for (const row of await helpRows.all()) {
+      const title = await row
+        .locator('.rp-radio-text > span')
+        .first()
+        .evaluate(element => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          const rect = range.getBoundingClientRect();
+          const line = element.getBoundingClientRect();
+          return {x: rect.x, y: line.y, width: rect.width, height: line.height};
+        });
+      const help = await box(row.getByRole('button'));
+      const gap = await row.getByRole('button').evaluate(element => parseFloat(getComputedStyle(element).marginInlineStart));
+      expect(Math.abs(help.x - (title.x + title.width) - gap)).toBeLessThanOrEqual(1);
+      expect(Math.abs(help.y + help.height / 2 - (title.y + title.height / 2))).toBeLessThanOrEqual(1);
+      await expect(row.locator('label button')).toHaveCount(0);
+      const selected = page.locator('.rp-radios input:checked');
+      const value = await selected.inputValue();
+      const description = row.locator('.rp-radio-text > .rp-label');
+      expect((await box(description)).x).toBeCloseTo(title.x, 0);
+      const descriptionGap = await row.evaluate(element => parseFloat(getComputedStyle(element).rowGap));
+      expect((await box(description)).y - title.y - title.height).toBeCloseTo(descriptionGap, 0);
+      await row.getByRole('button').click();
+      const explanation = page.getByRole('dialog', {
+        name: await row.locator('.rp-radio-text > span').first().innerText(),
+        exact: true
+      });
+      await expect(explanation).toBeVisible();
+      await expect(selected).toHaveValue(value);
+      await page.keyboard.press('Escape');
+      await expect(explanation).toHaveCount(0);
+      await expect(row.getByRole('button')).toBeFocused();
+      await description.click();
+      await expect(row.getByRole('radio')).toBeChecked();
+    }
+    if (variant.width === 390)
+      expect(
+        await page.locator('.rp-radios .rp-radio-option .rp-label').evaluateAll(items =>
+          items.some(item => {
+            const description = document.createRange();
+            description.selectNodeContents(item);
+            const title = document.createRange();
+            title.selectNodeContents(item.previousElementSibling!);
+            return description.getBoundingClientRect().width > title.getBoundingClientRect().width;
+          })
+        )
+      ).toBe(true);
     if (templateShots) {
       await page.setViewportSize({width: variant.width, height: variant.width === 390 ? 1800 : 1300});
       await page.screenshot({
@@ -529,6 +582,18 @@ test('the detected mode is selected, and the arrow keys move the selection throu
   await page.getByRole('button', {name: 'More templates'}).click();
   await modes(page).getByRole('radio', {name: 'Global proxy'}).focus();
   await page.keyboard.press('ArrowDown');
+  await expect(single).toBeChecked();
+  await expect(applyButton(page)).toBeDisabled();
+  await page.keyboard.press('Tab');
+  const help = page.getByRole('button', {name: t('ui.helpFor', {name: 'Single proxy group'}), exact: true});
+  await expect(help).toBeFocused();
+  await page.keyboard.press('Enter');
+  const explanation = page.getByRole('dialog', {name: 'Single proxy group', exact: true});
+  await expect(explanation).toBeVisible();
+  await expect(single).toBeChecked();
+  await page.keyboard.press('Escape');
+  await expect(explanation).toHaveCount(0);
+  await expect(help).toBeFocused();
   await expect(single).toBeChecked();
   await expect(applyButton(page)).toBeDisabled();
 });
