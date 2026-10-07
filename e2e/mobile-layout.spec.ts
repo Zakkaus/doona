@@ -94,7 +94,7 @@ test.describe('844x390 landscape', () => {
       const top = () => page.locator('.rp-top').evaluate(element => element.getBoundingClientRect().top);
       expect(await top()).toBe(0);
       await page.evaluate(() => window.scrollBy(0, 200));
-      expect(await top()).toBeLessThan(0);
+      await expect.poll(top).toBeLessThan(0);
     });
 });
 
