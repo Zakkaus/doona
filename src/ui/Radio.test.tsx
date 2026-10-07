@@ -31,3 +31,16 @@ it('marks a disabled radio on its row and its input', () => {
   const markup = group(null, true);
   expect(markup).toMatch(/<label[^>]*class="rp-radio"[^>]*data-disabled="true"[^>]*><span[^>]*><input[^>]*disabled[^>]*value="global"/);
 });
+
+it('keeps contextual help outside the radio label and associates its description', () => {
+  const markup = renderToStaticMarkup(
+    <RadioGroup label="Routing mode" value="single" onChange={() => {}}>
+      <Radio value="single" label="Single proxy group" description="One group for all traffic." help={{title: 'Single proxy group', text: 'Details.'}} />
+    </RadioGroup>
+  );
+  const input = markup.match(/<input[^>]*value="single"[^>]*>/)![0];
+  expect(markup).toContain(`id="${input.match(/aria-labelledby="([^"]+)"/)![1]}">Single proxy group</span>`);
+  expect(markup).toContain(`id="${input.match(/aria-describedby="([^" ]+)/)![1]}" class="rp-label">One group for all traffic.</span>`);
+  expect(markup).toMatch(/<\/label><span[^>]*class="rp-tipwrap"[^>]*><button[^>]*class="[^"]*rp-help/);
+  expect(markup.match(/<label[^>]*class="rp-radio"[^>]*>.*?<\/label>/)![0]).not.toContain('<button');
+});
