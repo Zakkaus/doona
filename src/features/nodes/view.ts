@@ -28,13 +28,22 @@ import {citingGroups, groupsNamingTag, namedInExpression, type GroupEntry} from 
 import {groupOwners} from '../shared/groupText';
 import {draftInterval, intervalText} from './subscription';
 
+const streamTransportLabels = new Map([
+  ['tcp', 'TCP'],
+  ['ws', 'WS'],
+  ['grpc', 'gRPC'],
+  ['xhttp', 'XHTTP']
+]);
+
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
   const latency = healthView(preferredHealth(node), t);
   const kinds = probeKindLines(node, t);
+  const protocol = node.protocol ?? '—';
+  const transport = node.stream_transport;
   return {
     id: node.id,
     name: node.name,
-    protocol: node.protocol ?? '—',
+    protocol: transport ? t('ui.aside', {text: protocol, note: streamTransportLabels.get(transport) ?? transport}) : protocol,
     latency: latency.value,
     latencyClass: latency.tone,
     groups: node.group_ids.length

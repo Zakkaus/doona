@@ -2145,6 +2145,7 @@ paths:
                       - id: node-hk-01
                         name: hk-01
                         protocol: vless
+                        stream_transport: xhttp
                         subscription_tag: provider-a
                         provider_id: provider-a
                         group_ids:
@@ -9549,6 +9550,16 @@ components:
           type:
             - string
             - 'null'
+        stream_transport:
+          type:
+            - string
+            - 'null'
+          description: Configured stream transport, not the negotiated transport or TCP/UDP health. Omitted or null when unavailable or inapplicable; future string values are allowed.
+          examples:
+            - tcp
+            - ws
+            - grpc
+            - xhttp
         subscription_tag:
           type:
             - string

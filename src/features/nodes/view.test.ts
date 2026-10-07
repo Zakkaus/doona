@@ -124,8 +124,8 @@ describe('node rows', () => {
 
   it('combines trimmed case-insensitive search, group and protocol filters without reordering its input', () => {
     const nodes = [
-      node('HK-10', {group_ids: ['gaming']}),
-      node('hk-2', {group_ids: ['gaming']}),
+      node('HK-10', {group_ids: ['gaming'], stream_transport: 'xhttp'}),
+      node('hk-2', {group_ids: ['gaming'], stream_transport: 'tcp'}),
       node('hk-1'),
       node('hk-3', {group_ids: ['gaming'], protocol: 'trojan'}),
       node('sg-1', {group_ids: ['gaming']})
@@ -135,6 +135,7 @@ describe('node rows', () => {
       'HK-10'
     ]);
     expect(nodes.map(item => item.id)).toEqual(['HK-10', 'hk-2', 'hk-1', 'hk-3', 'sg-1']);
+    expect(nodeRows(nodes, '', '', 'xhttp', {column: 'name', direction: 'ascending'}, contains, 'en-US')).toEqual([]);
     expect(nodeRows(nodes, '', '', '', {column: 'protocol', direction: 'ascending'}, contains, 'en-US').map(item => item.id)).toEqual([
       'hk-3',
       'HK-10',
@@ -170,6 +171,26 @@ describe('node rows', () => {
     expect(nodeRows(nodes, '', '', '', {column: 'latency', direction: 'ascending'}, contains, 'en-US').map(item => item.id)).toEqual(ascending);
     expect(nodeRows(nodes, '', '', '', {column: 'latency', direction: 'descending'}, contains, 'en-US').map(item => item.id)).toEqual([...ascending].reverse());
   });
+});
+
+it.each([
+  ['tcp', 'TCP'],
+  ['ws', 'WS'],
+  ['grpc', 'gRPC'],
+  ['xhttp', 'XHTTP'],
+  ['future<transport>', 'future<transport>'],
+  ['__proto__', '__proto__'],
+  [undefined, null],
+  [null, null],
+  ['', null]
+])('displays only the reported stream transport (%s)', (stream_transport, label) => {
+  const value = node('XHTTP in a name proves nothing', {stream_transport});
+  expect(nodeRowView(value, new Map(), 'en', t).protocol).toBe(label ? `vless (${label})` : 'vless');
+});
+
+it('uses localized parentheses for the configured transport', () => {
+  const t: Translator = (key, params) => translate('zh-TW', key, params);
+  expect(nodeRowView(node('a', {stream_transport: 'xhttp'}), new Map(), 'zh-TW', t).protocol).toBe('vless（XHTTP）');
 });
 
 it('projects node protocol, membership, measured zero and unavailable health', () => {

@@ -935,7 +935,7 @@
   "nodes.search": "搜索节点",
   "nodes.searchAll": "搜索范围：所有节点来源。",
   "nodes.selectedNodes": "已筛选 {n} 个节点",
-  "nodes.sourceHelp": "节点来源包括订阅、文件与配置内的节点。后端支持时，可在此添加订阅或粘贴节点链接；更改会写入主配置并重载。",
+  "nodes.sourceHelp": "节点来源包括订阅、文件与配置内的节点。后端支持时，可添加订阅或粘贴节点链接（含 XHTTP）；更改会写入主配置并重载。",
   "nodes.status.error": "失败",
   "nodes.status.never": "尚未获取",
   "nodes.status.ok": "正常",

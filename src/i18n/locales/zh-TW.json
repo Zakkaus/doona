@@ -935,7 +935,7 @@
   "nodes.search": "搜尋節點",
   "nodes.searchAll": "搜尋範圍：所有節點來源。",
   "nodes.selectedNodes": "已篩選 {n} 個節點",
-  "nodes.sourceHelp": "節點來源包括訂閱、檔案與組態內的節點。後端支援時，可在此新增訂閱或貼上節點連結；變更會寫入主組態並重載。",
+  "nodes.sourceHelp": "節點來源包括訂閱、檔案與組態內的節點。後端支援時，可新增訂閱或貼上節點連結（含 XHTTP）；變更會寫入主組態並重載。",
   "nodes.status.error": "失敗",
   "nodes.status.never": "尚未擷取",
   "nodes.status.ok": "正常",

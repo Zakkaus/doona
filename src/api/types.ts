@@ -2100,6 +2100,14 @@ export interface components {
             id: string;
             name: string;
             protocol: string | null;
+            /**
+             * @description Configured stream transport, not the negotiated transport or TCP/UDP health. Omitted or null when unavailable or inapplicable; future string values are allowed.
+             * @example tcp
+             * @example ws
+             * @example grpc
+             * @example xhttp
+             */
+            stream_transport?: string | null;
             subscription_tag: string | null;
             /** @description Provider identity from GET /providers; omitted or null when provenance is unavailable. Never infer it from the node name. */
             provider_id?: string | null;
