@@ -87,15 +87,6 @@ jobs:
       - name: Package the archives
         run: |
           if [ "$GITHUB_EVENT_NAME" = push ]; then tools/package.sh --git-version; else tools/package.sh; fi
-      # Temporary: honk has no release with the native API yet, so every doona release carries the honk debug builds of the
-      # tag pinned in tools/honk-pin.txt, the source archive of their commit and a note naming it. fetch-honk.mjs reads that
-      # tag's own release and fails unless its body, target and source tag name the pinned tag and commit. Remove this step,
-      # that file and the three honk lines in release's `files` once honk ships one.
-      - name: Bundle the honk-core debug builds
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          node tools/fetch-honk.mjs release
       # The sums job copies every intermediate artifact into release-assets, so they keep one day; release-assets
       # and the recipes keep the repository's default retention.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -304,7 +295,6 @@ jobs:
           draft: true
           prerelease: ${{ env.PRERELEASE != '' }}
           fail_on_unmatched_files: true
-          # The last three lines belong to the temporary honk-core step in the build job.
           files: |
             release/*-${{ env.NPM }}.tar.gz
             release/*_${{ env.NPM }}-${{ env.PACKAGE_RELEASE }}_all.deb
@@ -316,6 +306,3 @@ jobs:
             release/doona-openwrt.adb
             release/doona-openwrt.pem
             release/SHA256SUMS
-            release/honk-core-debug-*.tar.gz
-            release/honk-source-*.tar.gz
-            release/HONK-SOURCE.txt
