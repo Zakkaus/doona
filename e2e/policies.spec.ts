@@ -50,6 +50,66 @@ test('policies select a member, pin one network, release and test the group', as
   expect(controls[3].postDataJSON()).toMatchObject({target: {type: 'group', group_id: 'gaming'}, transport: ['tcp']});
 });
 
+test('rapid node switches paint only the current selection with ordinary motion', async ({page}) => {
+  await page.emulateMedia({reducedMotion: 'no-preference'});
+  const {api} = await mockBackend(page);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  await api.pollOperation(
+    await api.replaceConfigSource(
+      main.id,
+      writeGroupEntry(main.content, 'gaming', {filters: ['name(jp-01, hk-02, sg-01, us-01)'], policy: 'min_moving_avg'}),
+      `"${main.content_sha256}"`
+    )
+  );
+  for (const id of ['gaming', 'proxy']) await api.selectGroup(id, {member_id: 'hk-02', network: 'both'});
+  await page.goto('/#/policies?group=gaming');
+  for (const id of ['gaming', 'proxy']) {
+    const card = page.getByRole('region', {name: id, exact: true});
+    await card.scrollIntoViewIfNeeded();
+    if (id === 'proxy') await card.getByRole('searchbox', {name: 'Filter nodes'}).fill('-0');
+    await expect(card.locator('.rp-node[data-selected]')).toHaveCount(1);
+    await page.mouse.move(0, 0);
+    await card.evaluate(async el => {
+      await Promise.allSettled([...el.querySelectorAll('.rp-node')].flatMap(n => n.getAnimations().map(a => a.finished)));
+    });
+    await card.evaluate(el => {
+      const tiles = () => [...el.querySelectorAll('.rp-node')];
+      const accent = getComputedStyle(tiles().find(n => n.hasAttribute('data-selected'))!).borderTopColor;
+      const neutral = getComputedStyle(tiles().find(n => !n.hasAttribute('data-selected'))!).borderTopColor;
+      const paint = {frames: 0, stop: false, failures: [] as string[]};
+      Object.assign(window, {selectionPaint: paint});
+      const sample = () => {
+        if (paint.stop) return;
+        paint.frames++;
+        const nodes = tiles();
+        if (nodes.filter(n => n.hasAttribute('data-selected')).length !== 1) paint.failures.push('selected DOM count');
+        for (const node of nodes) {
+          const selected = node.hasAttribute('data-selected') || node.classList.contains('cur');
+          const border = getComputedStyle(node).borderTopColor;
+          if (border !== (selected ? accent : neutral)) paint.failures.push(`${node.textContent}: ${border}`);
+        }
+        requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+    for (const name of ['jp-01', 'sg-01', 'us-01']) {
+      const tile = id === 'gaming' ? card.getByRole('button', {name: new RegExp(`^${name}\\b`)}) : card.getByRole('row', {name, exact: true});
+      await tile.click({force: true});
+      await expect(tile).toHaveAttribute(id === 'gaming' ? 'aria-pressed' : 'aria-selected', 'true');
+    }
+    const paint = await card.evaluate(async el => {
+      await Promise.allSettled([...el.querySelectorAll('.rp-node')].flatMap(n => n.getAnimations().map(a => a.finished)));
+      const paint = (window as typeof window & {selectionPaint: {frames: number; stop: boolean; failures: string[]}}).selectionPaint;
+      paint.stop = true;
+      return paint;
+    });
+    expect(paint.frames).toBeGreaterThan(0);
+    expect.soft(paint.failures, `${id} selection paint`).toEqual([]);
+    const selection = (await api.group(id)).runtime.selection;
+    expect([selection.tcp?.member_id, selection.udp?.member_id]).toEqual(['us-01', 'us-01']);
+  }
+});
+
 test('a group card mounted on screen shows its members in the first frame', async ({page}) => {
   // Checked in the frame callback, which sees what is about to be painted.
   await page.addInitScript(() => {
