@@ -1088,7 +1088,7 @@
   "nodes.search": "Search nodes",
   "nodes.searchAll": "Search covers all node sources.",
   "nodes.selectedNodes": "Selected nodes: {n}",
-  "nodes.sourceHelp": "Node sources are subscriptions, files and the nodes in the configuration. When the backend allows it, subscriptions and share links are added here; changes are written to the main configuration and reloaded.",
+  "nodes.sourceHelp": "Node sources are subscriptions, files and configured nodes. When the backend supports it, add subscriptions or paste share links, including XHTTP links; changes are written to the main configuration and reloaded.",
   "nodes.status.error": "Failed",
   "nodes.status.never": "Not fetched",
   "nodes.status.ok": "OK",

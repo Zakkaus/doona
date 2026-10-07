@@ -108,6 +108,39 @@ test('a share link becomes an inline node and can be removed again', async ({pag
   await expect(page.locator('.rp-toolbar').first()).toContainText('42');
 });
 
+for (const transport of ['xhttp', 'splithttp'])
+  test(`raw ${transport} links reach create and edit API payloads unchanged`, async ({page}) => {
+    const {api, handlers, requests} = await mockBackend(page);
+    handlers['POST nodes'] = request => api.createNode(request.postDataJSON());
+    const link = `vless://00000000-0000-4000-8000-000000000001@example.com:443?security=tls&type=${transport}&path=%2Fx%252Fy&extra=%7B%22headers%22%3A%7B%22X-Test%22%3A%22a%2Bb%22%7D%7D#edge`;
+    await page.goto('/#/nodes?provider=inline');
+    await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+    const add = page.getByRole('dialog');
+    await add.getByLabel('Name', {exact: true}).fill('edge');
+    await add.getByLabel('Node link', {exact: true}).fill(`  ${link}  `);
+    await add.getByRole('button', {name: 'Add', exact: true}).click();
+    await expect(add).toHaveCount(0);
+    expect(requests.find(request => request.method() === 'POST' && new URL(request.url()).pathname === '/api/v1/nodes')!.postDataJSON()).toEqual({
+      name: 'edge',
+      link
+    });
+    const source = (await api.config()).sources.find(source => source.kind === 'main')!;
+    expect(source.content).toContain(link);
+    await page.reload();
+    const row = nodeRows(page).filter({hasText: 'edge'});
+    await row.getByRole('button', {name: 'Node actions', exact: true}).click();
+    await page.getByRole('menuitem', {name: 'Edit…', exact: true}).click();
+    const edit = page.getByRole('dialog', {name: 'Edit node edge'});
+    await expect(edit.getByLabel('Node link', {exact: true})).toHaveValue(link);
+    const updated = link.replace('%2Fx%252Fy', '%2Fnew%252Fpath');
+    await edit.getByLabel('Node link', {exact: true}).fill(`  ${updated}  `);
+    await edit.getByRole('button', {name: 'Apply', exact: true}).click();
+    await expect(edit).toHaveCount(0);
+    const write = requests.find(request => request.method() === 'PUT' && new URL(request.url()).pathname === `/api/v1/config/sources/${source.id}`)!;
+    expect(write.postDataJSON().content).toBe(source.content.replace(link, updated));
+    expect((await api.config()).sources.find(item => item.id === source.id)!.content).toBe(source.content.replace(link, updated));
+  });
+
 test('include declarations block removal even when the main source also declares them', async ({page}) => {
   const {api} = await mockBackend(page);
   const reason = 'Declared outside the main configuration file. Remove it from that file.';

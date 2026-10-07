@@ -39,3 +39,15 @@ it.each(['old', "'old'", '"old"'])('renames a DNS upstream detour written as %s 
     writeNodeEntry(text, entry, {name: 'new name', link: entry.link}) + dns.replace(`-> ${target} #`, "-> 'new name' #")
   );
 });
+
+it.each(['xhttp', 'splithttp'])('preserves raw %s links through source reads and edits', transport => {
+  const link = `vless://00000000-0000-4000-8000-000000000001@example.com:443?security=tls&type=${transport}&path=%2Fx%252Fy&extra=%7B%22headers%22%3A%7B%22X-Test%22%3A%22a%2Bb%22%7D%7D#edge`;
+  const source = `# keep\r\nnode {\r\n  edge: '${link}' # keep\r\n}\r\n`;
+  const [entry] = readNodeEntries(source);
+  expect(entry.link).toBe(link);
+  expect(writeNodeEntry(source, entry, {name: entry.name, link})).toBe(source);
+  const updated = link.replace('%2Fx%252Fy', '%2Fnew%252Fpath');
+  const written = writeNodeEntry(source, entry, {name: entry.name, link: updated});
+  expect(written).toBe(source.replace(link, updated));
+  expect(readNodeEntries(written)[0].link).toBe(updated);
+});

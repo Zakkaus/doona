@@ -57,7 +57,10 @@ export function nodeFixtures(count: number, faults = false): {nodes: Node[]; gro
     node('hk-01', 84, 91, true, 'inline', 'vless', [0.95, 1.04]),
     node('hk-02', 91, 88, true, 'inline', 'vless', [1.12, 1.18]),
     node('sg-01', 63, 70, false, 'inline', 'trojan', [0.98, 1.02]),
-    node('jp-01', faults ? null : 132, faults ? null : 139, false, 'inline', 'vless', [0.86, 0.9]),
+    {
+      ...node('jp-01', faults ? null : 132, faults ? null : 139, false, 'inline', 'vless', [0.86, 0.9]),
+      stream_transport: 'xhttp'
+    },
     node('us-01', 188, 201, true, 'inline', 'anytls', [0.62, 0.7])
   ];
   // A UDP data probe besides the TCP and DNS ones on hk-01 and sg-01; the faults scenario fails sg-01's.
