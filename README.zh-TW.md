@@ -46,7 +46,7 @@ WebSocket、gRPC 與 XHTTP 是串流傳輸方式，與代理協定不同。在�
 
 ## 最新版本
 
-[beta.17](CHANGELOG.md) 包含 1 項變更與 4 項修正。
+[beta.18](CHANGELOG.md) 新增已設定的串流傳輸方式顯示（包括 XHTTP），並修正發布打包流程，要求 honk 內嵌同版本的 doona。
 
 ## 文件
 

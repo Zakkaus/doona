@@ -46,7 +46,7 @@ WebSocket、gRPC 与 XHTTP 是流传输方式，与代理协议不同。在支�
 
 ## 最新版本
 
-[beta.17](CHANGELOG.md) 包含 1 项变更与 4 项修复。
+[beta.18](CHANGELOG.md) 新增已配置的流传输方式显示（包括 XHTTP），并修复发布打包流程，要求 honk 内嵌同版本的 doona。
 
 ## 文档
 
