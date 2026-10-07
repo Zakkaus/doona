@@ -4,12 +4,14 @@ import {Checkbox} from './Checkbox';
 export type CheckboxChoice = {id: string; label: string; isDisabled?: boolean; nodeName?: boolean};
 export function CheckboxSet({
   label,
+  hideLabel = false,
   items,
   value,
   onChange,
   isDisabled
 }: {
   label: string;
+  hideLabel?: boolean;
   items: CheckboxChoice[];
   value: string[];
   onChange: (value: string[]) => void;
@@ -18,7 +20,7 @@ export function CheckboxSet({
   const heading = useId();
   return (
     <div className="rp-checkbox-set" role="group" aria-labelledby={heading}>
-      <span id={heading} className="rp-label">
+      <span id={heading} className="rp-label" hidden={hideLabel}>
         {label}
       </span>
       <div className="rp-checkbox-options">

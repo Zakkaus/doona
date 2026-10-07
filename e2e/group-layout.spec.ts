@@ -49,7 +49,7 @@ for (const width of [1440, 390]) {
       let dialog = page.getByRole('dialog');
       await alignedForm(dialog);
       const disclosures = dialog.locator('form > section > .rp-disclosure');
-      await expect(disclosures).toHaveCount(2);
+      await expect(disclosures).toHaveCount(3);
       const paint = await disclosures.locator(':scope > h3 > button').evaluateAll(buttons =>
         buttons.map(button => {
           const style = getComputedStyle(button);
@@ -57,6 +57,7 @@ for (const width of [1440, 390]) {
         })
       );
       expect(paint[0]).toEqual(paint[1]);
+      expect(paint[0]).toEqual(paint[2]);
       await dialog.getByRole('button', {name: '取消', exact: true}).click();
       await page.getByRole('button', {name: '新增群組', exact: true}).click();
       dialog = page.getByRole('dialog');
