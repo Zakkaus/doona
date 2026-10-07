@@ -4,31 +4,49 @@
 
 # doona
 
-**[daeuniverse](https://github.com/daeuniverse) 引擎的 Web 界面：在浏览器中管理节点、群组、规则与配置。**
+**[daeuniverse](https://github.com/daeuniverse) 引擎的静态 Web 界面：在浏览器中管理节点、群组、规则与配置。**
 
 **[在线演示](https://demo.daeuniverse.org/)** / **[文档](https://zakkaus.github.io/doona-docs/zh-CN/)**
 
 [English](README.md) / 简体中文 / [繁體中文](README.zh-TW.md)
 
-[安装](#安装) / [文档](#文档) / [开发](#开发)
+[体验演示版](#体验演示版) / [安装](#安装) / [后端协议](#后端协议) / [文档](#文档)
 
 </div>
 
-doona 是 daeuniverse 引擎共用原生 API 的静态 Web 界面，显示引擎状态，并管理节点、群组、路由规则与配置文件。目前支持 honk；dae 实现同一份契约后也可使用。引擎或任意 Web 服务器均可提供此界面。
+doona 是用于管理代理后端的静态 Web 界面。查看真实数据需要兼容且正在运行的后端，并启用原生 API；目前支持 [honk](https://github.com/daeuniverse/honk)。目前不支持 dae；兼容性取决于 dae 未来是否实现同一份 API 契约。honk 或其他 Web 服务器均可提供此界面。
 
-[使用示例数据体验演示版](https://demo.daeuniverse.org/)。以 [`?scenario=faults`](https://demo.daeuniverse.org/?scenario=faults) 打开演示版可查看错误状态，以 `?scenario=` 打开则恢复正常的演示版。
+根据后端开放的功能，doona 可以：
 
-![活动页](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/activity-light.webp)
+- 监控流量、连接、事件与日志。
+- 管理节点与订阅、刷新订阅、查看探测结果。
+- 管理群组、成员与节点选择。
+- 查看路由与 DNS 规则，编辑可写源文件中的规则。
+- 编辑配置源文件、校验变更、导出源文件。
 
-[beta.17 更新记录](CHANGELOG.md)列出 1 项变更与 4 项修复。分组编辑器默认收起地区选项，已选标签仍保持可见。快速切换策略节点时，选中边框立即更新，键盘焦点轮廓仅显示在有焦点的节点上。Glass 通知正确堆叠，规则模板帮助按钮紧邻标题。
+## 体验演示版
 
-![配置文件与可编辑的源文本视图](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/config-source-light.webp)
+[打开演示版](https://demo.daeuniverse.org/)即可使用示例数据体验界面，无需后端。以 [`?scenario=faults`](https://demo.daeuniverse.org/?scenario=faults) 打开可查看错误状态，以 `?scenario=` 打开则恢复正常的演示版。
 
 ## 安装
 
-从[发布页](https://github.com/Zakkaus/doona/releases)下载 `doona-<version>.tar.gz`。
+先按[安装指南](https://zakkaus.github.io/doona-docs/zh-CN/install.html#install)选择并配置支持原生 API 的 honk 版本，再从[发布页](https://github.com/Zakkaus/doona/releases)下载 `doona-<version>.tar.gz`。
 解压到 honk `native_api` 配置块中 `ui` 指定的目录，honk 即在 `/ui/` 提供 doona。
-安装步骤与软件包选择见[安装说明](docs/install.zh-CN.md)和[文档站的安装指南](https://zakkaus.github.io/doona-docs/zh-CN/install.html#install)。
+修改设置与配置需要后端授予写入权限。各压缩包的内容见[安装说明](docs/install.zh-CN.md)。
+
+## 后端协议
+
+honk 负责代理流量，协议支持取决于后端版本与构建。其代理协议包括 SOCKS5、Shadowsocks/2022、Trojan、VMess、VLESS、AnyTLS、Hysteria2、TUIC 与 Juicity；支持的选项与限制见 [honk 节点参考](https://github.com/daeuniverse/honk/blob/main/doc/zh/reference/nodes.md#协议)。
+
+WebSocket、gRPC 与 XHTTP 是流传输方式，与代理协议不同。在支持 XHTTP 的 honk 版本中，Trojan／VMess／VLESS 使用 [H2 XHTTP 兼容配置](https://github.com/daeuniverse/honk/blob/main/doc/zh/reference/nodes.md#h2-上的-xhttp)，不会回退到 H1/H3；参考文档列出支持的组合与限制。
+
+![活动页](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/activity-light.webp)
+
+![配置文件与可编辑的源文本视图](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/config-source-light.webp)
+
+## 最新版本
+
+[beta.17](CHANGELOG.md) 包含 1 项变更与 4 项修复。
 
 ## 文档
 
