@@ -479,7 +479,8 @@ test.describe('default view', () => {
     await expect(groups.first()).toContainText('10.0.0.');
     await expect(groups.first()).toContainText('active');
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await grid.locator('[role=row][aria-level="2"]').first().click();
+    const target = grid.locator('[role=row][aria-level="2"]').first().getByRole('rowheader').locator('.cell');
+    await target.click();
     await expect(page).toHaveURL(/#\/connections\?tab=list&id=c-\d+$/);
     const drawer = page.getByRole('dialog');
     await expect(drawer.getByRole('heading')).toBeVisible();
@@ -487,7 +488,8 @@ test.describe('default view', () => {
     await expect(drawer).toHaveCount(0);
     await expect(page).toHaveURL(/#\/connections\?tab=list$/);
     await page.setViewportSize({width: 1440, height: 900});
-    await grid.locator('[role=row][aria-level="2"]').first().click();
+    await target.click();
+    await expect(page).toHaveURL(/#\/connections\?tab=list&id=c-\d+$/);
     await expect(page.locator('.rp-panel').getByRole('heading')).toBeVisible();
     await moreAction(page.locator('.rp-panel'), 'Only this device');
     await expect(page).toHaveURL(/src=10\.0\.0\.\d+/);
