@@ -1,4 +1,4 @@
-/** Usage: node tools/fetch-honk.mjs <out-dir> [--repo owner/name] --tag tag --doona-tag vVERSION [--api url] [--archive url] --commit sha; Node 22+; exits 0/1/2
+/** Usage: node tools/fetch-honk.mjs <out-dir> [--repo owner/name] [--doona-repo owner/name] --tag tag --doona-tag vVERSION [--api url] [--archive url] --commit sha; Node 22+; exits 0/1/2
  * for done/verification failure/usage. Downloads every honk-core build from the pinned debug pre-release, checks each file against the sha256
  * digest the GitHub API reports, checks that the release body, the release target and the source tag all name the pinned tag and commit,
  * verifies the embedded doona pins against its published release, downloads both sources, and writes HONK-SOURCE.txt.
@@ -15,7 +15,8 @@ import {pathToFileURL} from 'node:url';
 export const SOURCE_NOTE = 'HONK-SOURCE.txt';
 // honk's Cargo.toml declares the licence; LICENSE carries the GPL-3.0 text.
 const LICENCE = 'GPL-3.0-only';
-const usage = 'Usage: node tools/fetch-honk.mjs <out-dir> [--repo owner/name] --tag tag --doona-tag vVERSION [--api url] [--archive url] --commit sha';
+const usage =
+  'Usage: node tools/fetch-honk.mjs <out-dir> [--repo owner/name] [--doona-repo owner/name] --tag tag --doona-tag vVERSION [--api url] [--archive url] --commit sha';
 const SHA = /^[0-9a-f]{40}$/;
 
 // honk's release workflow builds each target twice: mimalloc by default, and the system allocator under -stock.
@@ -100,6 +101,7 @@ async function tagCommit({api, repo, tag, headers}) {
 export async function fetchHonk({
   out,
   repo = 'Glassyiris/honk',
+  doonaRepo = 'Zakkaus/doona',
   tag,
   doonaTag,
   api = 'https://api.github.com',
@@ -128,7 +130,6 @@ export async function fetchHonk({
   const tagged = await tagCommit({api, repo, tag: source.tag, headers});
   if (tagged !== commit) throw new Error(`source tag ${source.tag} points to ${tagged}, doona pins ${commit}`);
 
-  const doonaRepo = 'Zakkaus/doona';
   const uiResponse = await fetch(`${api}/repos/${doonaRepo}/releases/tags/${doonaTag}`, {headers, signal: AbortSignal.timeout(60_000)});
   if (!uiResponse.ok) throw new Error(`GET doona release ${doonaTag}: HTTP ${uiResponse.status}`);
   const uiRelease = await uiResponse.json();
@@ -137,11 +138,11 @@ export async function fetchHonk({
   const uiCommit = await tagCommit({api, repo: doonaRepo, tag: doonaTag, headers});
   if (!SHA.test(uiCommit ?? '')) throw new Error('doona tag has no full commit SHA');
   const uiAssets = [
-    [uiRelease, `doona-${version}.tar.gz`],
-    [release, `doona-source-${version}.tar.gz`]
-  ].map(([owner, name]) => {
+    [uiRelease, `${doonaRepo}@${doonaTag}`, `doona-${version}.tar.gz`],
+    [release, `${repo}@${tag}`, `doona-source-${version}.tar.gz`]
+  ].map(([owner, from, name]) => {
     const matches = (owner.assets ?? []).filter(asset => asset.name === name);
-    if (matches.length !== 1) throw new Error(`doona release requires exactly one ${name}`);
+    if (matches.length !== 1) throw new Error(`${from} requires exactly one ${name}`);
     const digest = /^sha256:([0-9a-f]{64})$/.exec(matches[0].digest ?? '')?.[1];
     if (!digest) throw new Error(`${name}: the API reports no sha256 digest`);
     return {...matches[0], sha256: digest};
@@ -212,11 +213,15 @@ export async function main(args) {
       positional.push(args[i]);
       continue;
     }
-    if (!['--repo', '--tag', '--doona-tag', '--api', '--archive', '--commit'].includes(args[i]) || !args[i + 1] || args[i + 1].startsWith('--')) {
+    if (
+      !['--repo', '--doona-repo', '--tag', '--doona-tag', '--api', '--archive', '--commit'].includes(args[i]) ||
+      !args[i + 1] ||
+      args[i + 1].startsWith('--')
+    ) {
       console.error(usage);
       return 2;
     }
-    options[args[i] === '--doona-tag' ? 'doonaTag' : args[i].slice(2)] = args[++i];
+    options[args[i].slice(2).replace(/-(\w)/g, (_, c) => c.toUpperCase())] = args[++i];
   }
   if (positional.length !== 1 || !options.tag || !options.commit || !options.doonaTag) {
     console.error(usage);
