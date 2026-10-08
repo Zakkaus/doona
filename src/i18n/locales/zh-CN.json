@@ -479,7 +479,7 @@
   "dns.deletePartial": "已删除 {deleted} 条，{n} 条无法删除",
   "dns.deleteUnsupported": "此后端不支持删除缓存项",
   "dns.deleted": "已删除 {n} 条缓存项",
-  "dns.empty": "暂无缓存项",
+  "dns.empty": "没有缓存条目",
   "dns.emptyFiltered": "没有符合的缓存条目",
   "dns.entries": "缓存项",
   "dns.expires": "到期时间",
