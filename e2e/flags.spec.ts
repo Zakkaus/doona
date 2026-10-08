@@ -347,7 +347,7 @@ test('node details and row actions share live overrides, aligned flag rows and i
   await expect(page.getByRole('tooltip', {name: 'Node actions', exact: true})).toBeVisible();
   await row.getByRole('rowheader').click();
   const details = page.getByRole('region', {name: 'Node details', exact: true});
-  await expect(details.getByText('vless', {exact: true})).toBeVisible();
+  await expect(details.getByText('vless (TCP)', {exact: true})).toBeVisible();
   await details.getByRole('button', {name: /Flag/}).click();
   const automatic = page.getByRole('option', {name: /Automatic.*Hong Kong/});
   const noFlag = page.getByRole('option', {name: 'No flag', exact: true});

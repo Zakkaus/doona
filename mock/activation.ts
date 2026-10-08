@@ -9,14 +9,24 @@ import {displayUrl} from './common';
 import {groupCapabilities, groupConfig} from './groupDefaults';
 import {resolveLeaf} from './control';
 
+// honk's mapping: an absent or empty claim is raw TCP, splithttp is xhttp, anything else unknown reports nothing.
+const canonicalTransports = new Map([
+  ['', 'tcp'],
+  ['tcp', 'tcp'],
+  ['ws', 'ws'],
+  ['grpc', 'grpc'],
+  ['xhttp', 'xhttp'],
+  ['splithttp', 'xhttp']
+]);
+
 function streamTransport(link: string, protocol: string) {
-  if (!['vless', 'vmess', 'trojan'].includes(protocol)) return null;
   try {
-    const transport = new URL(link).searchParams.get('type');
-    return transport === 'splithttp' ? 'xhttp' : transport;
+    if (protocol === 'vmess') return canonicalTransports.get(JSON.parse(atob(link.slice('vmess://'.length))).net ?? '') ?? null;
+    if (protocol === 'vless' || protocol === 'trojan') return canonicalTransports.get(new URL(link).searchParams.get('type') ?? '') ?? null;
   } catch {
-    return null;
+    // An unparsable link carries no transport.
   }
+  return null;
 }
 
 export function activateInventory(
