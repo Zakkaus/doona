@@ -31,11 +31,13 @@ export function credentialProblems(kind: 'setup' | 'login', username: string, pa
 // `wait` is how many seconds the backend refuses another attempt for.
 type Refusal = {key: Key; params?: Params; switchTo?: SignIn; wait?: number};
 // Branches on the error code, never the message; a conflict means the account state moved, so the form follows it.
-export function signInRefusal(error: unknown): Refusal | null {
+// Only the setup call is refused for the peer address; a login's permission_denied stays the generic backend error.
+export function signInRefusal(error: unknown, mode?: 'setup' | 'login'): Refusal | null {
   if (!(error instanceof ApiError)) return null;
   if (error.code === 'invalid_credentials') return {key: 'login.invalidCredentials'};
   if (error.code === 'setup_required') return {key: 'login.needsSetup', switchTo: 'setup'};
   if (error.code === 'setup_already_completed') return {key: 'login.alreadySetUp', switchTo: 'login'};
+  if (error.code === 'permission_denied' && mode === 'setup') return {key: 'login.setupPeer'};
   if (error.code === 'rate_limited') {
     const wait = error.retryAfter ?? 60;
     return {key: 'login.rateLimited', params: {n: wait}, wait};
@@ -87,7 +89,7 @@ export async function signIn(
   try {
     session = await openSession(api, mode, credentials);
   } catch (error) {
-    return signInRefusal(error) ?? {error};
+    return signInRefusal(error, mode) ?? {error};
   }
   try {
     saveSession(profileId, api, session.token);
