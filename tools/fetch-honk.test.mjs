@@ -35,10 +35,11 @@ async function serve({
   refs = {[ref]: {type: 'commit', sha: commit}},
   uiEdit = release => release,
   uiRefs = {},
+  doonaRepo = 'Zakkaus/doona',
   pins = `DOONA_VERSION=0.1.0-beta.17\nDOONA_REVISION=${uiCommit}\nDOONA_SHA256=${sha256('program')}\n`
 } = {}) {
   const contents = {...Object.fromEntries(expectedAssets().map(name => [name, `tarball ${name}`])), [uiProgram]: 'program', [uiSource]: 'doona source'};
-  refs = {...refs, [`/repos/Zakkaus/doona/git/ref/tags/${doonaTag}`]: {type: 'commit', sha: uiCommit}, ...uiRefs};
+  refs = {...refs, [`/repos/${doonaRepo}/git/ref/tags/${doonaTag}`]: {type: 'commit', sha: uiCommit}, ...uiRefs};
   const api = 'https://fixture.invalid';
   vi.stubGlobal('fetch', async url => {
     const path = url.slice(api.length);
@@ -53,9 +54,9 @@ async function serve({
           assets: assets([...expectedAssets(), uiSource])
         })
       );
-    if (path === `/repos/Zakkaus/doona/releases/tags/${doonaTag}`)
+    if (path === `/repos/${doonaRepo}/releases/tags/${doonaTag}`)
       return Response.json(
-        uiEdit({tag_name: doonaTag, draft: false, html_url: `https://github.com/Zakkaus/doona/releases/tag/${doonaTag}`, assets: assets([uiProgram])})
+        uiEdit({tag_name: doonaTag, draft: false, html_url: `https://github.com/${doonaRepo}/releases/tag/${doonaTag}`, assets: assets([uiProgram])})
       );
     if (path === `/repos/Glassyiris/honk/contents/.github/ci/pins.env?ref=${commit}` && pins !== null) return new Response(pins);
     if (path in refs) return Response.json({object: refs[path]});
@@ -278,6 +279,54 @@ describe('fetchHonk', () => {
     await expect(fetchHonk({doonaTag, tag, commit, ...options})).rejects.toThrow(error);
     expect(existsSync(join(options.out, SOURCE_NOTE))).toBe(false);
     expect(readdirSync(options.out).some(name => name.endsWith('.part'))).toBe(false);
+  });
+
+  it.each([
+    ['missing', release => release.assets.filter(asset => asset.name !== uiSource)],
+    ['duplicate', release => [...release.assets, release.assets.find(asset => asset.name === uiSource)]]
+  ])('names the honk release when its doona source is %s', async (_, assets) => {
+    const options = await serve({edit: release => ({...release, assets: assets(release)})});
+    await expect(fetchHonk({doonaTag, tag, commit, ...options})).rejects.toThrow(`Glassyiris/honk@${tag} requires exactly one ${uiSource}`);
+  });
+
+  it.each([
+    ['missing', () => []],
+    ['duplicate', release => [...release.assets, ...release.assets]]
+  ])('names the doona release when its program is %s', async (_, assets) => {
+    const options = await serve({uiEdit: release => ({...release, assets: assets(release)})});
+    await expect(fetchHonk({doonaTag, tag, commit, ...options})).rejects.toThrow(`Zakkaus/doona@${doonaTag} requires exactly one ${uiProgram}`);
+  });
+
+  it('reads the doona release from --doona-repo', async () => {
+    const options = await serve({doonaRepo: 'Acme/doona'});
+    const requested = [];
+    const stub = fetch;
+    vi.stubGlobal('fetch', (url, init) => (requested.push(url), stub(url, init)));
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      expect(
+        await main([
+          options.out,
+          '--tag',
+          tag,
+          '--commit',
+          commit,
+          '--doona-tag',
+          doonaTag,
+          '--doona-repo',
+          'Acme/doona',
+          '--api',
+          options.api,
+          '--archive',
+          options.archive
+        ])
+      ).toBe(0);
+    } finally {
+      log.mockRestore();
+    }
+    expect(requested).toContain(`${options.api}/repos/Acme/doona/releases/tags/${doonaTag}`);
+    expect(requested.filter(url => url.includes('Zakkaus'))).toEqual([]);
+    expect(readFileSync(join(options.out, SOURCE_NOTE), 'utf8')).toContain(`doona release: https://github.com/Acme/doona/releases/tag/${doonaTag}`);
   });
 
   it('peels the published doona tag instead of using the checkout revision', async () => {
