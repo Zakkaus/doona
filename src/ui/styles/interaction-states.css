@@ -263,7 +263,7 @@ h3.rp-label {
 :is(.rp-select, .rp-selectbtn, .rp-search, .rp-version, .rp-nav, .rp-brand, .rp-link, .rp-input :is(.clear, .reveal), .rp-node, .rp-tree-tile)[data-pressed] {
   background-color: var(--rp-hl-high);
 }
-.rp-node[data-hovered]:not([data-disabled]) {
+.rp-node[data-hovered] {
   background-color: var(--rp-hl-med);
 }
 .rp-btn.quiet[data-pressed] {
@@ -272,7 +272,7 @@ h3.rp-label {
 .rp-table [role='row'][data-pressed] {
   background-color: var(--rp-hl-high);
 }
-.rp-node[data-disabled],
+:is(.rp-nodes, .rp-nodegrid)[data-busy],
 .rp-item[data-disabled] {
   opacity: 0.5;
   cursor: default;
