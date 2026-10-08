@@ -145,7 +145,28 @@ it('projects the configured stream transport on create and after link edits', as
   main = (await api.config()).sources.find(source => source.kind === 'main')!;
   await api.replaceConfigSource(main.id, main.content!.replace('type=ws&', ''), `"${main.content_sha256}"`);
   await vi.advanceTimersByTimeAsync(1000);
-  expect((await api.nodes({limit: 1000})).nodes.find(node => node.id === created.id)?.stream_transport).toBeNull();
+  expect((await api.nodes({limit: 1000})).nodes.find(node => node.id === created.id)?.stream_transport).toBe('tcp');
+});
+
+const vmess = (net?: string) =>
+  'vmess://' + btoa(JSON.stringify({v: '2', add: '127.0.0.1', port: '443', id: 'b831381d-6324-4d53-ad4f-8cda48b30811', ...(net === undefined ? {} : {net})}));
+it.each([
+  ['trojan://pw@127.0.0.1:443?type=ws&path=%2Fp', 'ws'],
+  [vmess('grpc'), 'grpc'],
+  ['vless://id@127.0.0.1:443?type=tcp', 'tcp'],
+  ['vless://id@127.0.0.1:443?type=xhttp', 'xhttp'],
+  ['trojan://pw@127.0.0.1:443?type=splithttp', 'xhttp'],
+  ['trojan://pw@127.0.0.1:443', 'tcp'],
+  ['vless://id@127.0.0.1:443?type=', 'tcp'],
+  [vmess(), 'tcp'],
+  [vmess('splithttp'), 'xhttp'],
+  ['vless://id@127.0.0.1:443?type=quic', null],
+  [vmess('kcp'), null],
+  ['hysteria2://pw@127.0.0.1:443?type=ws', null]
+])('reports the stream transport of %s as %s', async (link, transport) => {
+  const api = createMockApi();
+  const created = (await api.createNode({name: 'transport-case', link})) as Node;
+  expect(created.stream_transport ?? null).toBe(transport);
 });
 
 it('admits AnyTLS share links and retains their protocol through reload', async () => {
