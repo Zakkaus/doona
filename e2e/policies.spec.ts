@@ -140,6 +140,64 @@ test('clicked node rows leave the keyboard outline on the focused row only', asy
   }
 });
 
+for (const group of ['gaming', 'proxy']) {
+  test(`${group} nodes keep keyboard focus and fade while a selection is pending`, async ({page}) => {
+    const {api, handlers, requests} = await mockBackend(page);
+    let release!: () => void;
+    const pending = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    handlers[`PUT groups/${group}/selection`] = async request => {
+      await pending;
+      return api.selectGroup(group, request.postDataJSON());
+    };
+    await page.goto(`/#/policies?group=${group}`);
+    const card = page.getByRole('region', {name: group, exact: true});
+    await card.getByRole('radio', {name: 'Both', exact: true}).click();
+    const virtual = group === 'proxy';
+    if (virtual) await card.getByRole('searchbox', {name: 'Filter nodes'}).fill('-0');
+    const list = card.locator(virtual ? '.rp-nodegrid' : '.rp-nodes');
+    const node = virtual ? card.getByRole('row', {name: 'sg-01', exact: true}) : card.getByRole('button', {name: /^jp-01\b/});
+    await expect(node).toBeVisible();
+    for (let tabs = 0; tabs < 12; tabs++) {
+      await page.keyboard.press('Tab');
+      if (virtual && (await list.locator(':focus').count())) {
+        await page.keyboard.press('Home');
+        break;
+      }
+      if (await node.evaluate(el => el === document.activeElement)) break;
+    }
+    await expect(node).toBeFocused();
+    await expect(list).not.toHaveAttribute('data-busy');
+    await expect(list).toHaveCSS('opacity', '1');
+    try {
+      await page.keyboard.press('Space');
+      await expect.poll(() => requests.filter(request => request.method() === 'PUT')).toHaveLength(1);
+      await expect(node).toBeFocused();
+      await expect(list).toHaveAttribute('data-busy', 'true');
+      await expect(list).toHaveCSS('opacity', '0.5');
+      await expect(list).toHaveCSS('cursor', 'default');
+      await expect(node).toHaveCSS('opacity', '1');
+      await expect(node).toHaveCSS('cursor', 'default');
+      if (!virtual) await expect(node).toHaveAttribute('aria-disabled', 'true');
+      await expect(node).not.toHaveAttribute('disabled');
+      await page.keyboard.press('Enter');
+      await page.keyboard.press('Space');
+      await expect(node).toBeFocused();
+      expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(1);
+    } finally {
+      release();
+    }
+    await expect(node).toHaveAttribute(virtual ? 'aria-selected' : 'aria-pressed', 'true');
+    await expect(list).not.toHaveAttribute('data-busy');
+    await expect(list).toHaveCSS('opacity', '1');
+    if (!virtual) await expect(node).toHaveCSS('cursor', 'pointer');
+    await expect(node).not.toHaveAttribute('aria-disabled', 'true');
+    await expect(node).toBeFocused();
+    expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(1);
+  });
+}
+
 test('a group card mounted on screen shows its members in the first frame', async ({page}) => {
   // Checked in the frame callback, which sees what is about to be painted.
   await page.addInitScript(() => {

@@ -1,7 +1,10 @@
 /* Node tiles */
 
-button.rp-node {
+.rp-nodes:where(:has(> button.rp-node)) {
   cursor: pointer;
+}
+button.rp-node {
+  cursor: inherit;
 }
 .rp-node[data-selected],
 .rp-node.cur {

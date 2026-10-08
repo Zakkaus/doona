@@ -1,4 +1,4 @@
-import {GridLayout, GridList, GridListItem, Size, ToggleButton, Virtualizer} from 'react-aria-components';
+import {Button, GridLayout, GridList, GridListItem, Size, Virtualizer} from 'react-aria-components';
 import {useCallback, useState, type ReactNode} from 'react';
 import {NodeTile, type NodeStatus} from '../../ui/Tile';
 import {Empty} from '../../ui/Feedback';
@@ -49,18 +49,19 @@ export function NodeGrid({nodes, label, empty, virtual, selected, current, marks
   );
   if (!virtual)
     return (
-      <div className="rp-nodes">
+      <div className="rp-nodes" data-busy={isDisabled || undefined}>
         {nodes.map(n =>
           onSelect ? (
-            <ToggleButton
+            <Button
               key={n.id}
               className={cx('rp-node', marks[n.id] && 'cur')}
-              isSelected={selected === n.id}
-              isDisabled={isDisabled}
-              onChange={() => onSelect(n.id)}
+              aria-pressed={selected === n.id}
+              data-selected={selected === n.id || undefined}
+              isPending={isDisabled}
+              onPress={() => onSelect(n.id)}
             >
               {tile(n)}
-            </ToggleButton>
+            </Button>
           ) : (
             <div key={n.id} className={cx('rp-node', current === n.id && 'cur')}>
               {tile(n)}
@@ -114,6 +115,7 @@ function VirtualNodeGrid({
       <GridList
         ref={gridRef}
         className="rp-nodegrid"
+        data-busy={isDisabled || undefined}
         data-fit={size.overflows ? undefined : true}
         aria-label={label}
         items={nodes}
