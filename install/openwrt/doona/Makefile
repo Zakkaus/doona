@@ -11,7 +11,7 @@ PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_REAL_VERSION).tar.gz
 PKG_SOURCE_URL:=https://github.com/Zakkaus/doona/releases/download/v$(PKG_REAL_VERSION)/
-PKG_HASH:=7860061e7ba632aa8e3e222c371c431d1dc62da761aeb8a09fcb812dc68bb2ac
+PKG_HASH:=5500c2f630bb6cadaa7c2db5758f9ffca3ca86fb47e63e4f145b6bf461173a04
 
 PKG_LICENSE:=GPL-3.0-only 0BSD Apache-2.0 BSD-3-Clause ISC MIT CC-BY-3.0 CC-BY-4.0 CC-BY-SA-4.0 CC0-1.0 LicenseRef-GitHub-Logos
 PKG_LICENSE_FILES:=web/LICENSE
@@ -24,13 +24,13 @@ define Download/doona-fonts
 	URL:=https://github.com/Zakkaus/doona/releases/download/v$(PKG_REAL_VERSION)/
 	URL_FILE:=$(FONTS_FILE)
 	FILE:=$(FONTS_FILE)
-	HASH:=343ef5c1fb2e0d3644eb36e4a8ecc944536188ab5b0fb18d557b940f21c0e7e8
+	HASH:=d28b9f3ef1141a5bfcbc59e853f065ff7da859c6a1d7e8cf1310d3de53320e3f
 endef
 
 PRECOMPRESSED_FILE:=$(PKG_NAME)-precompressed-$(PKG_REAL_VERSION).tar.gz
 define Download/doona-precompressed
 	URL:=https://github.com/Zakkaus/doona/releases/download/v$(PKG_REAL_VERSION)/
-	HASH:=8b95da5a8046f20fc45b236cd2f6ade1843b9210da2931e9740bb397d87275ec
+	HASH:=a1aa61313698f517884e3f0c65568a520764e6910bf7dc236dc4c1ad72d242fe
 	URL_FILE:=$(PRECOMPRESSED_FILE)
 	FILE:=$(PRECOMPRESSED_FILE)
 endef
