@@ -46,7 +46,7 @@ WebSocket, gRPC and XHTTP are stream transports, separate from proxy protocols. 
 
 ## Latest release
 
-[beta.18](CHANGELOG.md) adds configured stream transport display, including XHTTP, fixes release bundling to require honk with the same embedded doona version, and lets users edit newly added nodes immediately.
+[beta.19](CHANGELOG.md) fixes policy node focus, node group layout, scroll position in Events and Logs, and DNS cache and administrator setup messages.
 
 ## Documentation
 

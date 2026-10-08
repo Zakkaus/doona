@@ -6,6 +6,23 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Entries live in [changes/](changes/) until release.
 
+## [0.1.0-beta.19] - 2026-10-09
+
+### Fixed
+
+- Policies node tiles clear focus outlines when another node is clicked. (#536)
+- DNS cache messages distinguish an empty cache from no filter matches. (#530)
+- Administrator setup errors identify allowed loopback, private and link-local addresses. (#530)
+- Node details show groups in a full-width row. (#535)
+- Policy node lists retain focus and fade during selection; small lists ignore further presses. (#537)
+- Events and Logs preserve the current row during sideways swipes or scrolling within panels. (#533)
+
+### Internal
+
+- Honk downloads support alternate repositories and identify releases in file-count errors. (#529)
+- Demo Trojan and VLESS links initially report TCP. (#532)
+- Demo transport reporting matches honk, including TCP defaults and VMess transport settings. (#531)
+
 ## [0.1.0-beta.18] - 2026-10-08
 
 ### Added
@@ -783,7 +800,8 @@ Entries live in [changes/](changes/) until release.
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
-[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.18...HEAD
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.19...HEAD
+[0.1.0-beta.19]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.18...v0.1.0-beta.19
 [0.1.0-beta.18]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.17...v0.1.0-beta.18
 [0.1.0-beta.17]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.16...v0.1.0-beta.17
 [0.1.0-beta.16]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.15...v0.1.0-beta.16

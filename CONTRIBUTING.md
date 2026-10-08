@@ -336,7 +336,7 @@ For attachment or repair, save the current release's asset list, `SHA256SUMS` an
 
 Upload the staged additions or replacements to the existing release, then refresh its manifest and notes. Recheck every API asset digest and the final asset list; remove obsolete honk sources only after the replacement uploads succeed. Multi-asset uploads are not atomic: retain the saved bytes and retry interrupted uploads with that same set. Never move an existing numbered doona or honk tag, rebuild the standalone UI during repair, or rerun the first-phase workflow to repair honk. Honk's existing rolling `debug` alias may still advance during its normal release workflow.
 
-For tag `v0.1.0-beta.18`, release assets keep the upstream version without `v`. See the
+For tag `v0.1.0-beta.19`, release assets keep the upstream version without `v`. See the
 [package version table](install/README.md#version-spellings) for every archive, binary package and source recipe.
 
 ## Update the contract

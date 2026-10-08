@@ -35,7 +35,7 @@ The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the require
 
 ## Release files
 
-Standalone UI files are published first; matching honk builds and corresponding sources are attached afterward. Most people need two: the program file for their system and `SHA256SUMS`. The names below are for v0.1.0-beta.18; other versions follow the same [spellings](../install/README.md#version-spellings).
+Standalone UI files are published first; matching honk builds and corresponding sources are attached afterward. Most people need two: the program file for their system and `SHA256SUMS`. The names below are for v0.1.0-beta.19; other versions follow the same [spellings](../install/README.md#version-spellings).
 
 ### Program
 
@@ -43,25 +43,25 @@ Choose one, for a manual install or for your system's package manager.
 
 | File                                  | What it is                              | Choose for                              |
 | ------------------------------------- | --------------------------------------- | --------------------------------------- |
-| `doona-0.1.0-beta.18.tar.gz`          | The built UI and licences, no installer | Manual installation with any web server |
-| `doona-web_0.1.0-beta.18-1_all.deb`   | Debian package                          | Debian or Ubuntu                        |
-| `doona-0.1.0-beta.18-1.noarch.rpm`    | RPM package                             | Fedora or openSUSE                      |
-| `doona-0.1.0beta18-1-any.pkg.tar.zst` | pacman package                          | Arch Linux                              |
-| `doona_0.1.0-beta.18-1_all.ipk`       | opkg package                            | OpenWrt 24.10 and earlier               |
-| `doona-0.1.0_beta18-r1.apk`           | apk-tools 3 package                     | OpenWrt 25.12                           |
-| `doona-0.1.0-beta.18-r0.alpine.apk`   | Alpine package                          | Alpine Linux                            |
+| `doona-0.1.0-beta.19.tar.gz`          | The built UI and licences, no installer | Manual installation with any web server |
+| `doona-web_0.1.0-beta.19-1_all.deb`   | Debian package                          | Debian or Ubuntu                        |
+| `doona-0.1.0-beta.19-1.noarch.rpm`    | RPM package                             | Fedora or openSUSE                      |
+| `doona-0.1.0beta19-1-any.pkg.tar.zst` | pacman package                          | Arch Linux                              |
+| `doona_0.1.0-beta.19-1_all.ipk`       | opkg package                            | OpenWrt 24.10 and earlier               |
+| `doona-0.1.0_beta19-r1.apk`           | apk-tools 3 package                     | OpenWrt 25.12                           |
+| `doona-0.1.0-beta.19-r0.alpine.apk`   | Alpine package                          | Alpine Linux                            |
 
 Debian and Ubuntu ship an unrelated `doona` package, so their deb is named `doona-web` and installs into `/usr/share/doona-web`; set honk's `ui` to that path. The other package formats keep the name `doona` and install into `/usr/share/doona`. Alpine and OpenWrt apk files are not interchangeable.
 
 ### Optional add-ons
 
-Each add-on comes in the same formats as the program, with `fonts` or `precompressed` in its name: `doona-fonts-0.1.0-beta.18.tar.gz`, `doona-web-fonts_0.1.0-beta.18-1_all.deb`, `doona-fonts_0.1.0-beta.18-1_all.ipk` and so on. Install the add-on in the same format and version as the program.
+Each add-on comes in the same formats as the program, with `fonts` or `precompressed` in its name: `doona-fonts-0.1.0-beta.19.tar.gz`, `doona-web-fonts_0.1.0-beta.19-1_all.deb`, `doona-fonts_0.1.0-beta.19-1_all.ipk` and so on. Install the add-on in the same format and version as the program.
 
 | Name part       | What it adds                                                                              | When to install                                                                   |
 | --------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `fonts`         | Noto Sans TC and SC, about 8 MB                                                           | You want the bundled Chinese fonts instead of the system's. See [Fonts](fonts.md) |
 | `precompressed` | `.br` and `.gz` copies of the text assets, about 1.6 MB                                   | Servers and desktops; optional on a router                                        |
-| `doc` (Alpine)  | `doona-doc-0.1.0-beta.18-r0.alpine.apk`: the NOTICE file, split off as Alpine packages do | Rarely needed                                                                     |
+| `doc` (Alpine)  | `doona-doc-0.1.0-beta.19-r0.alpine.apk`: the NOTICE file, split off as Alpine packages do | Rarely needed                                                                     |
 
 Precompressed means compressed in advance. When a browser accepts compression, honk or a web server sends the `.br` or `.gz` copy instead of compressing the file for each request, so it spends no CPU on compression and pages load faster on a slow link. The copies are made with `brotli -q 11` and `gzip -9 -n` for text assets of at least 1 KiB; only copies smaller than the original are kept. For a manual install, extract the archive into the directory holding doona's files.
 
@@ -86,7 +86,7 @@ The attached honk builds embed the same doona version as the release; `ui: embed
 | `honk-core-debug-<target>[-stock].tar.gz` | One honk build per target, eight in all                                  |
 | `HONK-SOURCE.txt`                         | honk and embedded doona provenance, with build and source SHA-256 hashes |
 | `honk-source-<commit>.tar.gz`             | honk's corresponding source at the recorded commit                       |
-| `doona-source-0.1.0-beta.18.tar.gz`       | The embedded UI's corresponding source at the recorded doona revision    |
+| `doona-source-0.1.0-beta.19.tar.gz`       | The embedded UI's corresponding source at the recorded doona revision    |
 
 | Name part             | Choose for                                            |
 | --------------------- | ----------------------------------------------------- |
