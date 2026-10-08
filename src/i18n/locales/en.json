@@ -560,7 +560,8 @@
     "one": "Deleted {n} cache entry",
     "other": "Deleted {n} cache entries"
   },
-  "dns.empty": "No matching cache entries",
+  "dns.empty": "No cache entries",
+  "dns.emptyFiltered": "No matching cache entries",
   "dns.entries": "Cache entries",
   "dns.expires": "Expires",
   "dns.exportLog": "Export CSV",

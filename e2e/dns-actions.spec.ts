@@ -26,7 +26,7 @@ test('cache deletion removes one entry and flushing requires confirmation', asyn
   await expect(grid).toHaveAttribute('aria-rowcount', String(entries.length));
   await page.getByRole('button', {name: 'Clear all cache', exact: true}).click();
   await dialog.getByRole('button', {name: 'Clear all cache', exact: true}).click();
-  await expect(page.getByText('No matching cache entries', {exact: true})).toBeVisible();
+  await expect(page.getByText('No cache entries', {exact: true})).toBeVisible();
   await expect(page.locator('.rp-toast.positive').last()).toContainText(`matched: ${cached - 1}, deleted: ${cached - 1}`);
   expect(requests.filter(request => request.method() !== 'GET').map(request => [request.method(), new URL(request.url()).pathname])).toEqual([
     ['DELETE', `/api/v1/dns/cache/${encodeURIComponent(entries[0].entry_id)}`],
@@ -226,7 +226,7 @@ test('Cancel on a pending flush reads the cache again, since the flush may alrea
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   // The cache polls every 15 s; the empty table must come from the read that Cancel starts.
-  await expect(page.getByText('No matching cache entries', {exact: true})).toBeVisible();
+  await expect(page.getByText('No cache entries', {exact: true})).toBeVisible();
 });
 
 test('the cache table fits its entries instead of holding a page of empty space', async ({page}) => {
