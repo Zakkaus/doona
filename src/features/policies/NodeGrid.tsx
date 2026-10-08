@@ -120,7 +120,9 @@ function VirtualNodeGrid({
         // The collection caches each row's rendering by item; what a row reads besides the item is declared here.
         dependencies={[current, marks, onSelect, renderTile]}
         selectionMode={onSelect ? 'single' : 'none'}
+        // A pending selection blocks selecting only: a row that lost its tabIndex while focused would keep its focus ring.
         disabledKeys={isDisabled ? nodes.map(node => node.id) : []}
+        disabledBehavior="selection"
         disallowEmptySelection
         selectedKeys={onSelect && selected ? [selected] : []}
         onSelectionChange={keys => {
