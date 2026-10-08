@@ -1,5 +1,5 @@
 import {afterEach, expect, it, vi} from 'vitest';
-import {revealFlowRow} from './tableFlow';
+import {revealFlowRow, scrollsOwnBox} from './tableFlow';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -28,4 +28,25 @@ it('uses the detail top as the visible bottom bound without double-counting the 
   scrollBy.mockClear();
   revealFlowRow(box, 1558, 1598);
   expect(scrollBy).not.toHaveBeenCalled();
+});
+
+it('finds a box between the target and the page that scrolls vertically on its own', () => {
+  const body = {} as Element;
+  const box = (overflowY: string, scrollTop: number, parentElement: Element) =>
+    ({overflowY, scrollTop, scrollHeight: 600, clientHeight: 200, parentElement}) as unknown as Element;
+  vi.stubGlobal('document', {body});
+  vi.stubGlobal('getComputedStyle', (node: {overflowY?: string}) => ({overflowY: node.overflowY ?? 'visible'}));
+  const panel = box('auto', 0, {parentElement: body} as Element);
+  const cell = {parentElement: panel, scrollHeight: 0, clientHeight: 0} as unknown as Element;
+  expect(scrollsOwnBox(cell)).toBe(true);
+  expect(scrollsOwnBox(cell, 120)).toBe(true);
+  // At its top, an upward wheel passes through to the page.
+  expect(scrollsOwnBox(cell, -120)).toBe(false);
+  expect(scrollsOwnBox(box('auto', 400, body), 120)).toBe(false);
+  expect(scrollsOwnBox(box('auto', 400, body), -120)).toBe(true);
+  // A sideways scrollport or a box with nothing to scroll leaves vertical movement to the page.
+  expect(scrollsOwnBox(box('hidden', 200, body))).toBe(false);
+  expect(scrollsOwnBox({...box('auto', 0, body), scrollHeight: 200} as Element)).toBe(false);
+  expect(scrollsOwnBox(body)).toBe(false);
+  expect(scrollsOwnBox(null)).toBe(false);
 });
