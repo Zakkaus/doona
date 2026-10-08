@@ -15,6 +15,17 @@ export function revealFlowRow(box: HTMLElement, top: number, bottom: number) {
 
 const scrollSettle = 250;
 
+// Whether the target sits in a box that scrolls vertically on its own, in the wheel's direction when one is given, so the
+// gesture moves that box instead of the page.
+export function scrollsOwnBox(target: EventTarget | null, deltaY = 0) {
+  for (let node = target as Element | null; node?.parentElement && node !== document.body; node = node.parentElement) {
+    const room = node.scrollHeight - node.clientHeight;
+    if (room > 0 && /auto|scroll/.test(getComputedStyle(node).overflowY) && (deltaY < 0 ? node.scrollTop > 0 : !deltaY || Math.ceil(node.scrollTop) < room))
+      return true;
+  }
+  return false;
+}
+
 // RAC virtualises against the window; its horizontal scrollport still contains the sticky heading.
 export function useTableFlow(
   enabled: boolean | undefined,
@@ -87,21 +98,32 @@ export function useTableFlow(
     };
   }, [enabled, ref, detailRef, heading]);
 
-  // Until when the person's own scrolling holds the view: vertical wheel and touch movement start it, and scroll events
-  // during it, such as momentum, extend it. A prepend then leaves the view to them instead of fighting their movement.
-  // A click or a zoom wheel is not scrolling, so a stationary view keeps its anchor.
+  // Until when the person's own scrolling holds the view: a vertical wheel or mainly vertical touch movement that moves the
+  // page starts it, and scroll events during it, such as momentum, extend it. A prepend then leaves the view to them
+  // instead of fighting their movement. A click, a zoom wheel, a sideways swipe or a gesture taken by a box that scrolls
+  // on its own leaves the page still, so the view keeps its anchor.
   const scrolling = useRef(0);
   useEffect(() => {
     if (!enabled || !stream) return;
     const hold = () => (scrolling.current = performance.now() + scrollSettle);
-    const wheel = (event: WheelEvent) => event.deltaY && !event.ctrlKey && hold();
+    const wheel = (event: WheelEvent) => event.deltaY && !event.ctrlKey && !scrollsOwnBox(event.target, event.deltaY) && hold();
     const extend = () => performance.now() < scrolling.current && hold();
+    let touch: Touch | undefined;
+    let own = false;
+    const start = (event: TouchEvent) => {
+      touch = event.touches[0];
+      own = scrollsOwnBox(event.target);
+    };
+    const move = ({touches: [point]}: TouchEvent) =>
+      touch && point && !own && Math.abs(point.clientY - touch.clientY) > Math.abs(point.clientX - touch.clientX) && hold();
     window.addEventListener('wheel', wheel, {passive: true});
-    window.addEventListener('touchmove', hold, {passive: true});
+    window.addEventListener('touchstart', start, {passive: true});
+    window.addEventListener('touchmove', move, {passive: true});
     window.addEventListener('scroll', extend, {passive: true});
     return () => {
       window.removeEventListener('wheel', wheel);
-      window.removeEventListener('touchmove', hold);
+      window.removeEventListener('touchstart', start);
+      window.removeEventListener('touchmove', move);
       window.removeEventListener('scroll', extend);
       scrolling.current = 0;
     };

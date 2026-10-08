@@ -127,6 +127,78 @@ for (const kind of ['events', 'logs'] as const) {
   });
 }
 
+test('events retain prepend anchoring while a box that scrolls on its own takes the wheel', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  const {grid, frame} = await feed(page, 'events', 200);
+  await page.evaluate(() => window.scrollTo(0, 4000));
+  await page.evaluate(() => {
+    const scroller = Object.assign(document.createElement('div'), {style: 'position:fixed;left:900px;top:300px;width:240px;height:240px;overflow-y:auto'});
+    scroller.append(Object.assign(document.createElement('div'), {style: 'height:2400px'}));
+    document.body.append(scroller);
+    scroller.scrollTop = 1000;
+  });
+  await settleFrames(page);
+  const held = await grid.locator('[role=row][data-key]').evaluateAll(rows => {
+    const row = rows.find(row => row.getBoundingClientRect().top >= 110 && row.getBoundingClientRect().bottom <= innerHeight)!;
+    return {key: row.getAttribute('data-key')!, top: row.getBoundingClientRect().top, index: Number(row.getAttribute('aria-rowindex'))};
+  });
+  await page.mouse.move(1000, 400);
+  await page.mouse.wheel(0, -240);
+  await page.evaluate(record => (window as unknown as {appendRecord: (record: unknown) => void}).appendRecord(record), frame(201));
+  const row = grid.locator(`[data-key="${held.key}"]`);
+  await expect(row).toHaveAttribute('aria-rowindex', String(held.index + 1));
+  await settleFrames(page);
+  expect(await row.evaluate(element => element.getBoundingClientRect().top)).toBe(held.top);
+});
+
+test.describe('touch flow', () => {
+  test.use({viewport: {width: 390, height: 844}, hasTouch: true});
+
+  test('events retain prepend anchoring during a sideways swipe and yield to a vertical one', async ({page}) => {
+    const {grid, frame} = await feed(page, 'events', 200);
+    await page.evaluate(() => window.scrollTo(0, 4000));
+    await settleFrames(page);
+    const cdp = await page.context().newCDPSession(page);
+    const swipe = async (x: number, y: number) => {
+      await cdp.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{x: 200, y: 500}]});
+      for (let step = 1; step <= 8; step++)
+        await cdp.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: 200 + (x * step) / 8, y: 500 + (y * step) / 8}]});
+      await cdp.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+    };
+    const reading = () =>
+      grid.locator('[role=row][data-key]').evaluateAll(rows => {
+        const row = rows.find(row => row.getBoundingClientRect().top >= 110 && row.getBoundingClientRect().bottom <= innerHeight)!;
+        return {key: row.getAttribute('data-key')!, top: row.getBoundingClientRect().top, index: Number(row.getAttribute('aria-rowindex'))};
+      });
+    const append = (id: number) => page.evaluate(record => (window as unknown as {appendRecord: (record: unknown) => void}).appendRecord(record), frame(id));
+    const sideways = await reading();
+    await swipe(-160, 0);
+    expect(await page.evaluate(() => scrollY)).toBe(4000);
+    await append(201);
+    const row = grid.locator(`[data-key="${sideways.key}"]`);
+    await expect(row).toHaveAttribute('aria-rowindex', String(sideways.index + 1));
+    await settleFrames(page);
+    expect(await row.evaluate(element => element.getBoundingClientRect().top)).toBe(sideways.top);
+
+    // A vertical swipe moves the page, so the next prepend leaves the view to it instead of scrolling by a row.
+    await page.waitForTimeout(300);
+    const resting = await page.evaluate(() => scrollY);
+    await swipe(0, 120);
+    await page.evaluate(() => {
+      const scrollBy = window.scrollBy.bind(window);
+      (window as unknown as {compensated: number}).compensated = 0;
+      window.scrollBy = ((...args: [number, number]) => {
+        (window as unknown as {compensated: number}).compensated++;
+        scrollBy(...args);
+      }) as typeof window.scrollBy;
+    });
+    await append(202);
+    await expect(row).toHaveAttribute('aria-rowindex', String(sideways.index + 2));
+    expect(await page.evaluate(() => scrollY)).toBeLessThan(resting);
+    expect(await page.evaluate(() => (window as unknown as {compensated: number}).compensated)).toBe(0);
+  });
+});
+
 for (const viewport of [
   {width: 1440, height: 900},
   {width: 1700, height: 1150},
