@@ -154,9 +154,10 @@ export function useDnsCacheTab(domain: string) {
   const entries = dns.cache.data?.entries;
   const {matches: matched, error: matchError, pending: matching} = useCacheMatches(entries, settled, matchType);
   // The table and per-entry deletion share one result, including bounded regex matching.
+  const filtered = !!matchText.trim() || matchType !== 'all' || !!domain;
   const view = useMemo(
-    () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, dns.busy, locale, t, settling ? [] : matched),
-    [dns.cache.data, dns.capabilities.data, dns.busy, locale, t, settling, matched]
+    () => dnsCacheView(dns.cache.data, dns.capabilities.data?.resources, dns.busy, locale, t, settling ? [] : matched, filtered),
+    [dns.cache.data, dns.capabilities.data, dns.busy, locale, t, settling, matched, filtered]
   );
   // An exact name still works when the backend cannot list its cache.
   const byName = matchKind === 'full' && !!matchText.trim() && view.deleteBy.name;
@@ -186,7 +187,7 @@ export function useDnsCacheTab(domain: string) {
     matchText,
     matchType,
     matchAvailable: view.readable || view.deleteBy.name || view.deleteBy.entry,
-    filtered: !!matchText.trim() || matchType !== 'all' || !!domain,
+    filtered,
     clearMatches: () => {
       setMatchText('');
       setMatchType('all');

@@ -69,6 +69,15 @@ it('disables unsupported query types and omits explicitly unavailable tabs', () 
   expect(dnsQueryView(null, resources, 'A', 'example.com', false, t).tabs.map(tab => tab.id)).toEqual(['cache', 'query']);
 });
 
+it('names a filter only when one narrows an empty cache listing', () => {
+  const empty = (filtered?: boolean) => dnsCacheView(dnsCache, capabilities.resources, null, 'en-US', t, [], filtered).empty;
+  expect(empty()).toBe('No cache entries');
+  expect(empty(false)).toBe('No cache entries');
+  expect(empty(true)).toBe('No matching cache entries');
+  const unreadable = {...capabilities.resources, dns_cache: {...capabilities.resources.dns_cache, read: false}};
+  expect(dnsCacheView(dnsCache, unreadable, null, 'en-US', t, [], true).empty).toBe('This backend does not provide a cache listing');
+});
+
 it('projects matched cache rows without narrowing the flush scope or coverage', () => {
   const view = dnsCacheView(
     dnsCache,

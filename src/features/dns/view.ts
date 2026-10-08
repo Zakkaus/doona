@@ -98,7 +98,8 @@ export function dnsCacheView(
   busy: string | null,
   locale: string,
   t: LabelFn,
-  entries = data?.entries ?? []
+  entries = data?.entries ?? [],
+  filtered = false
 ) {
   const cache = resources?.dns_cache;
   return {
@@ -122,7 +123,7 @@ export function dnsCacheView(
     // Why Clear all cache and the rows' Delete are disabled, when the backend does not support them.
     flushReason: cache && !busy && (!cache.available || !cache.flush) ? t('dns.flushUnsupported') : null,
     deleteReason: cache && !busy && entries.length > 0 && (!cache.available || !cache.delete_entry) ? t('dns.deleteUnsupported') : null,
-    empty: t(resources?.dns_cache.available && resources.dns_cache.read ? 'dns.empty' : 'dns.cacheUnavailable'),
+    empty: t(resources?.dns_cache.available && resources.dns_cache.read ? (filtered ? 'dns.emptyFiltered' : 'dns.empty') : 'dns.cacheUnavailable'),
     rows: entries.map(entry => ({
       id: entry.entry_id,
       domain: entry.domain,
