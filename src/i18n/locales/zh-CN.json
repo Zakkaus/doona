@@ -801,6 +801,7 @@
   "login.sessionEnded": "会话已结束，请重新登录。",
   "login.settings": "更改后端网址",
   "login.setupNote": "{backend} 尚未设置管理员，创建后即登录。仅接受来自本机、私有网络或链路本地地址的创建请求。",
+  "login.setupPeer": "后端只接受来自本机、私有网络或链路本地地址的管理员创建请求。",
   "login.setupTitle": "创建管理员",
   "login.showPassword": "显示密码",
   "login.signIn": "登录",

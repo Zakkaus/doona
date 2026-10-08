@@ -936,6 +936,7 @@
   "login.sessionEnded": "The session has ended; sign in again.",
   "login.settings": "Change backend URL",
   "login.setupNote": "{backend} has no administrator yet; creating one signs you in. Accepted only from loopback, private or link-local addresses.",
+  "login.setupPeer": "The backend accepts administrator setup only from loopback, private or link-local addresses.",
   "login.setupTitle": "Create the administrator",
   "login.showPassword": "Show password",
   "login.signIn": "Sign in",

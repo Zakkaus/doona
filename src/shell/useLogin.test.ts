@@ -156,7 +156,7 @@ it('reports a rejected sign-in, then keeps the session a retry opens', async () 
   ]);
 });
 
-it.each(['login', 'setup'] as const)('keeps a %s permission refusal without inferring a setup restriction', async mode => {
+it.each(['login', 'setup'] as const)('answers a %s permission refusal by what that call can mean', async mode => {
   const session = storage();
   vi.stubGlobal('localStorage', session);
   vi.stubGlobal(
@@ -164,14 +164,24 @@ it.each(['login', 'setup'] as const)('keeps a %s permission refusal without infe
     vi.fn(async () => json({error: {code: 'permission_denied', message: 'A policy refusal', details: null}, request_id: 'policy-403'}, 403))
   );
   const result = await signIn(challenged.id, challenged.api, mode, {username: 'admin', password: 'secret'});
-  expect(result).toEqual({error: expect.any(ApiError)});
-  const error = (result as {error: ApiError}).error;
-  expect(error).toMatchObject({status: 403, code: 'permission_denied', message: 'A policy refusal', details: null, requestId: 'policy-403'});
-  for (const [lang] of LANGS) {
-    const t: Translator = (key, params) => translate(lang, key, params);
-    expect(errorText(error, t)).toBe(t('ui.backend.permissionDenied') + t('ui.requestNote', {requestId: 'policy-403'}));
+  // Only the setup endpoint refuses on the peer address, so only it names that limit; a login keeps the backend's error.
+  if (mode === 'setup') expect(result).toEqual({key: 'login.setupPeer'});
+  else {
+    expect(result).toEqual({error: expect.any(ApiError)});
+    const error = (result as {error: ApiError}).error;
+    expect(error).toMatchObject({status: 403, code: 'permission_denied', message: 'A policy refusal', details: null, requestId: 'policy-403'});
+    for (const [lang] of LANGS) {
+      const t: Translator = (key, params) => translate(lang, key, params);
+      expect(errorText(error, t)).toBe(t('ui.backend.permissionDenied') + t('ui.requestNote', {requestId: 'policy-403'}));
+    }
   }
   expect(session.store.size).toBe(0);
+});
+
+it('words the setup peer limit in every language', () => {
+  expect(translate('en', 'login.setupPeer')).toBe('The backend accepts administrator setup only from loopback, private or link-local addresses.');
+  expect(translate('zh-TW', 'login.setupPeer')).toBe('後端只接受來自本機、私有網路或鏈路本地位址的管理員建立請求。');
+  expect(translate('zh-CN', 'login.setupPeer')).toBe('后端只接受来自本机、私有网络或链路本地地址的管理员创建请求。');
 });
 
 it('names a session the browser cannot store apart from a failed sign-in', async () => {
