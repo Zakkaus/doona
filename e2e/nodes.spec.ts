@@ -455,6 +455,33 @@ test('node details list multiple probe kinds, and hide the list for a node with 
   await expect(details.getByText('Probe kinds', {exact: true})).toHaveCount(0);
 });
 
+test('node details give many groups a row as wide as the card, and keep the other facts on one line at 1440 px', async ({page}) => {
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto(`/#/nodes?provider=harbor&q=${encodeURIComponent('德國 03')}`);
+  await page
+    .getByRole('rowheader', {name: /^德國 03/})
+    .first()
+    .click();
+  const details = page.getByRole('region', {name: 'Node details', exact: true});
+  const groups = details.getByRole('group', {name: 'Groups', exact: true});
+  await expect(groups.locator('.rp-tag-link')).toHaveCount(10);
+  const {groupsWidth, contentWidth, factsHeight, factHeight} = await details.evaluate(card => {
+    const tags = card.querySelector('[role="group"][aria-label="Groups"]')!;
+    const content = card.querySelector<HTMLElement>('.rp-list')!;
+    const facts = content.querySelector<HTMLElement>(':scope > .rp-kv')!;
+    const fact = facts.firstElementChild!;
+    const valueEnd = fact.querySelector('.v')!.getBoundingClientRect().bottom;
+    return {
+      groupsWidth: tags.getBoundingClientRect().width,
+      contentWidth: content.getBoundingClientRect().width,
+      factsHeight: facts.getBoundingClientRect().height,
+      factHeight: valueEnd - fact.getBoundingClientRect().top
+    };
+  });
+  expect(groupsWidth).toBeGreaterThan(contentWidth - 1);
+  expect(factsHeight).toBeLessThanOrEqual(factHeight + 1);
+});
+
 // A Hysteria2 node listens on UDP only: a connect to its server endpoint fails while the node carries traffic, so the
 // latency test must measure through the node over HTTP. `rows` rewrites the node's probe rows once the probe finishes.
 async function udpOnlyNode(page: Parameters<typeof mockBackend>[0], rows: (row: ProbeResultItem) => ProbeResultItem) {
