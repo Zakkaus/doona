@@ -365,45 +365,53 @@ test('a subscription is added with its refresh interval, User-Agent and cache se
     .toContain("sub-o: {\n    url: 'https://example.org/sub?token=abc'\n    ua: 'clash.meta'\n    interval: '21600s'\n    cache: false\n  }");
 });
 
-test('a cold Nodes page finishes the first refresh after selecting a new subscription', async ({page}) => {
-  await page.addInitScript(() => {
-    window.requestIdleCallback = () => 0;
+test.describe('cold Nodes refresh', () => {
+  // A worker cache hit bypasses the chunk route that holds this page cold.
+  test.use({serviceWorkers: 'block'});
+
+  test('a cold Nodes page finishes the first refresh after selecting a new subscription', async ({page}) => {
+    await page.addInitScript(() => {
+      window.requestIdleCallback = () => 0;
+    });
+    let fetched = false;
+    let release = () => {};
+    const pending = new Promise<void>(resolve => (release = resolve));
+    await page.route(/\/Nodes-[\w-]+\.js$/, async route => {
+      fetched = true;
+      await pending;
+      await route.continue();
+    });
+    const {api, handlers} = await mockBackend(page);
+    let showVersion = () => {};
+    const version = new Promise<void>(resolve => (showVersion = resolve));
+    handlers['GET version'] = async () => {
+      await version;
+      return api.version();
+    };
+    let refreshStarted = false;
+    let finish = () => {};
+    const refreshing = new Promise<void>(resolve => (finish = resolve));
+    handlers['POST providers/sub-cold/refresh'] = async () => {
+      refreshStarted = true;
+      await refreshing;
+      return api.refreshProvider('sub-cold');
+    };
+    await page.goto('/#/nodes?tab=list', {waitUntil: 'domcontentloaded'});
+    await expect.poll(() => fetched).toBe(true);
+    await expect(page.locator(`.rp-content ${loadingState}`).first()).toBeVisible();
+    release();
+    await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Name').fill('sub-cold');
+    await dialog.getByLabel('Subscription URL').fill('https://example.org/plain');
+    await dialog.getByRole('button', {name: 'Add', exact: true}).click();
+    await expect(page).toHaveURL(/provider=sub-cold$/);
+    await expect.poll(() => refreshStarted).toBe(true);
+    finish();
+    await expect(page.locator('.rp-toast.positive', {hasText: 'sub-cold added and updated'})).toBeVisible();
+    showVersion();
+    expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toContain("  sub-cold: 'https://example.org/plain'\n");
   });
-  let fetched = false;
-  let release = () => {};
-  const pending = new Promise<void>(resolve => (release = resolve));
-  await page.route(/\/Nodes-[\w-]+\.js$/, async route => {
-    fetched = true;
-    await pending;
-    await route.continue();
-  });
-  const {api, handlers} = await mockBackend(page);
-  let showVersion = () => {};
-  const version = new Promise<void>(resolve => (showVersion = resolve));
-  handlers['GET version'] = async () => {
-    await version;
-    return api.version();
-  };
-  let finish = () => {};
-  const refreshing = new Promise<void>(resolve => (finish = resolve));
-  handlers['POST providers/sub-cold/refresh'] = async () => {
-    await refreshing;
-    return api.refreshProvider('sub-cold');
-  };
-  await page.goto('/#/nodes?tab=list', {waitUntil: 'domcontentloaded'});
-  await expect.poll(() => fetched).toBe(true);
-  await expect(page.locator(`.rp-content ${loadingState}`).first()).toBeVisible();
-  release();
-  await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
-  const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Name').fill('sub-cold');
-  await dialog.getByLabel('Subscription URL').fill('https://example.org/plain');
-  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
-  await expect(page).toHaveURL(/provider=sub-cold$/);
-  finish();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'sub-cold added and updated'})).toBeVisible();
-  showVersion();
-  expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toContain("  sub-cold: 'https://example.org/plain'\n");
 });
 
 test('an untouched option is left to the backend and an unadvertised one is not shown', async ({page}) => {
