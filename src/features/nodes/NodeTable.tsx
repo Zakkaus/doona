@@ -209,23 +209,25 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
                         items={[
                           [t('nodes.provider'), row.source],
                           [t('ui.protocol'), row.protocol],
-                          [t('act.latency'), row.latency],
-                          [
-                            t('nodes.groups'),
-                            row.groupLinks.length ? (
-                              <Tags label={t('nodes.groups')}>
-                                {row.groupLinks.map(group => (
-                                  <LinkTag key={group.id} href={group.href}>
-                                    {group.label}
-                                  </LinkTag>
-                                ))}
-                              </Tags>
-                            ) : (
-                              row.groups
-                            )
-                          ]
+                          [t('act.latency'), row.latency]
                         ]}
                       />
+                      {/* The groups take a row of their own, so their tags wrap across the card instead of stretching
+                          the facts above into a narrow column. */}
+                      <div className="rp-list">
+                        <span className="rp-label">{t('nodes.groups')}</span>
+                        {row.groupLinks.length ? (
+                          <Tags label={t('nodes.groups')}>
+                            {row.groupLinks.map(group => (
+                              <LinkTag key={group.id} href={group.href}>
+                                {group.label}
+                              </LinkTag>
+                            ))}
+                          </Tags>
+                        ) : (
+                          row.groups
+                        )}
+                      </div>
                       {row.showProbeKinds && (
                         <div className="rp-list">
                           <span className="rp-label">{t('nodes.probeKinds')}</span>
