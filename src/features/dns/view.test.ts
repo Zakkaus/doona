@@ -30,7 +30,7 @@ it('uses the same nullable field and answer projection for queries and log detai
   expect(query.cards[0].answers).toEqual(dnsLogDetail(data, record.id, 'en-US', t)?.answers);
   expect(query.cards[0].fields).toContainEqual([t('ui.upstream'), '—']);
   expect(query.cards[0].fields).toContainEqual([t('ui.elapsed'), t('ui.latency', {n: '0'})]);
-  expect(dnsAnswerView({...record, answers: undefined}, t).answers).toEqual([]);
+  expect(dnsAnswerView({...record, answers: undefined}, record.question.name, t).answers).toEqual([]);
   expect(log.rows[0]).toMatchObject({source: '—', result: '192.0.2.1', cached: true});
   expect(dnsLogsExport([record])).toContain('192.0.2.1');
 });
@@ -139,7 +139,10 @@ it('holds the loaded window when a poll advances the head after the final older 
 });
 
 it('names the route source and the cache entry a delete button removes', () => {
-  expect(dnsAnswerView({...record, route: {source: 'dns.routing', rule: 'r1'}}, t).fields).toContainEqual([t('dns.routeSource'), t('dns.route.rules')]);
+  expect(dnsAnswerView({...record, route: {source: 'dns.routing', rule: 'r1'}}, record.question.name, t).fields).toContainEqual([
+    t('dns.routeSource'),
+    t('dns.route.rules')
+  ]);
   const entry = dnsCacheView(dnsCache, capabilities.resources, null, 'en-US', t).rows[0];
   expect(entry.deleteLabel).toBe(t('dns.deleteEntry', {domain: entry.domain, type: entry.type}));
   expect(entry.deleteLabel).not.toContain(entry.id);
@@ -211,4 +214,30 @@ it.each([
 ])('gates pattern deletion on the cache capabilities %j', ({available, delete_name, delete_entry, by}) => {
   const resources = {...capabilities.resources, dns_cache: {...capabilities.resources.dns_cache, available, delete_name, delete_entry}};
   expect(dnsCacheView(dnsCache, resources, null, 'en', t).deleteBy).toEqual(by);
+});
+
+it('leads each answer with its data, links public addresses and names the owner only down a chain', () => {
+  const answers = [
+    ['A', '192.0.2.1', 'EXAMPLE.com'],
+    ['A', '10.0.0.1', 'example.com.'],
+    ['CNAME', '8.8.8.8', 'example.com.'],
+    ['AAAA', '2001:0DB8:0:0::1', 'edge.example.net.']
+  ].map(([type, data, name]) => ({...record.answers[0], type, data, name, ttl: 60}));
+  const item = {...record, question: {...record.question, name: 'example.com.'}, answers};
+  const result: DnsQueryResponse = {
+    domain: 'example.com',
+    cache_mode: 'normal',
+    query_time: record.observed_at,
+    results: [{...item, type: 'A', cache_entry_id: null}]
+  };
+  const data = {observed_at: record.observed_at, total: 1, next_cursor: null, records: [item]};
+  const ttl = t('dns.ttl', {ttl: 60});
+  const expected = [
+    {data: '192.0.2.1', name: null, type: 'A', ttl, lookup: '192.0.2.1'},
+    {data: '10.0.0.1', name: null, type: 'A', ttl, lookup: null},
+    {data: '8.8.8.8', name: null, type: 'CNAME', ttl, lookup: null},
+    {data: '2001:0DB8:0:0::1', name: 'edge.example.net.', type: 'AAAA', ttl, lookup: '2001:db8::1'}
+  ];
+  expect(dnsQueryView(result, capabilities.resources, 'A', 'example.com', false, t).cards[0].answers).toEqual(expected);
+  expect(dnsLogDetail(data, record.id, 'en-US', t)?.answers).toEqual(expected);
 });
