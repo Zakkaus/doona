@@ -183,6 +183,28 @@ test.describe('glass lens', () => {
     await expect(page.locator('.rp-popover').first()).toBeVisible();
     expect((await surface(page, '.rp-popover')).filter).toContain('url("#doona-lens-sm")');
   });
+  // Scrolling pauses the refraction, which Chromium redraws on every frame, and keeps the blur and colour.
+  test('pauses the lens while the page scrolls', async ({page}) => {
+    await page.goto('/#/overview');
+    await expect(page.locator('html')).toHaveAttribute('data-lens', '');
+    const card = `.rp-content ${pageCard}`;
+    const lensed = (await surface(page, card, '::before')).filter;
+    expect(lensed).toContain('url("#doona-lens")');
+    // Read in the scroll event's own task, before the 150 ms resume can run.
+    const paused = await page
+      .locator(card)
+      .first()
+      .evaluate(
+        element =>
+          new Promise<string>(resolve => {
+            addEventListener('scroll', () => resolve(getComputedStyle(element, '::before').backdropFilter), {once: true});
+            scrollBy(0, 200);
+          })
+      );
+    expect(paused).toBe(lensed.replace(/url\([^)]*\)\s*/g, ''));
+    await expect(page.locator('html')).not.toHaveAttribute('data-lens-paused');
+    expect((await surface(page, card, '::before')).filter).toBe(lensed);
+  });
   // At 32px the lens shows only as a bright rim, so controls on the wallpaper keep the cards' fill with a plain blur.
   test('keeps controls on the wallpaper to a plain blur', async ({page}) => {
     await page.goto('/#/logs');
