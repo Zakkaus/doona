@@ -5,7 +5,8 @@ import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {csvLine} from '../../ui/ui';
 import type {Key} from '../../i18n';
 import {dnsTabs} from './nav';
-import {sourceIp} from '../../api/selectors';
+import {sourceIp, ipLiteral} from '../../api/selectors';
+import {isPublicIp} from '../shared/ipLookup';
 import {answerAddresses, type QuickRuleSeed} from '../shared/rule';
 import {dnsUpstreamNames} from '../../dae/ruleText';
 import {unquote} from '../../dae/text';
@@ -35,7 +36,8 @@ const addressSeed = (address: string, name: string, type: string): QuickRuleSeed
 
 const routeSources: Record<string, Key> = {forced: 'dns.route.forced', 'dns.routing': 'dns.route.rules', default: 'dns.route.default'};
 type Result = Pick<DnsQueryResponse['results'][number], 'status' | 'upstream' | 'route' | 'elapsed_ms' | 'answers' | 'cached'>;
-export function dnsAnswerView(result: Result, t: LabelFn) {
+const sameName = (a: string, b: string) => a.replace(/\.$/, '').toLowerCase() === b.replace(/\.$/, '').toLowerCase();
+export function dnsAnswerView(result: Result, name: string, t: LabelFn) {
   return {
     fields: [
       [t('ui.state'), result.status],
@@ -44,7 +46,18 @@ export function dnsAnswerView(result: Result, t: LabelFn) {
       [t('dns.routeRule'), result.route.rule ?? '—'],
       [t('ui.elapsed'), formatLatency(result.elapsed_ms, t)]
     ] as Array<[string, string]>,
-    answers: (result.answers ?? []).map(answer => t('dns.answer', {name: answer.name, type: answer.type, ttl: answer.ttl, data: answer.data})),
+    answers: (result.answers ?? []).map(answer => {
+      const address = answerAddresses([answer])[0];
+      const ip = address ? ipLiteral(address) : undefined;
+      return {
+        data: answer.data,
+        // The owner shows only when it is not the name asked for, as further down a CNAME chain.
+        name: sameName(answer.name, name) ? null : answer.name,
+        type: answer.type,
+        ttl: t('dns.ttl', {ttl: answer.ttl}),
+        lookup: ip && isPublicIp(ip) ? ip : null
+      };
+    }),
     cacheText: t(result.cached ? 'dns.hit' : 'dns.miss'),
     cacheTone: result.cached ? undefined : ('warn' as const)
   };
@@ -82,7 +95,7 @@ export function dnsQueryView(
       result?.results.map(item => ({
         id: item.type,
         title: `${result.domain} ${item.type}`,
-        ...dnsAnswerView(item, t),
+        ...dnsAnswerView(item, result.domain, t),
         seed: nameSeed(result.domain, item.type, item.answers ?? [], item.upstream, null),
         // Each A or AAAA answer, in the order shown, starts a rule of its own; other records carry no address.
         answerSeeds: (item.answers ?? []).map(answer =>
@@ -142,7 +155,7 @@ export function dnsCacheView(
 export function dnsLogDetail(data: DnsLogList | undefined, selected: string | null, locale: string, t: LabelFn) {
   const record = data?.records.find(item => item.id === selected);
   if (!record) return null;
-  const answer = dnsAnswerView(record, t);
+  const answer = dnsAnswerView(record, record.question.name, t);
   return {
     id: record.id,
     title: record.question.name,

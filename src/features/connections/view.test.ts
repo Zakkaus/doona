@@ -88,3 +88,14 @@ it('explains the states before a connection is established, and no other', () =>
   ]);
   expect(connectionStateHelp('active', t)).toBeNull();
 });
+
+it.each([
+  ['192.0.2.1:443', {ip: '192.0.2.1', address: '192.0.2.1:443'}],
+  ['[2001:0DB8:0:0::1]:443', {ip: '2001:db8::1', address: '[2001:0DB8:0:0::1]:443'}],
+  ['2001:db8::1', {ip: '2001:db8::1', address: '2001:db8::1'}],
+  ['10.0.0.1:443', '10.0.0.1:443'],
+  [undefined, '—']
+])('prepares a lookup only in the public destination field: %s', (dst, value) => {
+  const detail = connectionDetail({...connections.tcp[0], network: 'tcp', dst}, 'en-US', t, new Map(), false);
+  expect(detail?.fields.find(([label]) => label === t('conn.f.dst'))?.[1]).toEqual(value);
+});

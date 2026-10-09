@@ -859,3 +859,48 @@ test('a failed connection read is shown on both tabs with a retry', async ({page
   await alert.getByRole('button', {name: 'Retry'}).click();
   await expect(alert).toHaveCount(0);
 });
+
+test('only public destination addresses open the IP site picker without background requests', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const list = await api.connections({detail: 'full', limit: 1000});
+  const row = list.tcp[0];
+  const external: string[] = [];
+  page.on('request', request => {
+    if (['ipinfo.io', 'ipapi.is', 'ip-api.com', 'bgp.he.net'].includes(new URL(request.url()).hostname)) external.push(request.url());
+  });
+  for (const [dst, address, ip] of [
+    ['192.0.2.1:443', '192.0.2.1:443', '192.0.2.1'],
+    ['[2001:0DB8:0:0::1]:443', '[2001:0DB8:0:0::1]:443', '2001:db8::1'],
+    ['10.0.0.1:443', null, null],
+    [undefined, null, null]
+  ]) {
+    handlers['GET connections'] = async () => ({...list, tcp: [{...row, dst: dst ?? undefined}], udp: [], truncated: false});
+    await page.goto(`/#/connections?id=${row.id}`);
+    await page.reload();
+    const panel = page.locator('.rp-panel');
+    await expect(panel).toBeVisible();
+    const destination = panel.locator('.rp-kv > div').filter({has: page.locator('.k', {hasText: /^Target address$/})});
+    await expect(destination).toContainText(dst ?? '—');
+    expect(external).toEqual([]);
+    if (address && ip) {
+      await destination.getByRole('button', {name: address, exact: true}).click();
+      const menu = page.getByRole('menu').filter({hasText: `Look up ${ip}`});
+      await expect(menu).toBeVisible();
+      for (const [name, href] of [
+        ['ipinfo.io', `https://ipinfo.io/${ip}`],
+        ['ipapi.is', `https://ipapi.is/?q=${ip}`],
+        ['ip-api.com', `https://ip-api.com/#${ip}`],
+        ['bgp.he.net', `https://bgp.he.net/ip/${ip}`]
+      ]) {
+        const link = menu.getByRole('menuitem', {name, exact: true});
+        await expect(link).toHaveAttribute('href', href);
+        await expect(link).toHaveAttribute('target', '_blank');
+        await expect(link).toHaveAttribute('rel', /noreferrer/);
+      }
+      await page.keyboard.press('Escape');
+      await expect(menu).toHaveCount(0);
+      await expect(destination.getByRole('button', {name: address, exact: true})).toBeFocused();
+    } else await expect(destination.getByRole('button')).toHaveCount(0);
+  }
+  expect(external).toEqual([]);
+});

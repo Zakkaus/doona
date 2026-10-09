@@ -1,3 +1,5 @@
+import {IpLookup} from '../../ui/IpLookup';
+import {ipLookupSites} from '../shared/ipLookup';
 import {OutboundTag} from '../shared/OutboundTag';
 import {
   Badge,
@@ -144,7 +146,12 @@ export function Connections(props: PageProps) {
                   ]}
                 />
               </div>
-              <Kv items={cur.fields} />
+              <Kv
+                items={cur.fields.map(([label, value]) => [
+                  label,
+                  typeof value === 'string' ? value : <IpLookup ip={value.ip} address={value.address} sites={ipLookupSites(value.ip)} />
+                ])}
+              />
               <Kv
                 items={[
                   [t('ui.outbound'), <OutboundTag {...cur.outboundTag} />],

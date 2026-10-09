@@ -629,3 +629,70 @@ test('the cache card meters its usage against the entry capacity', async ({page}
   await expect(meter).toHaveAttribute('aria-valuetext', /^<?\d+%$/);
   await expect(meter.locator('.v')).toHaveText((await meter.getAttribute('aria-valuetext'))!);
 });
+
+test('public DNS answers open the IP site picker in query cards and record details', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  const result = await api.dnsQuery('example.com', ['A']);
+  const answers = [
+    ['A', '192.0.2.1'],
+    ['A', '10.0.0.1'],
+    ['CNAME', '8.8.8.8'],
+    ['AAAA', '2001:0DB8:0:0::1']
+  ].map(([type, data]) => ({...result.results[0].answers![0], type, data}));
+  handlers['POST dns/query'] = async () => ({...result, results: [{...result.results[0], answers}]});
+  const log = await api.dnsLog();
+  handlers['GET dns/log'] = async () => ({...log, records: [{...log.records[0], answers}], total: 1, next_cursor: null});
+  const external: string[] = [];
+  page.on('request', request => {
+    if (['ipinfo.io', 'ipapi.is', 'ip-api.com', 'bgp.he.net'].includes(new URL(request.url()).hostname)) external.push(request.url());
+  });
+  await page.goto('/#/dns?tab=query&domain=example.com&type=A');
+  await page.getByRole('button', {name: 'Query', exact: true}).click();
+  const queryPanel = page.getByRole('tabpanel', {name: 'Query', exact: true});
+  for (const [button, ip] of [
+    ['192.0.2.1', '192.0.2.1'],
+    ['2001:0DB8:0:0::1', '2001:db8::1']
+  ]) {
+    await expect(queryPanel.locator('button.rp-link')).toHaveCount(2);
+    expect(external).toEqual([]);
+    const trigger = queryPanel.getByRole('button', {name: button, exact: true});
+    await expect(trigger).toHaveCSS('border-top-width', '0px');
+    await expect(trigger).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await trigger.click();
+    const menu = page.getByRole('menu').filter({hasText: `Look up ${ip}`});
+    await expect(menu).toBeVisible();
+    for (const [name, href] of [
+      ['ipinfo.io', `https://ipinfo.io/${ip}`],
+      ['ipapi.is', `https://ipapi.is/?q=${ip}`],
+      ['ip-api.com', `https://ip-api.com/#${ip}`],
+      ['bgp.he.net', `https://bgp.he.net/ip/${ip}`]
+    ]) {
+      const link = menu.getByRole('menuitem', {name, exact: true});
+      await expect(link).toHaveAttribute('href', href);
+      await expect(link).toHaveAttribute('target', '_blank');
+      await expect(link).toHaveAttribute('rel', /noreferrer/);
+    }
+    await page.keyboard.press('Escape');
+    await expect(menu).toHaveCount(0);
+    await expect(queryPanel.getByRole('button', {name: button, exact: true})).toBeFocused();
+  }
+  await page.goto('/#/dns?tab=log');
+  await page.getByRole('grid', {name: 'Resolution log', exact: true}).getByRole('rowheader').first().click();
+  const detail = page.locator('.rp-panel');
+  await expect(detail.locator('button.rp-link')).toHaveCount(2);
+  expect(external).toEqual([]);
+  await detail.getByRole('button', {name: '192.0.2.1', exact: true}).click();
+  const menu = page.getByRole('menu').filter({hasText: 'Look up 192.0.2.1'});
+  await expect(menu).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  expect(external).toEqual([]);
+  await page.context().route('https://ipapi.is/**', route => route.fulfill({contentType: 'text/html', body: '<title>IP lookup</title>'}));
+  await detail.getByRole('button', {name: '192.0.2.1', exact: true}).click();
+  const popup = page.waitForEvent('popup');
+  await menu.getByRole('menuitem', {name: 'ipapi.is', exact: true}).click();
+  const opened = await popup;
+  await expect(opened).toHaveURL('https://ipapi.is/?q=192.0.2.1');
+  await expect(menu).toHaveCount(0);
+  await opened.close();
+});

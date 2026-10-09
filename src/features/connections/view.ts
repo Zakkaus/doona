@@ -2,6 +2,7 @@ import type {BulkCloseQuery, Connection} from '../../api/model';
 import {tagId} from '../shared/taggedId';
 import {enumLabel} from '../../i18n/enum';
 import {chainLabel, chainNames, connectionStates, sourceIp, addressPort, type MessageRef, type OutboundNames} from '../../api/selectors';
+import {isPublicIp} from '../shared/ipLookup';
 import {localTime, formatBytes, formatRate} from '../../i18n/format';
 import type {Key, Translator as LabelFn} from '../../i18n';
 import {word} from '../../api/labels';
@@ -18,14 +19,18 @@ const chainSources: Record<Connection['chain_source'], Key> = {
   reconstructed: 'conn.chainSource.reconstructed',
   unknown: 'ui.unknown'
 };
-export function connectionDetails(c: Connection, locale: string): Array<[Key, string | MessageRef]> {
+type Destination = {ip: string; address: string};
+export function connectionDetails(c: Connection, locale: string): Array<[Key, string | MessageRef | Destination]> {
+  const address = c.dst ?? '—';
+  const ip = sourceIp(c.dst);
+  const destination = ip && isPublicIp(ip) ? {ip, address} : address;
   // A backend that predates the field leaves it out, and the row with it.
   const chainSource: Array<[Key, string | MessageRef]> = c.chain_source
     ? [['conn.f.chainSource', chainSources[c.chain_source] ? {key: chainSources[c.chain_source]} : c.chain_source]]
     : [];
   return [
     ['ui.device', c.src ?? '—'],
-    ['conn.f.dst', c.dst ?? '—'],
+    ['conn.f.dst', destination],
     ['ui.domain', c.domain ?? '—'],
     ['conn.f.ingress', word(c.ingress)],
     ['conn.f.domainSource', word(c.domain_source)],
@@ -106,7 +111,7 @@ export function connectionDetail(
         outbound: current.outbound,
         rule: {expression: current.rule_expression, href: ruleHref(current.rule_id, rulesListed)},
         fields: connectionDetails(current, locale).map(
-          ([key, value]) => [t(key), typeof value === 'string' ? value : t(value.key, value.params)] as [string, string]
+          ([key, value]) => [t(key), typeof value === 'string' || 'ip' in value ? value : t(value.key, value.params)] as [string, string | Destination]
         ),
         flowQuery: within('', {tab: 'records', ...(current.flow_id ? {id: current.flow_id} : {connection_id: current.id})}),
         // The trace of this connection's target, from its source and process; null when it has neither a domain nor an

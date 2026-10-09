@@ -1,8 +1,10 @@
-import {useMemo} from 'react';
+import {useMemo, type ReactNode} from 'react';
 import {useT} from '../../i18n';
 import Delete from '../../ui/icons/Delete';
 import Download from '../../ui/icons/Download';
 import Refresh from '../../ui/icons/Refresh';
+import {IpLookup} from '../../ui/IpLookup';
+import {ipLookupSites} from '../shared/ipLookup';
 import {
   ActionGroup,
   ActionHelp,
@@ -33,11 +35,33 @@ import type {PageProps} from '../../shell/routes';
 import {useDns, useDnsCacheTab, useDnsLogTab, type DnsRowRule} from './useDns';
 import {DnsStats} from './Analysis';
 import type {MatchKind} from './match';
+import type {dnsAnswerView} from './view';
 import {QuickRuleButton, RuleDialog} from '../shared/RuleDialog';
 import '../../ui/styles/impact.css';
+import '../../ui/styles/dns-answer.css';
 
 type DnsCacheRow = ReturnType<typeof useDnsCacheTab>['rows'][number];
 type DnsLogRow = ReturnType<typeof useDnsLogTab>['rows'][number];
+
+type DnsAnswerRow = ReturnType<typeof dnsAnswerView>['answers'][number];
+
+// One answer: the record data first, so an address reads at a glance, then its owner when it differs from the name
+// asked, its type and TTL. A public address opens the lookup sites.
+function DnsAnswer({answer, children}: {answer: DnsAnswerRow; children?: ReactNode}) {
+  return (
+    <div className="rp-dns-answer">
+      <span className="rp-code">
+        {answer.lookup ? <IpLookup ip={answer.lookup} address={answer.data} sites={ipLookupSites(answer.lookup)} /> : answer.data}
+      </span>
+      <span className="meta">
+        {answer.name && <span>{answer.name}</span>}
+        <span>{answer.type}</span>
+        <span>{answer.ttl}</span>
+      </span>
+      {children}
+    </div>
+  );
+}
 
 export function Dns(props: PageProps) {
   const t = useT();
@@ -94,14 +118,13 @@ export function Dns(props: PageProps) {
                   {card.answers.map((answer, i) => {
                     const address = card.answerSeeds[i];
                     return (
-                      <div key={i} className="rp-cluster">
-                        <div className="rp-code">{answer}</div>
+                      <DnsAnswer key={i} answer={answer}>
                         {address && vm.rule.canAdd(address.seed) && (
                           <Button quiet small label={t('dns.addRuleFor', {value: address.address})} onPress={() => vm.rule.open(address.seed)}>
                             {t('rule.add')}
                           </Button>
                         )}
-                      </div>
+                      </DnsAnswer>
                     );
                   })}
                 </div>
@@ -362,9 +385,7 @@ function DnsLog({
               {vm.detail.answers.length ? (
                 <div className="rp-list">
                   {vm.detail.answers.map((answer, i) => (
-                    <div key={i} className="rp-code">
-                      {answer}
-                    </div>
+                    <DnsAnswer key={i} answer={answer} />
                   ))}
                 </div>
               ) : (

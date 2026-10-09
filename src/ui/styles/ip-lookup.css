@@ -1,0 +1,27 @@
+/* An address that opens its lookup menu stays plain linked text: no fill around the glyphs on hover, on press or while
+   its menu is open (React Aria keeps it pressed then). */
+.rp-link.rp-ip-lookup {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.rp-link.rp-ip-lookup:is([data-hovered], [data-pressed]) {
+  background-color: transparent;
+}
+/* The menu's heading names the address and says where it goes, on the edge of the plain rows under it. */
+.rp-ip-lookup-head {
+  display: grid;
+  row-gap: var(--rp-space-half);
+  max-inline-size: 16rem;
+  padding-inline-start: var(--rp-space-3);
+}
+.rp-ip-lookup-head > .desc {
+  font-weight: 400;
+  color: var(--rp-subtle);
+}
+.rp-ip-lookup-menu .rp-item {
+  text-decoration: none;
+}
+.rp-ip-lookup-menu .rp-item > .rp-link-out {
+  color: var(--rp-subtle);
+}

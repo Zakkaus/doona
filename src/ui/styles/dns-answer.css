@@ -1,0 +1,24 @@
+/* A DNS answer: the data takes the free width and wraps inside it; owner, type and TTL follow in muted text, then
+   any action. Whatever wraps to a line of its own keeps to the row's end. */
+.rp-dns-answer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--rp-space-3);
+  row-gap: var(--rp-space-1);
+}
+.rp-dns-answer > .rp-code {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rp-dns-answer > :not(.rp-code) {
+  margin-inline-start: auto;
+}
+.rp-dns-answer > .meta {
+  display: flex;
+  gap: var(--rp-space-2);
+  color: var(--rp-subtle);
+  font-size: var(--rp-text-xs);
+  white-space: nowrap;
+}
