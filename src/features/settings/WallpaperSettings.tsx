@@ -5,7 +5,7 @@ import {FileButton} from '../../ui/FileButton';
 import {Slider} from '../../ui/Slider';
 import {WallpaperThumb} from '../../ui/WallpaperThumb';
 import {DEFAULT_DIM, MAX_DIM, setWallpaper, useWallpaper, wallpaperState} from '../../shell/wallpaper';
-import {MAX_BLUR} from '../../shell/preferences';
+import {MAX_BLUR, type PaletteId} from '../../shell/preferences';
 import {prepareWallpaper, WallpaperError, type WallpaperProblem} from './wallpaperImage';
 
 const problems: Record<WallpaperProblem, Key> = {
@@ -100,5 +100,43 @@ export function BlurSetting({value, onChange}: {value: number; onChange: (value:
     <div className="rp-field" data-setting="blur">
       <Slider label={t('settings.blur')} value={value} maxValue={MAX_BLUR} step={0.01} formatOptions={percent} onChange={onChange} />
     </div>
+  );
+}
+
+function LensPauseSetting({value, onChange}: {value: boolean; onChange: (value: boolean) => void}) {
+  const t = useT();
+  const helpId = useId();
+  return (
+    <div className="rp-field" data-setting="lensPause">
+      <Switch isSelected={value} onChange={onChange} aria-describedby={helpId}>
+        {t('settings.lensPause')}
+      </Switch>
+      <span id={helpId} className="rp-label">
+        {t('settings.lensPauseHelp')}
+      </span>
+    </div>
+  );
+}
+
+export default function GlassSettings({
+  palette,
+  blur,
+  onBlurChange,
+  lensPause,
+  onLensPauseChange
+}: {
+  palette: PaletteId;
+  blur: number;
+  onBlurChange: (value: number) => void;
+  lensPause: boolean;
+  onLensPauseChange: (value: boolean) => void;
+}) {
+  return (
+    <>
+      <WallpaperSettings />
+      {/* Tinted draws no blur, so it has nothing to scale. */}
+      {palette !== 'glass/tinted' && <BlurSetting value={blur} onChange={onBlurChange} />}
+      {palette === 'glass/glass' && <LensPauseSetting value={lensPause} onChange={onLensPauseChange} />}
+    </>
   );
 }

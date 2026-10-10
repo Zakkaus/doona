@@ -153,8 +153,9 @@ function pauseWhileScrolling() {
   addEventListener(
     'scroll',
     () => {
-      if (timer === undefined) root.setAttribute('data-lens-paused', '');
-      else clearTimeout(timer);
+      if (root.hasAttribute('data-lens-steady')) return;
+      if (!root.hasAttribute('data-lens-paused')) root.setAttribute('data-lens-paused', '');
+      if (timer !== undefined) clearTimeout(timer);
       timer = window.setTimeout(resume, 150);
     },
     {passive: true}

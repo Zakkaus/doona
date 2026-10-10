@@ -1794,6 +1794,8 @@
   "settings.installed": "Installed",
   "settings.invalidResponse": "The response has no API version information. Check the backend URL.",
   "settings.invalidUrl": "Enter http(s)://host[:port][/prefix] without credentials, a query, or a fragment, or enter mock.",
+  "settings.lensPause": "Pause refraction while scrolling",
+  "settings.lensPauseHelp": "Keeps scrolling smooth. Edges bend again once the page stops.",
   "settings.logBuffer": "Log records kept",
   "settings.logLevel": "Log level",
   "settings.mirror": "Mirrored layout",
