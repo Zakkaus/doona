@@ -285,6 +285,11 @@
 :root[data-flavour='glass'][data-scheme='dark'][data-lens] {
   --rp-float-fill: rgba(36, 36, 40, 0.62);
 }
+/* While the page scrolls, src/ui/lens.ts pauses the lens: the same blur and colour without the refraction. */
+:root[data-flavour='glass'][data-lens][data-lens-paused] {
+  --rp-panel-filter: var(--rp-flow-table-filter);
+  --rp-lens-sm: blur(calc(6px * var(--rp-blur-scale))) saturate(1.8) brightness(1.04);
+}
 /* Reduce Transparency, Increase Contrast and forced colours turn every material into the solid recipe with a clear
    edge. The selector matches the flavour blocks above in specificity and follows them. */
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {

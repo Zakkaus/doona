@@ -135,6 +135,29 @@ export function installLens(): boolean {
     })
     .join('');
   document.body.append(svg);
+  pauseWhileScrolling();
   installed = true;
   return true;
+}
+
+// Chromium redraws every lens on the CPU each frame the page moves under it, about 11 ms a frame on a desktop page of
+// cards, so the root carries data-lens-paused while the page scrolls and for 150 ms after, and the stylesheet drops the
+// refraction meanwhile.
+function pauseWhileScrolling() {
+  const root = document.documentElement;
+  let timer: number | undefined;
+  const resume = () => {
+    timer = undefined;
+    root.removeAttribute('data-lens-paused');
+  };
+  addEventListener(
+    'scroll',
+    () => {
+      if (root.hasAttribute('data-lens-steady')) return;
+      if (!root.hasAttribute('data-lens-paused')) root.setAttribute('data-lens-paused', '');
+      if (timer !== undefined) clearTimeout(timer);
+      timer = window.setTimeout(resume, 150);
+    },
+    {passive: true}
+  );
 }
