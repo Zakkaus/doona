@@ -34,6 +34,7 @@ export type Settings = {
   wordmark: Wordmark;
   mirrored: boolean;
   countryFlags: boolean;
+  lensPause: boolean;
   sparklines: boolean;
   flagOverrides: FlagOverrides;
   toastPlacement: ToastPlacement;
@@ -52,6 +53,7 @@ export function writeSetting(
     | 'wordmark'
     | 'mirror'
     | 'countryFlags'
+    | 'lensPause'
     | 'sparklines'
     | 'flagOverrides'
     | 'toastPlacement'
@@ -92,6 +94,7 @@ export function readSettings(storage?: StoragePort): Settings {
     mirrored: read(storageKeys.mirror) === 'on',
     startPage: startPage !== null && isRoutePath(startPage) ? startPage : defaultRoute,
     countryFlags: read(storageKeys.countryFlags) !== 'off',
+    lensPause: read(storageKeys.lensPause) !== 'off',
     sparklines: read(storageKeys.sparklines) !== 'off',
     flagOverrides: readFlagOverrides(storage),
     toastPlacement: TOAST_PLACEMENTS.find(item => item === placement) ?? 'bottom'
@@ -117,9 +120,11 @@ type Appearance = {
   pickWordmark: (value: Wordmark) => void;
   mirrored: boolean;
   countryFlags: boolean;
+  lensPause: boolean;
   flagOverrides: FlagOverrides;
   pickMirrored: (value: boolean) => void;
   pickCountryFlags: (value: boolean) => void;
+  pickLensPause: (value: boolean) => void;
   sparklines: boolean;
   pickSparklines: (value: boolean) => void;
   pickFlag: (name: string, value: string) => void;

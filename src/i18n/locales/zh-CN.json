@@ -1593,6 +1593,8 @@
   "settings.installed": "已安装",
   "settings.invalidResponse": "响应缺少 API 版本信息：请检查后端网址。",
   "settings.invalidUrl": "请输入 http(s)://主机[:端口][/前缀] 或 mock。网址不能包含账号密码、查询参数或片段。",
+  "settings.lensPause": "滚动时暂停折射",
+  "settings.lensPauseHelp": "滚动更流畅，页面停下后边缘恢复折射。",
   "settings.logBuffer": "日志保留条数",
   "settings.logLevel": "日志级别",
   "settings.mirror": "镜像布局",

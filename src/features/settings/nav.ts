@@ -59,6 +59,7 @@ type SettingsFieldId =
   | 'mirrored'
   | 'wallpaper'
   | 'blur'
+  | 'lensPause'
   | 'probeMethod'
   | 'probeFamily'
   | 'probeWarmth'
@@ -93,6 +94,7 @@ export const settingsFields: ReadonlyArray<SettingsField> = [
   {id: 'mirrored', card: 'appearance', labelKey: 'settings.mirror', aliases: ['rtl']},
   {id: 'wallpaper', card: 'appearance', labelKey: 'settings.wallpaper', aliases: ['background', 'image']},
   {id: 'blur', card: 'appearance', labelKey: 'settings.blur'},
+  {id: 'lensPause', card: 'appearance', labelKey: 'settings.lensPause'},
   {id: 'probeMethod', card: 'probes', labelKey: 'settings.probeMethod'},
   {id: 'probeFamily', card: 'probes', labelKey: 'settings.probeFamily', aliases: ['ipv4', 'ipv6']},
   {id: 'probeWarmth', card: 'probes', labelKey: 'settings.probeWarmth'},

@@ -13,6 +13,7 @@ it('keeps the keys browsers already hold', () => {
     'doona-wordmark',
     'doona-mirror',
     'doona-country-flags',
+    'doona-lens-pause',
     'doona-sparklines',
     'doona-flag-overrides',
     'doona-toast-placement',

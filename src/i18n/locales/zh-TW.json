@@ -1593,6 +1593,8 @@
   "settings.installed": "已安裝",
   "settings.invalidResponse": "回應缺少 API 版本資訊：請確認後端網址。",
   "settings.invalidUrl": "請輸入 http(s)://主機[:連接埠][/前綴] 或 mock。網址不可含帳號密碼、查詢參數或片段。",
+  "settings.lensPause": "捲動時暫停折射",
+  "settings.lensPauseHelp": "捲動更流暢，頁面停下後邊緣恢復折射。",
   "settings.logBuffer": "日誌保留筆數",
   "settings.logLevel": "日誌等級",
   "settings.mirror": "鏡像版面",

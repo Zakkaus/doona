@@ -1,4 +1,4 @@
-import {Fragment, useId, type ReactNode} from 'react';
+import {Fragment, lazy, Suspense, useId, type ReactNode} from 'react';
 import {LANGS, useT, type Lang} from '../../i18n';
 import {
   ActionHelp,
@@ -19,7 +19,6 @@ import {
 } from '../../ui/ui';
 import {SelectBoxGroup} from '../../ui/SelectBoxGroup';
 import {preloadGlass, swatchSections} from '../../shell/swatches';
-import {BlurSetting, WallpaperSettings} from './WallpaperSettings';
 import type {DateFormat, PaletteId, Scheme, TimeFormat, ToastPlacement, Wordmark} from '../../shell/preferences';
 import {useSettingsPage} from './useSettingsPage';
 import {useSignOut} from './useSignOut';
@@ -37,6 +36,7 @@ import {cardTab, settingsCard, settingsCards, settingsTab, settingsTabs, type Se
 const glassIntent = (event: React.SyntheticEvent) => {
   if (event.target instanceof Element && event.target.closest('[data-key^="glass/"]')) preloadGlass();
 };
+const GlassSettings = lazy(() => import('./WallpaperSettings'));
 const cards = {backend: settingsCard('backend'), appearance: settingsCard('appearance'), about: settingsCard('about')};
 
 export function Settings({query}: PageProps) {
@@ -292,9 +292,11 @@ export function Settings({query}: PageProps) {
             help={ap.shownPalette === 'glass/glass' ? t('palette.glassNote') : undefined}
           />
         </div>
-        {ap.palette.startsWith('glass/') && <WallpaperSettings />}
-        {/* Tinted draws no blur, so it has nothing to scale. */}
-        {ap.palette.startsWith('glass/') && ap.palette !== 'glass/tinted' && <BlurSetting value={ap.blur} onChange={ap.pickBlur} />}
+        {ap.palette.startsWith('glass/') && (
+          <Suspense fallback={null}>
+            <GlassSettings palette={ap.palette} blur={ap.blur} onBlurChange={ap.pickBlur} lensPause={ap.lensPause} onLensPauseChange={ap.pickLensPause} />
+          </Suspense>
+        )}
         <div className="rp-field" data-setting="countryFlags">
           <Switch isSelected={ap.countryFlags} onChange={ap.pickCountryFlags} aria-describedby={countryFlagsHelpId}>
             {t('settings.countryFlags')}

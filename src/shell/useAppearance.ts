@@ -70,6 +70,7 @@ export function useAppearance(stored: Settings) {
   const [mirrored, setMirrored] = useState(stored.mirrored);
   const [flagOverrides, setFlagOverrides] = useState(stored.flagOverrides);
   const [countryFlags, setCountryFlags] = useState(stored.countryFlags);
+  const [lensPause, setLensPause] = useState(stored.lensPause);
   const [sparklines, setSparklines] = useState(stored.sparklines);
   const [toastPlacement, setToastPlacement] = useState<ToastPlacement>(stored.toastPlacement);
   const [startPage, setStartPage] = useState<RoutePath>(stored.startPage);
@@ -78,6 +79,11 @@ export function useAppearance(stored: Settings) {
   const sysDark = useMediaQuery('(prefers-color-scheme: dark)');
   const dark = scheme === 'dark' || (scheme === 'system' && sysDark);
   useLayoutEffect(() => applyAppearance(dark, palette, wordmark, blur), [dark, palette, wordmark, blur]);
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.toggleAttribute('data-lens-steady', !lensPause);
+    if (!lensPause) root.removeAttribute('data-lens-paused');
+  }, [lensPause]);
   const pickScheme = useCallback((next: Scheme) => {
     withCrossfade(() => setScheme(next));
     writeSetting('scheme', next);
@@ -124,6 +130,10 @@ export function useAppearance(stored: Settings) {
   const pickCountryFlags = useCallback((next: boolean) => {
     setCountryFlags(next);
     writeSetting('countryFlags', next ? 'on' : 'off');
+  }, []);
+  const pickLensPause = useCallback((next: boolean) => {
+    setLensPause(next);
+    writeSetting('lensPause', next ? 'on' : 'off');
   }, []);
   const pickSparklines = useCallback((next: boolean) => {
     setSparklines(next);
@@ -176,6 +186,8 @@ export function useAppearance(stored: Settings) {
       pickFlag,
       countryFlags,
       pickCountryFlags,
+      lensPause,
+      pickLensPause,
       sparklines,
       pickSparklines,
       toastPlacement,
@@ -205,6 +217,8 @@ export function useAppearance(stored: Settings) {
       pickFlag,
       countryFlags,
       pickCountryFlags,
+      lensPause,
+      pickLensPause,
       sparklines,
       pickSparklines,
       toastPlacement,
