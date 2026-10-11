@@ -4,6 +4,9 @@ import {quoteName} from './groups';
 
 export type NodeEntry = {name: string; link: string; from: number; to: number; line: number; nameTo: number; linkFrom: number};
 export const isNodeLink = (value: string) => /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(value.trim());
+// A node declaration's key as written: honk reads a bare `mux:` line as the removed standalone mux setting, so that
+// one name keeps its quotes.
+export const nodeKey = (name: string) => (name === 'mux' ? quote(name) : quoteName(name));
 
 // Only named scalar entries have an unambiguous identity without decoding a protocol's share link.
 export function readNodeEntries(text: string): NodeEntry[] {
@@ -71,7 +74,7 @@ export function writeNodeEntry(text: string, original: NodeEntry, next: {name: s
   if (next.name !== original.name && readNodeEntries(text).some(entry => entry.name === next.name)) throw new LocalError('nodes.nameTaken');
   const entry = entries[0];
   const changes = [];
-  if (next.name !== original.name) changes.push({from: entry.from, to: entry.nameTo, text: quoteName(next.name)});
+  if (next.name !== original.name) changes.push({from: entry.from, to: entry.nameTo, text: nodeKey(next.name)});
   if (next.link !== original.link) changes.push({from: entry.linkFrom, to: entry.to, text: quote(next.link)});
   if (next.name !== original.name) changes.push(...nameReferences(text, original.name).map(ref => ({...ref, text: quoteName(next.name)})));
   return changes.sort((a, b) => b.from - a.from).reduce((out, change) => out.slice(0, change.from) + change.text + out.slice(change.to), text);
