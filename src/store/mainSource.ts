@@ -1,12 +1,12 @@
 import {useCallback, useMemo} from 'react';
 import {useCapabilities} from './runtime';
-import {useConfig, useConfigEditor, useSourceComplete} from './config';
+import {useConfig, useConfigEditor, useSourceComplete, type ConfigTransform} from './config';
 import type {ConfigSource} from '../api/model';
 import {LocalError, failureNotice, type Notice} from '../api/error';
 import type {Translator} from '../i18n';
 import {offered} from '../api/capabilities';
 
-// Apply small main-source edits through one read, optional full validation, If-Match write, and reload sequence.
+// Apply small main-source edits through shared preparation, optional full validation, If-Match write, and reload.
 export type MainSourceEdit = {
   main: ConfigSource | null;
   // Whether the backend lets this page write at all: configuration content and writes both offered.
@@ -15,7 +15,7 @@ export type MainSourceEdit = {
   error: Error | null;
   retry: () => void;
   // Never rejects: a dialog shows the outcome inline, a background edit as a toast.
-  apply: (transform: (text: string) => string, origin?: ConfigSource) => Promise<EditResult>;
+  apply: (transform: ConfigTransform, origin?: ConfigSource) => Promise<EditResult>;
 };
 export type EditResult = {kind: 'ok'} | {kind: 'invalid'; errors: number} | {kind: 'cancelled'} | {kind: 'failed'; error: unknown};
 

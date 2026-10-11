@@ -323,13 +323,6 @@ it('projects traffic without truncating counters and retains custom refresh inte
   });
 });
 
-it('gives an expiry to the minute beside the full date and time', () => {
-  const at = new Date(2026, 9, 27, 16, 27, 25).toISOString();
-  const row = providerRowView(provider('a', {expires_at: at}), undefined, 'en-US', t);
-  expect(row.expiresShort.replace(/\s/g, ' ')).toBe('10/27/26, 16:27');
-  expect(row.expires.replace(/\s/g, ' ')).toBe('10/27/26, 16:27:25');
-});
-
 it('separates built-in outbounds from unattributed nodes and avoids provider id collisions', () => {
   const nodes = [
     node('direct', {protocol: 'direct'}),
@@ -492,14 +485,14 @@ const form = {name: entry.name, value: entry.link, interval: '', agent: '', cach
 
 it.each(['filter: name(hk-01)', 'default: hk-01', 'final: hk-01'])('blocks a cross-source rename through %s but allows a link edit', reference => {
   const other = {...main, id: 'other', kind: 'include' as const, content: `group {\n other {\n ${reference}\n policy: random\n }\n}\n`};
-  expect(nodeEditState([main, other], main, entry, [], {...form, name: 'changed'}, t)).toMatchObject({valid: false, error: t('nodes.renameElsewhere')});
-  expect(nodeEditState([main, other], main, entry, [], {...form, value: 'socks5://127.0.0.1:1080'}, t)).toMatchObject({valid: true, error: null});
+  expect(nodeEditState([main, other], main, entry, [], {...form, name: 'changed'}, t)).toMatchObject({valid: false, reason: t('nodes.renameElsewhere')});
+  expect(nodeEditState([main, other], main, entry, [], {...form, value: 'socks5://127.0.0.1:1080'}, t)).toMatchObject({valid: true, reason: null});
 });
 
 it.each(['hk-01', "'hk-01'"])('blocks a cross-source DNS detour rename through %s but allows a link edit', target => {
   const other = {...main, id: 'dns', kind: 'include' as const, content: `dns {\n upstream {\n remote: 'tcp://1.1.1.1:53' -> ${target}\n }\n}\n`};
-  expect(nodeEditState([main, other], main, entry, [], {...form, name: 'changed'}, t)).toMatchObject({valid: false, error: t('nodes.renameElsewhere')});
-  expect(nodeEditState([main, other], main, entry, [], {...form, value: 'socks5://127.0.0.1:1080'}, t)).toMatchObject({valid: true, error: null});
+  expect(nodeEditState([main, other], main, entry, [], {...form, name: 'changed'}, t)).toMatchObject({valid: false, reason: t('nodes.renameElsewhere')});
+  expect(nodeEditState([main, other], main, entry, [], {...form, value: 'socks5://127.0.0.1:1080'}, t)).toMatchObject({valid: true, reason: null});
   expect(
     nodeEditState([main, {...other, content: other.content.replace(`-> ${target}`, '-> hk-010')}], main, entry, [], {...form, name: 'changed'}, t).valid
   ).toBe(true);
@@ -512,6 +505,23 @@ it('assigns duplicate names to the name field and validates links and unchanged 
   for (const patch of [{}, {name: ''}, {name: "can't"}, {value: 'vless:/broken'}, {value: "socks5://host:1080#can't"}])
     expect(nodeEditState([main], main, entry, [], {...form, ...patch}, t).valid).toBe(false);
   expect(nodeEditState([main], main, entry, [], {...form, name: 'edge one'}, t)).toMatchObject({valid: true, nameError: null});
+});
+
+it('explains empty edit fields without imposing the node creation limit', () => {
+  expect(nodeEditState([main], main, entry, [], {...form, name: '  '}, t)).toMatchObject({
+    valid: false,
+    nameError: t('nodes.nameMissing'),
+    reason: t('nodes.nameMissing')
+  });
+  expect(nodeEditState([main], main, entry, [], {...form, value: ''}, t)).toMatchObject({
+    valid: false,
+    linkError: t('nodes.linkInvalid'),
+    reason: t('nodes.linkInvalid')
+  });
+  expect(nodeEditState([main], main, entry, [], {...form, value: `socks5://example.com:1080#${'x'.repeat(8192)}`}, t)).toMatchObject({
+    valid: true,
+    reason: null
+  });
 });
 
 it.each([

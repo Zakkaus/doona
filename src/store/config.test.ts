@@ -4,9 +4,10 @@ import {ApiError, LocalError} from '../api/error';
 import {createMockApi} from '../../mock';
 import {capabilities} from '../../mock/fixtures';
 // The mocked react reads hookHarness, so testHelpers loads before the modules that import react.
-import {hookHarness, stubVisibleDocument} from './testHelpers';
+import {deferred, hookHarness, stubVisibleDocument} from './testHelpers';
 import {closestLimit, createSource, readConfigFresh, refusalOutcome, useConfigEditor, useConfigRevisionAction, withinLimits} from './config';
 import {watchResource} from './resourceCore';
+import {actionCell} from './action';
 
 vi.mock('react', async original => ({
   ...(await original<typeof import('react')>()),
@@ -14,7 +15,8 @@ vi.mock('react', async original => ({
   useCallback: (callback: unknown) => callback,
   useSyncExternalStore: (_subscribe: unknown, read: () => unknown) => read()
 }));
-vi.mock('./runtime', () => ({useCapabilities: () => ({data: capabilities})}));
+let editorCapabilities = capabilities;
+vi.mock('./runtime', () => ({useCapabilities: () => ({data: editorCapabilities})}));
 
 const source = {id: 'main', content_sha256: 'aaa'};
 const refused = new ApiError(412, 'precondition_failed', 'Precondition failed');
@@ -178,6 +180,131 @@ it.each([
     expect(refetch).not.toHaveBeenCalled();
     expect((await api.config()).sources.find(item => item.id === source.id)?.content).toBe(main.content);
   }
+});
+
+it('holds the shared save action through async preflight and read-back, persisting only the first candidate', async () => {
+  hookHarness.reset();
+  onTestFinished(() => {
+    hookHarness.unmount();
+    vi.restoreAllMocks();
+  });
+  const api = createMockApi();
+  const selection = vi.spyOn(apiSelection, 'getApi').mockReturnValue(api);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const content = main.content! + '\n# first candidate\n';
+  const preflight = deferred<void>();
+  const validateConfig = api.validateConfig.bind(api);
+  const validate = vi.spyOn(api, 'validateConfig').mockImplementation(async (request, signal) => {
+    if (request.mode === 'syntax') await preflight.promise;
+    return validateConfig(request, signal);
+  });
+  const replace = vi.spyOn(api, 'replaceConfigSource');
+  const readBack = deferred<void>();
+  const refetch = vi.fn(async () => {
+    await readBack.promise;
+    await api.config();
+    return {ok: true};
+  });
+  const [first, second] = hookHarness.render(() => [
+    useConfigEditor(refetch, {rethrow: true, shared: 'main-source-edit'}),
+    useConfigEditor(refetch, {rethrow: true, shared: 'main-source-edit'})
+  ]);
+  hookHarness.runEffects();
+  const cell = actionCell(api, 'main-source-edit');
+  const applied = first.apply(main, async (text, check) => {
+    const result = await check({sources: [{id: main.id, content: text}], mode: 'syntax'});
+    expect(result.valid).toBe(true);
+    return content;
+  });
+  const competing = vi.fn(() => main.content! + '\n# competing candidate\n');
+  expect(cell.snapshot().busy).toBe('save');
+  expect(await second.apply(main, competing)).toBeUndefined();
+  await vi.waitUntil(() => validate.mock.calls.length === 1);
+  expect(cell.snapshot().busy).toBe('save');
+  expect(replace).not.toHaveBeenCalled();
+  expect(await second.apply(main, competing)).toBeUndefined();
+  selection.mockImplementation(() => {
+    throw new Error('The async action must retain its captured API');
+  });
+  preflight.resolve();
+  await vi.waitUntil(() => refetch.mock.calls.length === 1, {timeout: 10000});
+  expect(cell.snapshot().busy).toBe('save');
+  expect(await second.apply(main, competing)).toBeUndefined();
+  readBack.resolve();
+  expect(await applied).toHaveProperty('result');
+  expect(competing).not.toHaveBeenCalled();
+  expect(cell.snapshot()).toEqual({busy: null, error: null});
+  expect(validate.mock.calls.map(([request]) => request.mode)).toEqual(['syntax', 'full']);
+  expect(validate.mock.calls[1][1]).toBe(validate.mock.calls[0][1]);
+  expect(replace).toHaveBeenCalledExactlyOnceWith(main.id, content, `"${main.content_sha256}"`, validate.mock.calls[0][1]);
+  expect((await api.config()).sources.find(source => source.id === main.id)?.content).toBe(content);
+});
+
+it('does not write or publish an error when cancelled during async preparation', async () => {
+  hookHarness.reset();
+  onTestFinished(() => {
+    hookHarness.unmount();
+    vi.restoreAllMocks();
+  });
+  const api = createMockApi();
+  vi.spyOn(apiSelection, 'getApi').mockReturnValue(api);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const prepared = deferred<void>();
+  const release = deferred<void>();
+  const validate = vi.spyOn(api, 'validateConfig');
+  const replace = vi.spyOn(api, 'replaceConfigSource');
+  const refetch = vi.fn();
+  const editor = hookHarness.render(() => useConfigEditor(refetch, {rethrow: true, shared: 'main-source-edit'}));
+  hookHarness.runEffects();
+  const applied = editor.apply({...main, path: '<redacted>'}, async (text, check) => {
+    await check({sources: [{id: main.id, content: text}], mode: 'syntax'});
+    prepared.resolve();
+    await release.promise;
+    return text + '\n# cancelled candidate\n';
+  });
+  await prepared.promise;
+  editor.cancel();
+  release.resolve();
+  expect(await applied).toBeUndefined();
+  expect(validate.mock.calls[0][1]?.aborted).toBe(true);
+  expect(actionCell(api, 'main-source-edit').snapshot()).toEqual({busy: null, error: null});
+  expect(replace).not.toHaveBeenCalled();
+  expect(refetch).not.toHaveBeenCalled();
+  expect((await api.config()).sources.find(source => source.id === main.id)?.content).toBe(main.content);
+});
+
+it.each(['content', 'body'] as const)('enforces the advertised validation %s limit during preparation without sending or writing', async limit => {
+  hookHarness.reset();
+  onTestFinished(() => {
+    hookHarness.unmount();
+    vi.restoreAllMocks();
+    editorCapabilities = capabilities;
+  });
+  const api = createMockApi();
+  vi.spyOn(apiSelection, 'getApi').mockReturnValue(api);
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  editorCapabilities = {
+    ...capabilities,
+    ...(limit === 'content'
+      ? {resources: {...capabilities.resources, config_validate: {...capabilities.resources.config_validate, max_bytes: 4}}}
+      : {limits: {...capabilities.limits, max_json_body_bytes: 4}})
+  };
+  const validate = vi.spyOn(api, 'validateConfig');
+  const replace = vi.spyOn(api, 'replaceConfigSource');
+  const refetch = vi.fn();
+  const editor = hookHarness.render(() => useConfigEditor(refetch, {rethrow: true, shared: 'main-source-edit'}));
+  hookHarness.runEffects();
+  await expect(
+    editor.apply(main, async (text, check) => {
+      await check({sources: [{id: main.id, content: 'global {}'}], mode: 'syntax'});
+      return text + '\n# oversized preflight\n';
+    })
+  ).rejects.toMatchObject({status: 413, text: {key: 'config.tooLarge', params: {limit: 4}}});
+  expect(actionCell(api, 'main-source-edit').snapshot().busy).toBeNull();
+  expect(validate).not.toHaveBeenCalled();
+  expect(replace).not.toHaveBeenCalled();
+  expect(refetch).not.toHaveBeenCalled();
+  expect((await api.config()).sources.find(source => source.id === main.id)?.content).toBe(main.content);
 });
 
 // The write settles only once the configuration is read back, and a read that fails leaves the caller its draft.

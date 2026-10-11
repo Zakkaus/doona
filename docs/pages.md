@@ -36,7 +36,9 @@ On Policies, use the pencil button on a group card to edit its policy and includ
 
 ### XHTTP node options
 
-When Paste node link or Edit… holds a vless or trojan XHTTP link, XHTTP options shows its mode, path, host, headers, padding, POST pacing and separate download peer as fields. Each field rewrites only its own part of the link, which remains what is saved. Before an edited link is written, honk reads it alone; a link honk would skip is refused with honk's reason instead of the node disappearing after reload. Adding a node takes a link of at most 8192 characters; put a longer one in the configuration editor.
+When Paste node link or Edit… holds a vless or trojan XHTTP link, XHTTP options shows its mode, path, host, headers, padding, POST pacing and separate download peer as fields. The link remains what is saved. Fields change their corresponding query parameters or extra JSON members; unchanged query parameter strings survive, but changing extra reserializes that object, normalizing its whitespace and using JavaScript's number precision. Header names are trimmed, and duplicate names (case-insensitive) must be corrected before saving. Before an edited link is written, honk reads it alone; a link honk would skip is refused with a translated diagnostic and any backend detail instead of the node disappearing after reload. The 8192-character limit applies only to adding a node; longer links can be edited in existing declarations or entered in the configuration editor.
+
+Unfinished header rows are protected as unsaved changes; replacing the raw link replaces those rows. Link checking and saving share one transaction, so group and routing-mode edits wait even if the node dialog closes.
 
 ### Traffic and connections
 

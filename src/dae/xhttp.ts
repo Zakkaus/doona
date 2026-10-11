@@ -1,6 +1,7 @@
-// XHTTP options of a vless or trojan share link: the request fields in its query, the rest in its Xray `extra`
-// JSON. The link stays the only copy: a write changes just the parameters whose shown value changed, so every other
-// byte survives, and honk alone decides what is valid.
+// XHTTP options of a vless or trojan share link: request fields in its query, the rest in its Xray `extra` JSON.
+// Writes preserve unchanged query parameter strings, but may normalize empty separators or surrounding blanks.
+// Changing extra uses JSON.parse/JSON.stringify: whitespace is normalized and numbers use JavaScript precision.
+// The link stays the only saved copy, and honk alone decides what is valid.
 
 export type XhttpDownload = {address: string; port: string; serverName: string; path: string; host: string};
 export type XhttpFields = {
@@ -14,6 +15,7 @@ export type XhttpFields = {
   scMinPostsIntervalMs: string;
   download: XhttpDownload | null;
 };
+export type XhttpChange = Partial<Omit<XhttpFields, 'download'>> & {download?: Partial<XhttpDownload> | null};
 export const xhttpModes = ['auto', 'packet-up', 'stream-up', 'stream-one'];
 const ranges = ['xPaddingBytes', 'scMaxEachPostBytes', 'scMinPostsIntervalMs'] as const;
 
@@ -100,47 +102,81 @@ export function readXhttp(link: string): XhttpFields | null {
   return parse(link)?.current ?? null;
 }
 
-export function writeXhttp(link: string, next: XhttpFields): string {
+// HTTP header names are case-insensitive; only later named rows offend, so the first stays editable too.
+export function duplicateXhttpHeaders(headers: XhttpFields['headers']): Set<number> {
+  const seen = new Set<string>();
+  const duplicates = new Set<number>();
+  headers.forEach(([name], index) => {
+    const key = name.trim().toLowerCase();
+    if (!key) return;
+    if (seen.has(key)) duplicates.add(index);
+    seen.add(key);
+  });
+  return duplicates;
+}
+
+export function writeXhttp(link: string, change: XhttpChange): string {
   const parsed = parse(link);
   if (!parsed) return link;
-  const {current} = parsed;
-  const params = [...parsed.params];
-  const extra = structuredClone(parsed.extra);
+  // Keep the original link until edited duplicate rows are corrected, without blocking unrelated patches.
+  if (change.headers && duplicateXhttpHeaders(change.headers).size) return link;
+  const {current, params, extra} = parsed;
+  const before = JSON.stringify(extra);
+  let changed = false;
   const setParam = (key: string, value: string) => {
     const at = params.findIndex(param => decode(param.split('=', 1)[0]) === key);
-    const param = `${key}=${encodeURIComponent(value)}`;
+    const param = `${key}=${encodeURIComponent(value).replace(/'/g, '%27')}`;
     if (!value) {
-      if (at >= 0) params.splice(at, 1);
+      if (at < 0) return;
+      params.splice(at, 1);
     } else if (at >= 0) params[at] = param;
     else params.push(param);
+    changed = true;
   };
   for (const key of ['mode', 'path', 'host'] as const) {
-    if (next[key] === current[key]) continue;
-    setParam(key, next[key]);
+    const value = change[key];
+    if (value === undefined || value === current[key]) continue;
+    setParam(key, value);
     // The query claim wins; a stale copy in extra would only resurface once the query claim is cleared.
     delete extra[key];
   }
-  for (const key of ranges) if (next[key] !== current[key]) put(extra, key, scalar(next[key].trim()));
-  if (next.noGRPCHeader !== current.noGRPCHeader) put(extra, 'noGRPCHeader', next.noGRPCHeader);
-  // Only named headers can live in the link; rows still waiting for a name change nothing.
-  if (JSON.stringify(next.headers) !== JSON.stringify(current.headers)) put(extra, 'headers', Object.fromEntries(next.headers.filter(([name]) => name.trim())));
-  if (!next.download) put(extra, 'downloadSettings', null);
-  else if (JSON.stringify(next.download) !== JSON.stringify(current.download)) {
-    const old = isObject(extra.downloadSettings) ? extra.downloadSettings : {};
-    const settings: Json = {...old};
-    const tls = isObject(old.tlsSettings) ? {...old.tlsSettings} : {};
-    const xhttp = isObject(old.xhttpSettings) ? {...old.xhttpSettings} : {};
-    put(tls, 'serverName', next.download.serverName);
-    put(xhttp, 'path', next.download.path);
-    put(xhttp, 'host', next.download.host);
-    // honk accepts only an H2-over-TLS XHTTP download peer, so those two members are not choices.
-    Object.assign(settings, {address: next.download.address, port: scalar(next.download.port), network: 'xhttp', security: 'tls'});
-    put(settings, 'tlsSettings', tls);
-    put(settings, 'xhttpSettings', xhttp);
+  for (const key of ranges) {
+    const value = change[key];
+    if (value !== undefined && value !== current[key]) put(extra, key, scalar(value.trim()));
+  }
+  if (change.noGRPCHeader !== undefined && change.noGRPCHeader !== current.noGRPCHeader) put(extra, 'noGRPCHeader', change.noGRPCHeader);
+  if (change.headers) {
+    // Compare only named rows: a pending row must not remove an explicitly empty headers object.
+    const headers = change.headers.map(([name, value]) => [name.trim(), value]).filter(([name]) => name);
+    if (
+      headers.length !== current.headers.length ||
+      headers.some(([name, value], index) => name !== current.headers[index][0] || value !== current.headers[index][1])
+    )
+      put(extra, 'headers', Object.fromEntries(headers));
+  }
+  if (change.download === null) delete extra.downloadSettings;
+  else if (change.download !== undefined) {
+    // honk accepts only an H2-over-TLS XHTTP download peer; initialize those claims when creating one.
+    const settings: Json = isObject(extra.downloadSettings) ? extra.downloadSettings : {network: 'xhttp', security: 'tls'};
+    for (const key of ['address', 'port'] as const) {
+      const value = change.download[key];
+      if (value !== undefined && value !== current.download?.[key]) put(settings, key, key === 'port' ? scalar(value) : value);
+    }
+    for (const [key, group] of [
+      ['serverName', 'tlsSettings'],
+      ['path', 'xhttpSettings'],
+      ['host', 'xhttpSettings']
+    ] as const) {
+      const value = change.download[key];
+      if (value === undefined || value === current.download?.[key]) continue;
+      const nested = isObject(settings[group]) ? settings[group] : {};
+      put(nested, key, value);
+      put(settings, group, nested);
+    }
     extra.downloadSettings = settings;
   }
-  if (JSON.stringify(extra) !== JSON.stringify(parsed.extra)) setParam('extra', Object.keys(extra).length ? JSON.stringify(extra) : '');
-  const written = `${parsed.head}${params.length ? `?${params.join('&')}` : ''}${parsed.fragment}`;
-  // Unchanged means the very same string, surrounding blanks included, so a caller can compare links directly.
-  return written === link.trim() ? link : written;
+  const serialized = JSON.stringify(extra);
+  if (serialized !== before) setParam('extra', Object.keys(extra).length ? serialized : '');
+  // Unchanged means the very same string, surrounding blanks and separators included.
+  return changed ? `${parsed.head}${params.length ? `?${params.join('&')}` : ''}${parsed.fragment}` : link;
 }

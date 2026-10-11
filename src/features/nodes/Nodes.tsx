@@ -21,9 +21,9 @@ import type {PageProps} from '../../shell/routes';
 import {ProviderCards} from './ProviderCards';
 import {NodeTable} from './NodeTable';
 import {useNodesPage} from './useNodesPage';
-import {SubscriptionFields} from './SubscriptionFields';
-// Only a node dialog holding an XHTTP link uses these fields, so they load with the first node dialog.
+// Dialog-only fields load when their editor opens, not with the node list.
 const XhttpOptions = lazy(() => import('./XhttpOptions').then(module => ({default: module.XhttpOptions})));
+const SubscriptionFields = lazy(() => import('./SubscriptionFields').then(module => ({default: module.SubscriptionFields})));
 const dialogForm = 'nodes-dialog-form';
 export function Nodes(props: PageProps) {
   const t = useT();
@@ -43,6 +43,10 @@ export function Nodes(props: PageProps) {
     problem,
     form,
     setForm,
+    setNodeLink,
+    xhttp,
+    headerDuplicates,
+    setXhttp,
     removing,
     dialogTitle,
     formValid,
@@ -141,17 +145,19 @@ export function Nodes(props: PageProps) {
         {(dialog?.kind === 'provider' || dialog?.kind === 'editProvider') && (
           <Form id={dialogForm} className="rp-list" onSubmit={send}>
             <span className="rp-label">{t(dialog.kind === 'provider' ? 'nodes.addProviderHelp' : 'nodes.editProviderHelp')}</span>
-            <SubscriptionFields
-              focusInterval={dialog.kind === 'editProvider' && dialog.focus === 'interval'}
-              value={subscription}
-              onChange={setSubscription}
-              fields={subscriptionFields}
-              isDisabled={pending}
-              nameError={subscriptionErrors.name}
-              agentError={subscriptionErrors.agent}
-              intervalError={subscriptionErrors.interval}
-              urlError={subscriptionErrors.url}
-            />
+            <Suspense fallback={null}>
+              <SubscriptionFields
+                focusInterval={dialog.kind === 'editProvider' && dialog.focus === 'interval'}
+                value={subscription}
+                onChange={setSubscription}
+                fields={subscriptionFields}
+                isDisabled={pending}
+                nameError={subscriptionErrors.name}
+                agentError={subscriptionErrors.agent}
+                intervalError={subscriptionErrors.interval}
+                urlError={subscriptionErrors.url}
+              />
+            </Suspense>
             {renameGroups && (
               <>
                 <Switch isSelected={updateGroups} isDisabled={pending} onChange={setUpdateGroups}>
@@ -188,11 +194,13 @@ export function Nodes(props: PageProps) {
               label={t('nodes.link')}
               value={form.value}
               placeholder="vless://…"
-              onChange={value => setForm({...form, value})}
+              onChange={setNodeLink}
             />
-            <Suspense fallback={null}>
-              <XhttpOptions link={form.value} isDisabled={pending} onChange={value => setForm({...form, value})} />
-            </Suspense>
+            {xhttp && (
+              <Suspense fallback={null}>
+                <XhttpOptions fields={xhttp} duplicates={headerDuplicates} isDisabled={pending} onChange={setXhttp} />
+              </Suspense>
+            )}
           </Form>
         )}
       </ModalDialog>

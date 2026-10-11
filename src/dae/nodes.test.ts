@@ -27,6 +27,13 @@ it('quotes a node renamed to mux, which honk would read bare as the removed stan
   );
 });
 
+it('quotes ordinary renamed declaration keys while keeping references bare', () => {
+  const [entry] = readNodeEntries(text);
+  expect(writeNodeEntry(text, entry, {name: 'new', link: entry.link})).toBe(
+    text.replace('"old"', "'new'").replace("name('old',", 'name(new,').replace('!name(old)', '!name(new)')
+  );
+});
+
 it.each(['default', 'final'])('renames exact %s references and detects cross-source blockers', field => {
   const group = `group {\r\n proxy {\r\n  ${field}: 'old' # keep\r\n  policy: fixed(0)\r\n }\r\n}\r\n`;
   const input = text + group;
