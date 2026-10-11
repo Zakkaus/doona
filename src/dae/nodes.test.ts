@@ -20,6 +20,13 @@ it('refuses stale, ambiguous and structurally unsafe edits', () => {
   expect(readNodeEntries("node {\n 'socks5://127.0.0.1:1080'\n wrapper {\n a: 'socks5://127.0.0.1:1080'\n }\n}\n")).toEqual([]);
 });
 
+it('quotes a node renamed to mux, which honk would read bare as the removed standalone setting', () => {
+  const [entry] = readNodeEntries(text);
+  expect(writeNodeEntry(text, entry, {name: 'mux', link: entry.link})).toBe(
+    text.replace('"old"', "'mux'").replace("name('old',", 'name(mux,').replace('!name(old)', '!name(mux)')
+  );
+});
+
 it.each(['default', 'final'])('renames exact %s references and detects cross-source blockers', field => {
   const group = `group {\r\n proxy {\r\n  ${field}: 'old' # keep\r\n  policy: fixed(0)\r\n }\r\n}\r\n`;
   const input = text + group;

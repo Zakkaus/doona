@@ -5,12 +5,12 @@ import {useCompleteness, useConfig} from '../../store/config';
 import type {Capabilities, ConfigSource, Node, Provider} from '../../api/model';
 import {toast, toastFailure, type Problem} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
-import {isWritableName, groupsNamingTag, quoteName, readGroupEntries} from '../../dae/groups';
+import {isWritableName, groupsNamingTag, readGroupEntries} from '../../dae/groups';
 import {isBareName, quote} from '../../dae/text';
 import {getApi} from '../../api';
 import {agentProblem, readSubscriptionEntries, type SubscriptionText} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
-import {readNodeEntries, writeNodeEntry, type NodeEntry} from '../../dae/nodes';
+import {nodeKey, readNodeEntries, writeNodeEntry, type NodeEntry} from '../../dae/nodes';
 import type {PageProps} from '../../shell/routes';
 import {replaceRoute} from '../../shell/route';
 import {
@@ -61,7 +61,7 @@ type NodeDialog =
 // when it reads, or when the engine offers no syntax validation, which leaves the write to report what it can.
 async function linkRejection(resources: Capabilities['resources'] | undefined, name: string, link: string) {
   if (!offered(resources, 'config_validate', {whileLoading: false}) || !resources?.config_validate.modes?.includes('syntax')) return null;
-  const content = `node {\n  ${quoteName(name)}: ${quote(link)}\n}\n`;
+  const content = `node {\n  ${nodeKey(name)}: ${quote(link)}\n}\n`;
   const {diagnostics} = await getApi().validateConfig({mode: 'syntax', sources: [{id: 'node', content}]});
   // honk documents that an accepted link only warns with legacy-* codes (node reference, `node {}` declarations).
   return diagnostics.find(row => row.level === 'error' || (row.level === 'warning' && !row.code.startsWith('legacy-')))?.message ?? null;
