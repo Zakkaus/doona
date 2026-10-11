@@ -134,6 +134,11 @@ export function useConfigCreate(refetch: () => void) {
   };
 }
 
+export type ConfigTransform = (
+  text: string,
+  validate: (request: ConfigValidationRequest) => Promise<ConfigValidationResult>
+) => string | null | Promise<string | null>;
+
 // `refetch` may return the read it starts: the write then settles once the new configuration is read back, so a caller that
 // drops its draft on success is not left showing the old text with the old digest. A read that fails after the write
 // landed ends the action with `ui.writtenNotRead`, so the draft stays until the read succeeds.
@@ -169,13 +174,14 @@ export function useConfigEditor(refetch: () => unknown, {rethrow = false, shared
       [validateConfig, run]
     ),
     apply: useCallback(
-      (source: ConfigSource, candidate: string | ((text: string) => string | null)) =>
+      (source: ConfigSource, candidate: string | ConfigTransform) =>
         run('save', async signal => {
           setSourceId(source.id);
           if (!source.writable) throw new LocalError('config.readOnly');
           if (!(await completeSource(source))) throw new LocalError('config.incomplete');
           signal.throwIfAborted();
-          const content = typeof candidate === 'string' ? candidate : candidate(source.content!);
+          const content = typeof candidate === 'string' ? candidate : await candidate(source.content!, request => validateConfig(request, signal));
+          signal.throwIfAborted();
           if (content === null) return undefined;
           if (canValidate && source.kind === 'main' && source.path !== '<redacted>') {
             const check = await validateConfig({sources: [{id: source.id, path: source.path, content}], mode: 'full'}, signal);

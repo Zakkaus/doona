@@ -2,15 +2,15 @@ import {useCallback, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useT, useLang, formatList} from '../../i18n';
 import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useSteadyNodes, useProviderRefresh, useProviders, useVersion} from '../../store';
 import {useCompleteness, useConfig} from '../../store/config';
-import type {Capabilities, ConfigSource, Node, Provider} from '../../api/model';
+import type {ConfigSource, Node, Provider} from '../../api/model';
 import {toast, toastFailure, type Problem} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {isWritableName, groupsNamingTag, readGroupEntries} from '../../dae/groups';
 import {isBareName, quote} from '../../dae/text';
-import {getApi} from '../../api';
 import {agentProblem, readSubscriptionEntries, type SubscriptionText} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
-import {nodeKey, readNodeEntries, writeNodeEntry, type NodeEntry} from '../../dae/nodes';
+import {readNodeEntries, writeNodeEntry, type NodeEntry} from '../../dae/nodes';
+import {duplicateXhttpHeaders, readXhttp, writeXhttp, type XhttpChange, type XhttpFields} from '../../dae/xhttp';
 import type {PageProps} from '../../shell/routes';
 import {replaceRoute} from '../../shell/route';
 import {
@@ -43,6 +43,7 @@ import {errorText, noticeText, requestIdOf, type Notice} from '../../api/error';
 import {href, pickTab, tabQuery, within} from '../../shell/route';
 import {noNodeSources} from '../../api/selectors';
 import {offered} from '../../api/capabilities';
+import {diagnosticMessage, oneLine} from '../../i18n/backend';
 import {nodesTabs} from './nav';
 import type {SubscriptionDraft, SubscriptionFieldSet} from './SubscriptionFields';
 
@@ -56,17 +57,6 @@ type NodeDialog =
   | {kind: 'removeNode'; item: Node}
   | SubscriptionEdit;
 
-// honk's parser skips a node entry it cannot read with only a warning, so writing an edited link into a whole source
-// would drop the node and still reload successfully. Checking the declaration alone first returns honk's reason; null
-// when it reads, or when the engine offers no syntax validation, which leaves the write to report what it can.
-async function linkRejection(resources: Capabilities['resources'] | undefined, name: string, link: string) {
-  if (!offered(resources, 'config_validate', {whileLoading: false}) || !resources?.config_validate.modes?.includes('syntax')) return null;
-  const content = `node {\n  ${nodeKey(name)}: ${quote(link)}\n}\n`;
-  const {diagnostics} = await getApi().validateConfig({mode: 'syntax', sources: [{id: 'node', content}]});
-  // honk documents that an accepted link only warns with legacy-* codes (node reference, `node {}` declarations).
-  return diagnostics.find(row => row.level === 'error' || (row.level === 'warning' && !row.code.startsWith('legacy-')))?.message ?? null;
-}
-
 export function runSubscriptionAction(query: string, action: {run: () => void} | null) {
   if (!action) return;
   replaceRoute('nodes', within(query, {editSubscription: null, editSubscriptionTag: null, focus: null}));
@@ -77,6 +67,12 @@ export function useNodesPage({go, query}: PageProps) {
   const t = useT();
   const [dialog, setDialog] = useState<NodeDialog | null>(null);
   const [form, setForm] = useState<ProviderForm>(blank);
+  const [headers, setHeaders] = useState<XhttpFields['headers'] | null>(null);
+  const xhttp = useMemo(() => readXhttp(form.value), [form.value]);
+  const headerRows = headers ?? xhttp?.headers ?? [];
+  const headerDuplicates = duplicateXhttpHeaders(headerRows);
+  const headerError = headerDuplicates.size ? t('nodes.xhttp.headerDuplicate') : null;
+  const headerEdited = headers !== null && JSON.stringify(headers) !== JSON.stringify(xhttp?.headers ?? []);
   const session = useDialogSession();
   const submitting = useRef<NodeDialog | null>(null);
   const [pendingDialog, setPendingDialog] = useState<NodeDialog | null>(null);
@@ -91,7 +87,7 @@ export function useNodesPage({go, query}: PageProps) {
     : dialog?.kind === 'editNode'
       ? form.name !== dialog.entry.name || form.value !== dialog.entry.link
       : !!(form.name || form.value);
-  const guard = useDraftGuard(!!dialog && edited, () => {
+  const guard = useDraftGuard(!!dialog && (edited || headerEdited), () => {
     session.next();
     setDialog(null);
   });
@@ -99,6 +95,7 @@ export function useNodesPage({go, query}: PageProps) {
     (next: NodeDialog) => {
       session.next();
       setForm(blank);
+      setHeaders(null);
       setProblem(null);
       if (next.kind === 'editProvider')
         setForm({...blank, name: next.entry.tag, value: next.entry.url, agent: next.entry.ua ?? '', route: next.entry.route ?? ''});
@@ -310,12 +307,23 @@ export function useNodesPage({go, query}: PageProps) {
           return;
         }
         const link = form.value.trim();
-        const rejected = link === dialog.entry.link ? null : await linkRejection(resources, form.name.trim(), link);
-        if (rejected) {
-          refuse(t('nodes.linkRejected', {reason: rejected}));
-          return;
-        }
-        const result = await apply(text => writeNodeEntry(text, dialog.entry, {name: form.name.trim(), link}), current);
+        const result = await apply(async (text, validate) => {
+          // The link check and source write share one save reservation, even after this dialog closes.
+          if (
+            link !== dialog.entry.link &&
+            offered(resources, 'config_validate', {whileLoading: false}) &&
+            resources?.config_validate.modes?.includes('syntax')
+          ) {
+            const {diagnostics} = await validate({
+              mode: 'syntax',
+              sources: [{id: 'node', content: `node {\n  ${quote(form.name.trim())}: ${quote(link)}\n}\n`}]
+            });
+            // honk skips unreadable links with a warning; accepted declarations only warn with legacy-* codes.
+            const rejected = diagnostics.find(row => row.level === 'error' || (row.level === 'warning' && !row.code.startsWith('legacy-')));
+            if (rejected) throw new Error(t('nodes.linkRejected', {reason: oneLine(diagnosticMessage(rejected, t), t)}));
+          }
+          return writeNodeEntry(text, dialog.entry, {name: form.name.trim(), link});
+        }, current);
         const problem = editProblem(result, t);
         if (problem) refuseNotice(problem);
         if (result.kind !== 'ok') return;
@@ -385,16 +393,15 @@ export function useNodesPage({go, query}: PageProps) {
   const checkingRemoval = removal.checking;
   const nodeState = dialog?.kind === 'editNode' ? nodeEditState(sources, dialog.source, dialog.entry, nodeList ?? [], form, t) : null;
   const nodeNameError = nodeState?.nameError ?? null;
-  const nodeEditError = nodeState?.error ?? null;
   const formValid =
     dialog?.kind === 'editNode'
-      ? nodeState!.valid
+      ? nodeState!.valid && !headerError
       : dialog?.kind === 'editProvider'
         ? subscriptionEdit.valid
         : dialog?.kind === 'provider'
           ? isBareName(form.name.trim()) && !!form.value.trim() && subscriptionUrlError(form.value, t) === null && !agentError && intervalSeconds !== null
           : dialog?.kind === 'node'
-            ? form.name.trim() !== '' && !!form.value.trim() && nodeFormReason('node', form.name, form.value, t) === null
+            ? form.name.trim() !== '' && !!form.value.trim() && nodeFormReason('node', form.name, form.value, t) === null && !headerError
             : true;
   const subscription: SubscriptionDraft = {name: form.name, url: form.value, interval: form.interval, agent: form.agent, cache: form.cache, route: form.route};
   // A new subscription shows each option the backend lists, with its default preselected or as the placeholder; an
@@ -494,18 +501,30 @@ export function useNodesPage({go, query}: PageProps) {
     setForm: (next: typeof form) => {
       if (submitting.current !== dialog) setForm(next);
     },
+    setNodeLink: (value: string) => {
+      if (submitting.current === dialog) return;
+      setHeaders(null);
+      setForm(previous => ({...previous, value}));
+    },
+    xhttp: xhttp && {...xhttp, headers: headerRows},
+    headerDuplicates,
+    setXhttp: (change: XhttpChange) => {
+      if (submitting.current === dialog) return;
+      if (change.headers !== undefined) setHeaders(change.headers);
+      setForm(previous => ({...previous, value: writeXhttp(previous.value, change)}));
+    },
     removing,
     dialogTitle,
     formValid,
     nodeNameError,
-    nodeLinkError: dialog?.kind === 'node' || dialog?.kind === 'editNode' ? nodeLinkError(form.value, t) : null,
+    nodeLinkError: nodeState?.linkError ?? (dialog?.kind === 'node' ? nodeLinkError(form.value, t) : null),
     formReason:
       dialog?.kind === 'editNode'
-        ? (nodeEditError ?? nodeFormReason('node', form.name, form.value, t))
+        ? (nodeState!.reason ?? headerError)
         : dialog?.kind === 'editProvider'
           ? // A name error is shown on its field alone.
             subscriptionEdit.reason
-          : nodeFormReason(dialog?.kind, form.name, form.value, t),
+          : (nodeFormReason(dialog?.kind, form.name, form.value, t) ?? headerError),
     submit,
     pending: dialog !== null && pendingDialog === dialog,
     // A write abandoned by Cancel still holds the node actions until it settles, so no dialog can submit meanwhile.

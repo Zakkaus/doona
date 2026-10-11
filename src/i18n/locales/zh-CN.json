@@ -961,6 +961,7 @@
   "nodes.xhttp.downloadPath": "下载路径",
   "nodes.xhttp.downloadPort": "端口",
   "nodes.xhttp.downloadServerName": "下载 TLS 服务器名",
+  "nodes.xhttp.headerDuplicate": "Header 名称不能重复（不区分大小写）。",
   "nodes.xhttp.headerName": "Header {n} 名称",
   "nodes.xhttp.headerValue": "Header {n} 值",
   "nodes.xhttp.help": "这些字段编辑链接中的 XHTTP 参数及其 extra JSON；留空即使用显示的默认值。保存时由 honk 校验链接，修改选项会使节点获得新的 ID。",

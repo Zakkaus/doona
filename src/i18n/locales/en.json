@@ -1114,6 +1114,7 @@
   "nodes.xhttp.downloadPath": "Download path",
   "nodes.xhttp.downloadPort": "Port",
   "nodes.xhttp.downloadServerName": "Download TLS server name",
+  "nodes.xhttp.headerDuplicate": "Header names must be unique (case-insensitive).",
   "nodes.xhttp.headerName": "Header {n} name",
   "nodes.xhttp.headerValue": "Header {n} value",
   "nodes.xhttp.help": "These fields edit the link's XHTTP parameters and its extra JSON; empty fields use the defaults shown. honk checks the link when it is saved, and a changed option gives the node a new ID.",

@@ -127,12 +127,14 @@ export function nodeEditState(sources: ConfigSource[], source: ConfigSource, ent
     renamed &&
     (nodes.some(node => node.name === name) ||
       sources.some(item => (item.kind === 'main' || item.kind === 'include') && readNodeEntries(item.content).some(entry => entry.name === name)));
-  const nameError = taken ? t('nodes.nameTaken') : !isQuotable(name) ? t('config.unquotable') : null;
-  const error = blocked ? t('nodes.renameElsewhere') : !isQuotable(form.value.trim()) ? t('config.unquotable') : null;
+  const nameError = !name ? t('nodes.nameMissing') : taken ? t('nodes.nameTaken') : !isQuotable(name) ? t('config.unquotable') : null;
+  const linkError = nodeLinkError(form.value, t) ?? (!form.value.trim() ? t('nodes.linkInvalid') : null);
+  const reason = nameError ?? linkError ?? (blocked ? t('nodes.renameElsewhere') : null);
   return {
     nameError,
-    error,
-    valid: !!name && isNodeLink(form.value) && !error && !nameError && (form.name !== entry.name || form.value !== entry.link)
+    linkError,
+    reason,
+    valid: reason === null && (form.name !== entry.name || form.value !== entry.link)
   };
 }
 

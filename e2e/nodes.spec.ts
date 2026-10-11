@@ -1,11 +1,14 @@
 import {freshBackend} from './getting-started';
 import type {Locator} from '@playwright/test';
 import {editorText, box, loadingState} from './fixtures';
-import {expect, expectFittedGroupTags, fulfillStream, mockBackend, query, settle, test, moreAction, moreItem} from './fixtures';
+import {expect, expectFittedGroupTags, fulfillStream, loadCatalogues, mockBackend, query, settle, test, moreAction, moreItem} from './fixtures';
 import {createMockApi} from '../mock';
 import {ApiError} from '../src/api/error';
 import {sha256} from '../src/api/hash';
 import type {ProbeResult, Provider} from '../src/api/model';
+import {translate, type Translator} from '../src/i18n';
+
+test.beforeAll(loadCatalogues);
 
 type ProbeResultItem = ProbeResult['results'][number];
 
@@ -155,6 +158,35 @@ for (const transport of ['xhttp', 'splithttp'])
     expect((await api.config()).sources.find(item => item.id === source.id)!.content).toBe(source.content.replace(link, updated));
   });
 
+test('a link longer than 8192 characters is blocked on create but saved exactly on edit', async ({page}) => {
+  const {api, requests} = await mockBackend(page);
+  const source = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const link = `vless://demo@hk-01.example.net:443?security=tls&path=${'x'.repeat(8193)}#hk-01`;
+  const tooLong = translate('en', 'nodes.linkTooLong', {n: 8192});
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  const add = page.getByRole('dialog');
+  await add.getByLabel('Name', {exact: true}).fill('long-node');
+  await add.getByLabel('Node link', {exact: true}).fill(link);
+  await expect(add.getByRole('button', {name: 'Add', exact: true})).toBeDisabled();
+  await expect(add.getByRole('button', {name: 'Add', exact: true})).toHaveAccessibleDescription(tooLong);
+  expect(requests.some(request => request.method() === 'POST' && new URL(request.url()).pathname === '/api/v1/nodes')).toBe(false);
+  await add.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await nodeRows(page).filter({hasText: 'hk-01'}).getByRole('button', {name: 'Node actions', exact: true}).click();
+  await page.getByRole('menuitem', {name: 'Edit…', exact: true}).click();
+  const edit = page.getByRole('dialog', {name: 'Edit node hk-01'});
+  const original = await edit.getByLabel('Node link', {exact: true}).inputValue();
+  await edit.getByLabel('Node link', {exact: true}).fill(link);
+  await expect(edit.getByRole('button', {name: 'Apply', exact: true})).toBeEnabled();
+  await expect(edit.getByText(tooLong, {exact: true})).toHaveCount(0);
+  await edit.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(edit).toHaveCount(0);
+  const expected = source.content.replace(original, link);
+  const write = requests.find(request => request.method() === 'PUT' && new URL(request.url()).pathname === `/api/v1/config/sources/${source.id}`)!;
+  expect(write.postDataJSON().content).toBe(expected);
+  expect((await api.config()).sources.find(item => item.id === source.id)!.content).toBe(expected);
+});
+
 test('XHTTP fields rewrite only their part of the link that is added', async ({page}) => {
   const {api, handlers, requests} = await mockBackend(page);
   handlers['POST nodes'] = request => api.createNode(request.postDataJSON());
@@ -180,12 +212,50 @@ test('XHTTP fields rewrite only their part of the link that is added', async ({p
   });
 });
 
+test('XHTTP header rows trim names, block case-insensitive duplicates and preserve both values after a rename', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  handlers['POST nodes'] = request => api.createNode(request.postDataJSON());
+  const link = 'vless://00000000-0000-4000-8000-000000000001@example.com:443?security=tls&type=xhttp#edge';
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  const add = page.getByRole('dialog');
+  await add.getByLabel('Name', {exact: true}).fill('edge');
+  await add.getByLabel('Node link', {exact: true}).fill(link);
+  await add.getByRole('button', {name: 'XHTTP options'}).click();
+  await add.getByLabel('Header 1 value').fill('first');
+  await add.getByLabel('Header 1 name').fill(' X-Test ');
+  const first = link.replace('#edge', `&extra=${encodeURIComponent(JSON.stringify({headers: {'X-Test': 'first'}}))}#edge`);
+  await expect(add.getByLabel('Node link', {exact: true})).toHaveValue(first);
+  await expect(add.getByLabel('Header 1 name')).toHaveValue(' X-Test ');
+  await add.getByLabel('Header 2 value').fill('second');
+  await add.getByLabel('Header 2 name').fill('x-test');
+  await expect(add.getByRole('button', {name: 'Add', exact: true})).toBeDisabled();
+  const duplicate = translate('en', 'nodes.xhttp.headerDuplicate');
+  await expect(add.getByLabel('Header 2 name')).toHaveAttribute('aria-invalid', 'true');
+  await expect(add.getByLabel('Header 2 name')).toHaveAccessibleDescription(duplicate);
+  await expect(add.getByRole('group', {name: 'XHTTP options', exact: true}).getByText(duplicate, {exact: true})).toBeVisible();
+  await expect(add.getByLabel('Header 1 value')).toHaveValue('first');
+  await expect(add.getByLabel('Header 2 value')).toHaveValue('second');
+  expect(requests.some(request => request.method() === 'POST' && new URL(request.url()).pathname === '/api/v1/nodes')).toBe(false);
+  await add.getByLabel('Header 2 name').fill('X-Other');
+  const expected = link.replace('#edge', `&extra=${encodeURIComponent(JSON.stringify({headers: {'X-Test': 'first', 'X-Other': 'second'}}))}#edge`);
+  await expect(add.getByLabel('Node link', {exact: true})).toHaveValue(expected);
+  await add.getByRole('button', {name: 'Add', exact: true}).click();
+  await expect(add).toHaveCount(0);
+  expect(requests.find(request => request.method() === 'POST' && new URL(request.url()).pathname === '/api/v1/nodes')!.postDataJSON()).toEqual({
+    name: 'edge',
+    link: expected
+  });
+  expect((await api.config()).sources.find(source => source.kind === 'main')!.content).toContain(expected);
+});
+
 for (const [code, refused] of [
   ['invalid-config-value', true],
   ['legacy-config-warning', false]
 ] as const)
   test(`an edited link that warns ${code} is ${refused ? 'refused before any write' : 'written'}`, async ({page}) => {
-    const {handlers, requests} = await mockBackend(page);
+    const {api, handlers, requests} = await mockBackend(page);
+    const source = (await api.config()).sources.find(source => source.kind === 'main')!;
     const reason = 'XHTTP xPaddingBytes must stay within 1-8192';
     handlers['POST config/validate'] = async () => ({
       valid: true,
@@ -198,17 +268,131 @@ for (const [code, refused] of [
     await row.getByRole('button', {name: 'Node actions', exact: true}).click();
     await page.getByRole('menuitem', {name: 'Edit…', exact: true}).click();
     const edit = page.getByRole('dialog', {name: 'Edit node jp-01'});
+    const original = await edit.getByLabel('Node link', {exact: true}).inputValue();
     await edit.getByRole('button', {name: 'XHTTP options'}).click();
     await edit.getByLabel('Padding bytes (xPaddingBytes)').fill('0-10');
+    const updated = await edit.getByLabel('Node link', {exact: true}).inputValue();
     await edit.getByRole('button', {name: 'Apply', exact: true}).click();
     if (refused) {
-      await expect(edit.getByRole('alert')).toContainText(`honk cannot read this link: ${reason}`);
+      await expect(edit.getByRole('alert')).toContainText(reason);
+      await expect(edit.getByLabel('Node link', {exact: true})).toHaveValue(updated);
+      expect((await api.config()).sources.find(item => item.id === source.id)!.content).toBe(source.content);
       expect(requests.some(request => request.method() === 'PUT')).toBe(false);
     } else {
       await expect(edit).toHaveCount(0);
-      expect(requests.some(request => request.method() === 'PUT')).toBe(true);
+      expect((await api.config()).sources.find(item => item.id === source.id)!.content).toBe(source.content.replace(original, updated));
     }
   });
+
+for (const lang of ['zh-CN', 'zh-TW'] as const)
+  test.describe(`edited link rejection in ${lang}`, () => {
+    test.use({storage: {'doona-lang': lang}});
+    const t: Translator = (key, params) => translate(lang, key, params);
+    for (const message of ['', 'XHTTP padding must stay within 1-8192'])
+      test(`a known diagnostic ${message ? 'retains backend detail' : 'with an empty message still rejects'} without writing`, async ({page}) => {
+        const {api, handlers, requests} = await mockBackend(page);
+        const source = (await api.config()).sources.find(source => source.kind === 'main')!;
+        handlers['POST config/validate'] = async () => ({
+          valid: true,
+          diagnostics: [{level: 'warning', source_id: 'node', line: 2, column: 3, span: null, code: 'unsupported_value', message}],
+          generation_id: 'mock:1',
+          validated_at: new Date().toISOString()
+        });
+        await page.goto('/#/nodes?provider=inline');
+        await nodeRows(page)
+          .filter({hasText: 'jp-01'})
+          .getByRole('button', {name: t('nodes.actions'), exact: true})
+          .click();
+        await page.getByRole('menuitem', {name: t('nodes.editAction'), exact: true}).click();
+        const edit = page.getByRole('dialog', {name: t('nodes.editNodeTitle', {name: 'jp-01'})});
+        const updated = 'vless://demo@example.com:443?security=tls&type=xhttp&extra=%7B%22xPaddingBytes%22%3A%220-10%22%7D#jp-01';
+        await edit.getByLabel(t('nodes.link'), {exact: true}).fill(updated);
+        await edit.getByRole('button', {name: t('policy.save'), exact: true}).click();
+        const summary = t('ui.backend.unsupportedValue');
+        const reason = message ? t('ui.valuePair', {label: summary, value: message}) : summary;
+        await expect(edit.getByRole('alert')).toContainText(t('nodes.linkRejected', {reason}));
+        await expect(edit.getByLabel(t('nodes.link'), {exact: true})).toHaveValue(updated);
+        expect(requests.some(request => request.method() === 'PUT')).toBe(false);
+        expect((await api.config()).sources.find(item => item.id === source.id)!.content).toBe(source.content);
+      });
+  });
+
+test('an unnamed XHTTP header protects an existing node draft until the raw link is replaced', async ({page}) => {
+  await mockBackend(page);
+  await page.goto('/#/nodes?provider=inline');
+  await nodeRows(page).filter({hasText: 'jp-01'}).getByRole('button', {name: 'Node actions', exact: true}).click();
+  await page.getByRole('menuitem', {name: 'Edit…', exact: true}).click();
+  const edit = page.getByRole('dialog', {name: 'Edit node jp-01'});
+  const link = edit.getByLabel('Node link', {exact: true});
+  const original = await link.inputValue();
+  await edit.getByRole('button', {name: 'XHTTP options'}).click();
+  await edit.getByLabel('Header 1 value').fill('pending');
+  await expect(link).toHaveValue(original);
+  await page.evaluate(() => {
+    location.hash = '#/settings';
+  });
+  const discard = page.getByRole('alertdialog', {name: 'Discard changes not applied?'});
+  await expect(discard).toBeVisible();
+  await discard.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await expect(edit.getByLabel('Header 1 value')).toHaveValue('pending');
+  await link.fill(original.replace('%2Fxhttp%2F', '%2Freplaced%2F'));
+  await expect(edit.getByLabel('Header 1 value')).toHaveValue('');
+  await link.fill(original);
+  await page.evaluate(() => {
+    location.hash = '#/settings';
+  });
+  await expect(page.locator('.rp-nav[href="#/settings"]')).toHaveAttribute('aria-current', 'page');
+  await expect(discard).toHaveCount(0);
+});
+
+test('empty node edit fields explain why applying is disabled', async ({page}) => {
+  await page.goto('/#/nodes?provider=inline');
+  await nodeRows(page).filter({hasText: 'jp-01'}).getByRole('button', {name: 'Node actions', exact: true}).click();
+  await page.getByRole('menuitem', {name: 'Edit…', exact: true}).click();
+  const edit = page.getByRole('dialog', {name: 'Edit node jp-01'});
+  const apply = edit.getByRole('button', {name: 'Apply', exact: true});
+  await edit.getByLabel('Name', {exact: true}).fill('');
+  await expect(apply).toBeDisabled();
+  await expect(edit.getByLabel('Name', {exact: true})).toHaveAccessibleDescription(translate('en', 'nodes.nameMissing'));
+  await expect(apply).toHaveAccessibleDescription(translate('en', 'nodes.nameMissing'));
+  await edit.getByLabel('Name', {exact: true}).fill('jp-01');
+  await edit.getByLabel('Node link', {exact: true}).fill('');
+  await expect(apply).toBeDisabled();
+  await expect(edit.getByLabel('Node link', {exact: true})).toHaveAccessibleDescription(translate('en', 'nodes.linkInvalid'));
+  await expect(apply).toHaveAccessibleDescription(translate('en', 'nodes.linkInvalid'));
+});
+
+test('a node preflight keeps shared source actions busy after its dialog closes', async ({page}) => {
+  const {api, handlers} = await mockBackend(page);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  handlers['POST config/validate'] = async request => {
+    const candidate = request.postDataJSON();
+    if (candidate.mode === 'syntax') await gate;
+    return api.validateConfig(candidate);
+  };
+  await page.goto('/#/nodes?provider=inline');
+  await nodeRows(page).filter({hasText: 'jp-01'}).getByRole('button', {name: 'Node actions', exact: true}).click();
+  await page.getByRole('menuitem', {name: 'Edit…', exact: true}).click();
+  const edit = page.getByRole('dialog', {name: 'Edit node jp-01'});
+  const link = edit.getByLabel('Node link', {exact: true});
+  const updated = (await link.inputValue()).replace('%2Fxhttp%2F', '%2Fupdated%2F');
+  await link.fill(updated);
+  const checking = page.waitForRequest(
+    request => request.method() === 'POST' && request.url().endsWith('/config/validate') && request.postDataJSON().mode === 'syntax'
+  );
+  await edit.getByRole('button', {name: 'Apply', exact: true}).click();
+  await checking;
+  await edit.getByRole('button', {name: 'Cancel', exact: true}).click();
+  await page.locator('.rp-nav[href="#/policies"]').click();
+  await expect(page.getByRole('button', {name: 'New group', exact: true})).toBeDisabled();
+  release();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Saved jp-01'})).toBeVisible();
+  await expect.poll(async () => (await api.config()).sources.find(source => source.kind === 'main')!.content).toContain(updated);
+  await expect(page.getByRole('button', {name: 'New group', exact: true})).toBeEnabled();
+});
 
 test('include declarations block removal even when the main source also declares them', async ({page}) => {
   const {api} = await mockBackend(page);
