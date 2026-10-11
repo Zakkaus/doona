@@ -6,6 +6,24 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Entries live in [changes/](changes/) until release.
 
+## [0.1.0-beta.20] - 2026-10-12
+
+### Added
+
+- Choose an IP lookup site from public destination and DNS answer addresses. DNS answers now lead with the address, followed by the type and TTL. (#540)
+- The node dialog shows a vless or trojan XHTTP link's options as fields: mode, path, host, headers, padding and POST pacing from its extra JSON, and a separate download peer. Editing fields changes their corresponding query parameters or JSON members; extra JSON is reserialized with JavaScript number precision. (#542)
+- Header names are trimmed, and case-insensitive duplicates show a field error and block saving until corrected, keeping both editable values. Unnamed rows remain protected unsaved drafts without rewriting an empty headers object; replacing the raw link replaces those rows. (#542)
+- Saving an edited node link first asks honk to read it within the same shared save transaction, so other group and routing-mode edits wait throughout validation and saving, even if the dialog closes. A link honk would skip is refused with a translated diagnostic and any backend detail, even when the backend message is empty. (#542)
+- Adding a node refuses a link longer than the 8192 characters the API accepts; editing an existing declaration does not apply that creation limit, and clearing required edit fields explains why saving is disabled. (#542)
+- Changed XHTTP parameters encode single quotes so header values and paths remain writable in configuration text; partial download changes preserve untouched settings. (#542)
+- Renamed node declarations always quote their names, including `mux`, which honk otherwise reads as a removed standalone setting. (#542)
+- XHTTP help is more concise in all three languages, retaining the existing startup download budgets. (#542)
+
+### Fixed
+
+- Liquid Glass scrolls smoothly: the lens pauses while the page scrolls and returns 150 ms after it stops, keeping the blur and colour. (#541)
+- Settings > Appearance can turn the pause off for Liquid Glass's full refraction while scrolling. (#541)
+
 ## [0.1.0-beta.19] - 2026-10-09
 
 ### Fixed
@@ -800,7 +818,8 @@ Entries live in [changes/](changes/) until release.
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
-[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.19...HEAD
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.20...HEAD
+[0.1.0-beta.20]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.19...v0.1.0-beta.20
 [0.1.0-beta.19]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.18...v0.1.0-beta.19
 [0.1.0-beta.18]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.17...v0.1.0-beta.18
 [0.1.0-beta.17]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.16...v0.1.0-beta.17

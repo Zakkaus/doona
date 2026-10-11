@@ -46,7 +46,7 @@ WebSocket, gRPC and XHTTP are stream transports, separate from proxy protocols. 
 
 ## Latest release
 
-[beta.19](CHANGELOG.md) fixes policy node focus, node group layout, scroll position in Events and Logs, and DNS cache and administrator setup messages.
+[beta.20](CHANGELOG.md) adds an IP lookup site choice for destination and DNS answer addresses, shows XHTTP link options as node dialog fields, and keeps Liquid Glass scrolling smooth.
 
 ## Documentation
 
