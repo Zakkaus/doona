@@ -2,11 +2,12 @@ import {useCallback, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useT, useLang, formatList} from '../../i18n';
 import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useSteadyNodes, useProviderRefresh, useProviders, useVersion} from '../../store';
 import {useCompleteness, useConfig} from '../../store/config';
-import type {ConfigSource, Node, Provider} from '../../api/model';
+import type {Capabilities, ConfigSource, Node, Provider} from '../../api/model';
 import {toast, toastFailure, type Problem} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
-import {isWritableName, groupsNamingTag, readGroupEntries} from '../../dae/groups';
-import {isBareName} from '../../dae/text';
+import {isWritableName, groupsNamingTag, quoteName, readGroupEntries} from '../../dae/groups';
+import {isBareName, quote} from '../../dae/text';
+import {getApi} from '../../api';
 import {agentProblem, readSubscriptionEntries, type SubscriptionText} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
 import {readNodeEntries, writeNodeEntry, type NodeEntry} from '../../dae/nodes';
@@ -54,6 +55,17 @@ type NodeDialog =
   | {kind: 'removeProvider'; item: Provider}
   | {kind: 'removeNode'; item: Node}
   | SubscriptionEdit;
+
+// honk's parser skips a node entry it cannot read with only a warning, so writing an edited link into a whole source
+// would drop the node and still reload successfully. Checking the declaration alone first returns honk's reason; null
+// when it reads, or when the engine offers no syntax validation, which leaves the write to report what it can.
+async function linkRejection(resources: Capabilities['resources'] | undefined, name: string, link: string) {
+  if (!offered(resources, 'config_validate', {whileLoading: false}) || !resources?.config_validate.modes?.includes('syntax')) return null;
+  const content = `node {\n  ${quoteName(name)}: ${quote(link)}\n}\n`;
+  const {diagnostics} = await getApi().validateConfig({mode: 'syntax', sources: [{id: 'node', content}]});
+  // honk documents that an accepted link only warns with legacy-* codes (node reference, `node {}` declarations).
+  return diagnostics.find(row => row.level === 'error' || (row.level === 'warning' && !row.code.startsWith('legacy-')))?.message ?? null;
+}
 
 export function runSubscriptionAction(query: string, action: {run: () => void} | null) {
   if (!action) return;
@@ -297,7 +309,13 @@ export function useNodesPage({go, query}: PageProps) {
           refuse(t('nodes.editNodeMissing'));
           return;
         }
-        const result = await apply(text => writeNodeEntry(text, dialog.entry, {name: form.name.trim(), link: form.value.trim()}), current);
+        const link = form.value.trim();
+        const rejected = link === dialog.entry.link ? null : await linkRejection(resources, form.name.trim(), link);
+        if (rejected) {
+          refuse(t('nodes.linkRejected', {reason: rejected}));
+          return;
+        }
+        const result = await apply(text => writeNodeEntry(text, dialog.entry, {name: form.name.trim(), link}), current);
         const problem = editProblem(result, t);
         if (problem) refuseNotice(problem);
         if (result.kind !== 'ok') return;
@@ -376,7 +394,7 @@ export function useNodesPage({go, query}: PageProps) {
         : dialog?.kind === 'provider'
           ? isBareName(form.name.trim()) && !!form.value.trim() && subscriptionUrlError(form.value, t) === null && !agentError && intervalSeconds !== null
           : dialog?.kind === 'node'
-            ? form.name.trim() !== '' && !!form.value.trim() && nodeLinkError(form.value, t) === null
+            ? form.name.trim() !== '' && !!form.value.trim() && nodeFormReason('node', form.name, form.value, t) === null
             : true;
   const subscription: SubscriptionDraft = {name: form.name, url: form.value, interval: form.interval, agent: form.agent, cache: form.cache, route: form.route};
   // A new subscription shows each option the backend lists, with its default preselected or as the placeholder; an

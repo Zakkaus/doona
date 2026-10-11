@@ -34,6 +34,10 @@ Sign-in is a page of its own: one card centred on the theme background, with Lan
 
 On Policies, use the pencil button on a group card to edit its policy and included regions, subscriptions and nodes. The dialog shows the matching nodes and supports undo before saving. New group opens the same editor. Group links on Nodes return to the group card. In a node's Node actions menu, Add to group lists groups from writable main and include files; choosing one opens its editor with the node staged for confirmation. Nodes and subscriptions declared in include files cannot be removed from this page; the disabled action explains why.
 
+### XHTTP node options
+
+When Paste node link or Edit… holds a vless or trojan XHTTP link, XHTTP options shows its mode, path, host, headers, padding, POST pacing and separate download peer as fields. Each field rewrites only its own part of the link, which remains what is saved. Before an edited link is written, honk reads it alone; a link honk would skip is refused with honk's reason instead of the node disappearing after reload. Adding a node takes a link of at most 8192 characters; put a longer one in the configuration editor.
+
 ### Traffic and connections
 
 The Traffic tab of Connections plots each connection's upload against its download, coloured by outbound; select a point to open that connection. The Connections tab groups live connections by device or by outbound, filters them by protocol and outbound, and exports them as CSV.

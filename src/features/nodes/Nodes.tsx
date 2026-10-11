@@ -1,4 +1,4 @@
-import type {FormEvent} from 'react';
+import {lazy, Suspense, type FormEvent} from 'react';
 import {useT} from '../../i18n';
 import {
   Button,
@@ -22,6 +22,8 @@ import {ProviderCards} from './ProviderCards';
 import {NodeTable} from './NodeTable';
 import {useNodesPage} from './useNodesPage';
 import {SubscriptionFields} from './SubscriptionFields';
+// Only a node dialog holding an XHTTP link uses these fields, so they load with the first node dialog.
+const XhttpOptions = lazy(() => import('./XhttpOptions').then(module => ({default: module.XhttpOptions})));
 const dialogForm = 'nodes-dialog-form';
 export function Nodes(props: PageProps) {
   const t = useT();
@@ -188,6 +190,9 @@ export function Nodes(props: PageProps) {
               placeholder="vless://…"
               onChange={value => setForm({...form, value})}
             />
+            <Suspense fallback={null}>
+              <XhttpOptions link={form.value} isDisabled={pending} onChange={value => setForm({...form, value})} />
+            </Suspense>
           </Form>
         )}
       </ModalDialog>
