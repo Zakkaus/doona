@@ -155,6 +155,61 @@ for (const transport of ['xhttp', 'splithttp'])
     expect((await api.config()).sources.find(item => item.id === source.id)!.content).toBe(source.content.replace(link, updated));
   });
 
+test('XHTTP fields rewrite only their part of the link that is added', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  handlers['POST nodes'] = request => api.createNode(request.postDataJSON());
+  const link = 'vless://00000000-0000-4000-8000-000000000001@example.com:443?security=tls&type=xhttp&path=%2Fx%252Fy&alpn=h2#edge';
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  const add = page.getByRole('dialog');
+  await add.getByLabel('Name', {exact: true}).fill('edge');
+  await add.getByLabel('Node link', {exact: true}).fill(link);
+  await add.getByRole('button', {name: 'XHTTP options'}).click();
+  await expect(add.getByLabel('Path', {exact: true})).toHaveValue('/x%2Fy');
+  await add.getByLabel('Padding bytes (xPaddingBytes)').fill('200-400');
+  // A value typed before its name waits in the row instead of being refused.
+  await add.getByLabel('Header 1 value').fill('a+b');
+  await add.getByLabel('Header 1 name').fill('X-Test');
+  const expected = link.replace('#edge', `&extra=${encodeURIComponent(JSON.stringify({xPaddingBytes: '200-400', headers: {'X-Test': 'a+b'}}))}#edge`);
+  await expect(add.getByLabel('Node link', {exact: true})).toHaveValue(expected);
+  await add.getByRole('button', {name: 'Add', exact: true}).click();
+  await expect(add).toHaveCount(0);
+  expect(requests.find(request => request.method() === 'POST' && new URL(request.url()).pathname === '/api/v1/nodes')!.postDataJSON()).toEqual({
+    name: 'edge',
+    link: expected
+  });
+});
+
+for (const [code, refused] of [
+  ['invalid-config-value', true],
+  ['legacy-config-warning', false]
+] as const)
+  test(`an edited link that warns ${code} is ${refused ? 'refused before any write' : 'written'}`, async ({page}) => {
+    const {handlers, requests} = await mockBackend(page);
+    const reason = 'XHTTP xPaddingBytes must stay within 1-8192';
+    handlers['POST config/validate'] = async () => ({
+      valid: true,
+      diagnostics: [{level: 'warning', source_id: 'node', line: 2, column: 3, span: null, code, message: reason}],
+      generation_id: 'mock:1',
+      validated_at: new Date().toISOString()
+    });
+    await page.goto('/#/nodes?provider=inline');
+    const row = nodeRows(page).filter({hasText: 'jp-01'});
+    await row.getByRole('button', {name: 'Node actions', exact: true}).click();
+    await page.getByRole('menuitem', {name: 'Edit…', exact: true}).click();
+    const edit = page.getByRole('dialog', {name: 'Edit node jp-01'});
+    await edit.getByRole('button', {name: 'XHTTP options'}).click();
+    await edit.getByLabel('Padding bytes (xPaddingBytes)').fill('0-10');
+    await edit.getByRole('button', {name: 'Apply', exact: true}).click();
+    if (refused) {
+      await expect(edit.getByRole('alert')).toContainText(`honk cannot read this link: ${reason}`);
+      expect(requests.some(request => request.method() === 'PUT')).toBe(false);
+    } else {
+      await expect(edit).toHaveCount(0);
+      expect(requests.some(request => request.method() === 'PUT')).toBe(true);
+    }
+  });
+
 test('include declarations block removal even when the main source also declares them', async ({page}) => {
   const {api} = await mockBackend(page);
   const reason = 'Declared outside the main configuration file. Remove it from that file.';

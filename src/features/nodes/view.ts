@@ -340,13 +340,20 @@ export function nodeLinkError(value: string, t: Translator) {
   return !link ? null : !isNodeLink(link) ? t('nodes.linkInvalid') : !isQuotable(link) ? t('config.unquotable') : null;
 }
 
+// POST /nodes takes at most this many characters; a longer declaration still fits a configuration source edit.
+const MAX_CREATE_LINK = 8192;
+
 // Why the add dialog's submit is disabled, first applicable. Null while every required field is still empty, which
 // speaks for itself, and for a problem its own field already shows (the User-Agent, a group name).
 export function nodeFormReason(kind: string | undefined, name: string, value: string, t: Translator): string | null {
   const bare = name.trim();
   if ((kind !== 'provider' && kind !== 'node') || (!bare && !value.trim())) return null;
   if (!bare) return t('nodes.nameMissing');
-  if (kind === 'node') return nodeLinkError(value, t) ?? (value.trim() ? null : t('nodes.linkInvalid'));
+  if (kind === 'node') {
+    const link = value.trim();
+    if (!link) return t('nodes.linkInvalid');
+    return nodeLinkError(value, t) ?? ([...link].length > MAX_CREATE_LINK ? t('nodes.linkTooLong', {n: MAX_CREATE_LINK}) : null);
+  }
   if (!isBareName(bare)) return t('nodes.nameInvalid');
   return subscriptionUrlError(value, t) ?? (value.trim() ? null : t('nodes.urlInvalid'));
 }
