@@ -6,3 +6,4 @@ Added
 - Adding a node refuses a link longer than the 8192 characters the API accepts; editing an existing declaration does not apply that creation limit, and clearing required edit fields explains why saving is disabled.
 - Changed XHTTP parameters encode single quotes so header values and paths remain writable in configuration text; partial download changes preserve untouched settings.
 - Renamed node declarations always quote their names, including `mux`, which honk otherwise reads as a removed standalone setting.
+- XHTTP help is more concise in all three languages, retaining the existing startup download budgets.
