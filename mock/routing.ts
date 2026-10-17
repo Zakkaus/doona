@@ -37,7 +37,7 @@ function predicate(expression: string, input: RoutingTraceInput): Pick<Condition
   const [, negated, kind, arg] = match;
   const field = fields[kind];
   const value = field === 'mac' ? undefined : input[field];
-  if (value == null || value === '') return {result: 'indeterminate', missing_inputs: [field ?? kind]};
+  if (value == null || (value === '' && kind !== 'pname')) return {result: 'indeterminate', missing_inputs: [field ?? kind]};
   let matched = false;
   if (kind === 'domain') {
     const name = domainName(String(value));

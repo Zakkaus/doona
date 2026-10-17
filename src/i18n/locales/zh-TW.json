@@ -1383,6 +1383,7 @@
   "rule.positionEnd": "最後（fallback 之前）",
   "rule.positionLast": "最後",
   "rule.positionOthers": "其他位置",
+  "rule.processHelp": "留空表示沒有行程，例如從區網轉發的流量。",
   "rule.queried": "查詢時間",
   "rule.queryAgain": "重新查詢",
   "rule.queryDns": "查詢 DNS",

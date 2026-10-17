@@ -1383,6 +1383,7 @@
   "rule.positionEnd": "最后（fallback 之前）",
   "rule.positionLast": "最后",
   "rule.positionOthers": "其他位置",
+  "rule.processHelp": "留空表示没有进程，例如从局域网转发的流量。",
   "rule.queried": "查询时间",
   "rule.queryAgain": "重新查询",
   "rule.queryDns": "查询 DNS",
