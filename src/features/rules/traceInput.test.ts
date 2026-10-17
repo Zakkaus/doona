@@ -4,6 +4,14 @@ import {traceInput} from './traceInput';
 const form = {network: 'tcp' as const, domain: 'example.com', dst_ip: '', dst_port: '443', src_ip: '', src_port: '', pname: '', dscp: ''};
 
 it.each([
+  ['', ''],
+  ['  ', ''],
+  [' curl ', 'curl']
+])('maps process %j to an explicit trimmed value', (pname, expected) => {
+  expect(traceInput({...form, pname})).toStrictEqual({network: 'tcp', domain: 'example.com', dst_port: 443, pname: expected});
+});
+
+it.each([
   ['', undefined],
   ['  ', undefined],
   ['0', 0],
@@ -14,6 +22,7 @@ it.each([
     network: 'tcp',
     domain: 'example.com',
     dst_port: 443,
+    pname: '',
     ...(expected !== undefined ? {dscp: expected} : {})
   });
 });

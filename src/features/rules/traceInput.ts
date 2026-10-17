@@ -14,7 +14,7 @@ export function traceInput(form: TraceFields): RoutingTraceInput {
   if (form.domain.trim() && form.dst_ip.trim()) input.dst_ip = address(form.dst_ip);
   if (form.src_ip.trim()) input.src_ip = address(form.src_ip);
   if (form.src_port.trim()) input.src_port = Number(form.src_port);
-  if (form.pname.trim()) input.pname = form.pname.trim();
+  input.pname = form.pname.trim();
   if (form.dscp.trim()) input.dscp = Number(form.dscp);
   return input;
 }

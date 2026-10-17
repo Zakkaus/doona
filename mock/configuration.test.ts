@@ -232,6 +232,29 @@ it('writes a patched default as the native default key so a later edit of it win
   expect((await api.group('proxy')).config.default_member_id).toBe(second.id);
 });
 
+it.each([
+  [undefined, 'indeterminate', null, 'indeterminate'],
+  ['', 'determinate', 'direct', 'not_matched'],
+  ['curl', 'determinate', 'direct', 'not_matched'],
+  ['NetworkManager', 'determinate', 'proxy', 'matched']
+] as const)('traces process %j separately from a missing process', async (pname, decision, outbound, result) => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const content = `group { proxy { policy: fixed(0) } }
+routing { pname(NetworkManager) -> proxy
+  fallback: direct
+}`;
+  await api.replaceConfigSource(main.id, content, `"${main.content_sha256}"`);
+  await vi.advanceTimersByTimeAsync(1000);
+  const trace = await api.routingTrace({
+    input: {network: 'tcp', dst_ip: '198.51.100.20', dst_port: 443, ...(pname !== undefined ? {pname} : {})},
+    resolve: 'none'
+  });
+  expect(trace.evaluations[0]).toMatchObject({decision, outbound, missing_inputs: pname === undefined ? ['pname'] : []});
+  expect(trace.evaluations[0].rules[0]).toMatchObject({result, conditions: [{result, missing_inputs: pname === undefined ? ['pname'] : []}]});
+});
+
 it('traces a negated condition and leaves an unreadable one undecided', async () => {
   vi.useFakeTimers();
   const api = createMockApi();

@@ -122,7 +122,7 @@ export function Trace({form: state, go}: {form: TraceForm; go: PageProps['go']})
               onChange={value => setForm({...form, src_port: textFromNumber(value)})}
               error={trace.errors.src_port}
             />
-            <TextField label={t('ui.process')} value={form.pname} onChange={pname => setForm({...form, pname})} />
+            <TextField label={t('ui.process')} description={t('rule.processHelp')} value={form.pname} onChange={pname => setForm({...form, pname})} />
             <NumberField
               label={t('rule.dscp')}
               value={numberFromText(form.dscp)}

@@ -1578,6 +1578,7 @@
   "rule.positionEnd": "Last, before the fallback",
   "rule.positionLast": "Last",
   "rule.positionOthers": "Other positions",
+  "rule.processHelp": "Leave empty for traffic without a process, such as traffic forwarded from the LAN.",
   "rule.queried": "Queried at",
   "rule.queryAgain": "Query again",
   "rule.queryDns": "Query DNS",
