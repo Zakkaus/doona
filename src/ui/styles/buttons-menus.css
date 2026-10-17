@@ -276,6 +276,12 @@ section:not(:first-child) > .rp-sec-h {
   min-width: 0;
   max-width: 100%;
 }
+/* A field label keeps one line's height with its help button, so the field lines up with neighbours that have none. */
+:is(.rp-field, .rp-cluster) > .rp-help-row {
+  font-size: var(--rp-text-xs);
+  line-height: var(--rp-line-caption);
+  height: 1lh;
+}
 .rp-help-row-fill {
   display: flex;
   min-width: 0;
