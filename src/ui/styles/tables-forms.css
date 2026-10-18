@@ -464,8 +464,8 @@
   overflow: visible;
   text-overflow: clip;
 }
-.rp-table[data-multiline] div[role='row'] {
-  height: auto;
+.rp-table[data-multiline] div:is([role='row'], [role='rowheader'], [role='gridcell']) {
+  height: 100%;
   min-height: var(--rp-space-10);
 }
 .rp-cell-wrap .rp-code > span {

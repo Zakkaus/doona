@@ -1,6 +1,6 @@
 import {createMockApi} from '../mock';
 import {ApiError} from '../src/api/error';
-import {expect, expectTextInside, mockBackend, test, box} from './fixtures';
+import {expect, expectTextInside, mockBackend, settleFrames, test, box} from './fixtures';
 
 // Without the backend's rule dictionary the list falls back to the flows grouped by rule.
 test('the rule list filters by source without accumulating polls, sorted in config order', async ({page}) => {
@@ -218,6 +218,44 @@ test('the rule list fits its rows instead of holding a page of empty space', asy
   expect(geometry.bottom - geometry.rowBottom).toBeGreaterThanOrEqual(0);
   expect(geometry.bottom - geometry.rowBottom).toBeLessThanOrEqual(2);
 });
+
+for (const extra of [0, 25]) {
+  test(`wrapped rule cells share their row edges in a ${extra ? 'virtualised' : 'native'} table`, async ({page}) => {
+    await page.setViewportSize({width: 1280, height: 900});
+    const {api} = await mockBackend(page);
+    const source = (await api.config()).sources.find(source => source.id === 'src-main')!;
+    const expression = 'domain(suffix: ghcr.io, suffix: brew.sh, suffix: nix.org, suffix: nixos.org, suffix: iriswo.com)';
+    const added = [expression, ...Array.from({length: extra}, (_, i) => `domain(full: row-${i}.example)`)];
+    const content = source.content!.replace(/^routing\s*\{/m, `routing {\n${added.map(rule => `  ${rule} -> proxy`).join('\n')}`);
+    await api.pollOperation(await api.replaceConfigSource(source.id, content, `"${source.content_sha256}"`));
+    await page.goto('/#/rules?view=advanced');
+    const cell = page.locator('.rp-cell-wrap').filter({hasText: expression});
+    await expect(cell).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await settleFrames(page);
+    const row = cell.locator('xpath=ancestor::*[@role="row"][1]');
+    const grid = page.getByRole('grid', {name: 'Routing rules'});
+    expect(await grid.evaluate(el => el.tagName)).toBe(extra ? 'DIV' : 'TABLE');
+    const bounds = await row.evaluate(el => {
+      const row = el.getBoundingClientRect();
+      return {
+        height: row.height,
+        edges: [...el.querySelectorAll('[role=gridcell], [role=rowheader]')].map(cell => {
+          const rect = cell.getBoundingClientRect();
+          return {top: rect.top - row.top, bottom: rect.bottom - row.bottom};
+        })
+      };
+    });
+    expect(bounds.edges.length).toBeGreaterThan(1);
+    for (const edge of bounds.edges) {
+      expect(Math.abs(edge.top)).toBeLessThanOrEqual(1);
+      expect(Math.abs(edge.bottom)).toBeLessThanOrEqual(1);
+    }
+    expect(bounds.height).toBeGreaterThan(40);
+    const short = grid.locator('[role=row][data-key]').nth(1);
+    expect((await box(short)).height).toBe(40);
+  });
+}
 
 for (const width of [1440, 768, 390]) {
   test(`rule text and controls follow kit geometry at ${width}px`, async ({page}) => {
