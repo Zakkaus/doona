@@ -1,5 +1,5 @@
 import {expect, it, vi} from 'vitest';
-import {detectHostedBackend} from './profiles';
+import {detectHostedBackend, suggestedBackendUrl} from './profiles';
 
 it('continues startup when accessing browser storage throws', async () => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
@@ -106,4 +106,12 @@ it('clears only the saved token of the profile signing out', async () => {
   const unreadable = {...storage, getItem: () => '{', setItem: vi.fn()};
   clearProfileToken('a', unreadable);
   expect(unreadable.setItem).not.toHaveBeenCalled();
+});
+
+it('suggests honk on the page host when no backend is saved', () => {
+  expect(suggestedBackendUrl({protocol: 'http:', hostname: '192.168.1.1'})).toBe('http://192.168.1.1:9527');
+  expect(suggestedBackendUrl({protocol: 'https:', hostname: 'honk.example'})).toBe('http://honk.example:9527');
+  expect(suggestedBackendUrl({protocol: 'http:', hostname: '::1'})).toBe('http://[::1]:9527');
+  expect(suggestedBackendUrl({protocol: 'file:', hostname: ''})).toBe('');
+  expect(suggestedBackendUrl({protocol: 'http:', hostname: ''})).toBe('');
 });
