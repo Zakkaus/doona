@@ -111,7 +111,7 @@ it('clears only the saved token of the profile signing out', async () => {
 it('suggests honk on the page host when no backend is saved', () => {
   expect(suggestedBackendUrl({protocol: 'http:', hostname: '192.168.1.1'})).toBe('http://192.168.1.1:9527');
   expect(suggestedBackendUrl({protocol: 'https:', hostname: 'honk.example'})).toBe('');
-  expect(suggestedBackendUrl({protocol: 'http:', hostname: '::1'})).toBe('http://[::1]:9527');
+  expect(suggestedBackendUrl(new URL('http://[::1]:8080/ui/'))).toBe('http://[::1]:9527');
   expect(suggestedBackendUrl({protocol: 'file:', hostname: ''})).toBe('');
   expect(suggestedBackendUrl({protocol: 'http:', hostname: ''})).toBe('');
 });
