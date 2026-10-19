@@ -46,7 +46,8 @@ test('profiles add, rename, switch, and delete without losing the route', async 
   await Promise.all([page.waitForEvent('load'), page.getByRole('alertdialog').getByRole('button', {name: 'Delete profile'}).click()]);
   await page.goto('/');
   await expect(page).toHaveURL(/#\/settings$/);
-  await expect(page.locator('[name=api]')).toHaveValue('');
+  // With every profile deleted, the field suggests honk's native API on this host again.
+  await expect(page.locator('[name=api]')).toHaveValue(`http://${new URL(origin).hostname}:9527`);
 });
 
 test('corrupt stored profiles show one error without overwriting the stored data', async ({page}) => {

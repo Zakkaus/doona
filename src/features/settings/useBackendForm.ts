@@ -4,7 +4,7 @@ import {useT, type Params} from '../../i18n';
 import type {Key} from '../../i18n';
 import {discoverAuth} from '../../api/auth';
 import {uuid} from '../../api/hash';
-import {DEMO_API, isDemoApi, normalizeApi, readProfiles, writeProfiles, type Profile} from '../../api/profiles';
+import {DEMO_API, isDemoApi, normalizeApi, readProfiles, suggestedBackendUrl, writeProfiles, type Profile} from '../../api/profiles';
 import {dropOrphanSession} from '../../api/session';
 import {storageKeys} from '../../api/storage';
 import {toast} from '../../ui/ui';
@@ -27,15 +27,17 @@ function readPairing(query: string): {api: string; token: string} | null {
 export function useBackendForm(query: string, startPage: RoutePath = defaultRoute) {
   const t = useT();
   const [saved] = useState(readSettings);
-  const [api, setApi] = useState(saved.api ?? '');
+  // A first run suggests honk's native API on this page's host; a saved backend wins.
+  const [defaultApi] = useState(() => saved.api ?? suggestedBackendUrl());
+  const [api, setApi] = useState(defaultApi);
   const [token, setToken] = useState(saved.token);
   const [paired, setPaired] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const {pending, running, cancel: cancelProbe, run: runProbe} = useConnectionTest();
   // Pairing links also fill an already-open form without saving the credentials.
-  const dirty = api !== (saved.api ?? '') || token !== saved.token;
+  const dirty = api !== defaultApi || token !== saved.token;
   const guard = useDraftGuard(dirty, () => {
-    setApi(saved.api ?? '');
+    setApi(defaultApi);
     setToken(saved.token);
     setPaired(false);
   });

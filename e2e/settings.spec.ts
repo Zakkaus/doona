@@ -9,6 +9,8 @@ import {palettes} from '../src/shell/palettes';
 test.beforeAll(loadCatalogues);
 
 const t = (key: Parameters<typeof translate>[1]) => translate('en', key);
+// With nothing saved, the backend field suggests honk's native API on the page's host.
+const suggestion = (page: Page) => `http://${new URL(page.url()).hostname}:9527`;
 
 test('first run opens settings and preserves explicit deep links', async ({page}) => {
   await page.goto('/');
@@ -30,8 +32,8 @@ test('a pairing link fills the backend draft and removes credentials from the ad
   await expect(page.locator('[name=token]')).toHaveValue('x');
   await expect(page).toHaveURL(/#\/settings$/);
   await page.reload();
-  await expect(page.locator('[name=api]')).toHaveValue('');
-  await expect(page.locator('[name=token]')).toHaveCount(0);
+  await expect(page.locator('[name=api]')).toHaveValue(suggestion(page));
+  await expect(page.locator('[name=token]')).toHaveValue('');
 });
 
 test('leaving a paired draft and staying does not write the token back into the address bar', async ({page}) => {
@@ -50,7 +52,7 @@ test('leaving a paired draft and staying does not write the token back into the 
 
 test('a pairing link followed on the open settings page removes its credentials without asking', async ({page}) => {
   await page.goto('/#/settings');
-  await expect(page.locator('[name=api]')).toHaveValue('');
+  await expect(page.locator('[name=api]')).toHaveValue(suggestion(page));
   // The page strips the credentials in the same commit as the route change, before the shell has seen that route.
   await page.evaluate(() => {
     location.hash = '#/settings?api=http://router:9527&token=secret-token';
