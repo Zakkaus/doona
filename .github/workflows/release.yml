@@ -89,7 +89,7 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = push ]; then tools/package.sh --git-version; else tools/package.sh; fi
       # The sums job copies every intermediate artifact into release-assets, so they keep one day; release-assets
       # and the recipes keep the repository's default retention.
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: archives
           path: |
@@ -183,7 +183,7 @@ jobs:
             ls "${deb}_${NPM}-${PACKAGE_RELEASE}_all.deb" "${name}-${NPM}-${PACKAGE_RELEASE}.noarch.rpm" \
               "${name}_${NPM}-${PACKAGE_RELEASE}_all.ipk" "${name}-${VERSION}${ARCH_PRERELEASE}-${PACKAGE_RELEASE}-any.pkg.tar.zst"
           done
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: nfpm-packages
           path: packages/
@@ -206,13 +206,13 @@ jobs:
           path: release/
       - name: Build the Alpine packages
         run: docker run --rm -v "$PWD:/src" -w /src "$ALPINE_IMAGE" sh tools/package-alpine.sh "$NPM"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: alpine-packages
           path: release/alpine/
           if-no-files-found: error
           retention-days: 1
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: alpine-recipe
           path: release/alpine-recipe/
@@ -238,13 +238,13 @@ jobs:
           mkdir -p release/openwrt release/openwrt-recipe
           chmod 777 release/openwrt release/openwrt-recipe
           docker run --rm -v "$PWD:/src" -w /src "$OPENWRT_SDK_IMAGE" sh tools/package-openwrt.sh "$NPM"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: openwrt-packages
           path: release/openwrt/
           if-no-files-found: error
           retention-days: 1
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: openwrt-recipe
           path: release/openwrt-recipe/
@@ -267,7 +267,7 @@ jobs:
           cd release
           sha256sum -- * > "$RUNNER_TEMP/SHA256SUMS"
           mv "$RUNNER_TEMP/SHA256SUMS" SHA256SUMS
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-assets
           path: release/
