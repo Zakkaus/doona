@@ -1735,6 +1735,7 @@
   "settings.demo": "Using built-in demo data; no external backend was contacted.",
   "settings.dnsLogSize": "DNS log records kept",
   "settings.firstRun": "No backend configured; showing built-in demo data",
+  "settings.firstRunUnsaved": "No backend configured; showing built-in demo data until the backend URL is saved",
   "settings.flowsMax": "Flows kept",
   "settings.flowsRetention": "Flow retention (seconds)",
   "settings.general": "General",

@@ -145,10 +145,10 @@ export function hostedRoot(loc: {origin: string; pathname: string}): string {
 }
 
 // The backend address suggested when nothing is saved: honk's native API
-// (port 9527) on this page's host. Empty when the page is not served over
-// http(s), where no host applies.
+// (port 9527) on this page's host. Empty unless the page is served over plain
+// http: honk's listener speaks http, which an https page may not call.
 export function suggestedBackendUrl(loc: {protocol: string; hostname: string} = location): string {
-  if (!/^https?:$/.test(loc.protocol) || !loc.hostname) return '';
+  if (loc.protocol !== 'http:' || !loc.hostname) return '';
   const host = loc.hostname.includes(':') ? `[${loc.hostname}]` : loc.hostname;
   return `http://${host}:9527`;
 }

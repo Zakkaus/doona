@@ -36,7 +36,8 @@ export function useSettingsPage(query: string) {
     profile,
     error: capabilities.error,
     retry: capabilities.refetch,
-    firstRun: form.saved.api === null,
+    // Until something is saved the app shows demo data, whatever address the field holds.
+    firstRun: form.saved.api === null ? t(form.demo ? 'settings.firstRun' : 'settings.firstRunUnsaved') : null,
     activeId: form.saved.activeId,
     hasActive: !!form.active,
     profileReason: profileReason(!!form.active, t),

@@ -351,7 +351,7 @@ export function Settings({query}: PageProps) {
 
   return (
     <div className="rp-page">
-      {firstRun && <p className="rp-note">{t('settings.firstRun')}</p>}
+      {firstRun && <p className="rp-note">{firstRun}</p>}
       {paired && <p className="rp-note">{t('settings.paired')}</p>}
       <Tabs
         page
