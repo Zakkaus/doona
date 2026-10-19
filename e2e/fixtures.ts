@@ -72,7 +72,9 @@ export const test = base.extend<{storage: Record<string, string>; signedIn: stri
         failedLoad && (expectedHttpErrors.get(page)?.has(message.location().url) || expectedLoadFailures.get(page)?.test(message.location().url));
       // React logs the rejection of a blocked lazy chunk that a load boundary caught.
       const rejectedImport = /dynamically imported module/.test(message.text()) && expectedLoadFailures.get(page)?.test(message.text());
-      if (message.type() === 'error' && !discovery && !expectedHttp && !rejectedImport) errors.push(`console: ${message.text()}`);
+      // Firefox reports a font request that a reload cancels as a failed download (NS_BINDING_ABORTED); the page did nothing wrong.
+      const abortedFont = /downloadable font: download failed .* status=2152398850 /.test(message.text());
+      if (message.type() === 'error' && !discovery && !expectedHttp && !rejectedImport && !abortedFont) errors.push(`console: ${message.text()}`);
     });
     // A ResizeObserver whose callback changes layout defers the rest of its notifications to the next frame and the
     // browser reports that as an error; nothing is lost, and WebKit raises it at random under CI load.
