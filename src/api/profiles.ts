@@ -148,9 +148,8 @@ export function hostedRoot(loc: {origin: string; pathname: string}): string {
 // (port 9527) on this page's host. Empty unless the page is served over plain
 // http: honk's listener speaks http, which an https page may not call.
 export function suggestedBackendUrl(loc: {protocol: string; hostname: string} = location): string {
-  if (loc.protocol !== 'http:' || !loc.hostname) return '';
-  const host = loc.hostname.includes(':') ? `[${loc.hostname}]` : loc.hostname;
-  return `http://${host}:9527`;
+  // `hostname` already brackets an IPv6 address.
+  return loc.protocol === 'http:' && loc.hostname ? `http://${loc.hostname}:9527` : '';
 }
 
 export async function detectHostedBackend(
