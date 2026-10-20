@@ -158,6 +158,11 @@ Some lists have one home, and everything else reads them:
 - Languages: `src/i18n/languages.ts`. The build injects the locales and the default into `tools/stamp.js`, and the Node tools read the same file through `tools/languages.mjs`.
 - Browser storage keys: `src/api/storage.ts`. Never change a key's string: browsers already hold it.
 
+### Fixed values and outside requests
+
+- Do not hard-code a value that the backend or the user decides, such as a data source, host, port or URL. Read it from the backend, or from settings when the user may change it. A default that remains is a named constant with a comment saying where the value comes from.
+- The page never contacts a third-party host without the user's confirmation. A link the user clicks counts as confirmation, as in `src/features/shared/ipLookup.ts`. Anything the page fetches from a third-party host itself, such as a download or a lookup, waits until the user confirms a prompt that names the host, the size of a download and any data sent along. Nothing is fetched in the background or refreshed automatically; a refresh asks again. Download URLs written into the backend's configuration, such as the geodata presets in `src/dae/geodata.ts`, are fetched by the backend and fall outside this rule.
+
 ### How the rules are enforced
 
 `pnpm check` and `pnpm check:size` fail on these; the lint rules live in `eslint.config.js`:
