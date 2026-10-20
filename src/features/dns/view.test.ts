@@ -1,6 +1,7 @@
 import {expect, it} from 'vitest';
 import {capabilities, dnsCache} from '../../../mock/fixtures';
 import type {ConfigSource, DnsLogRecord, DnsQueryResponse} from '../../api/model';
+import type {GeodataQueryResponse} from './geoCdn';
 import {translate, type Translator} from '../../i18n';
 import {appendDnsLog, dnsAnswerView, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryUpstreams, dnsQueryView} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
@@ -24,7 +25,7 @@ it('uses the same nullable field and answer projection for queries and log detai
     query_time: record.observed_at,
     results: [{...record, type: 'A', cache_entry_id: null}]
   };
-  const query = dnsQueryView(result, capabilities.resources, 'A', 'example.com', false, t);
+  const query = dnsQueryView(result, null, capabilities.resources, 'A', 'example.com', false, t);
   const data = {observed_at: record.observed_at, total: 1, next_cursor: null, records: [record]};
   const log = dnsLogView(data, true, t);
   expect(query.cards[0].answers).toEqual(dnsLogDetail(data, record.id, 'en-US', t)?.answers);
@@ -36,7 +37,7 @@ it('uses the same nullable field and answer projection for queries and log detai
 });
 
 it('lists the statistics and the two listings before the query', () => {
-  expect(dnsQueryView(null, capabilities.resources, 'A', '', false, t).tabs.map(tab => tab.id)).toEqual(['stats', 'log', 'cache', 'query']);
+  expect(dnsQueryView(null, null, capabilities.resources, 'A', '', false, t).tabs.map(tab => tab.id)).toEqual(['stats', 'log', 'cache', 'query']);
 });
 
 const source = (content: string | undefined) => ({id: 'main', content}) as ConfigSource;
@@ -63,10 +64,10 @@ it.each([
 
 it('disables unsupported query types and omits explicitly unavailable tabs', () => {
   const resources = {...capabilities.resources, dns_query: {...capabilities.resources.dns_query, record_types: ['A']}, dns_log: {available: false as const}};
-  expect(dnsQueryView(null, resources, 'AAAA', 'example.com', false, t).disabled).toBe(true);
-  expect(dnsQueryView(null, resources, 'all', 'example.com', false, t).disabled).toBe(false);
-  expect(dnsQueryView(null, resources, 'A', ' ', false, t).disabled).toBe(true);
-  expect(dnsQueryView(null, resources, 'A', 'example.com', false, t).tabs.map(tab => tab.id)).toEqual(['cache', 'query']);
+  expect(dnsQueryView(null, null, resources, 'AAAA', 'example.com', false, t).disabled).toBe(true);
+  expect(dnsQueryView(null, null, resources, 'all', 'example.com', false, t).disabled).toBe(false);
+  expect(dnsQueryView(null, null, resources, 'A', ' ', false, t).disabled).toBe(true);
+  expect(dnsQueryView(null, null, resources, 'A', 'example.com', false, t).tabs.map(tab => tab.id)).toEqual(['cache', 'query']);
 });
 
 it('names a filter only when one narrows an empty cache listing', () => {
@@ -157,17 +158,17 @@ it('reports missing cache coverage and omits warnings when all coverage is prese
 
 it('says why Query, Clear all cache and Delete are disabled when the backend does not support them', () => {
   const {resources} = capabilities;
-  expect(dnsQueryView(null, resources, 'A', 'example.com', false, t).reason).toBeNull();
+  expect(dnsQueryView(null, null, resources, 'A', 'example.com', false, t).reason).toBeNull();
   // An empty domain speaks for itself, and nothing is said before the capabilities arrive or while a query runs.
-  expect(dnsQueryView(null, resources, 'A', '', false, t).reason).toBeNull();
-  expect(dnsQueryView(null, undefined, 'A', 'example.com', false, t).reason).toBeNull();
+  expect(dnsQueryView(null, null, resources, 'A', '', false, t).reason).toBeNull();
+  expect(dnsQueryView(null, null, undefined, 'A', 'example.com', false, t).reason).toBeNull();
   const off = {...resources, dns_query: {...resources.dns_query, available: false}};
-  expect(dnsQueryView(null, off, 'A', 'example.com', false, t).reason).toBe('This backend cannot run DNS queries right now');
-  expect(dnsQueryView(null, off, 'A', 'example.com', true, t).reason).toBeNull();
+  expect(dnsQueryView(null, null, off, 'A', 'example.com', false, t).reason).toBe('This backend cannot run DNS queries right now');
+  expect(dnsQueryView(null, null, off, 'A', 'example.com', true, t).reason).toBeNull();
   const aOnly = {...resources, dns_query: {...resources.dns_query, record_types: ['A']}};
-  expect(dnsQueryView(null, aOnly, 'AAAA', 'example.com', false, t).reason).toBe('This backend cannot query this record type');
+  expect(dnsQueryView(null, null, aOnly, 'AAAA', 'example.com', false, t).reason).toBe('This backend cannot query this record type');
   const none = {...resources, dns_query: {...resources.dns_query, record_types: []}};
-  expect(dnsQueryView(null, none, 'all', 'example.com', false, t).reason).toBe('This backend offers no record types to query');
+  expect(dnsQueryView(null, null, none, 'all', 'example.com', false, t).reason).toBe('This backend offers no record types to query');
 
   const cache = dnsCacheView(dnsCache, resources, null, 'en-US', t);
   expect([cache.flushReason, cache.deleteReason]).toEqual([null, null]);
@@ -197,7 +198,7 @@ it('seeds a new rule from the typed answer records, the client address and the u
   });
   const result = {...record, type: 'A', cache_entry_id: null, answers};
   const query: DnsQueryResponse = {domain: 'example.com', cache_mode: 'normal', query_time: '2026-01-01T00:00:00Z', results: [result]};
-  const card = dnsQueryView(query, capabilities.resources, 'A', 'example.com', false, t).cards[0];
+  const card = dnsQueryView(query, null, capabilities.resources, 'A', 'example.com', false, t).cards[0];
   expect(card.seed.dns?.answers).toEqual(['192.0.2.1', '2001:db8::1']);
   // The CNAME carries a name, not an address, so only the A and AAAA answers start a rule of their own.
   expect(card.answerSeeds.map(answer => answer?.address ?? null)).toEqual([null, '192.0.2.1', '2001:db8::1']);
@@ -238,6 +239,62 @@ it('leads each answer with its data, links public addresses and names the owner 
     {data: '8.8.8.8', name: null, type: 'CNAME', ttl, lookup: null},
     {data: '2001:0DB8:0:0::1', name: 'edge.example.net.', type: 'AAAA', ttl, lookup: '2001:db8::1'}
   ];
-  expect(dnsQueryView(result, capabilities.resources, 'A', 'example.com', false, t).cards[0].answers).toEqual(expected);
+  expect(dnsQueryView(result, null, capabilities.resources, 'A', 'example.com', false, t).cards[0].answers).toEqual(expected);
   expect(dnsLogDetail(data, record.id, 'en-US', t)?.answers).toEqual(expected);
+});
+
+it('offers a geosite query type while geodata is available', () => {
+  const view = dnsQueryView(null, null, capabilities.resources, 'geosite', 'example.com', false, t);
+  expect(view.isGeosite).toBe(true);
+  expect(view.choices.map(choice => choice.id)).toContain('geosite');
+  expect(view.disabled).toBe(false);
+  expect(view.reason).toBeNull();
+  expect(view.geoCards).toEqual([]);
+});
+
+it('hides the geosite query type and disables it without geodata', () => {
+  const resources = {...capabilities.resources, geodata: {available: false}};
+  const view = dnsQueryView(null, null, resources, 'geosite', 'example.com', false, t);
+  expect(view.choices.map(choice => choice.id)).not.toContain('geosite');
+  expect(view.disabled).toBe(true);
+  expect(view.reason).toBe('This backend cannot query geodata right now');
+});
+
+it('refuses geosite input the backend cannot serve', () => {
+  const resources = capabilities.resources;
+  expect(dnsQueryView(null, null, resources, 'geosite', 'geoip:cn', false, t).reason).toBe('This backend only serves geosite, not geoip');
+  expect(dnsQueryView(null, null, resources, 'geosite', '1.1.1.1', false, t).disabled).toBe(true);
+  expect(dnsQueryView(null, null, resources, 'geosite', 'foo:bar', false, t).reason).toBe('Unknown prefix; use geosite:<code> or a plain domain');
+  // An empty input speaks for itself, like the DNS form.
+  expect(dnsQueryView(null, null, resources, 'geosite', '', false, t).reason).toBeNull();
+  expect(dnsQueryView(null, null, resources, 'geosite', '', false, t).disabled).toBe(true);
+});
+
+it('renders geodata find matches and show entries as cards', () => {
+  const find: GeodataQueryResponse = {
+    action: 'find',
+    value: 'example.com',
+    total: 2,
+    truncated: false,
+    matches: [
+      {code: 'google', type: 'domain', value: 'example.com', attrs: []},
+      {code: 'gfw', type: 'full', value: 'example.com', attrs: ['cn']}
+    ]
+  };
+  const found = dnsQueryView(null, find, capabilities.resources, 'geosite', 'example.com', false, t);
+  expect(found.geoCards).toHaveLength(1);
+  expect(found.geoCards[0].title).toBe('example.com');
+  expect(found.geoCards[0].rows.map(row => row.code)).toEqual(['google', 'gfw']);
+  expect(found.geoCards[0].rows[1]).toMatchObject({type: 'full', attrs: 'cn'});
+  const show: GeodataQueryResponse = {
+    action: 'show',
+    code: 'gfw',
+    total: 3,
+    truncated: true,
+    entries: [{type: 'domain', value: 'example.com', attrs: []}]
+  };
+  const shown = dnsQueryView(null, show, capabilities.resources, 'geosite', 'geosite:gfw', false, t);
+  expect(shown.geoCards[0].title).toBe('geosite:gfw');
+  expect(shown.geoCards[0].fields).toEqual([['Entries', '3, list truncated']]);
+  expect(shown.geoCards[0].rows).toHaveLength(1);
 });

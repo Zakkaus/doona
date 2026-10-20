@@ -33,6 +33,7 @@ import {
 } from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
 import {useDns, useDnsCacheTab, useDnsLogTab, type DnsRowRule} from './useDns';
+import {GeoResults} from './GeoResults';
 import {DnsStats} from './Analysis';
 import type {MatchKind} from './match';
 import type {dnsAnswerView} from './view';
@@ -78,62 +79,77 @@ export function Dns(props: PageProps) {
       >
         <ActionHelp reason={vm.reason}>
           <Toolbar>
-            <TextField side label={t('ui.domain')} value={vm.domain} onChange={vm.setDomain} width={280} placeholder="example.com" />
+            <TextField
+              side
+              label={t('ui.domain')}
+              value={vm.domain}
+              onChange={vm.setDomain}
+              width={280}
+              placeholder={vm.isGeosite ? t('dns.geodataPlaceholder') : 'example.com'}
+            />
             <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
-            {vm.upstreams.length > 0 && <LabeledSelect label={t('ui.upstream')} side value={vm.upstream} onChange={vm.setUpstream} items={vm.upstreams} />}
-            <Switch isSelected={vm.bypassCache} onChange={vm.setBypassCache}>
-              {t('dns.bypassCache')}
-            </Switch>
+            {!vm.isGeosite && vm.upstreams.length > 0 && (
+              <LabeledSelect label={t('ui.upstream')} side value={vm.upstream} onChange={vm.setUpstream} items={vm.upstreams} />
+            )}
+            {!vm.isGeosite && (
+              <Switch isSelected={vm.bypassCache} onChange={vm.setBypassCache}>
+                {t('dns.bypassCache')}
+              </Switch>
+            )}
             <Button accent type="submit" isPending={vm.pending} isDisabled={vm.disabled}>
               {t('dns.query')}
             </Button>
           </Toolbar>
         </ActionHelp>
       </Form>
-      {vm.cards.length > 0 && (
-        <div className="rp-col">
-          {vm.cards.map(card => (
-            <Card key={card.id} className="rp-col">
-              <div className="rp-row">
-                <div className="rp-cluster">
-                  <h2 className="rp-h3">{card.title}</h2>
-                  <Badge tone={card.cacheTone}>{card.cacheText}</Badge>
+      {vm.isGeosite ? (
+        <GeoResults cards={vm.geoCards} onShow={vm.showCategory} />
+      ) : (
+        vm.cards.length > 0 && (
+          <div className="rp-col">
+            {vm.cards.map(card => (
+              <Card key={card.id} className="rp-col">
+                <div className="rp-row">
+                  <div className="rp-cluster">
+                    <h2 className="rp-h3">{card.title}</h2>
+                    <Badge tone={card.cacheTone}>{card.cacheText}</Badge>
+                  </div>
+                  <div className="rp-cluster">
+                    {vm.rule.canAdd(card.seed) && (
+                      <Button quiet small onPress={() => vm.rule.open(card.seed)}>
+                        {t('rule.add')}
+                      </Button>
+                    )}
+                    {vm.showCache && (
+                      <Button quiet small onPress={vm.viewCache}>
+                        {t('dns.viewCache')}
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="rp-cluster">
-                  {vm.rule.canAdd(card.seed) && (
-                    <Button quiet small onPress={() => vm.rule.open(card.seed)}>
-                      {t('rule.add')}
-                    </Button>
-                  )}
-                  {vm.showCache && (
-                    <Button quiet small onPress={vm.viewCache}>
-                      {t('dns.viewCache')}
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <Kv inline items={card.fields} />
-              {card.answers.length ? (
-                <div className="rp-list">
-                  {card.answers.map((answer, i) => {
-                    const address = card.answerSeeds[i];
-                    return (
-                      <DnsAnswer key={i} answer={answer}>
-                        {address && vm.rule.canAdd(address.seed) && (
-                          <Button quiet small label={t('dns.addRuleFor', {value: address.address})} onPress={() => vm.rule.open(address.seed)}>
-                            {t('rule.add')}
-                          </Button>
-                        )}
-                      </DnsAnswer>
-                    );
-                  })}
-                </div>
-              ) : (
-                <Empty>{t('dns.noAnswers')}</Empty>
-              )}
-            </Card>
-          ))}
-        </div>
+                <Kv inline items={card.fields} />
+                {card.answers.length ? (
+                  <div className="rp-list">
+                    {card.answers.map((answer, i) => {
+                      const address = card.answerSeeds[i];
+                      return (
+                        <DnsAnswer key={i} answer={answer}>
+                          {address && vm.rule.canAdd(address.seed) && (
+                            <Button quiet small label={t('dns.addRuleFor', {value: address.address})} onPress={() => vm.rule.open(address.seed)}>
+                              {t('rule.add')}
+                            </Button>
+                          )}
+                        </DnsAnswer>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <Empty>{t('dns.noAnswers')}</Empty>
+                )}
+              </Card>
+            ))}
+          </div>
+        )
       )}
     </>
   );

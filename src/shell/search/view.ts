@@ -65,6 +65,10 @@ export function pageEntries(capabilities: Capabilities | undefined, t: Translato
     ...flowsTabs(resources).map(tab => ({path: 'flows' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...rulesTabs(resources).map(tab => ({path: 'rules' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...dnsTabs(resources).map(tab => ({path: 'dns' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
+    // The query tab's geosite type as its own hit, while the backend serves geodata.
+    ...(offered(resources, 'geodata', {whileLoading: false})
+      ? [{path: 'dns' as const, params: {tab: 'query', type: 'geosite'}, titleKey: 'dns.geositeType' as const, aliases: ['geosite', 'geodata'] as const}]
+      : []),
     ...configTabs(hasGlobal, capabilities).map(tab => ({path: 'config' as const, params: {tab: tab.id}, titleKey: tab.titleKey, aliases: tab.aliases})),
     ...settingsCardList(resources).map(card => ({path: 'settings' as const, params: {card: card.id}, titleKey: card.titleKey, aliases: card.aliases}))
   ];

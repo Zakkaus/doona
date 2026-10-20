@@ -1,4 +1,7 @@
 import type {Capabilities, ConfigSource, DnsCacheList, DnsLogList, DnsLogRecord, DnsQueryResponse} from '../../api/model';
+import type {GeodataQueryResponse} from './geoCdn';
+import {offered} from '../../api/capabilities';
+import {geoInput} from './geoInput';
 import {enumLabel} from '../../i18n/enum';
 import {localTime, formatLatency} from '../../i18n/format';
 import {formatNumber, type Translator as LabelFn} from '../../i18n';
@@ -67,8 +70,13 @@ export function dnsQueryUpstreams(sources: ConfigSource[] | undefined, t: LabelF
   const names = [...new Set((sources ?? []).flatMap(source => (source.content ? dnsUpstreamNames(source.content).map(unquote) : [])))];
   return names.length ? [{id: '', label: t('dns.upstreamAuto')}, ...names.map(id => ({id, label: id}))] : [];
 }
+// The query tab's geosite option: a geodata question asked in the DNS page's
+// domain-investigation form, not a DNS record type.
+export const geositeQueryType = 'geosite';
+
 export function dnsQueryView(
   result: DnsQueryResponse | null,
+  geoResult: GeodataQueryResponse | null,
   resources: Capabilities['resources'] | undefined,
   type: string,
   domain: string,
@@ -76,20 +84,31 @@ export function dnsQueryView(
   t: LabelFn
 ) {
   const types = resources?.dns_query.record_types ?? [];
-  const typeOffered = type === 'all' ? types.length > 0 : types.includes(type);
+  const isGeosite = type === geositeQueryType;
+  // The geosite option is offered while capabilities load; it vanishes once the backend reports no geodata.
+  const geoOffered = offered(resources, 'geodata', {whileLoading: true});
+  const parsed = isGeosite ? geoInput(domain) : null;
+  const typeOffered = isGeosite ? geoOffered : type === 'all' ? types.length > 0 : types.includes(type);
+  const backendReady = isGeosite ? !!resources?.geodata.available : !!resources?.dns_query.available;
+  const inputError = parsed && !parsed.ok && domain.trim() ? t(parsed.error) : null;
   return {
     types,
-    choices: [...types.map(id => ({id, label: id})), {id: 'all', label: t('dns.allTypes')}],
-    disabled: busy || !resources?.dns_query.available || !typeOffered || !domain.trim(),
-    // Why Query is disabled, when the backend is the reason; an empty domain speaks for itself.
+    isGeosite,
+    choices: [
+      ...types.map(id => ({id, label: id})),
+      {id: 'all', label: t('dns.allTypes')},
+      ...(geoOffered ? [{id: geositeQueryType, label: t('dns.geositeType')}] : [])
+    ],
+    disabled: busy || !typeOffered || !backendReady || !domain.trim() || !!inputError,
+    // Why Query is disabled, when the backend or the input is the reason; an empty domain speaks for itself.
     reason:
       !resources || busy
         ? null
-        : !resources.dns_query.available
-          ? t('dns.queryUnavailable')
-          : typeOffered
-            ? null
-            : t(type === 'all' ? 'dns.noTypes' : 'dns.typeUnsupported'),
+        : !backendReady
+          ? t(isGeosite ? 'dns.geodataUnavailable' : 'dns.queryUnavailable')
+          : !typeOffered
+            ? t(isGeosite ? 'dns.geodataUnavailable' : type === 'all' ? 'dns.noTypes' : 'dns.typeUnsupported')
+            : inputError,
     showCache: !!resources?.dns_cache.available,
     cards:
       result?.results.map(item => ({
@@ -102,8 +121,58 @@ export function dnsQueryView(
           answerAddresses([answer]).length ? {address: answer.data, seed: addressSeed(answer.data, result.domain, item.type)} : null
         )
       })) ?? [],
+    geoCards: isGeosite ? geodataCards(geoResult, t) : [],
     tabs: dnsTabs(resources).map(tab => ({id: tab.id, label: t(tab.titleKey)}))
   };
+}
+
+export type GeodataCard = {
+  id: string;
+  title: string;
+  fields: Array<[string, string]>;
+  empty: string;
+  // find: one row per matched category; show: one row per category entry.
+  rows: Array<{id: string; code: string | null; type: string | null; value: string; attrs: string}>;
+};
+// The geosite answer as cards beside the DNS ones: a find names every category
+// holding the domain, a show lists the category's entries.
+export function geodataCards(result: GeodataQueryResponse | null, t: LabelFn): GeodataCard[] {
+  if (!result) return [];
+  const total = t(result.truncated ? 'dns.geodataTruncated' : 'dns.geodataTotal', {total: result.total});
+  if (result.action === 'find') {
+    const matches = result.matches ?? [];
+    return [
+      {
+        id: `find:${result.value ?? ''}`,
+        title: result.value ?? '',
+        fields: [[t('dns.geodataMatched'), total]] as Array<[string, string]>,
+        empty: t('dns.geodataNoMatch'),
+        rows: matches.map((match, index) => ({
+          id: `${match.code}:${index}`,
+          code: match.code,
+          type: match.type,
+          value: match.value,
+          attrs: (match.attrs ?? []).join(', ')
+        }))
+      }
+    ];
+  }
+  const entries = result.entries ?? [];
+  return [
+    {
+      id: `show:${result.code ?? ''}`,
+      title: `geosite:${result.code ?? ''}`,
+      fields: [[t('dns.geodataEntries'), total]] as Array<[string, string]>,
+      empty: t('dns.noAnswers'),
+      rows: entries.map((entry, index) => ({
+        id: String(index),
+        code: null,
+        type: entry.type,
+        value: entry.value,
+        attrs: (entry.attrs ?? []).join(', ')
+      }))
+    }
+  ];
 }
 export function dnsCacheView(
   data: DnsCacheList | undefined,

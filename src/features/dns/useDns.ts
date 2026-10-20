@@ -4,11 +4,14 @@ import {queryTypes, useCapabilities, useConfig, useDnsCacheUsage, useDnsControl,
 import {offered} from '../../api/capabilities';
 import {useAction} from '../../store/action';
 import type {DnsQueryResponse} from '../../api/model';
+import type {GeodataQueryResponse} from './geoCdn';
 import {ipLiteral} from '../../api/selectors';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName, panelQuery, toast, toastErrorDetail, useDebounced, useLinked, useMediaQuery, useNearViewport, useTabShown} from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
-import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryUpstreams, dnsQueryView} from './view';
+import {appendDnsLog, dnsCacheView, dnsLogDetail, dnsLogsExport, dnsLogView, dnsLogWindow, dnsQueryUpstreams, dnsQueryView, geositeQueryType} from './view';
+import {geoInput} from './geoInput';
+import {queryGeodataCdn} from './geoCdn';
 import {href, pickTab, within, tabQuery} from '../../shell/route';
 import {ApiError, errorText, isSnapshotRefusal} from '../../api/error';
 import {wait} from '../../api/wait';
@@ -36,9 +39,10 @@ export function useDns({go, query}: PageProps) {
   useLinked(params.get('domain'), value => setDomain(value ?? ''));
   useLinked(params.get('type'), value => setType(value ?? 'A'));
   const [result, setResult] = useState<DnsQueryResponse | null>(null);
+  const [geoResult, setGeoResult] = useState<GeodataQueryResponse | null>(null);
   const {busy, error, run} = useAction<'query'>({rethrow: true});
   const resources = capabilities.data?.resources;
-  const view = useMemo(() => dnsQueryView(result, resources, type, domain, !!busy, t), [result, resources, type, domain, busy, t]);
+  const view = useMemo(() => dnsQueryView(result, geoResult, resources, type, domain, !!busy, t), [result, geoResult, resources, type, domain, busy, t]);
   // The statistics open the page, but a link that filters the log by domain or device opens the log. Without a log the
   // query opens it: the cache is a listing to browse, not a starting point.
   const ids = view.tabs.map(item => item.id);
@@ -56,6 +60,18 @@ export function useDns({go, query}: PageProps) {
   const submit = async (asked = {domain, type}) => {
     try {
       await run('query', async signal => {
+        // The geosite type asks the CDN's Loyalsoldier data in this tab's browser,
+        // not the backend: the form's upstream and cache controls do not apply.
+        if (asked.type === geositeQueryType) {
+          const parsed = geoInput(asked.domain);
+          if (!parsed.ok) throw new Error(t(parsed.error));
+          const value = await queryGeodataCdn({...parsed.query});
+          if (!signal.aborted) {
+            setGeoResult(value);
+            setResult(null);
+          }
+          return value;
+        }
         const value = await queryTypes(
           api.dnsQuery,
           asked.domain.trim(),
@@ -65,12 +81,22 @@ export function useDns({go, query}: PageProps) {
           bypassCache ? 'bypass' : 'normal',
           upstream || undefined
         );
-        if (!signal.aborted) setResult(value);
+        if (!signal.aborted) {
+          setResult(value);
+          setGeoResult(null);
+        }
         return value;
       });
     } catch {
       // The failure stays on the page as its banner until the next query; a toast would say it twice.
     }
+  };
+  // A find match's "show entries": re-query the tab as a category listing.
+  const showCategory = (code: string) => {
+    const input = `geosite:${code}`;
+    setDomain(input);
+    setType(geositeQueryType);
+    void submit({domain: input, type: geositeQueryType});
   };
   // The add-rule dialog of the log, the query results and the cache. Once a DNS rule is written, Query again, offered
   // while the backend answers queries, opens the query tab with the name the rule was added from and `run` in the
@@ -112,6 +138,7 @@ export function useDns({go, query}: PageProps) {
     pending: busy === 'query',
     queryError: error,
     submit: () => void submit(),
+    showCategory,
     setTab: (tab: string) => go('dns', tabQuery(query, tab, resources && !linked ? fallback : null)),
     tab,
     filterDomain: params.get('domain') ?? '',
