@@ -81,12 +81,12 @@ The release publishes the standalone UI first so honk can embed that exact versi
 
 The attached honk builds embed the same doona version as the release; `ui: embedded` serves it. To use a separate archive or package, set `ui` in `native_api` to its installation directory and restart honk: `/usr/share/doona` for most packages, `/usr/share/doona-web` for Debian, or the directory where you extracted the archive. `HONK-SOURCE.txt` records the honk release and commit, the embedded doona version, revision and program SHA-256, and both sources.
 
-| File                                      | What it is                                                               |
-| ----------------------------------------- | ------------------------------------------------------------------------ |
-| `honk-core-debug-<target>[-stock].tar.gz` | One honk build per target, eight in all                                  |
-| `HONK-SOURCE.txt`                         | honk and embedded doona provenance, with build and source SHA-256 hashes |
-| `honk-source-<commit>.tar.gz`             | honk's corresponding source at the recorded commit                       |
-| `doona-source-0.1.0-beta.20.tar.gz`       | The embedded UI's corresponding source at the recorded doona revision    |
+| File                                           | What it is                                                                |
+| ---------------------------------------------- | ------------------------------------------------------------------------- |
+| `honk-core-debug-<target>[-stock]-full.tar.gz` | One full honk build per target, eight in all; older releases omit `-full` |
+| `HONK-SOURCE.txt`                              | honk and embedded doona provenance, with build and source SHA-256 hashes  |
+| `honk-source-<commit>.tar.gz`                  | honk's corresponding source at the recorded commit                        |
+| `doona-source-0.1.0-beta.20.tar.gz`            | The embedded UI's corresponding source at the recorded doona revision     |
 
 | Name part             | Choose for                                            |
 | --------------------- | ----------------------------------------------------- |

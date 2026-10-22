@@ -81,12 +81,12 @@ Precompressed 意為預先壓縮。瀏覽器接受壓縮內容時，honk 或 Web
 
 附帶的 honk 建置內嵌與發布版本相同的 doona；`ui: embedded` 提供該版本。若要使用獨立封存檔或套件，請將 `native_api` 中的 `ui` 設為安裝目錄並重新啟動 honk：大多數套件為 `/usr/share/doona`，Debian 為 `/usr/share/doona-web`，手動安裝則為封存檔解壓縮後的目錄。`HONK-SOURCE.txt` 記錄 honk 發布版本與提交、內嵌 doona 的版本、修訂與程式 SHA-256，以及兩份原始碼。
 
-| 檔案                                      | 內容                                                     |
-| ----------------------------------------- | -------------------------------------------------------- |
-| `honk-core-debug-<target>[-stock].tar.gz` | 每個目標一個 honk 建置，共八個                           |
-| `HONK-SOURCE.txt`                         | honk 與內嵌 doona 的來源紀錄，以及建置和原始碼的 SHA-256 |
-| `honk-source-<commit>.tar.gz`             | 記錄的 honk 提交所對應的原始碼                           |
-| `doona-source-0.1.0-beta.20.tar.gz`       | 記錄的 doona 修訂所對應的內嵌 UI 原始碼                  |
+| 檔案                                           | 內容                                                     |
+| ---------------------------------------------- | -------------------------------------------------------- |
+| `honk-core-debug-<target>[-stock]-full.tar.gz` | 每個目標一個 honk full 建置，共八個；舊版本不帶 `-full`  |
+| `HONK-SOURCE.txt`                              | honk 與內嵌 doona 的來源紀錄，以及建置和原始碼的 SHA-256 |
+| `honk-source-<commit>.tar.gz`                  | 記錄的 honk 提交所對應的原始碼                           |
+| `doona-source-0.1.0-beta.20.tar.gz`            | 記錄的 doona 修訂所對應的內嵌 UI 原始碼                  |
 
 | 檔名部分              | 選擇依據                                 |
 | --------------------- | ---------------------------------------- |

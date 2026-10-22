@@ -19,13 +19,17 @@ const usage =
   'Usage: node tools/fetch-honk.mjs <out-dir> [--repo owner/name] [--doona-repo owner/name] --tag tag --doona-tag vVERSION [--api url] [--archive url] --commit sha';
 const SHA = /^[0-9a-f]{40}$/;
 
-// honk's release workflow builds each target twice: mimalloc by default, and the system allocator under -stock.
+// doona ships honk's full builds, which embed the UI: each target with mimalloc and with the system allocator (-stock).
 export function expectedAssets() {
   const names = [];
   for (const arch of ['x86_64', 'aarch64'])
-    for (const libc of ['gnu', 'musl']) for (const allocator of ['', '-stock']) names.push(`honk-core-debug-${arch}-unknown-linux-${libc}${allocator}.tar.gz`);
+    for (const libc of ['gnu', 'musl'])
+      for (const allocator of ['', '-stock']) names.push(`honk-core-debug-${arch}-unknown-linux-${libc}${allocator}-full.tar.gz`);
   return names;
 }
+
+// honk's lean builds carry no UI, so doona leaves them out without treating them as new variants.
+const LEAN = /^honk-core-debug-(x86_64|aarch64)-unknown-linux-musl(-stock)?-(clash-api|native-api)\.tar\.gz$/;
 
 // The debug workflow writes the source tag, commit and run into the release body.
 export function parseBody(body) {
@@ -163,7 +167,7 @@ export async function fetchHonk({
   const expected = expectedAssets();
   const assets = new Map((release.assets ?? []).filter(asset => asset.name.startsWith('honk-core-')).map(asset => [asset.name, asset]));
   const missing = expected.filter(name => !assets.has(name));
-  const unexpected = [...assets.keys()].filter(name => !expected.includes(name));
+  const unexpected = [...assets.keys()].filter(name => !expected.includes(name) && !LEAN.test(name));
   if (missing.length) throw new Error(`release lacks ${missing.join(', ')}`);
   // A new variant changes what doona ships, so it needs a look before it goes out.
   if (unexpected.length) throw new Error(`release has unrecognised builds ${unexpected.join(', ')}`);
