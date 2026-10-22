@@ -89,9 +89,22 @@ describe('parseBody', () => {
 });
 
 describe('fetchHonk', () => {
-  it('lists the eight builds', () => {
+  it('lists the eight full builds', () => {
     expect(expectedAssets()).toHaveLength(8);
-    expect(expectedAssets()).toContain('honk-core-debug-aarch64-unknown-linux-musl-stock.tar.gz');
+    expect(expectedAssets()).toContain('honk-core-debug-aarch64-unknown-linux-musl-stock-full.tar.gz');
+  });
+
+  it('leaves the lean builds out without failing', async () => {
+    const lean = ['honk-core-debug-x86_64-unknown-linux-musl-clash-api.tar.gz', 'honk-core-debug-aarch64-unknown-linux-musl-stock-native-api.tar.gz'].map(
+      name => ({
+        name,
+        digest: `sha256:${'0'.repeat(64)}`,
+        browser_download_url: 'http://127.0.0.1:1/'
+      })
+    );
+    const {api, archive, out} = await serve({edit: release => ({...release, assets: [...release.assets, ...lean]})});
+    const {files} = await fetchHonk({doonaTag, tag, commit, api, archive, out});
+    expect(files.map(file => file.name)).toEqual([...expectedAssets(), sourceArchive(commit), uiSource]);
   });
 
   it('downloads every build and the source archive, and writes the source note', async () => {
