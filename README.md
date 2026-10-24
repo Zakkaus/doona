@@ -46,7 +46,7 @@ WebSocket, gRPC and XHTTP are stream transports, separate from proxy protocols. 
 
 ## Latest release
 
-[beta.20](CHANGELOG.md) adds an IP lookup site choice for destination and DNS answer addresses, shows XHTTP link options as node dialog fields, and keeps Liquid Glass scrolling smooth.
+[rc.1](CHANGELOG.md) suggests the backend address on a plain-http page, keeps the IPv6 brackets in that suggestion, and fixes table row alignment and the route trace process field.
 
 ## Documentation
 
