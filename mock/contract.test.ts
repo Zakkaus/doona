@@ -120,6 +120,12 @@ it('leaves the full-only fields out of a summary', async () => {
   for (const entry of (await api.dnsCache({detail: 'summary'})).entries) expect(entry).not.toHaveProperty('answers');
 });
 
+it('accepts a check_url read back with its listener secrets masked', async () => {
+  const group = await createMockApi().group('proxy');
+  const body = {...group, config: {...group.config, check_url: 'https://example.invalid/<redacted>-<redacted>/check'}};
+  expect(validateBody({operationId: 'getGroup', status: 200, body})).toEqual([]);
+});
+
 it('ends a DNS log page early at a large answer and still offers the next page', async () => {
   const api = createMockApi({faults: true});
   const limit = capabilities.resources.dns_log.max_page_size!;

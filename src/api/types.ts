@@ -2369,8 +2369,8 @@ export interface components {
         GroupConfig: {
             default_member_id: string | null;
             final_outbound: string | null;
-            /** @description The one health-check URL. Engines probe this URL only; there is no list of URLs. */
-            check_url: null | components["schemas"]["SafeHttpUrl"];
+            /** @description The one health-check URL. Engines probe this URL only; there is no list of URLs. The value read back may be masked, so it is a MaskedHttpUrl rather than a SafeHttpUrl. */
+            check_url: null | components["schemas"]["MaskedHttpUrl"];
             /** @description Configured health-check interval in seconds. An engine that runs checks on one global interval may keep this value without applying it. */
             check_interval: number | null;
             /** @description Minimum latency improvement in milliseconds before a URLTest group switches members. */
@@ -2387,6 +2387,8 @@ export interface components {
          * @description Absolute HTTP(S) URL without userinfo, checked under the outbound-request policy in api-config.
          */
         SafeHttpUrl: string;
+        /** @description A SafeHttpUrl as read back, with each listener-secret value replaced by the literal `<redacted>`, so it may not parse as a URI. Read-only. */
+        MaskedHttpUrl: string;
         GroupSelection: {
             member_id: string;
             resolved_leaf_node_id?: string | null;
@@ -2477,6 +2479,7 @@ export interface components {
             op: "add" | "replace" | "test";
             /** @constant */
             path: "/config/check_url";
+            /** @description The engine compares test with the stored URL before masking, so a test with a masked check_url read back fails with 409 state_conflict. Add and replace store the value as sent and do not recognize `<redacted>`, so a masked URL must not be written back. */
             value: null | components["schemas"]["SafeHttpUrl"];
         };
         PositiveIntegerPatch: {
