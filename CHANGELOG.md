@@ -18,6 +18,9 @@ Entries live in [changes/](changes/) until release.
 - Keep every cell and separator aligned across wrapped table rows. (#552)
 - Treat a blank process name as traffic without a process in routing traces. (#550)
 - Keep the route trace's advanced fields on one row by explaining the blank process in a help button. (#553)
+- The contract types a group's `check_url` read back with listener secrets masked as `<redacted>`. (#562)
+- A group's check URL that carries a masked listener secret can be replaced again; the dialog no longer sends a test the engine always refuses, and refuses a URL that still contains `<redacted>`. (#562)
+- The demo backend rejects unknown, expired, mismatched and over-capacity list cursors with the same status and code as honk. (#561)
 
 ## [0.1.0-beta.20] - 2026-10-12
 
