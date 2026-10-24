@@ -10198,10 +10198,10 @@ components:
             - string
             - 'null'
         check_url:
-          description: The one health-check URL. Engines probe this URL only; there is no list of URLs.
+          description: The one health-check URL. Engines probe this URL only; there is no list of URLs. The value read back may be masked, so it is a MaskedHttpUrl rather than a SafeHttpUrl.
           oneOf:
             - type: 'null'
-            - $ref: '#/components/schemas/SafeHttpUrl'
+            - $ref: '#/components/schemas/MaskedHttpUrl'
         check_interval:
           type:
             - integer
@@ -10230,6 +10230,11 @@ components:
       format: uri
       pattern: ^https?://(?![^/?#]*@)
       description: Absolute HTTP(S) URL without userinfo, checked under the outbound-request policy in api-config.
+    MaskedHttpUrl:
+      type: string
+      minLength: 1
+      pattern: ^https?://(?![^/?#]*@)
+      description: A SafeHttpUrl as read back, with each listener-secret value replaced by the literal `<redacted>`, so it may not parse as a URI. Read-only.
     GroupSelection:
       type: object
       required:
@@ -10541,6 +10546,7 @@ components:
           type: string
           const: /config/check_url
         value:
+          description: The engine compares test with the stored URL before masking, so a test with a masked check_url read back fails with 409 state_conflict. Add and replace store the value as sent and do not recognize `<redacted>`, so a masked URL must not be written back.
           oneOf:
             - type: 'null'
             - $ref: '#/components/schemas/SafeHttpUrl'
