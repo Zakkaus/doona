@@ -5,8 +5,8 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=doona
-PKG_REAL_VERSION:=0.1.0-beta.20
-PKG_VERSION:=$(subst -beta.,_beta,$(PKG_REAL_VERSION))
+PKG_REAL_VERSION:=0.1.0-rc.1
+PKG_VERSION:=$(subst -rc.,_rc,$(subst -beta.,_beta,$(PKG_REAL_VERSION)))
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_REAL_VERSION).tar.gz

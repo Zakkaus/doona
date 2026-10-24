@@ -6,6 +6,19 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Entries live in [changes/](changes/) until release.
 
+## [0.1.0-rc.1] - 2026-10-24
+
+### Added
+
+- On a page served over http, the backend address field suggests honk's native API (`http://<this-host>:9527`) when no backend is saved yet. (#554)
+
+### Fixed
+
+- The suggested backend address no longer doubles the brackets around an IPv6 host. (#556)
+- Keep every cell and separator aligned across wrapped table rows. (#552)
+- Treat a blank process name as traffic without a process in routing traces. (#550)
+- Keep the route trace's advanced fields on one row by explaining the blank process in a help button. (#553)
+
 ## [0.1.0-beta.20] - 2026-10-12
 
 ### Added
@@ -818,7 +831,8 @@ Entries live in [changes/](changes/) until release.
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
-[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.20...HEAD
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.1...HEAD
+[0.1.0-rc.1]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.20...v0.1.0-rc.1
 [0.1.0-beta.20]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.19...v0.1.0-beta.20
 [0.1.0-beta.19]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.18...v0.1.0-beta.19
 [0.1.0-beta.18]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.17...v0.1.0-beta.18

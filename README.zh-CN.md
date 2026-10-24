@@ -46,7 +46,7 @@ WebSocket、gRPC 与 XHTTP 是流传输方式，与代理协议不同。在支�
 
 ## 最新版本
 
-[beta.20](CHANGELOG.md) 新增目标与 DNS 解析地址的 IP 查询站选择，在节点对话框中以字段显示 XHTTP 链接选项，并让 Liquid Glass 滚动更流畅。
+[rc.1](CHANGELOG.md) 在 http 页面上建议后端地址，建议中的 IPv6 主机不再重复方括号，并修复表格换行对齐与路由跟踪的进程字段。
 
 ## 文档
 
