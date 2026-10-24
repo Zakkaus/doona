@@ -62,17 +62,23 @@ export function checkRebase(draft: CheckEditDraft, current: CheckDraft): CheckEd
   }
   return {base: current, value, theirs};
 }
+// A check URL read back with a listener secret in it carries the secret as this literal (the contract's MaskedHttpUrl).
+// honk tests against the unmasked value and stores the literal as written, so a masked URL is neither tested nor sent back.
+const maskedUrl = (url: string) => url.includes('<redacted>');
 // The contract's floor: a check interval of at least one second, a tolerance or idle timeout of zero or more.
 export const countMinimum: Record<CountField, number> = {check_interval: 1, tolerance: 0, idle_timeout: 0};
 // An empty field is valid: it clears the group's own value, so the global or default one applies.
 export function checkInvalid(field: CheckField, value: string): boolean {
   const text = value.trim();
   if (!text) return false;
-  return field === 'check_url' ? !safeHttpUrl(text) : !/^\d+$/.test(text) || !Number.isSafeInteger(Number(text)) || Number(text) < countMinimum[field];
+  return field === 'check_url'
+    ? maskedUrl(text) || !safeHttpUrl(text)
+    : !/^\d+$/.test(text) || !Number.isSafeInteger(Number(text)) || Number(text) < countMinimum[field];
 }
 // For each offered field the user changed from `base`, the values the dialog opened with: a test that the group still holds
 // the base value, then the replace; an empty field sends null. A field the user left alone is not sent, so a change another
 // client made to it in the meantime is kept, and one made to a changed field fails the test with 409 instead of being overwritten.
+// A masked opening check URL cannot be tested, so its replace goes alone under the request's If-Match.
 export function checkPatch(g: Group, base: CheckDraft, draft: CheckDraft): JsonPatch {
   const fields = checkFields(g);
   const ops: JsonPatch = [];
@@ -80,7 +86,8 @@ export function checkPatch(g: Group, base: CheckDraft, draft: CheckDraft): JsonP
   const count = (text: string) => (text.trim() ? Number(text.trim()) : null);
   if (fields.includes('check_url') && url(draft.check_url) !== url(base.check_url)) {
     const path = '/config/check_url';
-    ops.push({op: 'test', path, value: url(base.check_url)}, {op: 'replace', path, value: url(draft.check_url)});
+    if (!maskedUrl(base.check_url)) ops.push({op: 'test', path, value: url(base.check_url)});
+    ops.push({op: 'replace', path, value: url(draft.check_url)});
   }
   for (const field of countFields) {
     if (!fields.includes(field) || count(draft[field]) === count(base[field])) continue;
