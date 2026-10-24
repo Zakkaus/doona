@@ -239,6 +239,17 @@ it('patches only the check fields that changed, testing each against its opening
   const urlOnly = {...g, capabilities: {...g.capabilities, mutable_config: ['check_url' as const]}};
   expect(checkPatch(urlOnly, base, {...base, check_interval: '60', tolerance: '50', idle_timeout: ''})).toEqual([]);
 });
+it('replaces a masked check URL without testing it and refuses a value that still carries the mask', () => {
+  const g = withInterval(nodeFixtures(0).groups[1]);
+  const masked = {...g, config: {...g.config, check_url: 'https://example.invalid/<redacted>/check'}};
+  const base = checkDraft(masked);
+  expect(checkPatch(masked, base, {...base, check_url: 'https://cp.cloudflare.com/'})).toEqual([
+    {op: 'replace', path: '/config/check_url', value: 'https://cp.cloudflare.com/'}
+  ]);
+  expect(checkPatch(masked, base, base)).toEqual([]);
+  expect(checkInvalid('check_url', 'https://example.invalid/<redacted>/check2')).toBe(true);
+  expect(checkInvalid('check_url', 'https://example.invalid/check')).toBe(false);
+});
 it('patches the tolerance and idle timeout like the interval, in their units, and the mock accepts them', () => {
   const g = nodeFixtures(0).groups[1];
   const base = checkDraft(g);
