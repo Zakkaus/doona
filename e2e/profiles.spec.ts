@@ -10,22 +10,23 @@ test('profiles add, rename, switch, and delete without losing the route', async 
   );
   await page.goto('/#/settings?from=connections');
   const origin = new URL(page.url()).origin;
-  await page.getByRole('button', {name: 'Add profile', exact: true}).click();
-  let dialog = page.getByRole('dialog', {name: 'Add profile'});
-  await dialog.getByRole('textbox', {name: 'Profile name'}).fill('Home');
-  await Promise.all([page.waitForEvent('load'), dialog.getByRole('button', {name: 'Save', exact: true}).click()]);
-  await expect(page.locator('[name=api]')).toHaveValue('mock');
+  // A first run has no profile to manage: saving its backend creates the first one, renamed below.
   await page.locator('[name=api]').fill(origin + '/home');
   await page.locator('[name=token]').fill('home-secret');
   await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Save', exact: true}).click()]);
-  // Saving a changed address lands on the start page; the Add profile steps below return to Settings.
+  // Saving a changed address lands on the start page; the profile dialogs below return to Settings.
   await expect(page).toHaveURL(/#\/activity$/);
   await page.goto('/#/settings?from=connections');
+  await page.getByRole('button', {name: 'Rename profile', exact: true}).click();
+  let dialog = page.getByRole('dialog', {name: 'Rename profile'});
+  await dialog.getByRole('textbox', {name: 'Profile name'}).fill('Home');
+  await Promise.all([page.waitForEvent('load'), dialog.getByRole('button', {name: 'Save', exact: true}).click()]);
   await page.getByRole('button', {name: 'Add profile', exact: true}).click();
   dialog = page.getByRole('dialog', {name: 'Add profile'});
   await dialog.getByRole('textbox', {name: 'Profile name'}).fill('Office');
   await Promise.all([page.waitForEvent('load'), dialog.getByRole('button', {name: 'Save', exact: true}).click()]);
   await expect(page).toHaveURL(/#\/settings\?from=connections$/);
+  await expect(page.locator('[name=api]')).toHaveValue('mock');
   await page.locator('[name=api]').fill(origin + '/office');
   await expect(page.locator('[name=token]')).toHaveValue('');
   await page.locator('[name=token]').fill('office-secret');
@@ -102,26 +103,30 @@ browserTest('a token draft survives persistence failure and can be retried', asy
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-profiles')!)[0].token)).toBe('retain-this-token');
 });
 
-test('a profile that cannot be saved says so in its dialog, again on each attempt', async ({page}) => {
-  await page.goto('/#/settings');
-  await page.evaluate(() => {
-    const setItem = Storage.prototype.setItem;
-    Storage.prototype.setItem = function (key: string, value: string) {
-      if (key === 'doona-profiles') throw new DOMException('Blocked', 'SecurityError');
-      return setItem.call(this, key, value);
-    };
+// Adding a profile needs one saved before it.
+test.describe('with a saved profile', () => {
+  test.use({storage: {'doona-api': 'mock'}, signedIn: 'legacy'});
+  test('a profile that cannot be saved says so in its dialog, again on each attempt', async ({page}) => {
+    await page.goto('/#/settings');
+    await page.evaluate(() => {
+      const setItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key === 'doona-profiles') throw new DOMException('Blocked', 'SecurityError');
+        return setItem.call(this, key, value);
+      };
+    });
+    await page.getByRole('button', {name: 'Add profile', exact: true}).click();
+    const dialog = page.getByRole('dialog', {name: 'Add profile'});
+    const name = dialog.getByRole('textbox', {name: 'Profile name'});
+    await name.fill('Home');
+    const save = dialog.getByRole('button', {name: 'Save', exact: true});
+    const alert = dialog.getByRole('alert');
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await name.focus();
+      await save.click();
+      await expect(alert).toContainText('Could not save settings');
+      await expect(alert).toBeFocused();
+    }
+    await expect(page.locator('.rp-toast')).toHaveCount(0);
   });
-  await page.getByRole('button', {name: 'Add profile', exact: true}).click();
-  const dialog = page.getByRole('dialog', {name: 'Add profile'});
-  const name = dialog.getByRole('textbox', {name: 'Profile name'});
-  await name.fill('Home');
-  const save = dialog.getByRole('button', {name: 'Save', exact: true});
-  const alert = dialog.getByRole('alert');
-  for (let attempt = 0; attempt < 2; attempt++) {
-    await name.focus();
-    await save.click();
-    await expect(alert).toContainText('Could not save settings');
-    await expect(alert).toBeFocused();
-  }
-  await expect(page.locator('.rp-toast')).toHaveCount(0);
 });

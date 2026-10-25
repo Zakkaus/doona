@@ -5,10 +5,20 @@ import type {Locator, Page} from '@playwright/test';
 import {pickWidget} from './widget-helpers';
 
 test.use({widgets: true});
+// A fresh panel starts collapsed; these tests read its widgets, so each starts from the default layout opened.
+const open = (): Layout => ({...defaults(), collapsed: false});
+// A test's layout replaces the opened default on the tab's first load; a reload keeps what the page wrote since.
 const save = (page: Page, layout: Layout) =>
   page.addInitScript(value => {
-    if (!localStorage.getItem('doona-widgets')) localStorage.setItem('doona-widgets', JSON.stringify(value));
+    if (sessionStorage.getItem('e2e-widgets')) return;
+    sessionStorage.setItem('e2e-widgets', '1');
+    localStorage.setItem('doona-widgets', JSON.stringify(value));
   }, layout);
+test.beforeEach(({page}) =>
+  page.addInitScript(value => {
+    if (!localStorage.getItem('doona-widgets')) localStorage.setItem('doona-widgets', JSON.stringify(value));
+  }, open())
+);
 // Wide enough for a segmented control's options to show in a row rather than in its overflow menu.
 const wide = {width: 480, height: 640};
 const floating = (page: Page) => page.locator('.rp-floating-frame .rp-floating-panel');
@@ -120,7 +130,7 @@ test.describe('medium-width widget editor', () => {
   test.use({viewport: {width: 1150, height: 900}, storage: {'doona-lang': 'zh-TW', 'doona-scheme': 'dark'}});
   test('keeps the library, preview and inspector readable beside a resized panel', async ({page}) => {
     await save(page, {
-      ...defaults(),
+      ...open(),
       size: {width: 640, height: 640},
       items: [
         {id: 'speed', size: 'medium', form: 'sparkline'},
@@ -198,7 +208,7 @@ test.describe('medium-width widget editor', () => {
   });
 });
 test('group quick switch shares network scope, keeps release and enforces capabilities', async ({page}) => {
-  await save(page, {...defaults(), items: [{id: 'group', form: 'text', size: 'medium', group: 'auto'}], size: wide});
+  await save(page, {...open(), items: [{id: 'group', form: 'text', size: 'medium', group: 'auto'}], size: wide});
   const backend = await mockBackend(page);
   await page.goto('/#/policies');
   const widget = page.locator('[data-widget-id="group"]');
@@ -219,7 +229,7 @@ test('group quick switch shares network scope, keeps release and enforces capabi
 });
 
 test('validates group identity on the active backend without losing its stored ID', async ({page}) => {
-  await save(page, {...defaults(), items: [{id: 'group', form: 'text', size: 'medium', group: 'absent'}]});
+  await save(page, {...open(), items: [{id: 'group', form: 'text', size: 'medium', group: 'absent'}]});
   const backend = await mockBackend(page);
   await page.goto('/#/settings');
   // A stored group the backend lacks falls back to its first manual group without asking for the missing one.
@@ -229,7 +239,7 @@ test('validates group identity on the active backend without losing its stored I
 
 for (const height of [960, 320])
   test(`the floating mode row at panel height ${height} keeps Apply at the switch's height and the panel's insets even`, async ({page}) => {
-    await save(page, {...defaults(), size: {width: 360, height}});
+    await save(page, {...open(), size: {width: 360, height}});
     await mockBackend(page);
     await page.goto('/#/settings');
     const widget = floating(page).locator('[data-widget-id="mode"]');
@@ -271,7 +281,7 @@ for (const [name, size, wrapped] of [
   ['widened', {width: 600, height: 640}, false]
 ] as const)
   test(`at its ${name} width the floating mode widget puts Apply ${wrapped ? 'on its own full-width row' : 'beside the choice'}`, async ({page}) => {
-    await save(page, {...defaults(), ...(size && {size})});
+    await save(page, {...open(), ...(size && {size})});
     await page.goto('/#/settings');
     const widget = floating(page).locator('[data-widget-id="mode"]');
     const content = await box(widget.locator('.rp-widget'));
@@ -332,7 +342,7 @@ test.describe('phone sheet insets', () => {
 
 test('the editor opens with nothing selected and its preview edge sets the panel width on save', async ({page}) => {
   await freezeRates(page);
-  await save(page, {...defaults(), size: {width: 320, height: 640}});
+  await save(page, {...open(), size: {width: 320, height: 640}});
   await page.goto('/#/settings');
   await openEditor(page);
   await expect(editor(page).locator('.rp-sortable-row[data-selected]')).toHaveCount(0);
@@ -402,7 +412,7 @@ const storedWidth = (page: Page) => page.evaluate(() => (JSON.parse(localStorage
 
 for (const mode of ['floating', 'docked'] as const) {
   test(`the ${mode} panel's editor shows a width grip that resizes the preview, kept on save and dropped on cancel`, async ({page}) => {
-    await save(page, {...defaults(), size: {width: 320, height: 640}, ...(mode === 'docked' && {docked: true})});
+    await save(page, {...open(), size: {width: 320, height: 640}, ...(mode === 'docked' && {docked: true})});
     await page.goto('/#/settings');
     if (mode === 'docked') await expect(page.locator('.rp-side-dock')).toBeVisible();
     await openEditor(page);
@@ -468,52 +478,54 @@ test("the editor's drag handles stay inside their own rows", async ({page}) => {
   }
 });
 
-test('segmented outbound mode applies once and persists across reload', async ({page}) => {
-  await save(page, {...defaults(), items: [{id: 'mode', form: 'text', size: 'medium'}], size: wide});
-  const backend = await mockBackend(page);
-  await page.goto('/#/activity');
-  const widget = page.locator('[data-widget-id="mode"]');
-  await widget.getByRole('radio', {name: 'Direct', exact: true}).click();
-  await widget.getByRole('button', {name: 'Apply', exact: true}).click();
-  await page.getByRole('alertdialog', {name: 'Apply Direct mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
-  await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Direct'})).toBeVisible();
-  await expect(page.locator('main').getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
-  expect(backend.requests.filter(r => r.method() === 'PUT' && r.url().includes('/config/sources/'))).toHaveLength(1);
-  await page.reload();
-  await expect(widget.getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
-  await expect(widget.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
-});
-
-test('a pending mode write blocks both hosts and a failed write keeps their shared draft', async ({page}) => {
-  await save(page, {...defaults(), items: [{id: 'mode', form: 'text', size: 'medium'}], size: wide});
-  const backend = await mockBackend(page);
-  let release!: () => void;
-  const held = new Promise<void>(resolve => {
-    release = resolve;
+test.describe('mode writes beside a wide panel', () => {
+  test('segmented outbound mode applies once and persists across reload', async ({page}) => {
+    await save(page, {...open(), items: [{id: 'mode', form: 'text', size: 'medium'}], size: wide});
+    const backend = await mockBackend(page);
+    await page.goto('/#/activity');
+    const widget = page.locator('[data-widget-id="mode"]');
+    await widget.getByRole('radio', {name: 'Direct', exact: true}).click();
+    await widget.getByRole('button', {name: 'Apply', exact: true}).click();
+    await page.getByRole('alertdialog', {name: 'Apply Direct mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
+    await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Direct'})).toBeVisible();
+    await expect(page.locator('main').getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
+    expect(backend.requests.filter(r => r.method() === 'PUT' && r.url().includes('/config/sources/'))).toHaveLength(1);
+    await page.reload();
+    await expect(widget.getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
+    await expect(widget.getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
   });
-  backend.handlers['PUT config/sources/src-main'] = async () => {
-    await held;
-    throw new ApiError(503, 'unavailable', 'Mode storage unavailable');
-  };
-  await page.goto('/#/activity');
-  const widget = page.locator('[data-widget-id="mode"]');
-  const request = page.waitForRequest(r => r.method() === 'PUT' && r.url().includes('/config/sources/'));
-  await widget.getByRole('radio', {name: 'Direct', exact: true}).click();
-  await widget.getByRole('button', {name: 'Apply', exact: true}).click();
-  await page.getByRole('alertdialog', {name: 'Apply Direct mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
-  await request;
-  await expect(widget.getByRole('radio', {name: 'Direct', exact: true})).toBeDisabled();
-  await expect(page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
-  release();
-  await expect(page.locator('.rp-toast.negative', {hasText: 'Mode storage unavailable'})).toBeVisible();
-  await expect(widget.getByRole('radio', {name: 'Direct', exact: true})).toBeEnabled();
-  await expect(page.locator('main').getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
-  expect(backend.requests.filter(r => r.method() === 'PUT' && r.url().includes('/config/sources/'))).toHaveLength(1);
-  expect((await backend.api.config()).sources.find(source => source.kind === 'main')!.content).not.toContain('-> direct # doona: outbound mode');
+
+  test('a pending mode write blocks both hosts and a failed write keeps their shared draft', async ({page}) => {
+    await save(page, {...open(), items: [{id: 'mode', form: 'text', size: 'medium'}], size: wide});
+    const backend = await mockBackend(page);
+    let release!: () => void;
+    const held = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    backend.handlers['PUT config/sources/src-main'] = async () => {
+      await held;
+      throw new ApiError(503, 'unavailable', 'Mode storage unavailable');
+    };
+    await page.goto('/#/activity');
+    const widget = page.locator('[data-widget-id="mode"]');
+    const request = page.waitForRequest(r => r.method() === 'PUT' && r.url().includes('/config/sources/'));
+    await widget.getByRole('radio', {name: 'Direct', exact: true}).click();
+    await widget.getByRole('button', {name: 'Apply', exact: true}).click();
+    await page.getByRole('alertdialog', {name: 'Apply Direct mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
+    await request;
+    await expect(widget.getByRole('radio', {name: 'Direct', exact: true})).toBeDisabled();
+    await expect(page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
+    release();
+    await expect(page.locator('.rp-toast.negative', {hasText: 'Mode storage unavailable'})).toBeVisible();
+    await expect(widget.getByRole('radio', {name: 'Direct', exact: true})).toBeEnabled();
+    await expect(page.locator('main').getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
+    expect(backend.requests.filter(r => r.method() === 'PUT' && r.url().includes('/config/sources/'))).toHaveLength(1);
+    expect((await backend.api.config()).sources.find(source => source.kind === 'main')!.content).not.toContain('-> direct # doona: outbound mode');
+  });
 });
 
 test('hidden widgets leave their editor unloaded', async ({page}) => {
-  await save(page, {...defaults(), visible: false});
+  await save(page, {...open(), visible: false});
   const chunks: string[] = [];
   await page.route(/\/assets\/(Editors)-[^/]+\.js$/, async route => {
     chunks.push(route.request().url());
@@ -744,7 +756,7 @@ test('the anchored panel resizes by keyboard within its limits and keeps the siz
   expect(await page.evaluate(() => String(getSelection()))).toBe('');
 });
 
-test('the panel starts unpinned and open and collapses on another page; pinned, it stays open and stays pinned', async ({page}) => {
+test('the panel starts unpinned and collapsed; expanded and pinned, it stays open and stays pinned', async ({page}) => {
   await page.goto('/#/settings');
   const pin = floating(page).getByRole('button', {name: 'Pin panel', exact: true});
   await expect(pin).toHaveAttribute('aria-pressed', 'false');
@@ -760,7 +772,7 @@ test('the panel starts unpinned and open and collapses on another page; pinned, 
 });
 
 test('a pinned panel keeps its place and size; unpinned, it moves and resizes again', async ({page}) => {
-  await save(page, {...defaults(), pinned: true});
+  await save(page, {...open(), pinned: true});
   await page.goto('/#/settings');
   const panel = floating(page);
   const start = await box(panel);
@@ -840,7 +852,7 @@ test('the default panel draws both rates in one chart without scrolling', async 
 });
 
 test('a rates widget splits its own chart in its settings, and the panel menu no longer offers it', async ({page}) => {
-  await save(page, {...defaults(), items: [defaultWidget('speed'), {...defaultWidget('speed'), instance: 'speed-2'}]});
+  await save(page, {...open(), items: [defaultWidget('speed'), {...defaultWidget('speed'), instance: 'speed-2'}]});
   await page.goto('/#/settings');
   const charts = (id: string) => floating(page).locator(`[data-widget-id="${id}"] .rp-compact-chart svg`);
   await expect(charts('speed')).toHaveCount(1);
@@ -865,7 +877,7 @@ test('a rates widget splits its own chart in its settings, and the panel menu no
 });
 
 test('a panel saved with the former split opens with its rates widget split', async ({page}) => {
-  await save(page, {...defaults(), splitRates: true} as Layout);
+  await save(page, {...open(), splitRates: true} as Layout);
   await page.goto('/#/settings');
   await expect(floating(page).locator('[data-widget-id="speed"] .rp-compact-chart svg')).toHaveCount(2);
 });
@@ -875,7 +887,7 @@ test.describe('three-column editor at 1440', () => {
   test('the preview, the library and the inspector scroll on their own, and the width grip stays whole', async ({page}) => {
     const ids: WidgetId[] = ['speed', 'memory', 'mode', 'notices', 'cpu', 'connections', 'global', 'group'];
     await save(page, {
-      ...defaults(),
+      ...open(),
       items: [...ids, ...ids]
         .map(id => ({...defaultWidget(id), size: 'large' as const}))
         .map((item, index) => (index < ids.length ? item : {...item, instance: `${item.id}-2`}))
@@ -961,7 +973,7 @@ test.describe('header and edge at 1440', () => {
     ['bottom', {offset: {x: 560, y: 0}, collapsed: true}]
   ] as const)
     test(`a panel near the ${edge} edge hides there behind its handle`, async ({page}) => {
-      await save(page, {...defaults(), pinned: false, ...layout, edge: true});
+      await save(page, {...open(), pinned: false, ...layout, edge: true});
       await page.goto('/#/settings');
       await expect(handle(page)).toHaveAttribute('data-edge', edge);
       await expect(floating(page)).toBeHidden();
@@ -1023,7 +1035,7 @@ test.describe('header and edge at 1440', () => {
       expect(geometry.border).toBe('0px');
     });
   test('the hidden summary is narrower than the docked collapsed row', async ({page}) => {
-    await save(page, {...defaults(), pinned: false, docked: true, collapsed: true, edge: true});
+    await save(page, {...open(), pinned: false, docked: true, collapsed: true, edge: true});
     await page.goto('/#/settings');
     const row = await box(page.locator('.rp-side-dock .rp-widget-header'));
     await page.locator('.rp-side-dock').getByRole('button', {name: 'Undock', exact: true}).click();
@@ -1035,7 +1047,7 @@ test.describe('header and edge at 1440', () => {
     expect(summary.height).toBeGreaterThanOrEqual(row.height - 1);
   });
   test('hover and keyboard focus show the hidden panel; leaving or Escape hides it again', async ({page}) => {
-    await save(page, {...defaults(), pinned: false, edge: true});
+    await save(page, {...open(), pinned: false, edge: true});
     await page.goto('/#/settings');
     await expect(floating(page)).toBeHidden();
     await handle(page).hover();
@@ -1056,7 +1068,7 @@ test.describe('header and edge at 1440', () => {
     await expect(handle(page)).toBeFocused();
   });
   test('the summary keeps its edge when the window resizes', async ({page}) => {
-    await save(page, {...defaults(), pinned: false, edge: true});
+    await save(page, {...open(), pinned: false, edge: true});
     await page.goto('/#/settings');
     await expect(handle(page)).toHaveAttribute('data-edge', 'right');
     await page.setViewportSize({width: 1200, height: 800});
@@ -1064,7 +1076,7 @@ test.describe('header and edge at 1440', () => {
     await expect(floating(page)).toBeHidden();
   });
   test('a panel out under the pointer hides once moving to another page collapses it away from the pointer', async ({page}) => {
-    await save(page, {...defaults(), pinned: false, edge: true});
+    await save(page, {...open(), pinned: false, edge: true});
     await page.goto('/#/settings');
     await handle(page).hover();
     const cell = floating(page).locator('.rp-widget-cell').first();
@@ -1075,7 +1087,7 @@ test.describe('header and edge at 1440', () => {
     await expect(handle(page)).toBeVisible();
   });
   test('a drag that carries the pointer outside the panel keeps it out until the drag ends', async ({page}) => {
-    await save(page, {...defaults(), pinned: false, edge: true});
+    await save(page, {...open(), pinned: false, edge: true});
     await page.goto('/#/settings');
     await handle(page).hover();
     // Hovering waits for the panel to finish sliding out, so the press lands on its header.
@@ -1094,7 +1106,7 @@ test.describe('header and edge at 1440', () => {
     await expect(floating(page)).toBeHidden();
   });
   test('Escape in a text field in the panel stays with the field', async ({page}) => {
-    await save(page, {...defaults(), pinned: false, edge: true});
+    await save(page, {...open(), pinned: false, edge: true});
     await page.goto('/#/settings');
     await handle(page).hover();
     await floating(page).locator('.rp-panel-head').hover();
@@ -1113,7 +1125,7 @@ test.describe('header and edge at 1440', () => {
     ['docked', {docked: true}]
   ] as const)
     test(`a ${name} panel ignores hiding at an edge`, async ({page}) => {
-      await save(page, {...defaults(), ...layout, edge: true});
+      await save(page, {...open(), ...layout, edge: true});
       await page.goto('/#/settings');
       await expect(
         page
@@ -1128,7 +1140,7 @@ test.describe('header and edge at 1440', () => {
 test.describe('edge on touch at 1024', () => {
   test.use({viewport: {width: 1024, height: 768}, hasTouch: true});
   test('a tap on the handle shows the hidden panel and a tap outside hides it', async ({page}) => {
-    await save(page, {...defaults(), pinned: false, edge: true});
+    await save(page, {...open(), pinned: false, edge: true});
     await page.goto('/#/settings');
     const handle = page.locator('.rp-edge-handle');
     await expect(floating(page)).toBeHidden();
@@ -1145,7 +1157,7 @@ test.describe('edge on touch at 1024', () => {
     await expect(handle).toBeVisible();
   });
   test('with a menu open, one tap outside closes the menu and hides the panel', async ({page}) => {
-    await save(page, {...defaults(), pinned: false, edge: true});
+    await save(page, {...open(), pinned: false, edge: true});
     await page.goto('/#/settings');
     const handle = page.locator('.rp-edge-handle');
     await handle.tap();
@@ -1160,7 +1172,7 @@ test.describe('edge on touch at 1024', () => {
 });
 
 test('editor previews never rewrite a saved latency group, even without cached groups', async ({page}) => {
-  await save(page, {...defaults(), collapsed: true, items: [{id: 'latency', form: 'kv', size: 'medium', group: 'custom-only'}]});
+  await save(page, {...open(), collapsed: true, items: [{id: 'latency', form: 'kv', size: 'medium', group: 'custom-only'}]});
   await page.goto('/#/settings');
   await openEditor(page);
   await expect(editor(page).locator('.rp-sortable-row')).toHaveCount(1);
@@ -1170,7 +1182,7 @@ test('editor previews never rewrite a saved latency group, even without cached g
 });
 
 test('a latency group chosen in the panel or on the dashboard survives a reload', async ({page}) => {
-  await save(page, {...defaults(), items: [{id: 'latency', form: 'kv', size: 'medium'}]});
+  await save(page, {...open(), items: [{id: 'latency', form: 'kv', size: 'medium'}]});
   await page.goto('/#/activity');
   const menu = page.getByRole('menu', {name: 'Groups', exact: true});
   const triggers = [floating(page), page.locator('.rp-dashboard')].map(scope => scope.getByRole('button', {name: /^Groups: /}));
@@ -1208,10 +1220,10 @@ for (const width of [1280, 390]) {
     test.use({viewport: {width, height: 1100}, storage: darkTraditional});
     test('aligns embedded content to section text and chevron edges without changing the phone host', async ({page}) => {
       await save(page, {
-        ...defaults(),
+        ...open(),
         docked: true,
         titles: true,
-        items: [...defaults().items, {id: 'download', size: 'small', form: 'kv'}, {id: 'upload', size: 'small', form: 'kv'}]
+        items: [...open().items, {id: 'download', size: 'small', form: 'kv'}, {id: 'upload', size: 'small', form: 'kv'}]
       });
       await page.goto('/#/activity');
       await page.getByRole('button', {name: '登入', exact: true}).click();
@@ -1302,7 +1314,7 @@ test.describe('sidebar read-only mode', () => {
     const config = await api.config();
     for (const source of config.sources) source.writable = false;
     handlers['GET config'] = async () => config;
-    await save(page, {...defaults(), docked: true, titles: true});
+    await save(page, {...open(), docked: true, titles: true});
     await page.goto('/#/activity');
     const dock = page.locator('.rp-side-dock');
     const trigger = dock.getByRole('button', {name: '檢視唯讀原因', exact: true});
@@ -1366,7 +1378,7 @@ for (const viewport of [
 test.describe('sidebar scrollbars at 1280x640', () => {
   test.use({viewport: {width: 1280, height: 640}, storage: darkTraditional});
   test("the scrollbars keep the top bar's inline gap from the links and the panel, and the mode control splits evenly", async ({page}) => {
-    await save(page, {...defaults(), docked: true, titles: true});
+    await save(page, {...open(), docked: true, titles: true});
     await page.goto('/#/activity');
     await page.getByRole('button', {name: '登入', exact: true}).click();
     const side = page.locator('nav.rp-side');
@@ -1413,7 +1425,7 @@ test.describe('sidebar scrollbars at 1280x640', () => {
 });
 
 test.describe('small and narrow panel widgets', () => {
-  const only = (id: WidgetId, form: string, size: 'small' | 'medium' | 'large') => ({...defaults(), items: [{...defaultWidget(id), form, size}]}) as Layout;
+  const only = (id: WidgetId, form: string, size: 'small' | 'medium' | 'large') => ({...open(), items: [{...defaultWidget(id), form, size}]}) as Layout;
   // Every name element shows its whole text: no ellipsis, no clipping.
   const truncated = (scope: Locator) =>
     scope
@@ -1444,7 +1456,7 @@ test.describe('small and narrow panel widgets', () => {
           ['nodeLatency', 'ranked', 'large']
         ] as const
       ).map(([id, form, size], i) => ({...defaultWidget(id), form, size, instance: `${id}-${i}`}));
-      await save(page, {...defaults(), items, size: {width, height: 900}} as Layout);
+      await save(page, {...open(), items, size: {width, height: 900}} as Layout);
       await page.goto('/#/settings');
       const body = floating(page).locator('.rp-widget-body');
       await expect(body.locator('[data-module="sourceHealth"] .rp-kv').first()).toBeVisible();
@@ -1470,7 +1482,7 @@ test.describe('small and narrow panel widgets', () => {
         {...defaultWidget('outbounds'), form: 'donut', size, instance: `outbounds-${size}`},
         {...defaultWidget('nodeLatency'), form: 'dots', size, instance: `nodeLatency-${size}`}
       ]);
-      await save(page, {...defaults(), items, size: {width, height: 900}} as Layout);
+      await save(page, {...open(), items, size: {width, height: 900}} as Layout);
       await page.goto('/#/settings');
       const body = floating(page).locator('.rp-widget-body');
       await expect(body.locator('.rp-donut .r').first()).toBeVisible();
@@ -1519,7 +1531,7 @@ test.describe('small and narrow panel widgets', () => {
           ['dnsLatency', 'dots', 'large']
         ] as const
       ).map(([id, form, size], i) => ({...defaultWidget(id), form, size, instance: `${id}-${i}`}));
-      await save(page, {...defaults(), items, size: {width, height: 960}} as Layout);
+      await save(page, {...open(), items, size: {width, height: 960}} as Layout);
       await page.goto('/#/settings');
       const body = floating(page).locator('.rp-widget-body');
       const widget = (id: WidgetId, n: number) => body.locator(`[data-module="${id}"]`).nth(n);
@@ -1585,7 +1597,7 @@ test.describe('small and narrow panel widgets', () => {
       const ids = ['speed', 'history', 'memory', 'cpu', 'download', 'connections'] as const;
       const sizes = ['small', 'medium', 'large'] as const;
       const items = ids.flatMap(id => sizes.map(size => ({...defaultWidget(id), form: 'sparkline', size, instance: `${id}-${size}`})));
-      await save(page, {...defaults(), items, size: {width, height: 900}} as Layout);
+      await save(page, {...open(), items, size: {width, height: 900}} as Layout);
       await page.goto('/#/settings');
       const body = floating(page).locator('.rp-widget-body');
       await expect(body.locator('.rp-legend').first()).toBeVisible();
@@ -1604,7 +1616,7 @@ test.describe('small and narrow panel widgets', () => {
         ['kv', 'medium']
       ] as const
     ).map(([form, size]) => ({...defaultWidget('memory'), form, size, instance: `memory-${form}-${size}`}));
-    await save(page, {...defaults(), items, size: {width: 280, height: 900}} as Layout);
+    await save(page, {...open(), items, size: {width: 280, height: 900}} as Layout);
     await page.goto('/#/settings');
     const body = floating(page).locator('.rp-widget-body');
     const card = (form: string, size: string) => body.locator(`[data-widget-id="memory-${form}-${size}"]`);
@@ -1629,7 +1641,7 @@ test.describe('small and narrow panel widgets', () => {
       const runtime = await backend.api.runtime();
       return {...runtime, traffic: {...runtime.traffic, rates: {download_bytes_per_second: rates[0], upload_bytes_per_second: rates[1]}}};
     };
-    await save(page, {...defaults(), items: [defaultWidget('speed')], size: {width: 296, height: 600}} as Layout);
+    await save(page, {...open(), items: [defaultWidget('speed')], size: {width: 296, height: 600}} as Layout);
     await page.goto('/#/settings');
     const widget = floating(page).locator('[data-widget-id="speed"]');
     const values = widget.locator('.rp-legend b');
@@ -1658,7 +1670,7 @@ for (const [lang, slash] of [
   test.describe(`the docked memory meter in ${lang}`, () => {
     test.use({viewport: {width: 1280, height: 900}, storage: {'doona-lang': lang}});
     test('puts its label and its value on one row at the default dock width', async ({page}) => {
-      await save(page, {...defaults(), docked: true, items: [{...defaultWidget('memory'), form: 'kv', size: 'medium'}]});
+      await save(page, {...open(), docked: true, items: [{...defaultWidget('memory'), form: 'kv', size: 'medium'}]});
       await page.goto('/#/settings');
       const meter = page.locator('.rp-side-dock').getByRole('meter');
       await expect(meter.locator('.v')).toHaveText(new RegExp(`^\\S+${slash}\\S+ MB$`));

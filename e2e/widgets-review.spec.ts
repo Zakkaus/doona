@@ -13,6 +13,7 @@ test('a backend without outbound traffic does not ask for it for connection stat
     items: [{...defaultWidget('connectionOutbounds'), form: 'kv'}]
   });
   await page.goto('/#/settings');
+  await panel(page).getByRole('button', {name: 'Expand widgets', exact: true}).click();
   await expect(panel(page).locator('.rp-kv').first()).toBeVisible();
   expect(requests.filter(request => new URL(request.url()).pathname === '/api/v1/runtime/outbounds')).toEqual([]);
 });
@@ -51,6 +52,7 @@ test('metric forms change the renderer without acquiring history for key-value c
     defaults()
   );
   await page.goto('/#/settings');
+  await panel(page).getByRole('button', {name: 'Expand widgets', exact: true}).click();
   await expect(panel(page).locator('.rp-kv')).toBeVisible();
   await expect(panel(page).locator('svg.rp-activity-surface, .rp-compact-chart')).toHaveCount(0);
   expect(backend.requests.filter(request => /traffic\/history/.test(request.url()))).toHaveLength(0);
@@ -76,6 +78,7 @@ test('panel mode stages a draft until Apply and writes the chosen mode', async (
     size: {width: 480, height: 640}
   });
   await page.goto('/#/activity');
+  await panel(page).getByRole('button', {name: 'Expand widgets', exact: true}).click();
   await panel(page).getByRole('radio', {name: 'Direct', exact: true}).click();
   await expect(panel(page).getByRole('button', {name: 'Apply', exact: true})).toBeEnabled();
   await expect(page.locator('main').getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
@@ -99,6 +102,7 @@ for (const host of ['panel', 'dashboard'] as const) {
         {host, layout: defaults(), item: defaultWidget('global')}
       );
       await page.goto(host === 'panel' ? '/#/settings' : '/#/activity');
+      if (host === 'panel' && width === 1280) await panel(page).getByRole('button', {name: 'Expand widgets', exact: true}).click();
       if (host === 'panel' && width === 390) await page.getByRole('button', {name: 'Show widgets', exact: true}).click();
       const widget = host === 'panel' ? page.locator('.rp-widget[aria-label="Global outbound"]') : page.locator('[data-instance="global"] .rp-card');
       const label = widget.getByText('Global outbound', {exact: true});
@@ -167,6 +171,7 @@ test('visible panels keep the gallery code unloaded until editing', async ({page
   const loaded: string[] = [];
   page.on('request', request => loaded.push(request.url()));
   await page.goto('/#/settings');
+  await panel(page).getByRole('button', {name: 'Expand widgets', exact: true}).click();
   await expect(panel(page).locator('.rp-widget-cell').first()).toBeVisible();
   expect(loaded.some(url => /Editors/.test(url))).toBe(false);
   await editPanel(page);
@@ -181,6 +186,7 @@ test('a failed editor chunk keeps the application shell available', async ({page
   let missing = true;
   await page.route(failed, route => (missing ? route.abort() : route.continue()));
   await page.goto('/#/settings');
+  await panel(page).getByRole('button', {name: 'Expand widgets', exact: true}).click();
   await editPanel(page);
   const reload = page.getByRole('button', {name: 'Reload', exact: true}).first();
   await expect(reload).toBeVisible();
@@ -218,4 +224,21 @@ test('ranking instances retain independent device and domain selections', async 
   await page.reload();
   await expect(first.getByRole('radio', {name: 'Devices', exact: true})).toBeChecked();
   await expect(second.getByRole('radio', {name: 'Domains', exact: true})).toBeChecked();
+});
+
+test('the panel overlays Activity and Overview and reserves space on Settings', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 900});
+  for (const route of ['activity', 'overview', 'settings']) {
+    await page.goto(`/#/${route}`);
+    await expect(page.locator('main h1')).toHaveText(route === 'activity' ? 'Activity' : route === 'overview' ? 'System status' : 'Settings');
+    await page.evaluate(() => document.fonts.ready);
+    const content = page.locator('.rp-content');
+    const before = (await content.boundingBox())!;
+    await panel(page).getByRole('button', {name: 'Expand widgets', exact: true}).click();
+    await expect(panel(page).locator('.rp-widget-cell').first()).toBeVisible();
+    const after = (await content.boundingBox())!;
+    if (route === 'settings') expect(after.width).toBeLessThan(before.width);
+    else expect(after.width).toBe(before.width);
+    await panel(page).getByRole('button', {name: 'Collapse widgets', exact: true}).click();
+  }
 });

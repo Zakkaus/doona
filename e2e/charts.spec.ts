@@ -100,7 +100,7 @@ test('traffic is the first connections tab, and a point opens its connection in 
   await page.locator('.rp-scatter circle').first().click();
   await expect(page).toHaveURL(/[?&]tab=list/);
   await expect(page).toHaveURL(/[?&]id=/);
-  await expect(page.getByRole('tab', {name: 'Connections'})).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', {name: 'List'})).toHaveAttribute('aria-selected', 'true');
 });
 
 const nodeLatency = (page: import('@playwright/test').Page) => page.getByRole('region', {name: 'Node latency', exact: true});

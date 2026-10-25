@@ -3,7 +3,7 @@ import {changesPanel, defaults, parseItems, parseLayout, registry, restoredPanel
 import {moveWidget} from './instances';
 it('defaults corrupt roots to a visible panel and preserves empty layouts', () => {
   for (const value of [null, {}, {version: 9, items: []}, {version: 1, items: 'bad'}]) expect(parseLayout(value)).toEqual(defaults());
-  expect(defaults()).toMatchObject({visible: true, collapsed: false});
+  expect(defaults()).toMatchObject({visible: true, collapsed: true});
   expect(defaults()).not.toHaveProperty('size');
   expect(defaults()).not.toHaveProperty('docked');
   expect(parseLayout({version: 1, items: []}).items).toEqual([]);
@@ -127,8 +127,8 @@ it('offers the divider in the panel, several times, and never on the dashboard',
   const saved = {version: 4, items: [{id: 'speed', form: 'sparkline', size: 'medium'}], collapsed: false, pinned: false, visible: true};
   expect(parseLayout(saved)).toEqual(saved);
 });
-it('defaults to a floating, unpinned, open panel and keeps the pin a panel was saved with', () => {
-  expect(defaults()).toMatchObject({version: 4, pinned: false, collapsed: false});
+it('defaults to a floating, unpinned, collapsed panel and keeps the pin a panel was saved with', () => {
+  expect(defaults()).toMatchObject({version: 4, pinned: false, collapsed: true});
   expect(defaults()).not.toHaveProperty('docked');
   const placed = {docked: true, dockHeight: 300, size: {width: 400, height: 300}, offset: {x: 120, y: 48}};
   const migrated = parseLayout({...defaults(), ...placed, version: 3});

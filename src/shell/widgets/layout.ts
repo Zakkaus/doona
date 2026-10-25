@@ -173,7 +173,8 @@ export type Layout = {
 export const defaults = (): Layout => ({
   version: 4,
   items: [defaultWidget('speed'), {id: 'memory', form: 'text', size: 'medium'}, defaultWidget('mode')],
-  collapsed: false,
+  // A fresh panel starts as its header, so it covers no content until the reader opens it.
+  collapsed: true,
   pinned: false,
   visible: true
 });

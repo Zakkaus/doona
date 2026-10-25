@@ -606,11 +606,11 @@ test('the outbound mode keeps Apply disabled without a line until a mode is pick
   await expect(apply).toBeEnabled();
 });
 
-test('the profile actions say a profile is created by saving the backend', async ({page}) => {
+test('a first run shows no profile actions until a backend is saved', async ({page}) => {
   test.skip(isLive, 'A live run starts from a saved profile');
   await page.goto('/#/settings');
-  await expectReason(page, page.getByRole('button', {name: 'Rename profile', exact: true}), 'No profile yet; saving the backend creates one');
-  await expect(page.getByRole('button', {name: 'Delete profile', exact: true})).toHaveAccessibleDescription('No profile yet; saving the backend creates one');
+  await expect(page.getByRole('button', {name: 'Use demo data', exact: true})).toBeVisible();
+  for (const name of ['Add profile', 'Rename profile', 'Delete profile']) await expect(page.getByRole('button', {name, exact: true})).toHaveCount(0);
 });
 
 test('the route trace says what it lacks until a destination and port are given', async ({page}) => {

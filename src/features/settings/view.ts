@@ -122,10 +122,6 @@ export function profileView(
   };
 }
 // Shared by the profile select, Rename and Delete.
-export function profileReason(hasActive: boolean, t: Translator): string | null {
-  return hasActive ? null : t('settings.noProfile');
-}
-
 export function runtimeApplyReason({busy, invalid}: {busy: boolean; invalid: string | null}, t: Translator): string | null {
   return !busy && invalid ? t('settings.runtimeInvalid', {field: invalid}) : null;
 }

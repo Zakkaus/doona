@@ -238,6 +238,11 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
         );
     } else toast('negative', t('settings.invalidUrl'));
   };
+  // A first run may keep the built-in demo instead: saved as its own profile, it ends the first run as a backend would.
+  const keepDemo = () => {
+    const profile = {id: uuid(), name: t('shell.backend.demo'), api: DEMO_API, token: ''};
+    persist([profile], profile.id, {route: startPage === 'settings' ? defaultRoute : startPage, query: ''});
+  };
   const [switchId, setSwitchId] = useState<string | null>(null);
   const switchProfile = (id: string) => {
     if (id === saved.activeId || !saved.profiles.some(profile => profile.id === id)) return;
@@ -318,6 +323,8 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
     dirty,
     invalid,
     result,
+    // The last test reached the backend in the form, so saving it is the next step.
+    reachable: result?.key === 'settings.reachable',
     pending,
     saving,
     save,
@@ -325,6 +332,7 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
     confirmSwitch,
     switchPending: switchId !== null,
     cancelSwitch: () => setSwitchId(null),
-    testConnection
+    testConnection,
+    keepDemo
   };
 }

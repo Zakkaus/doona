@@ -43,7 +43,7 @@ test('shortcut help and page sequences respect focus and the sequence deadline',
   await page.keyboard.press('c');
   await expect(page).toHaveURL(/#\/connections$/);
   // The shortcut opens the traffic tab; the filter lives in the list.
-  await page.getByRole('tab', {name: 'Connections', exact: true}).click();
+  await page.getByRole('tab', {name: 'List', exact: true}).click();
   const input = page.getByRole('searchbox', {name: 'Filter', exact: true});
   await input.focus();
   await page.keyboard.type('g a?');
@@ -286,7 +286,7 @@ test('Escape on a menu or dialog opened from a table row returns focus to its tr
 
 test('keyboard focus draws one ring on the focused tab', async ({page}) => {
   await page.goto('/#/connections?tab=list');
-  const tab = page.getByRole('tab', {name: 'Connections', exact: true});
+  const tab = page.getByRole('tab', {name: 'List', exact: true});
   await tab.focus();
   await page.keyboard.press('ArrowLeft');
   const focused = page.getByRole('tab').and(page.locator(':focus'));
