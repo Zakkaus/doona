@@ -27,30 +27,45 @@ async function completeSource(source: Pick<ConfigSource, 'content' | 'content_sh
   return source.content !== undefined && (await sha256(source.content)) === source.content_sha256;
 }
 
-type Check = {digest: string; content: string | undefined; complete: boolean};
+// Whether a text matches its digest depends on nothing else, so the verdicts are kept for the session by source, digest
+// and text: a page opened again, or a refetch of the same text, answers at once instead of dropping back to unknown.
+// Each batch of new verdicts replaces the map, so a hook holding the map it last read re-renders only for new answers.
+type Verdicts = ReadonlyMap<string, {content: string | undefined; complete: boolean}>;
+let verdicts: Verdicts = new Map();
+const VERDICTS_KEPT = 64;
+const verdictKey = (source: ConfigSource) => `${source.id}\u0000${source.content_sha256}`;
+const verdictIn = (known: Verdicts, source: ConfigSource) => {
+  const found = known.get(verdictKey(source));
+  return found && found.content === source.content ? found.complete : undefined;
+};
+const answered = (known: Verdicts, sources: ConfigSource[]) => sources.every(source => verdictIn(known, source) !== undefined);
 
-// Whether each source's text matches its digest; undefined until checked. Results are kept by id, digest and text
-// rather than by object, so a refetch of the same text keeps its answer instead of dropping back to unknown.
+// Whether each source's text matches its digest; undefined until checked.
 export function useCompleteness(sources: ConfigSource[]): (source: ConfigSource) => boolean | undefined {
-  const [checked, setChecked] = useState<Map<string, Check>>(new Map());
+  const [known, setKnown] = useState(verdicts);
   useEffect(() => {
+    const show = () => setKnown(current => (answered(current, sources) ? current : verdicts));
+    const unknown = sources.filter(source => verdictIn(verdicts, source) === undefined);
+    if (!unknown.length) {
+      show();
+      return;
+    }
     let live = true;
-    void Promise.all(
-      sources.map(async source => [source.id, {digest: source.content_sha256, content: source.content, complete: await completeSource(source)}] as const)
-    ).then(entries => {
-      if (live) setChecked(new Map(entries));
+    void Promise.all(unknown.map(async source => [source, await completeSource(source)] as const)).then(results => {
+      const next = new Map(verdicts);
+      for (const [source, complete] of results) {
+        next.delete(verdictKey(source));
+        next.set(verdictKey(source), {content: source.content, complete});
+      }
+      for (const key of next.keys()) if (next.size > VERDICTS_KEPT) next.delete(key);
+      verdicts = next;
+      if (live) show();
     });
     return () => {
       live = false;
     };
   }, [sources]);
-  return useCallback(
-    (source: ConfigSource) => {
-      const check = checked.get(source.id);
-      return check && check.digest === source.content_sha256 && check.content === source.content ? check.complete : undefined;
-    },
-    [checked]
-  );
+  return useCallback((source: ConfigSource) => verdictIn(known, source), [known]);
 }
 
 // One source's verdict: null until checked, and for no source at all.

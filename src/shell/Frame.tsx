@@ -66,7 +66,7 @@ function useCommands() {
 
 function Layout({lang, pickLang, ap, route, query, go, openSearch, mac, view}: FrameProps & {view: ShellModel}) {
   const t = useT();
-  const {paletteSections, settingsValue, menu, navRef, navStyle} = useShellFrame(lang, pickLang, ap, route);
+  const {paletteSections, settingsValue, menu} = useShellFrame(lang, pickLang, ap);
   const {commands, apply, reload} = useCommands();
   const [actions, setActions] = useState<HTMLElement | null>(null);
   const Page = view.current.Page;
@@ -92,7 +92,7 @@ function Layout({lang, pickLang, ap, route, query, go, openSearch, mac, view}: F
         paletteSections={paletteSections}
         menu={menu}
       />
-      <SideNav route={route} groups={view.groups} busy={view.busy} backend={view.backend} honk={view.honk} navRef={navRef} navStyle={navStyle} />
+      <SideNav route={route} groups={view.groups} busy={view.busy} backend={view.backend} honk={view.honk} />
       <main className="rp-main">
         <div className="rp-content">
           <div className="rp-head">

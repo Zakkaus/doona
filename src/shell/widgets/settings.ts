@@ -5,4 +5,5 @@ const store = storedLayout(storageKeys.widgets, parseLayout, defaults);
 export const readLayout = store.read;
 export const saveLayout = store.save;
 export const useWidgetLayout = store.useLayout;
-export const patchLayout = (value: Partial<Layout>) => saveLayout(previous => ({...previous, ...value}));
+export const patchLayout = (value: Partial<Layout>) =>
+  saveLayout(previous => (Object.entries(value).every(([key, next]) => previous[key as keyof Layout] === next) ? previous : {...previous, ...value}));

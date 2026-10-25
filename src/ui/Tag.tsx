@@ -84,6 +84,16 @@ function sharedObserver() {
   return shared;
 }
 
+// An overflow tag laid out only to be measured, before the browser paints: the same element and classes as MoreTag,
+// without the tip and press handling a tag nobody can reach needs.
+function MoreProbe({count}: {count: number}) {
+  return (
+    <button type="button" className="rp-tag rp-tag-more" tabIndex={-1} aria-hidden="true">
+      <span className="rp-tag-label">+{count}</span>
+    </button>
+  );
+}
+
 // Linked tags on one line, as S2's TagGroup does with a row limit: as many whole tags as the width holds, then a
 // "+N" tag for the rest; no tag is cut and nothing scrolls. Widths are read with every tag and overflow tag laid
 // out, once per set and language, again when a font arrives or a tag changes width, and each resize refits from them.
@@ -159,7 +169,7 @@ export function FitTags({
         </LinkTag>
       ))}
       {probes.map(n => (
-        <MoreTag key={n} count={n} label={more(n)} names={names} />
+        <MoreProbe key={n} count={n} />
       ))}
       {hidden > 0 && <MoreTag count={hidden} label={more(hidden)} names={names} />}
     </div>

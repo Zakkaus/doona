@@ -7,7 +7,7 @@ import {readSettings, writeSetting} from './preferences';
 import type {SettingsContext} from './preferences';
 import {FONT, LANGS, languages, LOCALE, loadLanguage, pageDirection, translate, useT, type Lang} from '../i18n';
 import {toast} from '../ui/Feedback';
-import {isMac, useSlider} from '../ui/hooks';
+import {isMac} from '../ui/hooks';
 import {features} from './registry';
 import {searchDialog} from './search/load';
 import {parseHash, useRoute} from './route';
@@ -112,7 +112,7 @@ export function useShellController(initial: Lang) {
   return {settings, lang, ap, route, query, go, confirming, discard, cancel, searchOpen, pickLang, openSearch, closeSearch, navigate, draft, mac: isMac};
 }
 
-export function useShellFrame(lang: Lang, pickLang: (lang: Lang) => void, ap: NonNullable<ContextType<typeof SettingsContext>>['ap'], route: string) {
+export function useShellFrame(lang: Lang, pickLang: (lang: Lang) => void, ap: NonNullable<ContextType<typeof SettingsContext>>['ap']) {
   const t = useT();
   const paletteSections = useMemo(() => paletteMenu(t), [t]);
   const startPageItems = useMemo<NonNullable<ContextType<typeof SettingsContext>>['startPageItems']>(
@@ -121,10 +121,7 @@ export function useShellFrame(lang: Lang, pickLang: (lang: Lang) => void, ap: No
   );
   const settingsValue = useMemo(() => ({lang, pickLang, ap, paletteSections, startPageItems}), [lang, pickLang, ap, paletteSections, startPageItems]);
   const menu = useMemo(() => appearanceMenu(t, ap.scheme, ap.dark), [t, ap.scheme, ap.dark]);
-  const [navRef, navPos] = useSlider(route, '[aria-current="page"]', true);
-  // One object per measured position: a fresh one on every render would re-render the memoised navigation.
-  const navStyle = useMemo(() => (navPos ? {translate: `0 ${navPos.y}px`, height: navPos.h} : undefined), [navPos]);
-  return {paletteSections, settingsValue, menu, navRef, navStyle};
+  return {paletteSections, settingsValue, menu};
 }
 
 export function useStartupToasts() {
