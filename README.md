@@ -10,7 +10,7 @@
 
 English / [简体中文](README.zh-CN.md) / [繁體中文](README.zh-TW.md)
 
-[Try the demo](#try-the-demo) / [Install](#install) / [Backend protocols](#backend-protocols) / [Documentation](#documentation)
+[Two editions](#two-editions) / [Try the demo](#try-the-demo) / [Install](#install) / [Backend protocols](#backend-protocols) / [Documentation](#documentation)
 
 </div>
 
@@ -24,14 +24,36 @@ Depending on the features exposed by your backend, doona lets you:
 - Inspect routing and DNS rules, and edit rules in writable sources.
 - Edit configuration source files, validate changes and export sources.
 
+## Two editions
+
+The standard edition is doona's full interface for monitoring traffic and editing configuration, with Settings and palettes.
+doona lite is a smaller configuration editor for beginners, without traffic pages.
+
+Both editions use the same honk native API and honk configuration, and accept the same administrator password or token for sign-in. honk serves one edition at a time; to switch, point `ui` at the other directory and restart honk. The editions never overwrite each other's files or browser settings.
+
+|         | Standard edition                                                                                                              | doona lite                                                                       |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| For     | Traffic monitoring and configuration                                                                                          | Beginners editing configuration                                                  |
+| Pages   | Activity, System status, Connections, Routing log, DNS, Logs, Events, Nodes, Groups, Rules, Trace, Configuration and Settings | Nodes, Subscriptions, Groups, Routing, DNS and global settings; no traffic pages |
+| Install | `doona-<version>.tar.gz` in `/usr/share/doona`, or `ui: embedded` in honk-core release builds (standard edition only)         | `doona-lite-<version>.tar.gz` in `/usr/share/doona-lite`                         |
+| Demo    | [Standard demo](https://demo.daeuniverse.org/)                                                                                | [lite demo](https://demo.daeuniverse.org/lite/)                                  |
+| Docs    | [Standard guide](https://zakkaus.github.io/doona-docs/en/)                                                                    | [lite guide](https://zakkaus.github.io/doona-docs/en/lite.html)                  |
+
+<img src="https://zakkaus.github.io/doona-docs/images/lite-nodes-light.webp" width="100%" alt="The doona lite Nodes page">
+
+See the [edition comparison](https://zakkaus.github.io/doona-docs/en/editions.html) for details.
+
 ## Try the demo
 
 [Open the demo](https://demo.daeuniverse.org/) to try the UI with sample data; no backend is needed. To see error states, use [`?scenario=faults`](https://demo.daeuniverse.org/?scenario=faults); `?scenario=` returns to the healthy demo.
+
+Try [the lite demo](https://demo.daeuniverse.org/lite/) to explore the smaller configuration editor.
 
 ## Install
 
 Start with a honk build that provides the native API; the [installation guide](https://zakkaus.github.io/doona-docs/en/install.html#install) lists compatible builds and setup steps. Then download `doona-<version>.tar.gz` from the [releases page](https://github.com/Zakkaus/doona/releases).
 Extract it into the directory that honk's `native_api` block names in `ui`; honk serves doona at `/ui/`.
+The same release provides `doona-lite-<version>.tar.gz`; extract it to its own directory, `/usr/share/doona-lite`, and use `ui` to select the edition as described in the [lite guide](https://zakkaus.github.io/doona-docs/en/lite.html).
 Editing settings and configuration requires write permission on the backend. See [package details](docs/install.md) for archive contents.
 
 ## Backend protocols
@@ -61,6 +83,8 @@ WebSocket, gRPC and XHTTP are stream transports, separate from proxy protocols. 
 ## Development
 
 The build, test and packaging commands, the source layout and the contract pin are on the [development page](https://zakkaus.github.io/doona-docs/en/development.html). See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+
+doona lite lives in `apps/lite`; from the repository root, build it with `pnpm --dir apps/lite build`.
 
 ## Support
 

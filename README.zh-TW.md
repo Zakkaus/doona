@@ -10,7 +10,7 @@
 
 [English](README.md) / [简体中文](README.zh-CN.md) / 繁體中文
 
-[體驗示範版](#體驗示範版) / [安裝](#安裝) / [後端協定](#後端協定) / [文件](#文件)
+[兩個版本](#兩個版本) / [體驗示範版](#體驗示範版) / [安裝](#安裝) / [後端協定](#後端協定) / [文件](#文件)
 
 </div>
 
@@ -24,14 +24,36 @@ doona 是用於管理代理後端的靜態 Web 介面。檢視真實資料需要
 - 檢視路由與 DNS 規則，編輯可寫入來源檔中的規則。
 - 編輯組態來源檔、驗證變更、匯出來源檔。
 
+## 兩個版本
+
+標準版是 doona 的完整介面，提供流量監控、組態編輯、設定與配色。
+doona lite 是面向新手的精簡組態編輯器，不含流量頁面。
+
+兩個版本使用相同的 honk 原生 API 與 honk 組態，均使用管理員密碼或權杖登入。honk 一次只提供一個版本；將 `ui` 指向另一個目錄並重新啟動 honk 即可切換。兩個版本不會覆寫彼此的檔案或瀏覽器設定。
+
+|          | 標準版                                                                                                            | doona lite                                                        |
+| -------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| 適用情境 | 監控流量與管理組態                                                                                                | 新手編輯組態                                                      |
+| 頁面     | 活動、系統狀態、連線、路由日誌、DNS、日誌、事件、節點、群組、規則、追蹤、組態與設定                               | 節點、訂閱、群組、路由、DNS 與全域設定；不含流量頁面              |
+| 安裝     | 將 `doona-<version>.tar.gz` 解壓縮到 `/usr/share/doona`，或在 honk-core 發布建置中使用 `ui: embedded`（僅標準版） | 將 `doona-lite-<version>.tar.gz` 解壓縮到 `/usr/share/doona-lite` |
+| 示範     | [標準版示範](https://demo.daeuniverse.org/)                                                                       | [lite 示範](https://demo.daeuniverse.org/lite/)                   |
+| 文件     | [標準版指南](https://zakkaus.github.io/doona-docs/zh-TW/)                                                         | [lite 指南](https://zakkaus.github.io/doona-docs/zh-TW/lite.html) |
+
+<img src="https://zakkaus.github.io/doona-docs/images/lite-nodes-light.webp" width="100%" alt="doona lite 節點頁面">
+
+詳細差異見[版本比較](https://zakkaus.github.io/doona-docs/zh-TW/editions.html)。
+
 ## 體驗示範版
 
 [開啟示範版](https://demo.daeuniverse.org/)即可使用範例資料體驗介面，無需後端。以 [`?scenario=faults`](https://demo.daeuniverse.org/?scenario=faults) 開啟可檢視錯誤狀態，以 `?scenario=` 開啟則恢復正常的示範版。
+
+也可開啟 [lite 示範版](https://demo.daeuniverse.org/lite/)，體驗精簡的組態編輯器。
 
 ## 安裝
 
 先按[安裝指南](https://zakkaus.github.io/doona-docs/zh-TW/install.html#install)選擇並設定支援原生 API 的 honk 版本，再從[發布頁](https://github.com/Zakkaus/doona/releases)下載 `doona-<version>.tar.gz`。
 解壓縮到 honk `native_api` 組態區塊中 `ui` 指定的目錄，honk 即在 `/ui/` 提供 doona。
+同一次發布還提供 `doona-lite-<version>.tar.gz`；將其解壓縮到獨立目錄 `/usr/share/doona-lite`，透過 `ui` 選擇版本，具體步驟見 [lite 指南](https://zakkaus.github.io/doona-docs/zh-TW/lite.html)。
 修改設定與組態需要後端授予寫入權限。各壓縮包的內容見[安裝說明](docs/install.zh-TW.md)。
 
 ## 後端協定
@@ -61,6 +83,8 @@ WebSocket、gRPC 與 XHTTP 是串流傳輸方式，與代理協定不同。在�
 ## 開發
 
 建置、測試與打包指令、原始碼配置與契約的固定提交，見[開發](https://zakkaus.github.io/doona-docs/zh-TW/development.html)一頁；送出 pull request 前先讀 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+doona lite 的原始碼位於 `apps/lite`，在儲存庫根目錄執行 `pnpm --dir apps/lite build` 即可建置。
 
 ## 支援
 
