@@ -161,6 +161,55 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
     [t, editFlag, across, canManage, canJoin, canCreate, busy, phone]
   );
   const cols = useMemo(() => (phone ? primaryFirst(columns, 'latency') : columns), [columns, phone]);
+  // Kept across renders, so a node read that changes no row leaves the table's collection as it was.
+  const detail = useMemo(
+    () =>
+      settings
+        ? (row: NodeTableView['rows'][number]) => (
+            <Card title={t('nodes.details')}>
+              <div className="rp-list">
+                <NodeName name={row.name} />
+                <Kv
+                  items={[
+                    [t('nodes.provider'), row.source],
+                    [t('ui.protocol'), row.protocol],
+                    [t('act.latency'), row.latency]
+                  ]}
+                />
+                {/* The groups take a row of their own, so their tags wrap across the card instead of stretching
+                    the facts above into a narrow column. */}
+                <div className="rp-list">
+                  <span className="rp-label">{t('nodes.groups')}</span>
+                  {row.groupLinks.length ? (
+                    <Tags label={t('nodes.groups')}>
+                      {row.groupLinks.map(group => (
+                        <LinkTag key={group.id} href={group.href}>
+                          {group.label}
+                        </LinkTag>
+                      ))}
+                    </Tags>
+                  ) : (
+                    row.groups
+                  )}
+                </div>
+                {row.showProbeKinds && (
+                  <div className="rp-list">
+                    <span className="rp-label">{t('nodes.probeKinds')}</span>
+                    <Kv items={row.probeKinds.map(line => [line.label, <span className={line.tone}>{line.value}</span>])} />
+                  </div>
+                )}
+                <FlagField
+                  name={row.name}
+                  value={settings.ap.flagOverrides[flagKey(row.name)] ?? 'automatic'}
+                  automaticFlag={flagForName(row.name)}
+                  onChange={value => settings.ap.pickFlag(row.name, value)}
+                />
+              </div>
+            </Card>
+          )
+        : undefined,
+    [settings, t]
+  );
   return (
     <>
       {m.probeOptions && <ProbeOptionsDialog model={m.probeOptions} />}
@@ -203,52 +252,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
           sort={m.sort}
           onSort={m.setSort}
           cols={cols}
-          detail={
-            settings
-              ? row => (
-                  <Card title={t('nodes.details')}>
-                    <div className="rp-list">
-                      <NodeName name={row.name} />
-                      <Kv
-                        items={[
-                          [t('nodes.provider'), row.source],
-                          [t('ui.protocol'), row.protocol],
-                          [t('act.latency'), row.latency]
-                        ]}
-                      />
-                      {/* The groups take a row of their own, so their tags wrap across the card instead of stretching
-                          the facts above into a narrow column. */}
-                      <div className="rp-list">
-                        <span className="rp-label">{t('nodes.groups')}</span>
-                        {row.groupLinks.length ? (
-                          <Tags label={t('nodes.groups')}>
-                            {row.groupLinks.map(group => (
-                              <LinkTag key={group.id} href={group.href}>
-                                {group.label}
-                              </LinkTag>
-                            ))}
-                          </Tags>
-                        ) : (
-                          row.groups
-                        )}
-                      </div>
-                      {row.showProbeKinds && (
-                        <div className="rp-list">
-                          <span className="rp-label">{t('nodes.probeKinds')}</span>
-                          <Kv items={row.probeKinds.map(line => [line.label, <span className={line.tone}>{line.value}</span>])} />
-                        </div>
-                      )}
-                      <FlagField
-                        name={row.name}
-                        value={settings.ap.flagOverrides[flagKey(row.name)] ?? 'automatic'}
-                        automaticFlag={flagForName(row.name)}
-                        onChange={value => settings.ap.pickFlag(row.name, value)}
-                      />
-                    </div>
-                  </Card>
-                )
-              : undefined
-          }
+          detail={detail}
         />
       </ProbeBusy.Provider>
     </>

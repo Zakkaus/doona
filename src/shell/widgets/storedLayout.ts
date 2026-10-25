@@ -32,6 +32,8 @@ export function storedLayout<Layout extends {version: number}>(
       }
     }
     const layout = typeof update === 'function' ? update(previous) : update;
+    // An update that keeps the layout it was given writes nothing and re-renders nobody.
+    if (layout === cached) return;
     cached = layout;
     persist(layout);
     listeners.forEach(notify => notify());

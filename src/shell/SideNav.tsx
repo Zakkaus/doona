@@ -1,8 +1,8 @@
-import {memo, useState, type CSSProperties, type RefObject} from 'react';
+import {memo, useState} from 'react';
 import {SidebarWidgets} from './widgets/host';
 import {readNavGroups, saveNavGroups} from './navGroups';
 import {Disclosure, Link} from '../ui/ui';
-import {useMoreBelow} from '../ui/hooks';
+import {useMoreBelow, useSlider} from '../ui/hooks';
 import {warmPage} from './registry';
 import type {BackendView, NavGroup} from './view';
 
@@ -12,18 +12,18 @@ type SideNavProps = {
   busy: boolean;
   backend: BackendView;
   honk: () => void;
-  navRef: RefObject<HTMLDivElement | null>;
-  navStyle: CSSProperties | undefined;
 };
 
 // Navigation follows the open page, not its query: a tab or filter change leaves it alone.
-export const SideNav = memo(function SideNav({route, groups, busy, backend, honk, navRef, navStyle}: SideNavProps) {
+// The marker's position is held here, so placing it on a page switch re-renders the navigation and not the page.
+export const SideNav = memo(function SideNav({route, groups, busy, backend, honk}: SideNavProps) {
   const [collapsed, setCollapsed] = useState(readNavGroups);
+  const [navRef, navPos] = useSlider(route, '[aria-current="page"]', true);
   useMoreBelow(navRef);
   return (
     <nav className="rp-side" aria-busy={busy || undefined}>
       <div className="rp-side-links rp-overlay-scroll" ref={navRef}>
-        {navStyle && <span className="rp-nav-slider" style={navStyle} />}
+        {navPos && <span className="rp-nav-slider" style={{translate: `0 ${navPos.y}px`, height: navPos.h}} />}
         {groups.map(group => (
           <div key={group.id} data-group={group.id}>
             <Disclosure

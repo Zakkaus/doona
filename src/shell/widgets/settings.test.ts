@@ -39,3 +39,17 @@ it('keeps session edits when reads work but writes exceed the browser quota', as
   saveLayout(previous => ({...previous, collapsed: true}));
   expect(readLayout()).toMatchObject({visible: false, collapsed: true});
 });
+
+it('writes nothing and keeps the layout when a patch changes nothing', async () => {
+  vi.resetModules();
+  const values = new Map<string, string>();
+  const setItem = vi.fn((key: string, value: string) => values.set(key, value));
+  vi.stubGlobal('localStorage', {getItem: (key: string) => values.get(key) ?? null, setItem});
+  const {readLayout, patchLayout} = await import('./settings');
+  patchLayout({collapsed: true});
+  const collapsed = readLayout();
+  setItem.mockClear();
+  patchLayout({collapsed: true});
+  expect(readLayout()).toBe(collapsed);
+  expect(setItem).not.toHaveBeenCalled();
+});

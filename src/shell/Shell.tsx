@@ -161,8 +161,8 @@ function ShellFrame(props: FrameProps) {
   );
 }
 
-function SignIn({lang, pickLang, ap, route, view, content}: FrameProps & {view: ShellModel; content: Extract<ShellModel['content'], {kind: 'login'}>}) {
-  const {menu, paletteSections} = useShellFrame(lang, pickLang, ap, route);
+function SignIn({lang, pickLang, ap, view, content}: FrameProps & {view: ShellModel; content: Extract<ShellModel['content'], {kind: 'login'}>}) {
+  const {menu, paletteSections} = useShellFrame(lang, pickLang, ap);
   return (
     <Suspense fallback={<Loading />}>
       <Login

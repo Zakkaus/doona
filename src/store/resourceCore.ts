@@ -163,7 +163,9 @@ export function watchResource<T>(api: Api, resource: Resource<T>, notify: () => 
       shared.watcher.dispose();
       store.active.delete(name);
       if (shared.snapshot.data === undefined) return;
-      store.inactive.set(name, {...shared.snapshot, error: null});
+      // The snapshot itself, unless it carries an error to drop: a page switch hands a resource from the page left to the
+      // one opened, which already read this object, and a copy would make it render once more in the switch's task.
+      store.inactive.set(name, shared.snapshot.error ? {...shared.snapshot, error: null} : shared.snapshot);
       expire(store, name);
       if (resource.key.length > 1) {
         store.parameterised.add(name);

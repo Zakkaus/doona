@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {dropDrafts} from './draft';
 import {shouldOpenSettings} from './preferences';
 import {defaultRoute, hasRoute, isRoutePath, type Go, type RoutePath} from './routes';
@@ -124,12 +124,22 @@ export function useRoute(api: string | null, startPage: RoutePath = defaultRoute
   // same commit counts before it renders. `go` reads it to keep one identity across navigations, so memoised pages and
   // tiles are not re-rendered by the callback alone.
   const current = useRef(loc);
-  const push = useCallback((next: Route, replace = false) => {
-    if (replace) history.replaceState({...history.state, doonaPosition: position.current}, '', buildHash(next.route, next.query));
-    else history.pushState({doonaPosition: ++position.current}, '', buildHash(next.route, next.query));
+  // A new page renders as a transition, so the old page stays on screen and responsive while React builds the next one
+  // in slices; an update within one page stays urgent, so what it changes shows with the event that changed it.
+  const accept = useCallback((next: Route) => {
+    const from = current.current;
     current.current = next;
-    setLoc(next);
+    if (from.route === next.route) setLoc(next);
+    else startTransition(() => setLoc(next));
   }, []);
+  const push = useCallback(
+    (next: Route, replace = false) => {
+      if (replace) history.replaceState({...history.state, doonaPosition: position.current}, '', buildHash(next.route, next.query));
+      else history.pushState({doonaPosition: ++position.current}, '', buildHash(next.route, next.query));
+      accept(next);
+    },
+    [accept]
+  );
   // A layout effect, so it is in place before a page's own effects run on the first render.
   useLayoutEffect(() => {
     replaceShellRoute = next => push(updateRoute(current.current, buildHash(next.route, next.query)), true);
@@ -171,8 +181,7 @@ export function useRoute(api: string | null, startPage: RoutePath = defaultRoute
       } else {
         if (history.state?.doonaPosition === undefined) history.replaceState({...history.state, doonaPosition: nextPosition}, '', hash);
         position.current = nextPosition;
-        current.current = next;
-        setLoc(next);
+        accept(next);
       }
     };
     // popstate, not hashchange: it also fires when two entries share a hash, so the cursor never drifts.
@@ -181,7 +190,7 @@ export function useRoute(api: string | null, startPage: RoutePath = defaultRoute
     // address is compared with the accepted route, not `loc`: a page that replaced it in this commit is not navigating.
     if (!restoring.current && updateRoute(current.current, location.hash) !== current.current) on();
     return () => removeEventListener('popstate', on);
-  }, [api, loc]);
+  }, [api, loc, accept]);
   const discard = () => {
     if (!pending && !leaving) return;
     dropDrafts(setDirty);

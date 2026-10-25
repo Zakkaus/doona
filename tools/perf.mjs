@@ -1,6 +1,7 @@
 // Usage: node tools/perf.mjs [URL]; measures a built doona against the mock backend with a throttled CPU.
 // Reports first paint, scripting and layout time per page, the cost of one polling minute on the activity
-// page, the long connection and node tables, a log burst, and hovering the routing tree. Numbers are medians
+// page, the long connection and node tables, a log burst, hovering the routing tree, and the longest task of each
+// side-nav page switch, on the first and the second visit. Numbers are medians
 // of PERF_RUNS runs, three by default. PERF_ONLY=regex runs only the scenarios whose name matches.
 import {chromium} from '@playwright/test';
 import {signInDemo} from './demo-session.mjs';
@@ -222,6 +223,34 @@ await measure('flows: hover 20 tree tiles', async (page, session) => {
   for (let i = 0; i < count; i++) await tiles.nth(i).hover();
   return delta(before, await metrics(session));
 });
+// Every page is opened twice from the side navigation, as a person moves around. The activity page opens the tab, so
+// its first switch is the one back to it.
+if (wanted('page switch')) {
+  const result = await run(async page => {
+    await page.goto(`${base}/#/activity`);
+    await ready(page);
+    await page.waitForTimeout(2000);
+    await page.evaluate(() => {
+      window.longTasks = [];
+      new PerformanceObserver(list => window.longTasks.push(...list.getEntries().map(entry => [entry.startTime, entry.duration]))).observe({type: 'longtask'});
+    });
+    const longest = {};
+    const order = [...Object.keys(content).filter(route => route !== 'activity'), 'activity'];
+    for (const visit of ['first', 'second'])
+      for (const route of order) {
+        const start = await page.evaluate(() => performance.now());
+        await page.locator(`.rp-side a[href="#/${route}"]`).click();
+        await ready(page);
+        await page.waitForTimeout(1000);
+        longest[`${route} ${visit}`] = await page.evaluate(
+          from => Math.max(0, ...window.longTasks.filter(([at]) => at >= from).map(([, duration]) => duration)),
+          start
+        );
+      }
+    return longest;
+  });
+  for (const route of Object.keys(content)) rows.push({scenario: `page switch: ${route}`, first: result[`${route} first`], second: result[`${route} second`]});
+}
 const width = Math.max(...rows.map(row => row.scenario.length));
 for (const row of rows) {
   const cells = Object.entries(row)

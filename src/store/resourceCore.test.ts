@@ -518,3 +518,31 @@ it('negotiates the fastest cadence and applies changes received during retry bac
   await vi.advanceTimersByTimeAsync(1);
   expect(fetch).toHaveBeenCalledTimes(4);
 });
+
+it('keeps the data of a page opened again when the read is equal, and notifies nobody', async () => {
+  const api = createMockApi();
+  const fetch = async () => ({rows: [{id: 'a'}, {id: 'b'}]});
+  const first = watchResource(api, {key: ['version'], every: 0, fetch}, () => {});
+  await vi.advanceTimersByTimeAsync(0);
+  const held = first.getSnapshot().data;
+  first.dispose();
+  const notify = vi.fn();
+  const again = watchResource(api, {key: ['version'], every: 0, fetch}, notify);
+  disposers.push(again.dispose);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(again.getSnapshot().data).toBe(held);
+  expect(notify).not.toHaveBeenCalled();
+});
+
+it('hands a resource from one page to the next as the same snapshot', async () => {
+  const api = createMockApi();
+  const fetch = async () => ({rows: [{id: 'a'}]});
+  const left = watchResource(api, {key: ['version'], every: 0, fetch}, () => {});
+  await vi.advanceTimersByTimeAsync(0);
+  const read = left.getSnapshot();
+  // The page opened rendered `read` before the page left let go of it.
+  left.dispose();
+  const opened = watchResource(api, {key: ['version'], every: 0, fetch}, () => {});
+  disposers.push(opened.dispose);
+  expect(opened.getSnapshot()).toBe(read);
+});
