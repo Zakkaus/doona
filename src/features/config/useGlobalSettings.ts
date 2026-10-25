@@ -46,10 +46,14 @@ export function useGlobalSettings({query, go}: PageProps) {
   const editor = useConfigEditor(config.refetch);
   const [draft, setDraft] = useState<{source: ConfigSource; id: string; patch: Record<string, string>} | null>(null);
   const [failure, setFailure] = useState<string | ConfigDiagnostic[] | null>(null);
-  const guard = useDraftGuard(!!draft, () => {
-    setDraft(null);
-    setFailure(null);
-  });
+  const guard = useDraftGuard(
+    !!draft,
+    () => {
+      setDraft(null);
+      setFailure(null);
+    },
+    'config.draftConfig'
+  );
   useEffect(() => editor.cancel, [editor.cancel, guard.revision]);
   const patch = draft?.patch ?? {};
   const text = draft?.source.content ?? source?.content ?? '';

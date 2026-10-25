@@ -291,6 +291,7 @@ type DistributionRow = {
   expression: string;
   expressionClass: string | undefined;
   source: string;
+  sourceTip: string;
   hits: string;
   share: string;
 };
@@ -332,6 +333,7 @@ export function distributionView(list: FlowList | undefined, source: string, t: 
         expression: row.expression ?? t('rule.unknownRule'),
         expressionClass: row.expression ? 'rp-code' : undefined,
         source: enumLabel(sources, row.source, t),
+        sourceTip: t(sourceHelp[row.source] ?? 'rule.sourceHelp.unknown'),
         hits: formatNumber(row.count, locale),
         share: t('ui.percent', {n: row.share * 100}, 'n', {n: 1})
       })),

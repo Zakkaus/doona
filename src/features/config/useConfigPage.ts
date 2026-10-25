@@ -234,10 +234,14 @@ export function useSourceCard({
   // The file changed on disk under the draft, whether a refetch or a refused save showed it. Saving waits until the
   // person keeps the draft over the new text or cancels it, since the draft would replace a change they have not seen.
   const conflict = dirty && draft.origin.content_sha256 !== source.content_sha256;
-  const guard = useDraftGuard(dirty, () => {
-    setDraft(null);
-    setFound(null);
-  });
+  const guard = useDraftGuard(
+    dirty,
+    () => {
+      setDraft(null);
+      setFound(null);
+    },
+    'config.draftConfig'
+  );
   useEffect(() => editor.cancel, [editor.cancel, guard.revision]);
   const draftText = draft?.text;
   const candidates = useValidationSources(sources, isComplete, {id: source.id, content: text});
@@ -343,6 +347,7 @@ export function useSourceCard({
         ['info', t('config.levelInfo', {n: summary.infos})]
       ] satisfies Array<[DiagnosticLevel, string]>,
       scope: dirty ? t('config.draftDiagnostics') : checkedDraft ? t('config.fileDiagnostics') : t('config.acceptedDiagnostics', {generation}),
+      scopeHelp: !dirty && !checkedDraft ? {title: t('ui.generation'), text: t('ui.generationHelp')} : undefined,
       // One quiet line instead of the bar: a draft not checked yet, or nothing to report.
       quiet: pending ? t('config.draftPending') : rows.length ? null : t('config.clean'),
       open: diagnosticsOpen(summary.errorKeys, diagnosticsChoice),

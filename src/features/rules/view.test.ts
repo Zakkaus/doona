@@ -25,15 +25,15 @@ import {
 
 const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 
-it('labels the dictionary caption with the generation id it received, untranslated in every locale', async () => {
+it('labels the dictionary caption with a translated term and the unchanged generation id', async () => {
   const api = createMockApi();
   const [rules, config] = await Promise.all([api.rules(), api.config()]);
   const caption = dictionaryView(rules.rules, 'gen-77', undefined, config.sources, [], t, 'en').caption;
   expect(caption).toContain('generation gen-77');
   expect(caption).not.toContain(config.revision);
-  expect(translate('zh-TW', 'rule.dictionaryCaption', {n: 2, generation: 'gen-77'})).toMatch(/generation gen-77$/);
-  expect(translate('zh-CN', 'ui.generation')).toBe('generation');
-  expect(translate('zh-TW', 'ui.generation')).toBe('generation');
+  expect(translate('zh-TW', 'rule.dictionaryCaption', {n: 2, generation: 'gen-77'})).toMatch(/世代 gen-77$/);
+  expect(translate('zh-CN', 'ui.generation')).toBe('世代');
+  expect(translate('zh-TW', 'ui.generation')).toBe('世代');
 });
 
 it('lists the first place and the end first in the position picker, and finds the others by their rule', async () => {
@@ -262,7 +262,7 @@ it('tells an empty distribution apart by the recorder, then by the source filter
   const view = distributionView(undefined, 'all', t, 'en', recorder('off'));
   expect(view.empty).toBe(t('rule.distributionNotRecorded'));
   expect(view.choices.map(([id]) => id)).toEqual(['all', 'kernel', 'userspace', 'recomputed', 'unknown']);
-  expect(t('rule.sourceRecomputed')).toBe('Recomputed');
+  expect(t('rule.sourceRecomputed')).toBe('Re-evaluated');
   expect(view.sourceHelp.text).toEqual([
     t('ui.valuePair', {label: t('flow.v.kernel'), value: t('rule.sourceHelp.kernel')}),
     t('ui.valuePair', {label: t('ov.v.userspace'), value: t('rule.sourceHelp.userspace')}),

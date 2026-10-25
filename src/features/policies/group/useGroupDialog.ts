@@ -249,7 +249,8 @@ export function useGroupDialog(input: Input): GroupDialogView {
       session.next();
       setDraft(null);
       setProblem(null);
-    }
+    },
+    'config.draftGroup'
   );
   const save = (close: () => void) => {
     if (!draft || removed || source.busy || saving.current) return;

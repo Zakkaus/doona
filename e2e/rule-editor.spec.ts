@@ -83,7 +83,7 @@ test('bare include rules edit and remove in place, while unsupported calls keep 
   const dialog = page.getByRole('dialog', {name: 'Edit rule'});
   await expect(dialog.getByRole('textbox', {name: 'Values'})).toHaveValue('openai');
   await dialog.getByRole('textbox', {name: 'Values'}).fill('github');
-  await dialog.getByRole('button', {name: 'Edit rule', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
   await expect(dialog).toBeHidden();
   expect((await api.config()).sources.find(source => source.id === 'src-rules')!.content).toBe(before.replace('geosite:openai', 'geosite: github'));
   await row.getByRole('button', {name: 'Remove rule', exact: true}).click();
@@ -95,7 +95,7 @@ test('bare include rules edit and remove in place, while unsupported calls keep 
   await expect(dialog.getByRole('textbox', {name: 'Expression'})).toHaveValue('mac(aa:bb:cc:dd:ee:ff) && ipversion(4)');
   await expect(dialog.getByRole('textbox', {name: 'Values'})).toHaveCount(0);
   await dialog.getByRole('textbox', {name: 'Expression'}).fill('mac(aa:bb:cc:dd:ee:ff) && ipversion(6)');
-  await dialog.getByRole('button', {name: 'Edit rule', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
   await expect(dialog).toBeHidden();
   await expect(unsupported).toContainText('ipversion(6)');
   await unsupported.getByRole('button', {name: 'Open config file', exact: true}).click();
@@ -237,14 +237,14 @@ test('existing routing conditions reconstruct, change kind and values, negate, a
   await dialog.locator('.rp-switch').filter({hasText: 'Negate condition'}).first().click();
   await dialog.getByRole('button', {name: 'Remove condition', exact: true}).nth(1).click();
   await dialog.getByRole('button', {name: 'Add AND condition', exact: true}).click();
-  await expect(dialog.getByRole('button', {name: 'Edit rule', exact: true})).toBeDisabled();
+  await expect(dialog.getByRole('button', {name: 'Save', exact: true})).toBeDisabled();
   await dialog
     .getByRole('button', {name: /Match by$/})
     .last()
     .click();
   await page.getByRole('option', {name: 'Domain keyword', exact: true}).click();
   await dialog.getByRole('textbox', {name: 'Values'}).last().fill('tracker');
-  await dialog.getByRole('button', {name: 'Edit rule', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
   await expect(dialog).toBeHidden();
   expect((await api.config()).sources.find(item => item.id === source.id)!.content).toBe(
     before.replace(original, '!pname(curl, wget) && dport(53) && domain(keyword: tracker) -> direct(must)')
@@ -302,7 +302,7 @@ test('editing an include refuses a changed generation and retains the condition 
   handlers['GET config'] = async () => ({...(await api.config()), generation_id: '41'});
   await page.getByRole('button', {name: 'Refresh', exact: true, includeHidden: true}).evaluate((button: HTMLButtonElement) => button.click());
   await expect(page.getByRole('tabpanel', {name: 'Routing rules', includeHidden: true})).toContainText('generation 41');
-  await dialog.getByRole('button', {name: 'Edit rule', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
   await expect(page.locator('.rp-toast.negative')).toContainText('out of sync');
   await expect(dialog.getByRole('textbox', {name: 'Values'})).toHaveValue('github');
   expect(requests.filter(request => request.method() === 'PUT')).toHaveLength(0);

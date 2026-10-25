@@ -651,7 +651,7 @@ test('the matched rule is edited from a connection: only its outbound changes, o
   await dialog.getByRole('button', {name: /Outbound$/}).click();
   await page.getByRole('searchbox', {name: 'Filter outbounds'}).fill('gaming');
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
-  await dialog.getByRole('button', {name: 'Edit rule', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Rule change is in effect'})).toBeVisible();
   await expect(dialog).toHaveCount(0);
   await expect(page).not.toHaveURL(/edit=/);
@@ -673,7 +673,7 @@ test('a routing rule edits its outbound from its own row, and a read-only file d
   await dialog.getByRole('button', {name: /Outbound$/}).click();
   await page.getByRole('searchbox', {name: 'Filter outbounds'}).fill('gaming');
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
-  await dialog.getByRole('button', {name: 'Edit rule', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Rule change is in effect'})).toBeVisible();
   const writes = requests.filter(request => request.method() === 'PUT');
   expect(writes).toHaveLength(1);

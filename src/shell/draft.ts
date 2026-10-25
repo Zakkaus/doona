@@ -1,4 +1,5 @@
 import {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
+import type {Key} from '../i18n';
 import {useLinked} from '../ui/hooks';
 
 export const DraftContext = createContext<{setDirty: (dirty: boolean) => void; revision: number; ask: (action: () => void) => void}>({
@@ -7,7 +8,11 @@ export const DraftContext = createContext<{setDirty: (dirty: boolean) => void; r
   ask: action => action()
 });
 
-const drafts = new WeakMap<(dirty: boolean) => void, Set<symbol>>();
+const drafts = new WeakMap<(dirty: boolean) => void, Map<symbol, Key | undefined>>();
+
+export function draftLabels(setDirty: (dirty: boolean) => void): Key[] {
+  return [...new Set([...(drafts.get(setDirty)?.values() ?? [])].map(label => label ?? 'config.draftOther'))];
+}
 
 // The shell calls this once the person agreed to lose every draft: their reload prompts stop at once, ahead of the
 // forms dropping the drafts themselves.
@@ -21,7 +26,7 @@ export function useLeave(own?: symbol) {
   const {setDirty, ask} = useContext(DraftContext);
   return useCallback(
     (action: () => void) => {
-      if ([...(drafts.get(setDirty) ?? [])].some(owner => owner !== own)) ask(action);
+      if ([...(drafts.get(setDirty)?.keys() ?? [])].some(owner => owner !== own)) ask(action);
       else action();
     },
     [setDirty, ask, own]
@@ -29,7 +34,7 @@ export function useLeave(own?: symbol) {
 }
 
 // `onDiscard` runs when the user confirms leaving with unsaved changes; the caller drops its draft there.
-export function useDraftGuard(dirty: boolean, onDiscard: () => void) {
+export function useDraftGuard(dirty: boolean, onDiscard: () => void, label?: Key) {
   const {setDirty, revision} = useContext(DraftContext);
   const [id] = useState(() => Symbol());
   const leave = useLeave(id);
@@ -40,9 +45,9 @@ export function useDraftGuard(dirty: boolean, onDiscard: () => void) {
   }, [id, setDirty]);
   useEffect(() => {
     if (!dirty) return;
-    const owners = drafts.get(setDirty) ?? new Set<symbol>();
+    const owners = drafts.get(setDirty) ?? new Map<symbol, Key | undefined>();
     drafts.set(setDirty, owners);
-    owners.add(id);
+    owners.set(id, label);
     setDirty(true);
     const warn = (event: BeforeUnloadEvent) => {
       if (owners.has(id)) event.preventDefault();
@@ -52,7 +57,7 @@ export function useDraftGuard(dirty: boolean, onDiscard: () => void) {
       removeEventListener('beforeunload', warn);
       clear();
     };
-  }, [dirty, id, setDirty, clear, revision]);
+  }, [dirty, id, setDirty, clear, revision, label]);
   useLinked(revision, onDiscard);
   return {clear, revision, leave};
 }

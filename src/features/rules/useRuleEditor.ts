@@ -107,7 +107,7 @@ export function useRuleEditor<R extends EditedRule>({
     dialog?.kind === 'add'
       ? !!(conditions?.some(row => row.value.trim()) || form.condition.trim())
       : dialog?.kind === 'edit' && (condition !== originalCondition || form.outbound !== dialog.outbound || form.must !== dialog.must);
-  const guard = useDraftGuard(drafted, () => setDialog(null));
+  const guard = useDraftGuard(drafted, () => setDialog(null), 'config.draftRule');
   const rules: R[] = list?.rules ?? [];
   const sources = config?.sources ?? [];
   const stale = () => {
@@ -246,7 +246,7 @@ export function useRuleEditor<R extends EditedRule>({
     addReason: addRuleTip(noPosition, !!editor.busy, t) ?? null,
     dialog: dialogView,
     dialogTitle: t(dialog?.kind === 'remove' ? 'rule.removeTitle' : dialog?.kind === 'edit' ? 'rule.edit' : 'rule.add'),
-    submitLabel: t(dialog?.kind === 'remove' ? 'rule.remove' : dialog?.kind === 'edit' ? 'rule.edit' : 'rule.add'),
+    submitLabel: t(dialog?.kind === 'remove' ? 'rule.remove' : dialog?.kind === 'edit' ? 'settings.save' : 'rule.add'),
     close,
     openAdd: () => {
       if (list) open({kind: 'add'});

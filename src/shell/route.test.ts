@@ -1,8 +1,68 @@
-import {afterEach, describe, expect, it, vi} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+import {hookHarness} from '../store/testHelpers';
 import {buildHash, historyPosition, href, parseHash, pickTab, restoreDraftRoute, tabQuery, updateRoute} from './route';
 import type {RoutePath} from './routes';
 
-afterEach(() => vi.unstubAllGlobals());
+import {draftLabels, dropDrafts, useDraftGuard} from './draft';
+import {translate} from '../i18n';
+
+const draftContext = vi.hoisted(() => ({setDirty: vi.fn(), revision: 0, ask: vi.fn()}));
+vi.mock('react', async original => ({
+  ...(await original<typeof import('react')>()),
+  ...hookHarness.hooks,
+  useContext: () => draftContext,
+  useCallback: <T>(callback: T) => callback
+}));
+
+beforeEach(() => {
+  hookHarness.reset();
+  draftContext.setDirty.mockClear();
+  draftContext.ask.mockClear();
+  const events = new EventTarget();
+  vi.stubGlobal('addEventListener', events.addEventListener.bind(events));
+  vi.stubGlobal('removeEventListener', events.removeEventListener.bind(events));
+});
+afterEach(() => {
+  hookHarness.unmount();
+  dropDrafts(draftContext.setDirty);
+  vi.unstubAllGlobals();
+});
+
+it('names two dirty owners and removes each label when its draft is cleared', () => {
+  const [runtime, backend] = hookHarness.render(() => [
+    useDraftGuard(true, vi.fn(), 'config.draftRuntime'),
+    useDraftGuard(true, vi.fn(), 'config.draftBackend'),
+    useDraftGuard(false, vi.fn(), 'config.draftRule')
+  ]);
+  hookHarness.runEffects();
+  expect(draftLabels(draftContext.setDirty)).toEqual(['config.draftRuntime', 'config.draftBackend']);
+  runtime.leave(vi.fn());
+  expect(draftContext.ask).toHaveBeenCalledOnce();
+  runtime.clear();
+  expect(draftLabels(draftContext.setDirty)).toEqual(['config.draftBackend']);
+  expect(draftContext.setDirty).toHaveBeenLastCalledWith(true);
+  const action = vi.fn();
+  backend.leave(action);
+  expect(action).toHaveBeenCalledOnce();
+  backend.clear();
+  expect(draftLabels(draftContext.setDirty)).toEqual([]);
+  expect(draftContext.setDirty).toHaveBeenLastCalledWith(false);
+});
+
+it('gives an unnamed dirty owner a neutral label in each locale', () => {
+  hookHarness.render(() => useDraftGuard(true, vi.fn()));
+  hookHarness.runEffects();
+  expect(draftLabels(draftContext.setDirty)).toEqual(['config.draftOther']);
+  for (const lang of ['en', 'zh-TW', 'zh-CN'] as const) {
+    const label = translate(lang, draftLabels(draftContext.setDirty)[0]);
+    const text = translate(lang, 'config.discardHelp', {drafts: label});
+    expect(text).toContain(label);
+    expect(text).not.toContain(translate(lang, 'config.draftConfig'));
+    expect(text).not.toContain('{drafts}');
+  }
+  dropDrafts(draftContext.setDirty);
+  expect(draftLabels(draftContext.setDirty)).toEqual([]);
+});
 
 describe('draft history restoration', () => {
   it('restores an unindexed Back destination without traversing away from the draft', () => {

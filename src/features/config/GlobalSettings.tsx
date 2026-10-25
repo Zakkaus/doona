@@ -3,6 +3,7 @@ import {
   Button,
   PrimaryActions,
   Card,
+  HelpRow,
   ErrorMessage,
   InlineAlert,
   LabeledSelect,
@@ -119,7 +120,9 @@ export function GlobalSettings(props: PageProps) {
                   />
                 )}
                 {/* The key, then the hint, follow every control alike, so a row of pickers and text fields keeps one rhythm. */}
-                <span className="rp-label rp-code">{field.key}</span>
+                <HelpRow help={field.key === 'so_mark_from_dae' ? {title: field.label, text: t('config.socketMarkHelp')} : null}>
+                  <span className="rp-label rp-code">{field.key}</span>
+                </HelpRow>
                 {field.hint && (
                   <span id={`config-global-${field.key}`} className="rp-label">
                     {field.hint}

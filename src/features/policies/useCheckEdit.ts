@@ -55,7 +55,7 @@ export function useCheckEdit(
     setDraft(null);
     setTried(false);
   };
-  const guard = useDraftGuard(ops.length > 0, reset);
+  const guard = useDraftGuard(ops.length > 0, reset, 'config.draftGroup');
   const save = (close: () => void) => {
     if (!g || !draft) return;
     setTried(true);

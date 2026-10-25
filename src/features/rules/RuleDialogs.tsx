@@ -42,7 +42,7 @@ export function RuleDialogs({view}: {view: DictionaryModel}) {
         )}
         {view.copy.must && (
           <Switch isDisabled={view.busy} isSelected={form.must} onChange={must => setForm({...form, must})} aria-describedby={mustHelpId}>
-            {t('rule.must')} <code>must</code>
+            {t('rule.must')} <code>{t('flow.f.must')}</code>
           </Switch>
         )}
       </Toolbar>
