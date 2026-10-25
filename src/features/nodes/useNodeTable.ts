@@ -55,6 +55,7 @@ export function useNodeTable(input: NodeTableInput) {
   const lang = useLang();
   const locale = LOCALE[lang];
   const probe = useNodeProbe(reload);
+  const [progress, setProgress] = useState({done: 0, total: 0});
   const [probeTarget, setProbeTarget] = useState<Node | null>(null);
   const [search, setSearch] = useState(query ?? '');
   useLinked(query, value => setSearch(value ?? ''));
@@ -138,6 +139,20 @@ export function useNodeTable(input: NodeTableInput) {
   return {
     rows,
     probeBusy,
+    testAll: () => {
+      if (probeBusy || !members.length) return;
+      setProgress({done: 0, total: members.length});
+      void probe
+        .probeMany(members, done => setProgress({done, total: members.length}))
+        .then(result => {
+          if (!result) return;
+          setSort({column: 'latency', direction: 'ascending'});
+          toast(result.unavailable ? 'warning' : 'positive', t('nodes.batchTested', {n: result.tested, unavailable: result.unavailable}));
+        });
+    },
+    cancelTest: probe.cancel,
+    testLabel: probeBusy === '*' ? t('nodes.testingBatch', {n: progress.done, total: progress.total}) : t('nodes.testAll'),
+    testReason: probeBusy ? t('nodes.testBusy') : !members.length ? t('nodes.noMatch') : null,
     probeOptions: probeTarget
       ? {
           name: probeTarget.name,
@@ -213,6 +228,10 @@ export type NodeTableView = {
   }>;
   // The node whose probe is running; while one runs, every probe button waits.
   probeBusy: string | null;
+  testAll: () => void;
+  cancelTest: () => void;
+  testLabel: string;
+  testReason: string | null;
   probeOptions: ProbeOptionsDialogModel | null;
   search: string;
   setSearch: (value: string) => void;

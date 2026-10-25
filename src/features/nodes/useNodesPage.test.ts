@@ -152,3 +152,57 @@ it('puts a duplicate-name refusal on Name and clears it after the name changes',
   read().setForm({...read().form, name: 'second'});
   expect(read()).toMatchObject({nodeNameError: null, formValid: true});
 });
+
+it('adds valid lines sequentially, keeps failed lines and retries a single remainder', async () => {
+  const first = deferred<Node | null>();
+  store.addNode = vi.fn().mockReturnValueOnce(first.promise).mockRejectedValueOnce(new Error('backend refused')).mockResolvedValue({name: 'third'});
+  read().addNode!();
+  read().setNodeLink('vless://one#first\nvless://two#second\nvless://three#third');
+  expect(read().formValid).toBe(true);
+  const close = vi.fn();
+  const sent = read().submit(close);
+  expect(store.addNode).toHaveBeenCalledTimes(1);
+  expect(read().submitLabel).toBe('Adding 1/3');
+  await read().submit(close);
+  expect(store.addNode).toHaveBeenCalledTimes(1);
+  first.resolve({name: 'first'} as Node);
+  await sent;
+  expect(vi.mocked(store.addNode).mock.calls.map(([input]) => input)).toEqual([
+    {name: 'first', link: 'vless://one#first'},
+    {name: 'second', link: 'vless://two#second'},
+    {name: 'third', link: 'vless://three#third'}
+  ]);
+  expect(read().form).toMatchObject({name: 'second', value: 'vless://two#second'});
+  expect(read().batchErrors).toEqual(['second: backend refused']);
+  expect(close).not.toHaveBeenCalled();
+  expect(toast).toHaveBeenCalledExactlyOnceWith('warning', 'Added 2, failed 1');
+  expect(read().formValid).toBe(true);
+  await read().submit(close);
+  expect(close).toHaveBeenCalledOnce();
+});
+it('excludes invalid lines, counts them and blocks batches over 200', async () => {
+  store.addNode = vi.fn().mockResolvedValue({name: 'good'});
+  read().addNode!();
+  read().setNodeLink('wrong://bad\nvless://good');
+  await read().submit(vi.fn());
+  expect(store.addNode).toHaveBeenCalledExactlyOnceWith({name: 'good', link: 'vless://good'});
+  expect(read().form.value).toBe('wrong://bad');
+  expect(toast).toHaveBeenCalledExactlyOnceWith('warning', 'Added 1, failed 1');
+  read().setNodeLink(Array(201).fill('vless://host').join('\n'));
+  expect(read().formValid).toBe(false);
+  expect(read().nodeLinkError).toBe('Use at most 200 links.');
+});
+it('stops a batch after closing its dialog without sending the next line', async () => {
+  const request = deferred<Node | null>();
+  store.addNode = vi.fn(() => request.promise);
+  read().addNode!();
+  read().setNodeLink('vless://first\nvless://second');
+  const sent = read().submit(vi.fn());
+  read().setDialog(null);
+  read().addNode!();
+  request.resolve({name: 'first'} as Node);
+  await sent;
+  expect(store.addNode).toHaveBeenCalledTimes(1);
+  expect(read().form.value).toBe('');
+  expect(read().batchErrors).toEqual([]);
+});
