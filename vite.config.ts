@@ -11,6 +11,7 @@ import {rtlScripts} from './src/i18n/direction';
 import {languages, REFERENCE_LANG} from './src/i18n/languages';
 import {languageFiles} from './src/i18n/offline';
 import {startupTextPlugin} from './tools/startup-text.mjs';
+import {cataloguePart, cataloguePartsPlugin} from './tools/catalogue-parts.mjs';
 import {stampScript} from './tools/stamp.mjs';
 
 // lightningcss ships native binaries for x86_64, aarch64 and armv7; on any other architecture the build
@@ -72,6 +73,7 @@ export default defineConfig({
   plugins: [
     react(),
     startupTextPlugin(),
+    cataloguePartsPlugin(),
     {
       name: 'font-notices',
       generateBundle() {
@@ -129,7 +131,7 @@ export default defineConfig({
           files.map(name => {
             const entry = bundle[name];
             return entry.type === 'chunk'
-              ? {name, catalogue: entry.facadeModuleId && /\/src\/i18n\/locales\//.test(entry.facadeModuleId) ? entry.name : null, sources: []}
+              ? {name, catalogue: cataloguePart(entry.facadeModuleId)?.lang ?? null, sources: []}
               : {name, catalogue: null, sources: entry.originalFileNames};
           })
         );
@@ -182,9 +184,11 @@ export default defineConfig({
         // Keep optional CJK subsets out of the shell precache and in the separate font archive.
         assetFileNames: asset =>
           asset.names.some(name => /^noto-sans-(tc|sc)-.*\.woff2$/.test(name)) ? 'fonts/[name]-[hash][extname]' : 'assets/[name]-[hash][extname]',
-        // Locale catalogues are named apart, so the service worker can leave them out of its precache.
-        chunkFileNames: chunk =>
-          chunk.facadeModuleId && /\/src\/i18n\/locales\//.test(chunk.facadeModuleId) ? 'assets/locale-[name]-[hash].js' : 'assets/[name]-[hash].js',
+        // Catalogue parts are named apart, so the service worker can leave them out of its precache.
+        chunkFileNames: chunk => {
+          const part = cataloguePart(chunk.facadeModuleId);
+          return part ? `assets/locale-${part.lang}-${part.stage}-[hash].js` : 'assets/[name]-[hash].js';
+        },
         // A manual chunk holds only the modules named for it; their other dependencies stay where Rollup puts them, so
         // the shell's modules are not pulled into the Activity chunk.
         onlyExplicitManualChunks: true,

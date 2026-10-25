@@ -37,27 +37,63 @@ export function readLang(storage?: Pick<Storage, 'getItem'>, tags?: readonly str
   return browserLang(tags ?? (typeof navigator === 'undefined' ? [] : navigator.languages?.length ? navigator.languages : [navigator.language]));
 }
 export type Catalogue = Record<Key, Message>;
-// Each language is its own chunk, loaded on first use; `translate` reads only what has loaded. Vite expands the
-// template import into one chunk per catalogue. A catalogue resolves with its language's faces declared, so the page
-// never renders in it before they are.
-function readCatalogue(lang: Lang): Promise<Partial<Catalogue>> {
+// A catalogue loads in stages (tools/catalogue-parts.mjs): the core part at startup, the later ones with the code that
+// first shows their keys, which wraps its dynamic import in withCatalogue. A build splits each catalogue by stage; the
+// dev server serves it whole as the core part.
+export const stages = ['core', 'activity', 'rest'] as const;
+export type Stage = (typeof stages)[number];
+// Built on first read: Node runs this module in the e2e specs, without import.meta.glob, and passes its own reader.
+let parts: Record<Stage, Record<string, () => Promise<Partial<Catalogue>>>> | undefined;
+const partLoaders = () =>
+  (parts ??= {
+    core: import.meta.glob<Partial<Catalogue>>('./locales/*.json', {query: {part: 'core'}, import: 'default'}),
+    activity: import.meta.glob<Partial<Catalogue>>('./locales/*.json', {query: {part: 'activity'}, import: 'default'}),
+    rest: import.meta.glob<Partial<Catalogue>>('./locales/*.json', {query: {part: 'rest'}, import: 'default'})
+  });
+// Each part is its own chunk, loaded on first use; `translate` reads only what has loaded. The core part resolves with
+// its language's faces declared, so the page never renders in it before they are.
+export type Reader = (lang: Lang, stage: Stage) => Promise<Partial<Catalogue>>;
+function readCatalogue(lang: Lang, stage: Stage): Promise<Partial<Catalogue>> {
+  const part = partLoaders()[stage][`./locales/${lang}.json`]();
+  if (stage !== 'core') return part;
   const {fonts} = languages.find(language => language.id === lang)!;
-  const catalogue = (import(`./locales/${lang}.json`) as Promise<{default: Partial<Catalogue>}>).then(module => module.default);
-  return Promise.all([catalogue, loadFaces(fonts)]).then(([messages]) => messages);
+  return Promise.all([part, loadFaces(fonts)]).then(([messages]) => messages);
 }
 const catalogues = new Map<Lang, Partial<Catalogue>>();
+const loaded = new Set<Lang>();
 const loading = new Map<Lang, Promise<void>>();
-// Node imports JSON only with the type attribute, which Vite 6 does not expand, so the e2e specs pass their own reader.
-// A partial language loads the reference catalogue too; translation resolves its missing keys from English.
-export function loadLanguage(lang: Lang, read: (lang: Lang) => Promise<Partial<Catalogue>> = readCatalogue): Promise<void> {
-  let pending = loading.get(lang);
+const readers = new Map<Lang, Reader>();
+const partLoads = new Map<string, Promise<void>>();
+// The latest stage any code has asked for; a language loaded later loads every part up to it.
+let reached = 0;
+function loadPart(lang: Lang, stage: Stage, read: Reader): Promise<void> {
+  const id = `${lang}/${stage}`;
+  let pending = partLoads.get(id);
   if (!pending) {
-    const {complete} = languages.find(language => language.id === lang)!;
-    const table = complete ? read(lang) : Promise.all([read(lang), loadLanguage(REFERENCE_LANG, read)]).then(([own]) => own);
-    pending = table.then(
-      messages => void catalogues.set(lang, messages),
+    pending = read(lang, stage).then(
+      messages => void catalogues.set(lang, {...catalogues.get(lang), ...messages}),
       (error: unknown) => {
         // A failed chunk (offline, a new deploy) can be asked for again.
+        partLoads.delete(id);
+        throw error;
+      }
+    );
+    partLoads.set(id, pending);
+  }
+  return pending;
+}
+// Node imports JSON only with the type attribute, which Vite 6 does not expand, so the e2e specs pass their own reader.
+// A partial language loads the reference catalogue too; translation resolves its missing keys from English.
+export function loadLanguage(lang: Lang, read: Reader = readCatalogue): Promise<void> {
+  let pending = loading.get(lang);
+  if (!pending) {
+    readers.set(lang, read);
+    const {complete} = languages.find(language => language.id === lang)!;
+    const own = Promise.all(stages.slice(0, reached + 1).map(stage => loadPart(lang, stage, read)));
+    const table = complete ? own : Promise.all([own, loadLanguage(REFERENCE_LANG, read)]);
+    pending = table.then(
+      () => void loaded.add(lang),
+      (error: unknown) => {
         loading.delete(lang);
         throw error;
       }
@@ -66,8 +102,20 @@ export function loadLanguage(lang: Lang, read: (lang: Lang) => Promise<Partial<C
   }
   return pending;
 }
+// The parts up to `stage` of every language this page loads, now and later.
+export function loadStage(stage: Stage): Promise<void> {
+  const index = stages.indexOf(stage);
+  reached = Math.max(reached, index);
+  const wanted = [...loading.keys()].flatMap(lang => stages.slice(1, index + 1).map(next => loadPart(lang, next, readers.get(lang)!)));
+  return Promise.all(wanted).then(() => undefined);
+}
+// A dynamic import that resolves once the module and its stage's messages have arrived, so what it renders never shows
+// a key. tools/catalogue-parts.mjs reads the stage from this call, so it is always written around the import itself.
+export function withCatalogue<T>(stage: Stage, load: () => Promise<T>): () => Promise<T> {
+  return () => Promise.all([load(), loadStage(stage)]).then(([module]) => module);
+}
 export function isLoaded(lang: Lang) {
-  return catalogues.has(lang);
+  return loaded.has(lang);
 }
 // The preferred language when this page has loaded it, otherwise one it has; another tab may have saved a
 // language this page never loaded.

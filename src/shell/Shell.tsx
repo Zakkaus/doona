@@ -1,7 +1,7 @@
 import './install';
 import {lazy, Suspense, useCallback, useState, type ComponentProps, type ReactNode} from 'react';
 import {I18nProvider, RouterProvider} from 'react-aria-components';
-import {LangContext, LOCALE, RewordingContext, useT, type Lang, type Key} from '../i18n';
+import {LangContext, LOCALE, RewordingContext, useT, withCatalogue, type Lang, type Key} from '../i18n';
 import {ConfirmDialog, Toasts, ErrorMessage, Loading, PageSkeleton} from '../ui/ui';
 import {DraftContext, draftLabels, useDraftGuard} from './draft';
 import {useModeDraft} from '../features/shared/useModeDraft';
@@ -119,7 +119,7 @@ function ToastHost({placement, route}: {placement: ToastPlacement; route: string
 
 // The signed-in frame shares the Activity page's chunk. A tab that expects to be let in requests it at startup beside
 // the capabilities read; any other tab requests it once the backend accepts it, so the sign-in page does not load it.
-const frame = preloadable<ComponentProps<typeof Frame>>(() => import('./Frame').then(module => ({default: module.Frame})));
+const frame = preloadable<ComponentProps<typeof Frame>>(withCatalogue('activity', () => import('./Frame').then(module => ({default: module.Frame}))));
 export const preloadFrame = () => void frame.preload().catch(() => undefined);
 
 // What startup shows before the shell: the brand over the given content. The shell shows the same while the frame loads.

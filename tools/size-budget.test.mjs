@@ -143,6 +143,27 @@ it.each([
   expect(() => checkLimits(bad)).toThrow(message);
 });
 
+it('counts the heaviest language core part at sign-in and its activity part on Activity', () => {
+  const parts = {...manifest};
+  delete parts['src/i18n/locales/en.json'];
+  delete parts['src/i18n/locales/zh-TW.json'];
+  const sizes = {...bytes, 'en-core.js': 4, 'en-activity.js': 9, 'zh-core.js': 6, 'zh-activity.js': 2, 'zh-rest.js': 40};
+  for (const [name, file] of [
+    ['en.json?part=core', 'en-core.js'],
+    ['en.json?part=activity', 'en-activity.js'],
+    ['zh-TW.json?part=core', 'zh-core.js'],
+    ['zh-TW.json?part=activity', 'zh-activity.js'],
+    ['zh-TW.json?part=rest', 'zh-rest.js']
+  ])
+    parts[`src/i18n/locales/${name}`] = chunk(file, {src: `src/i18n/locales/${name}`, isDynamicEntry: true});
+  const result = measure(parts, file => sizes[file.replace('assets/', '')]);
+  const login = result.find(({budget}) => budget === 'startupLogin');
+  const activity = result.find(({budget}) => budget === 'startupActivity');
+  expect(login.parts.map(([file]) => file)).toContain('assets/zh-core.js');
+  expect(activity.parts.map(([file]) => file)).toEqual(expect.arrayContaining(['assets/en-core.js', 'assets/en-activity.js']));
+  expect(activity.parts.map(([file]) => file)).not.toContain('assets/zh-rest.js');
+});
+
 it('totals count the largest locale once and never gate', () => {
   const sizes = new Map([
     ['assets/a.js', 10],
