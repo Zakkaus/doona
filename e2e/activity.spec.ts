@@ -121,6 +121,8 @@ test('the outbound mode is staged and applied as a configuration write with a re
   await mode.getByRole('radio', {name: 'Direct', exact: true}).click();
   await expect(apply).toBeEnabled();
   await apply.click();
+  // Direct asks first; Rule applies at once.
+  await page.getByRole('alertdialog', {name: 'Apply Direct mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Direct'})).toBeVisible();
   await expect(apply).toBeDisabled();
   // The marked rule is near the source end, outside CodeMirror's initial viewport; the page scrolls the editor.
@@ -145,6 +147,7 @@ test('applying a mode keeps the Apply button that the pending announcement names
   await page.getByRole('radiogroup', {name: 'Outbound mode'}).getByRole('radio', {name: 'Direct', exact: true}).click();
   const id = await apply.getAttribute('id');
   await apply.click();
+  await page.getByRole('alertdialog', {name: 'Apply Direct mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Direct'})).toBeVisible();
   await expect(apply).toBeDisabled();
   // React Aria announces the pending state by pointing at the button; a remounted button leaves it naming nothing.
@@ -948,6 +951,7 @@ test('interleaved mandatory rules reject mode changes without writing configurat
   await page.goto('/#/activity');
   await page.getByRole('radiogroup', {name: 'Outbound mode'}).getByRole('radio', {name: 'Direct', exact: true}).click();
   await page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true}).click();
+  await page.getByRole('alertdialog', {name: 'Apply Direct mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
   const toast = page.locator('.rp-toast.negative');
   await expect(toast).toContainText('Move the must rules to the top of the routing block');
   // The rule in the way is named on its own line.
@@ -965,6 +969,7 @@ test('the demo switches the outbound mode and back while preserving mandatory ru
   const modes = page.getByRole('radiogroup', {name: 'Outbound mode'});
   await modes.getByRole('radio', {name: 'Direct', exact: true}).click();
   await page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true}).click();
+  await page.getByRole('alertdialog', {name: 'Apply Direct mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('reloaded: Direct');
   await expect(page.locator('.rp-toast.negative')).toHaveCount(0);
   // The catch-all is a real rule of the new generation, right after the must rules.

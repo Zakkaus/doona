@@ -270,7 +270,9 @@ for (const viewport of [
         await page.mouse.move(0, 0);
         await expectFormGeometry(dialog);
         await page.screenshot({path: info.outputPath('create-manual.png')});
+        // An edited new group asks before Escape discards it.
         await page.keyboard.press('Escape');
+        await page.getByRole('alertdialog').getByRole('button', {name: labels['config.discard'], exact: true}).click();
         await expect(dialog).toHaveCount(0);
         await expect(create).toBeFocused();
         await page.goto('/#/policies');

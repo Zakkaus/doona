@@ -61,6 +61,7 @@ test('logs filter the stream, pause incoming rows, export and clear', async ({pa
     `${runtime.observed_at} WARN  honk::dns Received after resume`
   ]);
   await page.getByRole('button', {name: 'Clear', exact: true}).filter({hasText: 'Clear'}).click();
+  await page.getByRole('alertdialog', {name: 'Clear', exact: true}).getByRole('button', {name: 'Clear', exact: true}).click();
   await expect(rows.filter({hasText: /DNS slow|Received after resume/})).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Export', exact: true})).toBeDisabled();
 });

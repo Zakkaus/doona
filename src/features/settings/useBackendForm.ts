@@ -208,7 +208,7 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
     return active ? saved.profiles.map(item => (item.id === active.id ? profile : item)) : [profile];
   };
   const save = () => {
-    if (staleLogin) return;
+    if (staleLogin || invalid) return;
     let profiles = editedProfiles();
     if (profiles && loginProfile !== null) {
       try {
@@ -230,7 +230,12 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
       if (loginProfile === saved.activeId && back?.startsWith('#/')) {
         const destination = parseHash(back);
         persist(profiles, active?.id ?? profiles[0].id, destination);
-      } else persist(profiles, active?.id ?? profiles[0].id, saved.api === null ? {route: startPage, query: ''} : undefined);
+      } else
+        persist(
+          profiles,
+          active?.id ?? profiles[0].id,
+          saved.api === null || dirty ? {route: startPage === 'settings' ? defaultRoute : startPage, query: ''} : undefined
+        );
     } else toast('negative', t('settings.invalidUrl'));
   };
   const [switchId, setSwitchId] = useState<string | null>(null);

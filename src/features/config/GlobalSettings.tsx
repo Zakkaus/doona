@@ -99,12 +99,10 @@ export function GlobalSettings(props: PageProps) {
                     name={field.key}
                     value={field.number.value}
                     onChange={value => field.change(textFromNumber(value))}
-                    minValue={0}
-                    maxValue={field.number.max}
                     step={1}
                     isDisabled={!m.writable || m.busy || field.duplicate}
                     placeholder={t('config.globalUnset')}
-                    error={field.invalid ? t('config.globalInvalid') : undefined}
+                    error={field.invalid ? t('config.globalRange', {max: field.number.max}) : undefined}
                     aria-describedby={field.hint ? `config-global-${field.key}` : undefined}
                   />
                 ) : (

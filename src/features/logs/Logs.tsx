@@ -1,7 +1,21 @@
 import {useCallback, useMemo} from 'react';
 import {LogActivity} from './Activity';
 import {useT} from '../../i18n';
-import {ActionGroup, Button, DataTable, ErrorMessage, Kv, LabeledSelect, Light, Switch, TextField, TextTooltip, type TableColumn, Toolbar} from '../../ui/ui';
+import {
+  ActionGroup,
+  Button,
+  ConfirmDialog,
+  DataTable,
+  ErrorMessage,
+  Kv,
+  LabeledSelect,
+  Light,
+  Switch,
+  TextField,
+  TextTooltip,
+  type TableColumn,
+  Toolbar
+} from '../../ui/ui';
 import {useLogs} from './useLogs';
 import {logRowText} from './view';
 import {useCopyRecord} from '../shared/useCopyRecord';
@@ -90,6 +104,9 @@ export function Logs({go}: PageProps) {
   );
   return (
     <div className="rp-page">
+      <ConfirmDialog {...vm.confirmClear} title={t('log.clear')} confirmLabel={t('log.clear')}>
+        <p className="rp-label">{t('log.clearHelp')}</p>
+      </ConfirmDialog>
       <Toolbar page>
         <LabeledSelect side label={t('log.level')} value={vm.level} onChange={vm.setLevel} items={vm.levels} />
         {vm.filtersTarget && (

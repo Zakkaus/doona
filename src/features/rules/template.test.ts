@@ -1,4 +1,4 @@
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import type {ConfigSource} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {writeTemplate} from '../../dae/setup';
@@ -180,4 +180,50 @@ it('leaves DNS alone when any loaded file has a dns block', () => {
   const {plain, withDns} = templateWrites('global', main, [main, dns], t);
   expect(withDns).toBeNull();
   expect(plain.after).not.toContain('dns {');
+});
+
+import {hookHarness} from '../../store/testHelpers';
+import {useRuleTemplates} from './useRuleTemplates';
+import {capabilities, version} from '../../../mock/fixtures';
+vi.mock('react', async original => ({...(await original<typeof import('react')>()), ...hookHarness.hooks}));
+vi.mock('../../store', () => ({
+  useCapabilities: () => ({data: capabilities}),
+  useVersion: () => ({data: version}),
+  useConfig: () => ({data: {sources: [templateSource]}}),
+  useNodes: () => ({data: []}),
+  useConfigEditor: () => ({busy: null, apply: templateApply}),
+  refetchAll: vi.fn()
+}));
+vi.mock('../../store/config', () => ({useCompleteness: () => () => true}));
+vi.mock('../shared/useOfflineFix', () => ({useOfflineFix: () => ({fix: null})}));
+vi.mock('../../shell/draft', () => ({
+  useDraftGuard: (...args: unknown[]) => {
+    draftGuard(...args);
+    return {clear: clearDraft};
+  }
+}));
+vi.mock('../../ui/ui', async original => ({...(await original<typeof import('../../ui/ui')>()), toast: vi.fn()}));
+vi.mock('../../i18n', async original => ({...(await original<typeof import('../../i18n')>()), useT: () => t}));
+const draftGuard = vi.hoisted(() => vi.fn());
+const clearDraft = vi.hoisted(() => vi.fn());
+const templateApply = vi.hoisted(() => vi.fn(async () => ({result: {}})));
+const templateSource = source('main', writeTemplate('', 'bypass', [], {t}), 'main');
+it('guards a template choice across tab queries and clears it only on discard or successful apply', async () => {
+  hookHarness.reset();
+  draftGuard.mockClear();
+  clearDraft.mockClear();
+  const go = vi.fn();
+  const read = (query = '') => hookHarness.render(() => useRuleTemplates({go, query}));
+  read().select('global');
+  expect(read('tab=dns').selected).toBe('global');
+  expect(read().selected).toBe('global');
+  expect(draftGuard).toHaveBeenLastCalledWith(true, expect.any(Function), 'rule.templates');
+  const discard = draftGuard.mock.lastCall![1] as () => void;
+  discard();
+  expect(read().selected).toBe('bypass');
+  read().select('global');
+  read().open();
+  await read().confirm();
+  expect(templateApply).toHaveBeenCalledOnce();
+  expect(clearDraft).toHaveBeenCalledOnce();
 });

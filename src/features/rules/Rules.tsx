@@ -37,6 +37,7 @@ export function Rules(props: PageProps) {
     <div className="rp-page">
       <Tabs
         page
+        keepMounted
         label={t('nav.rules')}
         items={view.tabs.map(tab => ({...tab, content: content[tab.id], onIntent: tab.id === 'trace' ? preloadTrace : undefined}))}
         value={view.tab}

@@ -92,6 +92,7 @@ test('overview suspend and resume follow the completed lifecycle', async ({page}
   const {requests} = await mockBackend(page);
   await page.goto('/#/overview');
   await page.getByRole('button', {name: 'Suspend', exact: true}).click();
+  await page.getByRole('alertdialog', {name: 'Suspend honk'}).getByRole('button', {name: 'Suspend', exact: true}).click();
   await expect(page.getByRole('button', {name: 'Resume', exact: true})).toBeEnabled();
   await expect(page.locator('.rp-toast.positive')).toContainText('Suspend: Completed');
   await page.getByRole('button', {name: 'Resume', exact: true}).click();

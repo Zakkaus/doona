@@ -414,7 +414,8 @@ it('falls back to the first real source when the linked provider is no longer li
 });
 
 it('says why the add dialog cannot submit, first applicable, and nothing while it is still empty', () => {
-  expect(nodeFormReason('provider', '', '', t)).toBeNull();
+  expect(nodeFormReason('provider', '', '', t)).toBe(t('nodes.nameMissing'));
+  expect(nodeFormReason('node', '', '', t)).toBe(t('nodes.nameMissing'));
   expect(nodeFormReason('provider', '', 'https://example.org/sub', t)).toBe('Enter a name');
   expect(nodeFormReason('provider', 'sub a', 'ftp://x', t)).toBe(t('nodes.nameInvalid'));
   expect(nodeFormReason('provider', 'sub-a', 'ftp://x', t)).toBe(t('nodes.urlInvalid'));

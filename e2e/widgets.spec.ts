@@ -475,6 +475,7 @@ test('segmented outbound mode applies once and persists across reload', async ({
   const widget = page.locator('[data-widget-id="mode"]');
   await widget.getByRole('radio', {name: 'Direct', exact: true}).click();
   await widget.getByRole('button', {name: 'Apply', exact: true}).click();
+  await page.getByRole('alertdialog', {name: 'Apply Direct mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Direct'})).toBeVisible();
   await expect(page.locator('main').getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
   expect(backend.requests.filter(r => r.method() === 'PUT' && r.url().includes('/config/sources/'))).toHaveLength(1);
@@ -499,6 +500,7 @@ test('a pending mode write blocks both hosts and a failed write keeps their shar
   const request = page.waitForRequest(r => r.method() === 'PUT' && r.url().includes('/config/sources/'));
   await widget.getByRole('radio', {name: 'Direct', exact: true}).click();
   await widget.getByRole('button', {name: 'Apply', exact: true}).click();
+  await page.getByRole('alertdialog', {name: 'Apply Direct mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
   await request;
   await expect(widget.getByRole('radio', {name: 'Direct', exact: true})).toBeDisabled();
   await expect(page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();

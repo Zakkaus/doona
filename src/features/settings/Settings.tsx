@@ -189,7 +189,7 @@ export function Settings({query}: PageProps) {
                   {t('settings.test')}
                 </Button>
               </div>
-              <Button type="submit" accent isPending={saving} isDisabled={staleLogin}>
+              <Button type="submit" accent isPending={saving} isDisabled={staleLogin || !!invalidText}>
                 {t('settings.save')}
               </Button>
             </PrimaryActions>

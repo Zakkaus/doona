@@ -13,6 +13,7 @@ const unknown: Engine = {
   settingName: key => key,
   redactedSections: () => [],
   daeText: false,
+  nodeLinkSchemes: null,
   globalSettings: null,
   flowDemandGraceSeconds: null,
   uncheckedHooks: []

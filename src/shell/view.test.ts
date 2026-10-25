@@ -119,3 +119,19 @@ it('splits the top bar into apply for held rules and reload for honk', () => {
   expect(topBarCommands({...two, busy: true}, true, false, t).reload).toMatchObject({blocked: true, busy: false});
   expect(topBarCommands(two, true, true, t)).toMatchObject({apply: {blocked: true}, reload: {busy: true}});
 });
+
+it('routes a mock authentication refusal to sign-in after leaving offline Settings', async () => {
+  const {createMockApi} = await import('../../mock');
+  const api = createMockApi({signIn: true, session: 'rejected'});
+  const discovery = await api.discovery();
+  expect(discovery).toMatchObject({auth: {mode: 'password', setup_required: false}});
+  expect(discovery).not.toHaveProperty('status');
+  let refused: Error | null = null;
+  try {
+    await api.runtime();
+  } catch (error) {
+    refused = error as Error;
+  }
+  expect(refused).toMatchObject({status: 401});
+  expect(shellView(settings, 'activity', undefined, accessError(null, refused), undefined, refused, t).content.kind).toBe('login');
+});

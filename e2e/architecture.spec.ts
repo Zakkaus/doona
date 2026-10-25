@@ -271,6 +271,7 @@ test('global target cannot change during a pending mode apply', async ({page}) =
   await page.getByRole('radio', {name: 'Global', exact: true}).click();
   const validating = page.waitForRequest('**/config/validate');
   await page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true}).click();
+  await page.getByRole('alertdialog', {name: 'Apply Global mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
   await validating;
   try {
     await expect(page.getByRole('button', {name: 'Global outbound', exact: true})).toBeDisabled();

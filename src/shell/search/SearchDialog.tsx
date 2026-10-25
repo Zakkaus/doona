@@ -20,7 +20,16 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
     >
       {/* The field and the results form one combobox: arrow keys move through results while typing continues. */}
       <Autocomplete inputValue={q} onInputChange={setQ}>
-        <div className="rp-toolbar">
+        <div
+          className="rp-toolbar"
+          onKeyDownCapture={event => {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              event.stopPropagation();
+              onClose();
+            }
+          }}
+        >
           {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the dialog the user just opened */}
           <TextField search label={t('shell.search')} placeholder={t('shell.shortcutSearch')} value={q} onChange={setQ} autoFocus className="rp-grow" />
           <Button quiet icon onPress={onClose} label={t('ui.close')}>

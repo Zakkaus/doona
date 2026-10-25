@@ -18,3 +18,19 @@ it('shows a single choice as text with its help below, not as a picker', () => {
 it('names the field without a description when the choice has no help', () => {
   expect(renderToStaticMarkup(<StaticField label="Insert position" value="End of list" />)).not.toContain('aria-describedby');
 });
+
+it('associates an edited node-link error with the field inside a form', async () => {
+  const {TextField} = await import('./Fields');
+  const {Form} = await import('./Form');
+  const markup = renderToStaticMarkup(
+    <Form>
+      <TextField label="Node link" value="garbage://x" error="Invalid node link" />
+    </Form>
+  );
+  const input = markup.match(/<input[^>]+>/)![0];
+  expect(input).toContain('aria-invalid="true"');
+  const described = input.match(/aria-describedby="([^"]+)"/)![1];
+  const errorId = markup.match(/class="rp-field-error" id="([^"]+)"/)![1];
+  expect(described.split(' ')).toContain(errorId);
+  expect(markup).toContain('Invalid node link');
+});

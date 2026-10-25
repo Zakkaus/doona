@@ -20,10 +20,17 @@ import {toast} from '../../ui/ui';
 let lang: Lang = 'en';
 vi.mock('../../i18n', async original => ({
   ...(await original<typeof import('../../i18n')>()),
+  useLang: () => 'en',
   useT: () => (key: Parameters<Translator>[0], params: Parameters<Translator>[1]) => translate(lang, key, params)
 }));
 vi.mock('../../store', () => ({
-  useRuntimeOperations: () => ({canRun: () => true, busy: null, run: async () => ({operation_id: 'op-1'})})
+  useRuntimeOperations: () => ({canRun: () => true, busy: null, run: operation}),
+  useCapabilities: () => ({data: undefined}),
+  useRuntime: () => ({data: undefined}),
+  useDatapath: () => ({data: undefined}),
+  useRuntimeMemory: () => ({data: undefined}),
+  useRuntimeSettings: () => ({data: undefined}),
+  useVersion: () => ({data: undefined})
 }));
 vi.mock('../../ui/ui', () => ({toast: vi.fn(), toastFailure: vi.fn()}));
 
@@ -37,4 +44,37 @@ it.each([
   useLifecycle(undefined, undefined, vi.fn()).run('reload');
   await Promise.resolve();
   expect(toast).toHaveBeenCalledExactlyOnceWith('positive', message);
+});
+
+import {hookHarness} from '../../store/testHelpers';
+import {useOverview} from '../overview/useOverview';
+const operation = vi.hoisted(() => vi.fn(async () => ({operation_id: 'op-1'})));
+vi.mock('react', async original => ({...(await original<typeof import('react')>()), ...hookHarness.hooks}));
+it('confirms Suspend without changing the immediate Resume action', () => {
+  hookHarness.reset();
+  operation.mockClear();
+  const read = () => hookHarness.render(() => useOverview());
+  read()
+    .actions.find(action => action.id === 'suspend')!
+    .onAction();
+  expect(operation).not.toHaveBeenCalled();
+  expect(read().confirmSuspend.isOpen).toBe(true);
+  read().confirmSuspend.onCancel();
+  expect(read().confirmSuspend.isOpen).toBe(false);
+  expect(operation).not.toHaveBeenCalled();
+  read()
+    .actions.find(action => action.id === 'suspend')!
+    .onAction();
+  read().confirmSuspend.onConfirm();
+  expect(operation).toHaveBeenCalledExactlyOnceWith('suspend');
+  read()
+    .actions.find(action => action.id === 'resume')!
+    .onAction();
+  expect(operation).toHaveBeenLastCalledWith('resume');
+});
+it('explains why Reload waits for an operation', () => {
+  expect(lifecycleActions(() => true, 'suspend', vi.fn(), t).find(action => action.id === 'reload')).toMatchObject({
+    isDisabled: true,
+    reason: t('ov.operationPending')
+  });
 });

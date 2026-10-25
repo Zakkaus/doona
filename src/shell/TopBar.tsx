@@ -120,7 +120,15 @@ export const TopBar = memo(function TopBar({
         {/* Below the side navigation's breakpoint, reload, language and appearance share one overflow menu. */}
         <span className="rp-wide-only">
           {commands.reload && (
-            <Button quiet icon label={commands.reload.label} isPending={commands.reload.busy} isDisabled={commands.reload.blocked} onPress={askReload}>
+            <Button
+              quiet
+              icon
+              label={commands.reload.label}
+              isPending={commands.reload.busy}
+              isDisabled={commands.reload.blocked}
+              tip={commands.reload.blocked || commands.reload.busy ? t('ov.operationPending') : undefined}
+              onPress={askReload}
+            >
               <Refresh className="rp-spin-on-press" />
             </Button>
           )}
