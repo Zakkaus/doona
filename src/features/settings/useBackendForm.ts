@@ -36,11 +36,15 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
   const {pending, running, cancel: cancelProbe, run: runProbe} = useConnectionTest();
   // Pairing links also fill an already-open form without saving the credentials.
   const dirty = api !== defaultApi || token !== saved.token;
-  const guard = useDraftGuard(dirty, () => {
-    setApi(defaultApi);
-    setToken(saved.token);
-    setPaired(false);
-  });
+  const guard = useDraftGuard(
+    dirty,
+    () => {
+      setApi(defaultApi);
+      setToken(saved.token);
+      setPaired(false);
+    },
+    'config.draftBackend'
+  );
   const [lastQuery, setLastQuery] = useState<string | null>(null);
   if (lastQuery !== query) {
     setLastQuery(query);

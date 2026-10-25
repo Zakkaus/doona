@@ -159,7 +159,7 @@ for (const list of ['request', 'response'] as const) {
     await expect(dialog.getByRole('textbox')).toHaveCount(0);
     await dialog.getByRole('button', {name: /Action$/}).click();
     await page.getByRole('option', {name: /^alidns/}).click();
-    await dialog.getByRole('button', {name: 'Edit rule', exact: true}).click();
+    await dialog.getByRole('button', {name: 'Save', exact: true}).click();
     await expect(dialog).toBeHidden();
     await expect(fallback).toContainText('fallback: alidns');
   });
@@ -175,7 +175,7 @@ test('an implicit DNS fallback becomes an explicit action in its own list', asyn
   const dialog = page.getByRole('dialog', {name: 'Edit rule'});
   await dialog.getByRole('button', {name: /Action$/}).click();
   await page.getByRole('option', {name: /^reject/}).click();
-  await dialog.getByRole('button', {name: 'Edit rule', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Save', exact: true}).click();
   await expect(dialog).toBeHidden();
   expect((await api.config()).sources.find(source => source.id === 'src-main')!.content).toBe(
     before.replace('      fallback: cloudflare\n    }\n', '      fallback: cloudflare\n    }\n    response {\n      fallback: reject\n    }\n')

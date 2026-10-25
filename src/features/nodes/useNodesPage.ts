@@ -87,10 +87,14 @@ export function useNodesPage({go, query}: PageProps) {
     : dialog?.kind === 'editNode'
       ? form.name !== dialog.entry.name || form.value !== dialog.entry.link
       : !!(form.name || form.value);
-  const guard = useDraftGuard(!!dialog && (edited || headerEdited), () => {
-    session.next();
-    setDialog(null);
-  });
+  const guard = useDraftGuard(
+    !!dialog && (edited || headerEdited),
+    () => {
+      session.next();
+      setDialog(null);
+    },
+    'config.draftNode'
+  );
   const open = useCallback(
     (next: NodeDialog) => {
       session.next();

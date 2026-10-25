@@ -1304,7 +1304,7 @@ test('server import cancels without a write, then succeeds and lists a revision 
   await page.getByRole('button', {name: 'Import server files', exact: true}).click();
   await dialog.getByRole('button', {name: 'Import server files', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('Server configuration imported');
-  const row = page.getByRole('row').filter({hasText: 'Database head'});
+  const row = page.getByRole('row').filter({hasText: 'Latest database revision'});
   await expect(row).toContainText('2');
   await row.click();
   const details = page.getByRole('dialog', {name: 'Revision details'});
@@ -1324,7 +1324,7 @@ test('server import stays available when the revisions list fails', async ({page
   await expect(page.getByRole('button', {name: 'Retry', exact: true})).toBeVisible();
   await page.getByRole('button', {name: 'Import server files', exact: true}).click();
   const dialog = page.getByRole('alertdialog', {name: 'Replace configuration from server files?'});
-  await expect(dialog).not.toContainText('Database head');
+  await expect(dialog).not.toContainText('Latest database revision');
   await dialog.getByRole('button', {name: 'Import server files', exact: true}).click();
   await expect(dialog).toHaveCount(0);
   expect(requests.filter(request => request.method() === 'POST')).toHaveLength(1);
@@ -1389,7 +1389,7 @@ test('restore confirms, shows 422 diagnostics, then creates a new revision', asy
   handlers['POST x-honk/config/revisions/1/activate'] = () => api.activateConfigRevision(1);
   await dialog.getByRole('button', {name: 'Restore revision', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('Revision restored');
-  await expect(page.getByRole('row').filter({hasText: 'Database head'})).toContainText('3');
+  await expect(page.getByRole('row').filter({hasText: 'Latest database revision'})).toContainText('3');
   const list = await api.configRevisions();
   expect(list.revisions[0]).toMatchObject({revision: 3, parent: 2, origin: 'activate'});
 });

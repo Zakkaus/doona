@@ -9,6 +9,7 @@ import {
   Button,
   Link,
   Card,
+  ContextualHelp,
   HelpRow,
   DataTable,
   Light,
@@ -53,7 +54,12 @@ export function RuleList(props: PageProps) {
   return (
     <div className="rp-col">
       <Toolbar page>
-        {view.table.caption && <span className="rp-label">{view.table.caption}</span>}
+        {view.table.caption && (
+          <>
+            <span className="rp-label">{view.table.caption}</span>
+            <ContextualHelp title={t('ui.generation')} text={t('ui.generationHelp')} />
+          </>
+        )}
         <span className="rp-grow" />
         {viewSwitch}
       </Toolbar>
@@ -111,7 +117,7 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
         render: row => (
           <span className="rp-chain">
             {row.outbound}
-            {row.must && <Badge>must</Badge>}
+            {row.must && <Badge>{t('flow.f.must')}</Badge>}
           </span>
         )
       },
@@ -177,7 +183,12 @@ export function RuleDictionary({view, viewSwitch}: {view: DictionaryModel; viewS
     <div className="rp-col">
       <ActionHelp reason={view.canWrite ? view.addReason : null}>
         <Toolbar page>
-          {view.table.caption && <span className="rp-label">{view.table.caption}</span>}
+          {view.table.caption && (
+            <>
+              <span className="rp-label">{view.table.caption}</span>
+              <ContextualHelp title={t('ui.generation')} text={t('ui.generationHelp')} />
+            </>
+          )}
           <span className="rp-grow" />
           {view.canWrite && (
             <Button isDisabled={view.addDisabled} onPress={view.openAdd}>
@@ -256,7 +267,7 @@ function Distribution({view, viewSwitch}: {view: Model; viewSwitch?: ReactNode})
         isRowHeader: true,
         render: row => (row.expressionClass ? <DaeCode text={row.expression} /> : row.expression)
       },
-      {id: 'source', label: t('rule.distributionSource'), minWidth: 120, grow: 0, drop: 1, render: row => <Badge>{row.source}</Badge>},
+      {id: 'source', label: t('rule.distributionSource'), minWidth: 120, grow: 0, drop: 1, render: row => <Badge tip={row.sourceTip}>{row.source}</Badge>},
       {id: 'hits', label: t('rule.hits'), minWidth: 96, grow: 0, render: row => row.hits},
       {id: 'share', label: t('rule.share'), minWidth: 72, grow: 0, drop: 3, render: row => row.share}
     ],

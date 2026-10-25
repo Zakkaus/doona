@@ -38,7 +38,7 @@ export function ConnectionTable({collection, view, collapse, onToggleGroup, load
       rule: c => (
         <span className="rp-rule">
           <RuleRef {...c.rule} />
-          {c.recomputed && <Badge>{c.recomputed}</Badge>}
+          {c.recomputed && <Badge tip={t('rule.sourceHelp.recomputed')}>{c.recomputed}</Badge>}
         </span>
       ),
       state: c => c.state,

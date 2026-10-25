@@ -95,7 +95,7 @@ export function useRuntimeSettingsForm() {
       recorderFields.some(id => !recorders.some(recorder => recorder.id === id) && draft.modes[id] !== undefined && draft.modes[id] !== modeOf(id)) ||
       (!hasLevel && draft.level !== undefined && draft.level !== baseline?.log?.level));
   const dirty = !!draft && (Object.keys(patch).length > 0 || invalid !== null || hiddenEdit);
-  const guard = useDraftGuard(dirty, () => setDraft(null));
+  const guard = useDraftGuard(dirty, () => setDraft(null), 'config.draftRuntime');
   const apply = () => {
     if (settings.busy) return;
     const submitted = draft;

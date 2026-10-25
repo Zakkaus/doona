@@ -1,6 +1,7 @@
 import {Suspense, useEffect, useRef, type ComponentProps} from 'react';
 import {useT} from '../../i18n';
 import {Badge, Button, Card, Disclosure, Light, Link, PageSkeleton, Segmented, Toolbar, VisuallyHidden, type Action, type PageShape} from '../../ui/ui';
+import {ContextualHelp} from '../../ui/ContextualHelp';
 import {preloadable} from '../../ui/preloadable';
 import type {CodeEditor} from '../../ui/code/CodeEditor';
 import {ChangedOnDisk} from './ChangedOnDisk';
@@ -74,6 +75,7 @@ export function SourceCard(props: SourceCardProps) {
         <span className="rp-config-diagnostics-quiet rp-label">{d.quiet}</span>
       ) : (
         <Disclosure
+          aside={d.scopeHelp && <ContextualHelp {...d.scopeHelp} />}
           isExpanded={d.open}
           onExpandedChange={d.setOpen}
           title={

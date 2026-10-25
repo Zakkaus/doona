@@ -271,7 +271,7 @@ test.describe('phone configuration history', () => {
     await page.goto('/#/config?tab=history');
     await expect(page.getByRole('grid', {name: 'Backups and revisions'})).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-    await page.getByRole('row').filter({hasText: 'Database head'}).click();
+    await page.getByRole('row').filter({hasText: 'Latest database revision'}).click();
     const dialog = page.getByRole('dialog', {name: 'Revision details'});
     await expect(dialog).toContainText('SHA-256');
     const bounds = await box(dialog);
