@@ -14,8 +14,11 @@ import {
   StaticField,
   Switch,
   Tabs,
-  TextField
+  TextField,
+  TextTooltip
 } from '../../ui/ui';
+import {TextArea} from '../../ui/TextArea';
+import {DataTable} from '../../ui/Table';
 import {NodeLatency} from './Latency';
 import type {PageProps} from '../../shell/routes';
 import {ProviderCards} from './ProviderCards';
@@ -42,6 +45,8 @@ export function Nodes(props: PageProps) {
     setDialog,
     problem,
     form,
+    batch,
+    batchErrors,
     setForm,
     setNodeLink,
     xhttp,
@@ -104,6 +109,7 @@ export function Nodes(props: PageProps) {
   );
   const content = {list, latency: <NodeLatency />};
   // Enter in a field submits as the footer's button does; closing the dialog clears it, as Cancel does.
+  const NodeLinkField = dialog?.kind === 'node' ? TextArea : TextField;
   const send = (event: FormEvent) => {
     event.preventDefault();
     if (formValid && !submitting) void submit(() => setDialog(null));
@@ -127,6 +133,7 @@ export function Nodes(props: PageProps) {
       <ModalDialog
         title={dialogTitle}
         narrow
+        scrollBody={dialog?.kind === 'node'}
         isOpen={dialog !== null && !removing}
         reason={pending ? null : formReason}
         onOpenChange={isOpen => {
@@ -136,7 +143,7 @@ export function Nodes(props: PageProps) {
           <>
             <Button onPress={close}>{t('ui.cancel')}</Button>
             <Button accent type="submit" form={dialogForm} isDisabled={!formValid || submitting} isPending={pending}>
-              {submitLabel}
+              <span aria-live="polite">{submitLabel}</span>
             </Button>
           </>
         )}
@@ -180,15 +187,17 @@ export function Nodes(props: PageProps) {
         {(dialog?.kind === 'node' || dialog?.kind === 'editNode') && (
           <Form id={dialogForm} className="rp-list" onSubmit={send}>
             <span className="rp-label">{t(dialog.kind === 'editNode' ? 'nodes.editNodeHelp' : 'nodes.addNodeHelp')}</span>
-            <TextField
-              error={nodeNameError ?? undefined}
-              isDisabled={pending}
-              label={t('ui.name')}
-              value={form.name}
-              placeholder="hk-03"
-              onChange={name => setForm({...form, name})}
-            />
-            <TextField
+            {!batch && (
+              <TextField
+                error={nodeNameError ?? undefined}
+                isDisabled={pending}
+                label={t('ui.name')}
+                value={form.name}
+                placeholder="hk-03"
+                onChange={name => setForm({...form, name})}
+              />
+            )}
+            <NodeLinkField
               error={nodeLinkError ?? undefined}
               isDisabled={pending}
               label={t('nodes.link')}
@@ -196,6 +205,30 @@ export function Nodes(props: PageProps) {
               placeholder="vless://…"
               onChange={setNodeLink}
             />
+            {batch && (
+              <>
+                <span className="rp-label">{t('nodes.batchExcluded', {n: batch.rows.filter(row => row.error).length})}</span>
+                <DataTable
+                  label={t('nodes.batchPreview')}
+                  rows={batch.rows}
+                  cols={[
+                    {id: 'name', label: t('ui.name'), minWidth: 120, isRowHeader: true, text: 'wrap', render: row => row.name},
+                    {id: 'scheme', label: t('ui.protocol'), minWidth: 80, render: row => row.scheme},
+                    {
+                      id: 'error',
+                      label: t('ui.error'),
+                      minWidth: 120,
+                      render: row => row.error && <TextTooltip text={row.error}>{row.errorSummary}</TextTooltip>
+                    }
+                  ]}
+                />
+              </>
+            )}
+            {batchErrors.map((error, index) => (
+              <p key={index} className="rp-field-error">
+                {error}
+              </p>
+            ))}
             {xhttp && (
               <Suspense fallback={null}>
                 <XhttpOptions fields={xhttp} duplicates={headerDuplicates} isDisabled={pending} onChange={setXhttp} />

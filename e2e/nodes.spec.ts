@@ -2168,3 +2168,69 @@ test('QUIC nodes fall back to HTTP once and omit TCP connect from options', asyn
   await dialog.getByRole('button', {name: /Kind/}).click();
   await expect(page.getByRole('option')).toHaveText(['HTTP', 'DNS (TCP)', 'DNS (UDP)', 'DNS (TCP + UDP)']);
 });
+
+test('pastes several node links and keeps a failed line for retry on a phone', async ({page}) => {
+  await page.setViewportSize({width: 390, height: 844});
+  const {api, handlers} = await mockBackend(page);
+  let refuse = true;
+  handlers['POST nodes'] = request => {
+    const body = request.postDataJSON();
+    if (body.name === 'batch-second' && refuse) {
+      refuse = false;
+      throw new ApiError(422, 'unsupported_value', 'Link refused');
+    }
+    return api.createNode(body);
+  };
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  const dialog = page.getByRole('dialog');
+  const input = dialog.getByLabel('Node link', {exact: true});
+  await input.fill('wrong://host');
+  await expect(dialog.locator('.rp-field-error')).toHaveText(translate('en', 'nodes.linkInvalid'));
+  await input.fill(Array.from({length: 30}, (_, index) => `wrong://host#invalid-${index}`).join('\n'));
+  const excluded = dialog.getByText('Excluded: 30', {exact: true});
+  const preview = dialog.getByRole('grid', {name: 'Node links'});
+  const body = dialog.locator('.rp-dialog-body');
+  await expect(preview.getByRole('row').nth(1)).toContainText('Invalid link');
+  const inputBox = await box(input);
+  const excludedBox = await box(excluded);
+  expect(inputBox.y + inputBox.height).toBeLessThanOrEqual(excludedBox.y);
+  expect(excludedBox.y + excludedBox.height).toBeLessThanOrEqual((await box(preview)).y);
+  await expect.poll(() => body.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+  for (const name of ['Cancel', 'Add']) await expect(dialog.getByRole('button', {name, exact: true})).toBeInViewport({ratio: 1});
+  await body.evaluate(element => {
+    element.scrollTop = element.scrollHeight;
+  });
+  for (const name of ['Cancel', 'Add']) await expect(dialog.getByRole('button', {name, exact: true})).toBeInViewport({ratio: 1});
+  // A phone has no hover; the short reason carries the full message as its tip for pointer devices.
+  await expect(preview.getByText('Invalid link', {exact: true}).first()).toHaveAttribute('data-tip', '');
+  await dialog.getByLabel('Node link', {exact: true}).fill('vless://uuid@example.com:443#batch-first\nvless://uuid@example.com:443#batch-second');
+  await expect(dialog.getByRole('textbox', {name: 'Name', exact: true})).toHaveCount(0);
+  await expect(dialog.getByRole('row', {name: /batch-first/})).toBeVisible();
+  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
+  await expect(page.locator('.rp-toast')).toContainText('Added 1, failed 1');
+  await expect(dialog.getByLabel('Node link', {exact: true})).toHaveValue('vless://uuid@example.com:443#batch-second');
+  await expect(dialog.locator('.rp-field-error')).toContainText('Link refused');
+  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(nodeRows(page).filter({hasText: 'batch-'})).toHaveCount(2);
+});
+
+test('tests all filtered nodes and sorts by latency once', async ({page}) => {
+  const {requests} = await mockBackend(page);
+  await page.goto('/#/nodes?provider=inline');
+  await page.getByRole('button', {name: /Group$/}).click();
+  await page.getByRole('option', {name: 'gaming', exact: true}).click();
+  const table = page.locator('.rp-table').first();
+  await expect(rows(table)).toHaveCount(2);
+  const ids = await rows(table).evaluateAll(items => items.map(item => item.getAttribute('data-key')));
+  expect(ids).toHaveLength(2);
+  await page.getByRole('button', {name: 'Test all', exact: true}).click();
+  await expect(page.locator('.rp-toast')).toContainText('Tested 2, unavailable');
+  const probes = requests.filter(request => request.method() === 'POST' && request.url().endsWith('/probes'));
+  expect(probes.map(request => request.postDataJSON().target.node_id).sort()).toEqual(ids.sort());
+  await expect(table.getByRole('columnheader', {name: /^Latency/})).toHaveAttribute('aria-sort', 'ascending');
+  await table.getByRole('columnheader', {name: /^Node/}).click();
+  await expect(table.getByRole('columnheader', {name: /^Node/})).toHaveAttribute('aria-sort', 'ascending');
+  await expect(page.getByRole('button', {name: 'Test all', exact: true})).toBeEnabled();
+});

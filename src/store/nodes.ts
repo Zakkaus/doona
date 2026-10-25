@@ -5,7 +5,8 @@ import {getApi} from '../api/index';
 import type {HealthObservation, Node, NodeCreate, OperationAccepted, ProviderCreate, ProviderList} from '../api/model';
 import {gated, pageSize, useResource, walk} from './resource';
 import {activationError, finished, settle, useAction, type SucceededResult} from './action';
-import {optionsProbe, probeChoices, probeFallback, useProbeOptions} from './probeOptions';
+import {optionsProbe, probeChoices, probeDefaults, probeFallback, useProbeOptions} from './probeOptions';
+import {foldFamilies} from '../api/selectors';
 import {useCapabilities} from './runtime';
 export function useNodes(enabled = true) {
   const api = getApi();
@@ -165,22 +166,47 @@ export function useNodeProbe(refetch: () => void) {
   const stored = useProbeOptions();
   const api = getApi();
   const capabilities = useCapabilities();
-  const {busy, run} = useAction<string>({rethrow: true});
+  const {busy, run, cancel} = useAction<string>({rethrow: true});
   const choices = useCallback((node: Node) => probeChoices(capabilities.data, 'node', undefined, [node.protocol]), [capabilities.data]);
-  const probe = useCallback(
-    (node: Node, options = stored) => {
+  const one = useCallback(
+    async (node: Node, options: typeof stored, signal: AbortSignal) => {
       const request = optionsProbe(capabilities.data, {type: 'node', node_id: node.id}, options, undefined, [node.protocol]);
-      if (!request) return Promise.resolve(undefined);
-      return run(node.id, async signal => {
-        const accepted = await api.startProbe(request, signal);
-        const result = await settle(api, accepted, signal);
-        refetch();
-        return {...finished(result, 'probe'), fallback: probeFallback(options.choice, request)};
-      });
+      if (!request) return;
+      const accepted = await api.startProbe(request, signal);
+      const result = await settle(api, accepted, signal);
+      refetch();
+      return {...finished(result, 'probe'), fallback: probeFallback(options.choice, request)};
     },
-    [api, capabilities.data, stored, run, refetch]
+    [api, capabilities.data, refetch]
   );
-  return {busy, probe, choices};
+  const probe = useCallback((node: Node, options = stored) => run(node.id, signal => one(node, options, signal)), [stored, run, one]);
+  const probeMany = useCallback(
+    (nodes: Node[], progress: (done: number) => void) =>
+      run('*', async signal => {
+        let next = 0,
+          tested = 0,
+          unavailable = 0;
+        await Promise.all(
+          Array.from({length: Math.min(4, nodes.length)}, async () => {
+            while (!signal.aborted && next < nodes.length) {
+              const node = nodes[next++];
+              try {
+                const result = await one(node, probeDefaults, signal);
+                if (signal.aborted) break;
+                if (foldFamilies(result?.results.filter(row => row.member_id === node.id) ?? [])?.state !== 'healthy') unavailable++;
+              } catch {
+                if (signal.aborted) break;
+                unavailable++;
+              }
+              progress(++tested);
+            }
+          })
+        );
+        return {tested, unavailable};
+      }),
+    [run, one]
+  );
+  return {busy, probe, choices, probeMany, cancel};
 }
 export function useGeodata(enabled = true) {
   const api = getApi();

@@ -187,6 +187,10 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
         <span className="rp-label">{m.shown}</span>
         {m.clearNodes && <Button onPress={m.clearNodes}>{t('ui.clearFilters')}</Button>}
         <span className="rp-grow" />
+        <Button onPress={m.testAll} isDisabled={!!m.testReason} tip={m.testReason ?? undefined}>
+          <span aria-live="polite">{m.testLabel}</span>
+        </Button>
+        {m.probeBusy === '*' && <Button onPress={m.cancelTest}>{t('ui.cancel')}</Button>}
         {m.canManage && <Button onPress={m.onAdd}>{t('nodes.addNode')}</Button>}
       </Toolbar>
       <ProbeBusy.Provider value={m.probeBusy}>
