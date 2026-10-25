@@ -1,4 +1,4 @@
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {translate, type Translator} from '../../i18n';
 import {logEmpty, logLevel, logRowText, logStatus, logsExport, logView} from './view';
 const t: Translator = (key, params) => translate('en', key, params);
@@ -97,4 +97,32 @@ it('tells an empty list apart by the configuration and the recorder, then by the
   expect(logEmpty(recorder('off', false), true, t)).toBe(t('log.emptyForbidden'));
   expect(logEmpty(recorder('auto'), true, t)).toBe(t('log.emptyFiltered'));
   expect(logEmpty(undefined, false, t)).toBe(t('log.empty'));
+});
+
+import {hookHarness} from '../../store/testHelpers';
+import {useLogs} from './useLogs';
+vi.mock('react', async original => ({...(await original<typeof import('react')>()), ...hookHarness.hooks, useCallback: (fn: unknown) => fn}));
+const clearLogs = vi.hoisted(() => vi.fn());
+vi.mock('../../store', () => ({
+  LOG_FEED_LIMIT: 100,
+  useCapabilities: () => ({data: undefined}),
+  useVersion: () => ({data: undefined}),
+  useRuntimeSettings: () => ({data: undefined}),
+  useLogFeed: () => ({records: [], gaps: new Set(), clear: clearLogs})
+}));
+vi.mock('../../ui/ui', async original => ({...(await original<typeof import('../../ui/ui')>()), useDebounced: (value: string) => value}));
+vi.mock('../../i18n', async original => ({...(await original<typeof import('../../i18n')>()), useT: () => t, useLang: () => 'en'}));
+it('clears logs only after confirmation and leaves them intact on Cancel', () => {
+  hookHarness.reset();
+  const read = () => hookHarness.render(() => useLogs({go: vi.fn()}));
+  read().clear();
+  expect(read().confirmClear.isOpen).toBe(true);
+  expect(clearLogs).not.toHaveBeenCalled();
+  read().confirmClear.onCancel();
+  expect(read().confirmClear.isOpen).toBe(false);
+  expect(clearLogs).not.toHaveBeenCalled();
+  read().clear();
+  read().confirmClear.onConfirm();
+  expect(clearLogs).toHaveBeenCalledOnce();
+  expect(read().confirmClear.isOpen).toBe(false);
 });

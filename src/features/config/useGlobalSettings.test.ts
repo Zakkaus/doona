@@ -15,7 +15,7 @@ vi.mock('../../store', () => ({
 }));
 vi.mock('../../store/config', () => ({useCompleteness: () => () => complete}));
 vi.mock('../../shell/draft', () => ({useDraftGuard: () => ({clear: vi.fn(), revision: 0})}));
-vi.mock('../../ui/ui', () => ({toast: vi.fn()}));
+vi.mock('../../ui/ui', async original => ({...(await original<typeof import('../../ui/ui')>()), toast: vi.fn()}));
 vi.mock('../../i18n', async original => {
   const actual = await original<typeof import('../../i18n')>();
   return {
@@ -201,4 +201,31 @@ it('tells a write that could not be read back apart from a failed read, and keep
   expect(m).toMatchObject({unread: 'The change was saved, but the configuration could not be read back. Retry to show it', error: failure, dirty: true});
   editor.error = new Error('refused');
   expect(read()).toMatchObject({unread: null, error: editor.error});
+});
+
+it('retains an out-of-range port and refuses to write it', async () => {
+  field('tproxy_port').change('99999');
+  expect(field('tproxy_port')).toMatchObject({value: '99999', invalid: true, number: {value: 99999, max: 65535}});
+  expect(read().blocked).toBe(true);
+  await read().save();
+  expect(editor.apply).not.toHaveBeenCalled();
+});
+
+it('lets the global port field retain typed values beyond its validation range', async () => {
+  const {GlobalSettings} = await import('./GlobalSettings');
+  const {NumberField} = await import('../../ui/ui');
+  const {isValidElement} = await import('react');
+  const form = hookHarness.render(() => GlobalSettings({query: '', go: vi.fn()}));
+  function find(node: unknown): Record<string, unknown> | undefined {
+    if (Array.isArray(node)) return node.map(find).find(Boolean);
+    if (!isValidElement<Record<string, unknown>>(node)) return;
+    if (node.type === NumberField && node.props.name === 'tproxy_port') return node.props;
+    return find(node.props.children);
+  }
+  const port = find(form)!;
+  expect(port).toBeDefined();
+  expect(port.minValue).toBeUndefined();
+  expect(port.maxValue).toBeUndefined();
+  (port.onChange as (value: number) => void)(99999);
+  expect(field('tproxy_port')).toMatchObject({value: '99999', invalid: true});
 });

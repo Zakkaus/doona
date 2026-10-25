@@ -5,6 +5,7 @@ import {
   Badge,
   Button,
   Card,
+  ConfirmDialog,
   HelpRow,
   DataTable,
   Kv,
@@ -88,6 +89,9 @@ export function Overview({query}: PageProps) {
         <div className="rp-cluster">
           <ActionGroup actions={[{id: 'export', label: t('ov.export'), icon: <Download />, isDisabled: !vm.canExport, onAction: vm.export}, ...vm.actions]} />
           <ReloadConfirm {...vm.confirmReload} />
+          <ConfirmDialog {...vm.confirmSuspend} title={t('ov.suspendTitle')} confirmLabel={t('ov.suspend')}>
+            <p className="rp-label">{t('ov.suspendHelp')}</p>
+          </ConfirmDialog>
         </div>
       </div>
       <div className="rp-g3">

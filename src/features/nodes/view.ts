@@ -337,19 +337,24 @@ export function subscriptionUrlError(value: string, t: Translator) {
   const url = completeSubscriptionUrl(value);
   return !url ? null : !isSubscriptionUrl(url) ? t('nodes.urlInvalid') : !isQuotable(url) ? t('config.unquotable') : null;
 }
-export function nodeLinkError(value: string, t: Translator) {
+export function nodeLinkError(value: string, t: Translator, schemes?: readonly string[] | null) {
   const link = value.trim();
-  return !link ? null : !isNodeLink(link) ? t('nodes.linkInvalid') : !isQuotable(link) ? t('config.unquotable') : null;
+  return !link
+    ? null
+    : !isNodeLink(link) || (schemes && !schemes.includes(link.split(':', 1)[0].toLowerCase()))
+      ? t('nodes.linkInvalid')
+      : !isQuotable(link)
+        ? t('config.unquotable')
+        : null;
 }
 
 // POST /nodes takes at most this many characters; a longer declaration still fits a configuration source edit.
 const MAX_CREATE_LINK = 8192;
 
-// Why the add dialog's submit is disabled, first applicable. Null while every required field is still empty, which
-// speaks for itself, and for a problem its own field already shows (the User-Agent, a group name).
+// Why the add dialog's submit is disabled, first applicable.
 export function nodeFormReason(kind: string | undefined, name: string, value: string, t: Translator): string | null {
   const bare = name.trim();
-  if ((kind !== 'provider' && kind !== 'node') || (!bare && !value.trim())) return null;
+  if (kind !== 'provider' && kind !== 'node') return null;
   if (!bare) return t('nodes.nameMissing');
   if (kind === 'node') {
     const link = value.trim();

@@ -121,7 +121,8 @@ test('an invalid URL is identified and cannot overwrite saved settings', async (
   await page.goto('/#/settings');
   await page.locator('[name=api]').fill('ftp://honk.example');
   await page.locator('[name=token]').fill('not-saved');
-  await page.getByRole('region', {name: 'Backend', exact: true}).locator('button[type=submit]').click();
+  // Save stays off for an address the app cannot use, so nothing is written.
+  await expect(page.getByRole('region', {name: 'Backend', exact: true}).locator('button[type=submit]')).toBeDisabled();
   await expect(page.locator('[name=api]')).toHaveAttribute('aria-invalid', 'true');
   // The error joins the hint in the field's description rather than replacing it.
   await expect(page.locator('[name=api]')).toHaveAccessibleDescription(/not \/api\/v1/);

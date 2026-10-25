@@ -17,6 +17,7 @@ export function useLogs({go}: Pick<PageProps, 'go'>) {
   const [requestedLevel, setRequestedLevel] = useState<LogLevel>('info');
   const setLevel = useCallback((value: string) => setRequestedLevel(value as LogLevel), []);
   const [target, setTarget] = useState('');
+  const [clearing, setClearing] = useState(false);
   const [paused, setPaused] = useState(false);
   const resource = capabilities.data?.resources.logs;
   // The backend lists `target` among its filters only when it applies one, and refuses a filter it does not list.
@@ -47,7 +48,15 @@ export function useLogs({go}: Pick<PageProps, 'go'>) {
     // The shell reports a failed capabilities read above every page; this page reports only its stream.
     error: feed.error,
     loading: !capabilities.error && !feed.error && !feed.connected && !feed.records.length,
-    clear: feed.clear,
+    clear: () => setClearing(true),
+    confirmClear: {
+      isOpen: clearing,
+      onCancel: () => setClearing(false),
+      onConfirm: () => {
+        feed.clear();
+        setClearing(false);
+      }
+    },
     // The level and recording the list is limited by are set in Settings.
     openRecording: capabilities.data?.resources.runtime_settings.available ? () => go('settings', 'card=runtime') : null,
     retry: feed.retry,

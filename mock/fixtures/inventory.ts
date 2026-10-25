@@ -1,3 +1,5 @@
+import {engineOf} from '../../src/api/engines';
+import {version} from './runtime';
 import type {Group, HealthObservation, Node, Provider, GeoData} from '../../src/api/model';
 import {ago, now, observedAt} from './clock';
 import {configMain} from './configuration';
@@ -162,7 +164,7 @@ export const providers: Provider[] = [
 // The faults scenario's subscription fetch failure, as a provider's last_error and its refresh operation's error.
 export const providerFault = {code: 'fetch_failed', message: 'Subscription host answered HTTP 502', details: null};
 // Share-link schemes the demo accepts on POST /nodes, as dae's own parser does.
-export const linkSchemes = ['vless', 'vmess', 'trojan', 'trojan-go', 'ss', 'ssr', 'socks5', 'http', 'https', 'hysteria2', 'hy2', 'tuic', 'juicity', 'anytls'];
+export const linkSchemes = engineOf(version).nodeLinkSchemes!;
 // The loaded files came from the built-in MetaCubeX sources three days ago; automatic updates are off.
 export const geodata: GeoData = {
   observed_at: observedAt,

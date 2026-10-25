@@ -107,3 +107,9 @@ describe('an unknown engine', () => {
     expect(other.daeText).toBe(false);
   });
 });
+
+it('limits known honk share-link schemes without guessing for other engines', () => {
+  expect(honk.nodeLinkSchemes).toContain('vless');
+  expect(honk.nodeLinkSchemes).not.toContain('garbage');
+  expect(other.nodeLinkSchemes).toBeNull();
+});

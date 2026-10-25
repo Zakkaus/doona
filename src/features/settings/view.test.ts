@@ -1,4 +1,4 @@
-import {expect, it} from 'vitest';
+import {afterEach, expect, it, vi} from 'vitest';
 import {runtimeSettings} from '../../../mock/fixtures';
 import type {RuntimeSettingsPatch} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
@@ -114,4 +114,56 @@ it('says a geodata update needs its status, and nothing while it loads', () => {
   expect(geodataUpdateReason({busy: false, loaded: false, failed: false}, t)).toBeNull();
   expect(geodataUpdateReason({busy: true, loaded: false, failed: true}, t)).toBeNull();
   expect(geodataUpdateReason({busy: false, loaded: true, failed: true}, t)).toBeNull();
+});
+
+import {hookHarness} from '../../store/testHelpers';
+import {useBackendForm} from './useBackendForm';
+import {writeProfiles} from '../../api/profiles';
+import {replaceRoute} from '../../shell/route';
+import {toast} from '../../ui/ui';
+vi.mock('react', async original => ({
+  ...(await original<typeof import('react')>()),
+  ...(await import('../../store/testHelpers')).hookHarness.hooks,
+  useState: (initial: unknown) => hookHarness.hooks.useState(typeof initial === 'function' ? initial() : initial),
+  useCallback: (fn: unknown) => fn,
+  useLayoutEffect: () => undefined
+}));
+vi.mock('../../shell/preferences', () => ({
+  readSettings: () => ({api: 'mock', token: '', activeId: 'demo', profiles: [{id: 'demo', name: 'Demo', api: 'mock', token: ''}]})
+}));
+vi.mock('../../shell/draft', () => ({useDraftGuard: () => ({clear: vi.fn(), leave: (action: () => void) => action()})}));
+vi.mock('../../shell/route', async original => ({...(await original<typeof import('../../shell/route')>()), replaceRoute: vi.fn()}));
+vi.mock('../../api/profiles', async original => ({...(await original<typeof import('../../api/profiles')>()), writeProfiles: vi.fn()}));
+vi.mock('../../api/session', () => ({dropOrphanSession: vi.fn()}));
+vi.mock('../../ui/ui', async original => ({...(await original<typeof import('../../ui/ui')>()), toast: vi.fn()}));
+vi.mock('../../i18n', async original => ({...(await original<typeof import('../../i18n')>()), useT: () => t}));
+afterEach(() => vi.unstubAllGlobals());
+it('refuses an invalid backend URL without persisting or scheduling a saved toast', () => {
+  hookHarness.reset();
+  vi.mocked(writeProfiles).mockClear();
+  vi.mocked(toast).mockClear();
+  const setItem = vi.fn();
+  const reload = vi.fn();
+  vi.stubGlobal('sessionStorage', {setItem});
+  vi.stubGlobal('location', {reload});
+  const read = () => hookHarness.render(() => useBackendForm(''));
+  read().changeApi('garbage://x');
+  expect(read().invalid).toBe(true);
+  read().save();
+  expect(writeProfiles).not.toHaveBeenCalled();
+  expect(setItem).not.toHaveBeenCalled();
+  expect(toast).not.toHaveBeenCalled();
+  expect(reload).not.toHaveBeenCalled();
+});
+it.each(['activity', 'settings'] as const)('sends a changed connection through a protected page when the start page is %s', start => {
+  hookHarness.reset();
+  vi.mocked(replaceRoute).mockClear();
+  const reload = vi.fn();
+  vi.stubGlobal('sessionStorage', {setItem: vi.fn()});
+  vi.stubGlobal('location', {reload});
+  const read = () => hookHarness.render(() => useBackendForm('', start));
+  read().changeApi('https://router.test');
+  read().save();
+  expect(replaceRoute).toHaveBeenCalledExactlyOnceWith('activity', '');
+  expect(reload).toHaveBeenCalledOnce();
 });

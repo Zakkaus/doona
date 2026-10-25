@@ -71,6 +71,8 @@ export type GroupDialogView = {
   name: {value: string; error: string | null; change: (value: string) => void} | null;
   submitLabel: string;
   open: boolean;
+  dismiss: () => void;
+  discard: {isOpen: boolean; onCancel: () => void; onConfirm: () => void};
   // Open on the file's declaration; false while the dialog only shows the group's configuration.
   editing: boolean;
   // Whether the dialog can open on the declaration; when it cannot, it opens read-only (`view`).
@@ -237,21 +239,33 @@ export function useGroupDialog(input: Input): GroupDialogView {
   const session = useDialogSession();
   const [problem, setProblem] = useState<GroupDialogView['problem']>(null);
   const refuse = (text: string, kind?: Problem['kind']) => setProblem(prev => ({id: (prev?.id ?? 0) + 1, text, kind}));
-  const guard = useDraftGuard(
+  const dirty =
     !!draft &&
-      ((creating && !!draft.name) ||
-        (!creating && draft.interrupt !== entry?.interrupt) ||
-        draft.policy !== (creating ? newGroupPolicies[0].id : entry?.policy) ||
-        invalid ||
-        JSON.stringify(filters) !== JSON.stringify(creating ? [] : entry?.filters) ||
-        routes.some(id => draft[routeKeys[id]] !== routeValue(entry?.[routeKeys[id]] ?? null))),
+    ((creating && !!draft.name) ||
+      (!creating && draft.interrupt !== entry?.interrupt) ||
+      draft.policy !== (creating ? newGroupPolicies[0].id : entry?.policy) ||
+      invalid ||
+      JSON.stringify(filters) !== JSON.stringify(creating ? [] : entry?.filters) ||
+      routes.some(id => draft[routeKeys[id]] !== routeValue(entry?.[routeKeys[id]] ?? null)));
+  const [discarding, setDiscarding] = useState(false);
+  const guard = useDraftGuard(
+    dirty,
     () => {
       session.next();
       setDraft(null);
       setProblem(null);
+      setDiscarding(false);
     },
     'config.draftGroup'
   );
+  const close = () => {
+    session.next();
+    setProblem(null);
+    guard.clear();
+    setDraft(null);
+    setViewing(false);
+    setDiscarding(false);
+  };
   const save = (close: () => void) => {
     if (!draft || removed || source.busy || saving.current) return;
     setTried(true);
@@ -489,13 +503,9 @@ export function useGroupDialog(input: Input): GroupDialogView {
       setProblem(null);
       setViewing(true);
     },
-    close: () => {
-      session.next();
-      setProblem(null);
-      guard.clear();
-      setDraft(null);
-      setViewing(false);
-    },
+    close,
+    dismiss: () => (dirty ? setDiscarding(true) : close()),
+    discard: {isOpen: discarding, onCancel: () => setDiscarding(false), onConfirm: close},
     setPolicy: policy => edit(prev => ({...prev, policy})),
     add: () => edit(prev => ({...prev, filters: [...prev.filters, newGroupFilter()]})),
     save,

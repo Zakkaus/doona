@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
 import {createMockApi} from '../../../mock';
 import {translate} from '../../i18n';
 import type {Capabilities, ConnectionList, DnsRuleList, Node, GroupSummary, ProviderList, EffectiveConfig, RuleList} from '../../api/model';
@@ -385,4 +385,25 @@ describe('ranking', () => {
   ])('%s', (_, names, q, expected) => {
     expect(ranked(names, q)).toEqual(expected);
   });
+});
+
+import type {ReactElement, KeyboardEvent} from 'react';
+import {SearchDialog} from './SearchDialog';
+import {ModalDialog} from '../../ui/ui';
+vi.mock('./useSearch', () => ({useSearch: () => ({q: 'proxy', setQ: vi.fn(), sections: []})}));
+vi.mock('../../i18n', async original => ({
+  ...(await original<typeof import('../../i18n')>()),
+  useT: () => (key: Parameters<Translator>[0], params: Parameters<Translator>[1]) => translate('en', key, params)
+}));
+it('closes search with one Escape before a nonempty search field can clear it', () => {
+  const close = vi.fn();
+  const dialog = SearchDialog({onClose: close, go: vi.fn()});
+  expect(dialog.type).toBe(ModalDialog);
+  const autocomplete = dialog.props.children as ReactElement<{children: ReactElement[]}>;
+  const toolbar = autocomplete.props.children[0] as ReactElement<{onKeyDownCapture: (event: KeyboardEvent) => void}>;
+  const event = {key: 'Escape', preventDefault: vi.fn(), stopPropagation: vi.fn()};
+  toolbar.props.onKeyDownCapture(event as unknown as KeyboardEvent);
+  expect(close).toHaveBeenCalledOnce();
+  expect(event.preventDefault).toHaveBeenCalledOnce();
+  expect(event.stopPropagation).toHaveBeenCalledOnce();
 });

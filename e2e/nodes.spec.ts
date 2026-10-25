@@ -94,9 +94,9 @@ test('a share link becomes an inline node and can be removed again', async ({pag
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Name').fill('hk-03');
   await dialog.getByLabel('Node link').fill('foo://nope');
-  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
-  await expect(dialog.getByRole('alert')).toContainText('Unsupported value');
-  await expect(dialog.getByRole('alert')).toContainText('Unsupported share link scheme "foo"');
+  // The link is refused at its field, before anything is sent, and Add stays off until it is fixed.
+  await expect(dialog.locator('.rp-field-error', {hasText: 'The node link must be a protocol://'})).toBeVisible();
+  await expect(dialog.getByRole('button', {name: 'Add', exact: true})).toBeDisabled();
   await dialog.getByLabel('Node link').fill('vless://uuid@example.com:443?security=tls#hk-03');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'hk-03 added'})).toBeVisible();
@@ -588,7 +588,7 @@ test('a subscription is added with its refresh interval, User-Agent and cache se
   await dialog.getByRole('button', {name: 'Auto-update'}).click();
   await page.getByRole('option', {name: 'Every 6 hours', exact: true}).click();
   await dialog.getByLabel('User-Agent').fill('agent\u00e9');
-  await expect(dialog.getByText('Up to 256 printable ASCII characters')).toBeVisible();
+  await expect(dialog.locator('.rp-field-error', {hasText: 'Up to 256 printable ASCII characters'})).toBeVisible();
   await expect(dialog.getByRole('button', {name: 'Add', exact: true})).toBeDisabled();
   await dialog.getByLabel('User-Agent').fill('clash.meta');
   await dialog.getByText('Cache the subscription').click();
@@ -1527,11 +1527,12 @@ test('a node write conflict names its cause, and only a delete without groups re
   await confirmation.getByRole('button', {name: 'Cancel', exact: true}).click();
   await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Name').fill(node.name);
+  await dialog.getByLabel('Name').fill('hk-new');
   await dialog.getByLabel('Node link').fill('vless://uuid@example.com:443?security=tls#dup');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
-  await expect(dialog.getByRole('alert')).toContainText('A resource with this name already exists');
-  await expect(dialog.getByRole('alert')).not.toContainText('changed or another write');
+  // A name clash the list did not show is reported at the Name field, not as a changed configuration.
+  await expect(dialog.locator('.rp-field-error', {hasText: 'A node already uses this name.'})).toBeVisible();
+  await expect(dialog).not.toContainText('changed or another write');
 });
 
 test("a subscription's URL is edited where its entry is written", async ({page}) => {

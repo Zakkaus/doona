@@ -1,6 +1,7 @@
+import {useState} from 'react';
 import {useLang, useT} from '../../i18n';
 import {docsHref} from '../shared/docs';
-import {Button, Card, ErrorMessage, Light, Link, ChoiceMenu, PopoverDialog, Segmented, WidestLabel} from '../../ui/ui';
+import {Button, Card, ConfirmDialog, ErrorMessage, Light, Link, ChoiceMenu, PopoverDialog, Segmented, WidestLabel} from '../../ui/ui';
 import Shuffle from '../../ui/icons/Shuffle';
 import Filter from '../../ui/icons/Filter';
 type ModeCardsModel = {
@@ -23,12 +24,28 @@ type ModeCardsModel = {
   apply: () => void;
 };
 
-export function ModeApply({model: vm}: {model: Pick<ModeCardsModel, 'writable' | 'dirty' | 'incomplete' | 'busy' | 'apply'>}) {
+export function ModeApply({model: vm}: {model: Pick<ModeCardsModel, 'mode' | 'modes' | 'writable' | 'dirty' | 'incomplete' | 'busy' | 'apply'>}) {
   const t = useT();
+  const [asking, setAsking] = useState<string | null>(null);
   return vm.writable ? (
-    <Button accent isDisabled={!vm.dirty || vm.incomplete} isPending={vm.busy} onPress={vm.apply}>
-      {t('config.save')}
-    </Button>
+    <>
+      <Button accent isDisabled={!vm.dirty || vm.incomplete} isPending={vm.busy} onPress={() => (vm.mode === 'rule' ? vm.apply() : setAsking(vm.mode))}>
+        {t('config.save')}
+      </Button>
+      <ConfirmDialog
+        title={t('act.modeConfirm', {mode: vm.modes.find(([id]) => id === asking)?.[1] ?? ''})}
+        confirmLabel={t('config.save')}
+        isOpen={asking !== null}
+        isDisabled={vm.busy || !vm.dirty || vm.incomplete || asking !== vm.mode}
+        onCancel={() => setAsking(null)}
+        onConfirm={() => {
+          setAsking(null);
+          vm.apply();
+        }}
+      >
+        <p className="rp-label">{t(asking === 'direct' ? 'act.modeDirectHelp' : 'act.modeGlobalHelp')}</p>
+      </ConfirmDialog>
+    </>
   ) : null;
 }
 

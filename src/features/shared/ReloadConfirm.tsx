@@ -25,6 +25,7 @@ export function ReloadConfirm({
       confirmLabel={t('shell.reloadEngine')}
       isPending={isPending}
       isDisabled={isDisabled}
+      reason={isDisabled || isPending ? t('ov.operationPending') : null}
       onConfirm={onConfirm}
     >
       <p className="rp-label">{t('shell.reloadHelp')}</p>

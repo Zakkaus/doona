@@ -6,7 +6,7 @@ import {deferred, hookHarness} from '../../store/testHelpers';
 import {subscriptionActionKind} from './view';
 import {runSubscriptionAction, useNodesPage} from './useNodesPage';
 
-const {capabilities} = await vi.hoisted(() => import('../../../mock/fixtures'));
+const {capabilities, version} = await vi.hoisted(() => import('../../../mock/fixtures'));
 const store = vi.hoisted(() => ({addNode: null as unknown as (input: unknown) => Promise<Node | null>}));
 vi.mock('react', async original => ({
   ...(await original<typeof import('react')>()),
@@ -23,7 +23,7 @@ vi.mock('../../store', async () => ({
   useProviders: () => ({data: {providers: []}, refetch: () => undefined, loading: false, error: null}),
   useOutboundNames: () => [],
   useProviderRefresh: () => ({refresh: vi.fn()}),
-  useVersion: () => ({data: undefined})
+  useVersion: () => ({data: version})
 }));
 vi.mock('../../store/config', () => ({useCompleteness: () => () => true, useConfig: () => ({data: undefined, loading: false})}));
 vi.mock('../../store/mainSource', async original => ({
@@ -127,4 +127,28 @@ it('lands a result in the dialog that sent it', async () => {
     expect(read().problem).toEqual(outcome === 'resolve' ? null : expect.objectContaining({id: 1, kind: 'negative'}));
     expect(vi.mocked(toast).mock.calls.map(call => call[0])).toEqual(outcome === 'resolve' ? ['positive'] : []);
   }
+});
+
+it('explains empty add forms and shows an edited unsupported link on its field', () => {
+  read().addNode!();
+  expect(read()).toMatchObject({formValid: false, formReason: 'Enter a name', nodeLinkError: null});
+  read().setForm({...read().form, name: 'first', value: 'garbage://x'});
+  expect(read().nodeLinkError).toBeTruthy();
+  expect(read().formValid).toBe(false);
+  read().setDialog({kind: 'provider'});
+  read().setForm({...read().form, name: '', value: ''});
+  expect(read()).toMatchObject({formValid: false, formReason: 'Enter a name'});
+});
+
+it('puts a duplicate-name refusal on Name and clears it after the name changes', async () => {
+  const {ApiError} = await import('../../api/error');
+  store.addNode = async () => {
+    throw new ApiError(409, 'state_conflict', 'An inline node named first already exists');
+  };
+  read().addNode!();
+  read().setForm({...read().form, name: 'first', value: 'vless://first'});
+  await read().submit(vi.fn());
+  expect(read()).toMatchObject({nodeNameError: 'A node already uses this name.', problem: null, formValid: false});
+  read().setForm({...read().form, name: 'second'});
+  expect(read()).toMatchObject({nodeNameError: null, formValid: true});
 });

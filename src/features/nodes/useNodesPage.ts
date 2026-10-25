@@ -39,7 +39,7 @@ import {useRefreshAll} from '../shared/useRefreshAll';
 import {useNodeTable} from './useNodeTable';
 import {useSubscriptionEditor, type SubscriptionEdit} from './useSubscriptionEditor';
 import {useDialogSession, useDraftGuard} from '../../shell/draft';
-import {errorText, noticeText, requestIdOf, type Notice} from '../../api/error';
+import {ApiError, errorText, noticeText, requestIdOf, type Notice} from '../../api/error';
 import {href, pickTab, tabQuery, within} from '../../shell/route';
 import {noNodeSources} from '../../api/selectors';
 import {offered} from '../../api/capabilities';
@@ -78,6 +78,8 @@ export function useNodesPage({go, query}: PageProps) {
   const [pendingDialog, setPendingDialog] = useState<NodeDialog | null>(null);
   // Why the last submit did not land; `id` changes with each refusal so the alert takes focus again.
   const [problem, setProblem] = useState<Problem | null>(null);
+  const [refusedName, setRefusedName] = useState<string | null>(null);
+  const [refusedLink, setRefusedLink] = useState<string | null>(null);
   const intervalSeconds = draftInterval(form.interval);
   const resources = useCapabilities().data?.resources;
   const createOptions = resources?.providers.create_options;
@@ -99,6 +101,8 @@ export function useNodesPage({go, query}: PageProps) {
     (next: NodeDialog) => {
       session.next();
       setForm(blank);
+      setRefusedName(null);
+      setRefusedLink(null);
       setHeaders(null);
       setProblem(null);
       if (next.kind === 'editProvider')
@@ -258,7 +262,7 @@ export function useNodesPage({go, query}: PageProps) {
     };
   }, [query]);
   const submit = async (close: () => void) => {
-    if (!dialog || submitting.current) return;
+    if (!dialog || submitting.current || !formValid) return;
     submitting.current = dialog;
     setPendingDialog(dialog);
     const isCurrent = session.start();
@@ -362,7 +366,9 @@ export function useNodesPage({go, query}: PageProps) {
         close();
       }
     } catch (error) {
-      refuse(errorText(error, t), errorText(error, t, false), error);
+      if (isCurrent() && dialog.kind === 'node' && error instanceof ApiError && error.code === 'state_conflict') setRefusedName(form.name.trim());
+      else if (isCurrent() && dialog.kind === 'node' && error instanceof ApiError && error.code === 'unsupported_value') setRefusedLink(form.value.trim());
+      else refuse(errorText(error, t), errorText(error, t, false), error);
     } finally {
       submitting.current = null;
       setPendingDialog(null);
@@ -396,7 +402,17 @@ export function useNodesPage({go, query}: PageProps) {
       : removal.blockers;
   const checkingRemoval = removal.checking;
   const nodeState = dialog?.kind === 'editNode' ? nodeEditState(sources, dialog.source, dialog.entry, nodeList ?? [], form, t) : null;
-  const nodeNameError = nodeState?.nameError ?? null;
+  const nodeNameError =
+    nodeState?.nameError ??
+    (dialog?.kind === 'node' && form.name.trim() && (refusedName === form.name.trim() || nodeList?.some(node => node.name === form.name.trim()))
+      ? t('nodes.nameTaken')
+      : null);
+  const linkError =
+    dialog?.kind === 'node'
+      ? refusedLink === form.value.trim()
+        ? t('nodes.linkInvalid')
+        : nodeLinkError(form.value, t, engineOf(version).nodeLinkSchemes)
+      : (nodeState?.linkError ?? null);
   const formValid =
     dialog?.kind === 'editNode'
       ? nodeState!.valid && !headerError
@@ -405,7 +421,12 @@ export function useNodesPage({go, query}: PageProps) {
         : dialog?.kind === 'provider'
           ? isBareName(form.name.trim()) && !!form.value.trim() && subscriptionUrlError(form.value, t) === null && !agentError && intervalSeconds !== null
           : dialog?.kind === 'node'
-            ? form.name.trim() !== '' && !!form.value.trim() && nodeFormReason('node', form.name, form.value, t) === null && !headerError
+            ? form.name.trim() !== '' &&
+              !!form.value.trim() &&
+              nodeFormReason('node', form.name, form.value, t) === null &&
+              !nodeNameError &&
+              !linkError &&
+              !headerError
             : true;
   const subscription: SubscriptionDraft = {name: form.name, url: form.value, interval: form.interval, agent: form.agent, cache: form.cache, route: form.route};
   // A new subscription shows each option the backend lists, with its default preselected or as the placeholder; an
@@ -521,14 +542,14 @@ export function useNodesPage({go, query}: PageProps) {
     dialogTitle,
     formValid,
     nodeNameError,
-    nodeLinkError: nodeState?.linkError ?? (dialog?.kind === 'node' ? nodeLinkError(form.value, t) : null),
+    nodeLinkError: linkError,
     formReason:
       dialog?.kind === 'editNode'
         ? (nodeState!.reason ?? headerError)
         : dialog?.kind === 'editProvider'
           ? // A name error is shown on its field alone.
             subscriptionEdit.reason
-          : (nodeFormReason(dialog?.kind, form.name, form.value, t) ?? headerError),
+          : (nodeNameError ?? linkError ?? nodeFormReason(dialog?.kind, form.name, form.value, t) ?? headerError ?? agentError ?? intervalError),
     submit,
     pending: dialog !== null && pendingDialog === dialog,
     // A write abandoned by Cancel still holds the node actions until it settles, so no dialog can submit meanwhile.

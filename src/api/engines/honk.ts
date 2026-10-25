@@ -72,6 +72,7 @@ const definesListener = (blocks: TextBlock[]): boolean => blocks.some(block => l
 
 export const honk: Engine = {
   id: 'honk',
+  nodeLinkSchemes: ['vless', 'vmess', 'trojan', 'trojan-go', 'ss', 'ssr', 'socks5', 'http', 'https', 'hysteria2', 'hy2', 'tuic', 'juicity', 'anytls'],
   flowDemandGraceSeconds: 60,
   globalSettings: honkGlobal,
   reason,

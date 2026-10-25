@@ -15,6 +15,7 @@ import {toast, toastFailure} from '../../ui/ui';
 import {fileName} from '../../dae/sources';
 import type {RuleTemplate, TemplateOptions} from '../../dae/templates';
 import type {PageProps} from '../../shell/routes';
+import {useDraftGuard} from '../../shell/draft';
 import {within} from '../../shell/route';
 import {
   refusalReason,
@@ -129,13 +130,17 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
   const selected = picked ?? view.current?.id ?? null;
   const options: TemplateOptions = {blockAds: view.blockAds, blockQuic: view.blockQuic, networkManagerDirect: view.networkManagerDirect, ...pickedOptions};
   const applying = editor.busy === 'save';
-  const canApply =
-    !!selected &&
-    (selected !== view.current?.id || templateOptionKeys.some(key => options[key] !== view[key])) &&
-    !target.refusal &&
-    !!target.source &&
-    isComplete(target.source) === true &&
-    !editor.busy;
+  const dirty = !!selected && (selected !== view.current?.id || templateOptionKeys.some(key => options[key] !== view[key]));
+  const guard = useDraftGuard(
+    dirty,
+    () => {
+      setPicked(null);
+      setPickedOptions({});
+      setDialog(null);
+    },
+    'rule.templates'
+  );
+  const canApply = dirty && !target.refusal && !!target.source && isComplete(target.source) === true && !editor.busy;
   return {
     ...view,
     ...options,
@@ -213,6 +218,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
           refuse(outcome.diagnostics);
           return;
         }
+        guard.clear();
         toast('positive', t('rule.template.applied', {name: dialog.choice.name, file: fileName(dialog.source)}));
         setDialog(null);
         setPicked(null);

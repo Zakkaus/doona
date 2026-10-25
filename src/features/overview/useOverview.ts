@@ -22,7 +22,7 @@ export function useOverview(query = '') {
   const version = useVersion();
   const settings = useRuntimeSettings(offered(resources, 'runtime_settings', {whileLoading: false}));
   const lifecycle = useLifecycle(runtime.data, capabilities.data, runtime.refetch);
-  const [asking, setAsking] = useState(false);
+  const [asking, setAsking] = useState<'reload' | 'suspend' | null>(null);
   const data = useMemo(
     () => ({capabilities: capabilities.data, runtime: runtime.data, version: version.data, memory: memory.data, datapath: datapath.data}),
     [capabilities.data, runtime.data, version.data, memory.data, datapath.data]
@@ -75,15 +75,26 @@ export function useOverview(query = '') {
       memory: memory.refetch,
       datapath: datapath.refetch
     },
-    // Reload asks first, as the top bar's does; suspend and resume run at once.
-    actions: lifecycle.actions.map(action => (action.id === 'reload' ? {...action, onAction: () => setAsking(true)} : action)),
+    // Reload and suspend ask first; resume runs immediately.
+    actions: lifecycle.actions.map(action =>
+      action.id === 'reload' || action.id === 'suspend' ? {...action, onAction: () => setAsking(action.id as 'reload' | 'suspend')} : action
+    ),
     confirmReload: {
-      isOpen: asking,
+      isOpen: asking === 'reload',
       isPending: lifecycle.busy === 'reload',
-      onCancel: () => setAsking(false),
+      onCancel: () => setAsking(null),
       onConfirm: () => {
-        setAsking(false);
+        setAsking(null);
         lifecycle.run('reload');
+      }
+    },
+    confirmSuspend: {
+      isOpen: asking === 'suspend',
+      isDisabled: !!lifecycle.busy,
+      onCancel: () => setAsking(null),
+      onConfirm: () => {
+        setAsking(null);
+        lifecycle.run('suspend');
       }
     },
     export: () => downloadFile(exportName('doona-state', 'json'), overviewExport(data, new Date().toISOString()), 'application/json')

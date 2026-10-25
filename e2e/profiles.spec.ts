@@ -18,6 +18,9 @@ test('profiles add, rename, switch, and delete without losing the route', async 
   await page.locator('[name=api]').fill(origin + '/home');
   await page.locator('[name=token]').fill('home-secret');
   await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Save', exact: true}).click()]);
+  // Saving a changed address lands on the start page; the Add profile steps below return to Settings.
+  await expect(page).toHaveURL(/#\/activity$/);
+  await page.goto('/#/settings?from=connections');
   await page.getByRole('button', {name: 'Add profile', exact: true}).click();
   dialog = page.getByRole('dialog', {name: 'Add profile'});
   await dialog.getByRole('textbox', {name: 'Profile name'}).fill('Office');
@@ -27,6 +30,8 @@ test('profiles add, rename, switch, and delete without losing the route', async 
   await expect(page.locator('[name=token]')).toHaveValue('');
   await page.locator('[name=token]').fill('office-secret');
   await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Save', exact: true}).click()]);
+  await expect(page).toHaveURL(/#\/activity$/);
+  await page.goto('/#/settings?from=connections');
   await page.getByRole('button', {name: /Profile$/}).click();
   await Promise.all([page.waitForEvent('load'), page.getByRole('option', {name: 'Home', exact: true}).click()]);
   await expect(page).toHaveURL(/#\/settings\?from=connections$/);

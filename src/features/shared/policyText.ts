@@ -37,6 +37,7 @@ export function policyChoices(value: string | null, t: Translator) {
 
 const nameProblems = {invalid: 'group.badName', taken: 'group.takenName'} as const;
 export function groupNameError(name: string, taken: ReadonlySet<string>, t: Translator): string | null {
+  if (!name.trim()) return t('nodes.nameMissing');
   const problem = groupNameProblem(name, taken);
   return problem ? t(nameProblems[problem]) : null;
 }

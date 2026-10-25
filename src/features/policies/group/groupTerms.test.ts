@@ -1,4 +1,4 @@
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {newGroupCondition, type GroupConditionKind, type GroupConditionRow} from '../../../dae/groupConditions';
 import {addAlternative, changeTerm, conditionTerms, kindChoices, removeAlternative} from './groupTerms';
 
@@ -56,4 +56,43 @@ it.each([-2, -3])('removes only alternative %s', id => {
   expect(next).toEqual({...row, alternatives: [row.alternatives![id === -2 ? 1 : 0]]});
   expect(removeAlternative(next, next.alternatives![0].id)).toEqual({...row, alternatives: []});
   expect(row.alternatives).toHaveLength(2);
+});
+
+import {hookHarness} from '../../../store/testHelpers';
+import {useGroupDialog} from './useGroupDialog';
+import {translate, type Translator} from '../../../i18n';
+vi.mock('react', async original => ({...(await original<typeof import('react')>()), ...hookHarness.hooks}));
+vi.mock('../../../store', () => ({useCapabilities: () => ({data: undefined}), useNodes: () => ({data: []}), useProviders: () => ({data: undefined})}));
+vi.mock('../../../store/config', () => ({useConfig: () => ({data: undefined})}));
+vi.mock('../../../shell/draft', () => ({useDraftGuard: () => ({clear: vi.fn()}), useDialogSession: () => ({next: vi.fn(), start: () => () => true})}));
+vi.mock('../../../i18n', async original => ({
+  ...(await original<typeof import('../../../i18n')>()),
+  useLang: () => 'en',
+  useT: () => (key: Parameters<Translator>[0], params: Parameters<Translator>[1]) => translate('en', key, params)
+}));
+it('asks before dismissing a new group draft and keeps it when discard is cancelled', () => {
+  hookHarness.reset();
+  const read = () =>
+    hookHarness.render(() =>
+      useGroupDialog({
+        mode: 'create',
+        source: {main: null, writable: true, busy: false, apply: vi.fn()},
+        taken: new Set(),
+        outbounds: {groups: [], nodes: [], links: new Map()},
+        nodes: []
+      })
+    );
+  read().show();
+  read().name!.change('work');
+  read().dismiss();
+  expect(read()).toMatchObject({open: true, discard: {isOpen: true}});
+  read().discard.onCancel();
+  expect(read().name!.value).toBe('work');
+  expect(read().discard.isOpen).toBe(false);
+  read().dismiss();
+  read().discard.onConfirm();
+  expect(read().open).toBe(false);
+  read().show();
+  read().save(vi.fn());
+  expect(read().name!.error).toBe('Enter a name');
 });

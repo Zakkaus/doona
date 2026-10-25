@@ -71,3 +71,9 @@ it('offers score as its own choice, selected and named in words', () => {
   expect(groupPolicyText({kind: 'score', native: 'score'}, t)).toEqual({label: 'Score', id: 'score'});
   expect(groupEditSafe(['name(a)'], 'score', {filters: ['name(a)'], policy: 'select'})).toBe(true);
 });
+
+it('distinguishes an empty group name from invalid characters', async () => {
+  const {groupNameError} = await import('./policyText');
+  expect(groupNameError('  ', new Set(), t)).toBe(t('nodes.nameMissing'));
+  expect(groupNameError('bad/name', new Set(), t)).toBe(t('group.badName'));
+});

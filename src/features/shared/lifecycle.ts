@@ -10,5 +10,12 @@ export function lifecycleActions(
 ): Action[] {
   return (Object.keys(operationLabels) as Array<keyof typeof operationLabels>)
     .filter(kind => canRun(kind) || busy === kind)
-    .map(kind => ({id: kind, label: t(operationLabels[kind]), isPending: busy === kind, isDisabled: !!busy, onAction: () => run(kind)}));
+    .map(kind => ({
+      id: kind,
+      label: t(operationLabels[kind]),
+      isPending: busy === kind,
+      isDisabled: !!busy,
+      reason: busy ? t('ov.operationPending') : undefined,
+      onAction: () => run(kind)
+    }));
 }

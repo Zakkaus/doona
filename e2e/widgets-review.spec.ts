@@ -81,6 +81,7 @@ test('panel mode stages a draft until Apply and writes the chosen mode', async (
   await expect(page.locator('main').getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
   expect(backend.requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
   await panel(page).getByRole('button', {name: 'Apply', exact: true}).click();
+  await page.getByRole('alertdialog', {name: 'Apply Direct mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
   await expect.poll(async () => readMode((await backend.api.config()).sources.find(source => source.kind === 'main')!.content!).mode).toBe('direct');
   await expect(page.locator('main').getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
 });
@@ -135,6 +136,7 @@ for (const host of ['panel', 'dashboard'] as const) {
       expect((await widget.boundingBox())!.height).toBe(before.height);
       if (host === 'dashboard') await expect(section).toHaveAttribute('data-controls', inline ? 'inline' : 'stacked');
       await apply.click();
+      await page.getByRole('alertdialog', {name: 'Apply Global mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
       await expect
         .poll(async () => readMode((await backend.api.config()).sources.find(source => source.kind === 'main')!.content!))
         .toEqual({
