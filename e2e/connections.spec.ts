@@ -787,7 +787,7 @@ test('a hidden tab keeps its detail drawer closed when the window narrows', asyn
   await page.getByRole('tab', {name: 'Traffic', exact: true}).click();
   await page.setViewportSize({width: 600, height: 900});
   await expect(page.locator('.rp-drawer')).toHaveCount(0);
-  await page.getByRole('tab', {name: 'Connections', exact: true}).click();
+  await page.getByRole('tab', {name: 'List', exact: true}).click();
   await expect(page.locator('.rp-drawer .rp-h3')).toHaveText('cdn.bilibili.com');
 });
 
@@ -835,7 +835,7 @@ test.describe('with motion', () => {
     await expect(page.locator('.rp-panel .rp-h3')).toHaveText('cdn.bilibili.com');
     await page.getByRole('tab', {name: 'Traffic', exact: true}).click();
     await page.setViewportSize({width: 600, height: 900});
-    await page.getByRole('tab', {name: 'Connections', exact: true}).click();
+    await page.getByRole('tab', {name: 'List', exact: true}).click();
     await expect(page.locator('.rp-drawer .rp-h3')).toHaveText('cdn.bilibili.com');
     const running = await page.evaluate(() => document.getAnimations().filter(a => (a.effect as KeyframeEffect).target?.closest?.('.rp-underlay')).length);
     expect(running).toBe(0);
@@ -853,7 +853,7 @@ test('a failed connection read is shown on both tabs with a retry', async ({page
   await expect(page.getByRole('tab', {name: 'Traffic', exact: true})).toHaveAttribute('aria-selected', 'true');
   const alert = page.getByRole('alert').filter({hasText: 'Connection table unavailable'});
   await expect(alert).toBeVisible();
-  await page.getByRole('tab', {name: 'Connections', exact: true}).click();
+  await page.getByRole('tab', {name: 'List', exact: true}).click();
   await expect(alert).toBeVisible();
   fail = false;
   await alert.getByRole('button', {name: 'Retry'}).click();

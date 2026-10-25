@@ -74,7 +74,7 @@ test('discard resets a source draft even when the destination selects the same e
 
 test('cancelled Back and Forward restore the cursor without replacing history entries', async ({page}) => {
   await page.goto('/#/settings');
-  await expect(page.getByRole('region', {name: 'Backend', exact: true})).toBeVisible();
+  await expect(page.getByRole('region', {name: 'Connect to a backend', exact: true})).toBeVisible();
   await page.evaluate(() => {
     location.hash = '#/config?tab=source';
   });

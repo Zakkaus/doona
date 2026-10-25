@@ -69,6 +69,10 @@ export function PanelHost({
     (base, _dx, dy) => ({...base, height: Math.min(base.max, Math.max(base.min, base.height - dy))}),
     next => patchLayout({dockHeight: Math.round(next.height)})
   );
+  useReservedColumn(
+    route !== 'activity' && route !== 'overview' && !docked && !collapsed && !(layout.edge && !layout.pinned),
+    `${layout.offset?.x} ${layout.size?.width}`
+  );
   const dockHeight = dockResize.live?.height ?? layout.dockHeight;
   const header = <PanelHeader backend={backend} honk={honk} docked={docked} dockable={dockable} onDock={() => dock(!docked)} />;
   if (docked)
@@ -119,6 +123,27 @@ export function PanelHost({
     </FloatingPanel>,
     document.body
   );
+}
+// An open floating panel keeps a column of its own at the content's inline-end, so the page's tables and fields end
+// beside it instead of under it: the content's padding grows by how far the panel reaches into it, plus the frame's
+// inset. A panel moved past the content's middle overlaps it where the reader placed it.
+function useReservedColumn(active: boolean, placement: string) {
+  useLayoutEffect(() => {
+    const main = document.querySelector<HTMLElement>('.rp-main');
+    const panel = document.querySelector('.rp-floating-panel');
+    if (!active || !main || !panel) return;
+    const update = () => {
+      const [outer, inner] = [main.getBoundingClientRect(), panel.getBoundingClientRect()];
+      const reach = Math.ceil(document.dir === 'rtl' ? inner.right - outer.left : outer.right - inner.left);
+      main.style.paddingInlineEnd = reach > 0 && reach < outer.width / 2 ? `max(var(--rp-space-10), ${reach}px + var(--rp-space-4))` : '';
+    };
+    update();
+    addEventListener('resize', update);
+    return () => {
+      removeEventListener('resize', update);
+      main.style.paddingInlineEnd = '';
+    };
+  }, [active, placement]);
 }
 // The panel's switch in its menu on every host: the widgets' titles.
 const panelSwitches = (layout: Layout, t: ReturnType<typeof useT>) => [

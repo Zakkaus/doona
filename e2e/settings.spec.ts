@@ -108,7 +108,13 @@ test('saving mock reloads and restores the default activity route', async ({page
   // The built-in demo ignores any token, so the field goes.
   await page.locator('[name=api]').fill(' mock ');
   await expect(token).toHaveCount(0);
-  await Promise.all([page.waitForEvent('load'), page.getByRole('region', {name: 'Backend', exact: true}).locator('button[type=submit]').click()]);
+  await Promise.all([
+    page.waitForEvent('load'),
+    page
+      .getByRole('region', {name: t('settings.connectTitle'), exact: true})
+      .locator('button[type=submit]')
+      .click()
+  ]);
   await expect(page).toHaveURL(/#\/activity$/);
   // A saved demo profile signs in with its published account, filled in, before the default route.
   await page.goto('/#/');
@@ -117,12 +123,25 @@ test('saving mock reloads and restores the default activity route', async ({page
   await expect(page.locator('.rp-nav[href="#/activity"]')).toHaveAttribute('aria-current', 'page');
 });
 
+test('a first run offers the demo data instead of profile tools and saves it as a profile', async ({page}) => {
+  await page.goto('/#/settings');
+  const card = page.getByRole('region', {name: t('settings.connectTitle'), exact: true});
+  await expect(card).toContainText(t('settings.firstRunUnsaved'));
+  await expect(page.getByRole('button', {name: 'Rename profile', exact: true})).toHaveCount(0);
+  // Test connection leads until a test reaches the backend; the demo is the secondary choice.
+  await expect(card.getByRole('button', {name: t('settings.test'), exact: true})).toHaveClass(/accent/);
+  await expect(card.locator('button[type=submit]')).not.toHaveClass(/accent/);
+  await Promise.all([page.waitForEvent('load'), card.getByRole('button', {name: t('settings.useDemo'), exact: true}).click()]);
+  await expect(page).toHaveURL(/#\/activity$/);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('doona-profiles') ?? '[]'))).toMatchObject([{name: 'Built-in demo data', api: 'mock'}]);
+});
+
 test('an invalid URL is identified and cannot overwrite saved settings', async ({page}) => {
   await page.goto('/#/settings');
   await page.locator('[name=api]').fill('ftp://honk.example');
   await page.locator('[name=token]').fill('not-saved');
   // Save stays off for an address the app cannot use, so nothing is written.
-  await expect(page.getByRole('region', {name: 'Backend', exact: true}).locator('button[type=submit]')).toBeDisabled();
+  await expect(page.getByRole('region', {name: t('settings.connectTitle'), exact: true}).locator('button[type=submit]')).toBeDisabled();
   await expect(page.locator('[name=api]')).toHaveAttribute('aria-invalid', 'true');
   // The error joins the hint in the field's description rather than replacing it.
   await expect(page.locator('[name=api]')).toHaveAccessibleDescription(/not \/api\/v1/);
@@ -151,10 +170,15 @@ test('connection testing uses the unsaved prefix and token for native discovery'
   expectLoadFailures(page, /\/settings-backend\/api$/);
   await page.locator('[name=token]').fill('wrong-token');
   await page.getByRole('button', {name: t('settings.test'), exact: true}).click();
-  await expect(page.getByRole('region', {name: 'Backend', exact: true}).locator('form')).toContainText(t('settings.tokenRejected'));
+  await expect(page.getByRole('region', {name: t('settings.connectTitle'), exact: true}).locator('form')).toContainText(t('settings.tokenRejected'));
   await page.locator('[name=token]').fill('test-token');
   await page.getByRole('button', {name: t('settings.test'), exact: true}).click();
-  await expect(page.getByRole('region', {name: 'Backend', exact: true}).locator('form').getByRole('status')).toContainText('API v1');
+  await expect(
+    page
+      .getByRole('region', {name: t('settings.connectTitle'), exact: true})
+      .locator('form')
+      .getByRole('status')
+  ).toContainText('API v1');
   expect(await page.evaluate(() => localStorage.getItem('doona-api'))).toBeNull();
 });
 
@@ -203,15 +227,30 @@ test('a pairing link cancels the old probe and clears its result', async ({page}
   await expect(page.locator('[name=api]')).toHaveValue(origin + '/new-backend');
   await expect(probe).toBeEnabled();
   resolve();
-  await expect(page.getByRole('region', {name: 'Backend', exact: true}).locator('form').getByRole('status')).toHaveCount(0);
+  await expect(
+    page
+      .getByRole('region', {name: t('settings.connectTitle'), exact: true})
+      .locator('form')
+      .getByRole('status')
+  ).toHaveCount(0);
   await probe.click();
-  await expect(page.getByRole('region', {name: 'Backend', exact: true}).locator('form').getByRole('status')).toContainText('API v2');
+  await expect(
+    page
+      .getByRole('region', {name: t('settings.connectTitle'), exact: true})
+      .locator('form')
+      .getByRole('status')
+  ).toContainText('API v2');
   await page.evaluate(() => {
     location.hash = '#/settings?api=mock';
   });
   await page.getByRole('alertdialog', {name: 'Discard changes not applied?'}).getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect(page.locator('[name=api]')).toHaveValue('mock');
-  await expect(page.getByRole('region', {name: 'Backend', exact: true}).locator('form').getByRole('status')).toHaveCount(0);
+  await expect(
+    page
+      .getByRole('region', {name: t('settings.connectTitle'), exact: true})
+      .locator('form')
+      .getByRole('status')
+  ).toHaveCount(0);
 });
 
 // A raw browser test: 401 and 404 responses log console errors by design here.
@@ -291,18 +330,18 @@ test('Settings keeps Appearance on its own tab, in the address and across a relo
   const general = page.getByRole('tab', {name: 'General', exact: true});
   const appearance = page.getByRole('tab', {name: 'Appearance', exact: true});
   await expect(general).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('region', {name: 'Backend', exact: true})).toBeVisible();
+  await expect(page.getByRole('region', {name: t('settings.connectTitle'), exact: true})).toBeVisible();
   await expect(page.getByRole('listbox', {name: 'Palette'})).toBeHidden();
   await appearance.click();
   await expect(page).toHaveURL(/#\/settings\?tab=appearance$/);
   await expect(page.getByRole('listbox', {name: 'Palette'})).toBeVisible();
-  await expect(page.getByRole('region', {name: 'Backend', exact: true})).toBeHidden();
+  await expect(page.getByRole('region', {name: t('settings.connectTitle'), exact: true})).toBeHidden();
   await page.reload();
   await expect(appearance).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('listbox', {name: 'Palette'})).toBeVisible();
   await general.click();
   await expect(page).toHaveURL(/#\/settings$/);
-  await expect(page.getByRole('region', {name: 'Backend', exact: true})).toBeVisible();
+  await expect(page.getByRole('region', {name: t('settings.connectTitle'), exact: true})).toBeVisible();
 });
 
 test('a link to the Appearance card or one of its fields opens its tab', async ({page}) => {
@@ -588,7 +627,7 @@ test('appearance uses labeled pickers with balanced insets and matching type', a
   await expect(page.getByRole('listbox', {name: 'Language'})).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('tab', {name: 'General', exact: true}).click();
-  await expect(page.getByRole('region', {name: 'Backend', exact: true})).toBeVisible();
+  await expect(page.getByRole('region', {name: t('settings.connectTitle'), exact: true})).toBeVisible();
   await expect(page.getByRole('heading', {name: 'Backend', exact: true})).toHaveCount(0);
 });
 

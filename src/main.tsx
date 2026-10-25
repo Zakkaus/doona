@@ -99,6 +99,8 @@ function Startup() {
     </LangContext.Provider>
   );
 }
+// Touch hit areas draw nothing, so they load after the first paint, and only where a finger may point.
+if (matchMedia('(any-pointer: coarse)').matches) void import('./ui/styles/touch.css');
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Startup />

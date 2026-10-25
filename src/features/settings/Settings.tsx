@@ -48,8 +48,6 @@ export function Settings({query}: PageProps) {
     activeId,
     staleLogin,
     loginReason,
-    hasActive,
-    profileReason,
     firstRun,
     error,
     retry,
@@ -74,6 +72,8 @@ export function Settings({query}: PageProps) {
     switchPending,
     cancelSwitch,
     testConnection,
+    keepDemo,
+    reachable,
     lang,
     pickLang,
     ap,
@@ -105,36 +105,26 @@ export function Settings({query}: PageProps) {
 
   const content: Record<SettingsCardId, ReactNode> = {
     backend: (
-      <Card aria-label={t(cards.backend.titleKey)} id={cards.backend.headingId}>
+      // Before any backend is saved the card leads the page: it names the step and holds no profile to manage yet.
+      <Card {...(firstRun ? {title: t('settings.connectTitle'), note: firstRun} : {'aria-label': t(cards.backend.titleKey)})} id={cards.backend.headingId}>
         <ErrorMessage error={error} onRetry={retry} />
         {staleLogin && <InlineAlert tone="negative">{t('login.stale')}</InlineAlert>}
         {(loginReason === 'rejected' || loginReason === 'required') && (
           <InlineAlert tone="informative">{t(loginReason === 'rejected' ? 'login.rejected' : 'login.tokenRequired')}</InlineAlert>
         )}
-        <ActionHelp reason={profileReason}>
+        {!firstRun && (
           <Toolbar>
             <div className="rp-contents" data-setting="profile">
-              <LabeledSelect
-                label={t('settings.profile')}
-                side
-                value={activeId}
-                isDisabled={!hasActive || saving}
-                items={profile.choices}
-                onChange={switchProfile}
-              />
+              <LabeledSelect label={t('settings.profile')} side value={activeId} isDisabled={saving} items={profile.choices} onChange={switchProfile} />
             </div>
             <div className="rp-contents" data-setting="addProfile">
               <Button onPress={addProfile}>{t('settings.addProfile')}</Button>
             </div>
             <div className="rp-contents" data-setting="renameProfile">
-              <Button isDisabled={!hasActive} onPress={renameProfile}>
-                {t('settings.renameProfile')}
-              </Button>
+              <Button onPress={renameProfile}>{t('settings.renameProfile')}</Button>
             </div>
             <div className="rp-contents" data-setting="deleteProfile">
-              <Button isDisabled={!hasActive} onPress={() => setDialog('delete')}>
-                {t('settings.deleteProfile')}
-              </Button>
+              <Button onPress={() => setDialog('delete')}>{t('settings.deleteProfile')}</Button>
             </div>
             {session && (
               <div className="rp-contents" data-setting="signOut">
@@ -144,7 +134,7 @@ export function Settings({query}: PageProps) {
               </div>
             )}
           </Toolbar>
-        </ActionHelp>
+        )}
         {session?.tokenOnly && <span className="rp-label">{t('settings.signOutTokenHelp')}</span>}
         <Form
           className="rp-form"
@@ -184,12 +174,17 @@ export function Settings({query}: PageProps) {
           )}
           <Toolbar>
             <PrimaryActions>
+              {firstRun && (
+                <Button isDisabled={saving} onPress={keepDemo}>
+                  {t('settings.useDemo')}
+                </Button>
+              )}
               <div className="rp-contents" data-setting="test">
-                <Button onPress={() => void testConnection()} isPending={pending} isDisabled={saving}>
+                <Button accent={firstRun !== null && !reachable} onPress={() => void testConnection()} isPending={pending} isDisabled={saving}>
                   {t('settings.test')}
                 </Button>
               </div>
-              <Button type="submit" accent isPending={saving} isDisabled={staleLogin || !!invalidText}>
+              <Button type="submit" accent={firstRun === null || reachable} isPending={saving} isDisabled={staleLogin || !!invalidText}>
                 {t('settings.save')}
               </Button>
             </PrimaryActions>
@@ -351,7 +346,6 @@ export function Settings({query}: PageProps) {
 
   return (
     <div className="rp-page">
-      {firstRun && <p className="rp-note">{firstRun}</p>}
       {paired && <p className="rp-note">{t('settings.paired')}</p>}
       <Tabs
         page

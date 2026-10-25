@@ -4,7 +4,7 @@ import {useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {SettingsContext} from '../../shell/preferences';
 import {useBackendForm} from './useBackendForm';
-import {profileView, profileReason} from './view';
+import {profileView} from './view';
 import {installHint, useInstallOffer} from '../../shell/install';
 import {docsHref} from '../shared/docs';
 export function useSettingsPage(query: string) {
@@ -39,8 +39,6 @@ export function useSettingsPage(query: string) {
     // Until something is saved the app shows demo data, whatever address the field holds.
     firstRun: form.saved.api === null ? t(form.demo ? 'settings.firstRun' : 'settings.firstRunUnsaved') : null,
     activeId: form.saved.activeId,
-    hasActive: !!form.active,
-    profileReason: profileReason(!!form.active, t),
     invalidText: form.invalid ? t('settings.invalidUrl') : undefined,
     tokenType: showToken ? 'text' : 'password',
     tokenToggleText: t(showToken ? 'settings.hideToken' : 'settings.showToken'),

@@ -1005,7 +1005,7 @@ test('the active connections tile opens the connection list', async ({page}) => 
   await page.goto('/#/activity');
   await page.getByRole('link', {name: 'Active connections', exact: true}).click();
   await expect(page).toHaveURL(/#\/connections\?tab=list$/);
-  await expect(page.getByRole('tab', {name: 'Connections', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', {name: 'List', exact: true})).toHaveAttribute('aria-selected', 'true');
 });
 
 test('the download and upload tiles open the connections traffic', async ({page}) => {
@@ -1029,7 +1029,7 @@ test('the rankings, outbound usage and latency tile open the connections and nod
   const address = (await device.innerText()).trim();
   await device.click();
   await expect(page).toHaveURL(new RegExp(`#/connections\\?src=${escape(address)}$`));
-  await expect(page.getByRole('tab', {name: 'Connections', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', {name: 'List', exact: true})).toHaveAttribute('aria-selected', 'true');
   await expect(list).toContainText(address);
   await page.goBack();
   await ranking.getByRole('radio', {name: 'Domains', exact: true}).click();

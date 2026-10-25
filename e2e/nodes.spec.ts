@@ -1378,7 +1378,7 @@ test('a latency row opens its node in the list', async ({page}) => {
     const params = new URLSearchParams(search);
     return path === '/nodes' && params.get('provider') === node.provider_id && params.get('q') === name;
   });
-  await expect(page.getByRole('tab', {name: 'Nodes', exact: true})).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', {name: 'List', exact: true})).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('searchbox', {name: 'Search nodes', exact: true})).toHaveValue(name);
   await expect(page.getByRole('grid').last()).toContainText(name);
 });

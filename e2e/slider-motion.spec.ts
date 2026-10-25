@@ -15,7 +15,7 @@ const cases: Array<{name: string; route: string; marker: string; pick: (page: Pa
     name: 'tab bar',
     route: 'connections',
     marker: '.rp-content .rp-tabbar > .rp-slider',
-    pick: page => page.getByRole('tab', {name: 'Connections', exact: true}),
+    pick: page => page.getByRole('tab', {name: 'List', exact: true}),
     axis: 'x'
   },
   {

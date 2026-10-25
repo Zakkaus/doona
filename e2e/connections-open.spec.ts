@@ -78,7 +78,7 @@ for (const viewport of [
       await page.getByRole('tab', {name: 'Traffic'}).click();
       await expect(page.locator('.rp-table')).toBeHidden();
       await page.evaluate(watchPainted);
-      await page.getByRole('tab', {name: 'Connections'}).click();
+      await page.getByRole('tab', {name: 'List'}).click();
       await expect.poll(() => page.evaluate(() => (window as unknown as {painted: {frames: unknown[]}}).painted.frames.length)).toBe(20);
       const {frames} = await page.evaluate(() => (window as unknown as {painted: {frames: number[][]}}).painted);
       expect(new Set(frames.map(frame => frame.join()))).toEqual(new Set([frames.at(-1)!.join()]));

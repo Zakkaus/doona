@@ -8,7 +8,6 @@ import {
   numericFields,
   numericFieldView,
   probeFailure,
-  profileReason,
   profileView,
   recorderAccess,
   recorderFields,
@@ -95,11 +94,6 @@ it('names why a connection test failed and ignores a cancelled test', () => {
   expect(probeFailure(new SyntaxError('Unexpected token'), idle, base, origin)).toEqual({key: 'settings.nonJson'});
   expect(probeFailure(new TypeError('Failed to fetch'), idle, base, origin)).toEqual({key: 'settings.cors'});
   expect(probeFailure(new TypeError('Failed to fetch'), idle, base, 'https://router.example')).toEqual({key: 'settings.network'});
-});
-
-it('says the profile actions wait for a saved profile', () => {
-  expect(profileReason(false, t)).toBe('No profile yet; saving the backend creates one');
-  expect(profileReason(true, t)).toBeNull();
 });
 
 it('says why Apply for backend options is disabled only for a value out of range, not for having nothing to apply', () => {
