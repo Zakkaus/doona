@@ -73,7 +73,7 @@ it('loads only itself for a complete language', async () => {
   const i18n = await import('./index');
   const read = vi.fn((lang: Lang) => Promise.resolve(lang === 'zh-TW' ? ({} as Partial<Catalogue>) : (en as Partial<Catalogue>)));
   await i18n.loadLanguage('zh-TW', read);
-  expect(read.mock.calls).toEqual([['zh-TW']]);
+  expect(read.mock.calls).toEqual([['zh-TW', 'core']]);
   expect(i18n.isLoaded('en')).toBe(false);
 });
 

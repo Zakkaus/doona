@@ -37,14 +37,23 @@ export function measure(manifest, size) {
   const activityKey = keyOf('activity chunk', chunk => chunk.name === 'activity' && chunk.file.endsWith('.js'));
   const locales = entries.filter(([, chunk]) => chunk.src?.startsWith('src/i18n/locales/')).map(([key]) => key);
   if (!locales.length) throw new Error('Manifest has no locale chunks.');
-  // Startup loads one language catalogue, so the largest counts.
-  const locale = [...filesOf(manifest, locales)].reduce((best, file) => (size(file) > size(best) ? file : best));
+  // Startup loads one language's core part and Activity adds its activity part (tools/catalogue-parts.mjs), so the
+  // language whose parts weigh most counts. A catalogue built whole is its own core part.
+  const parts = new Map();
+  for (const key of locales) {
+    const [, lang, stage = 'core'] = /^src\/i18n\/locales\/([^/?]+)\.json(?:\?(?:.*&)?part=(\w+))?/.exec(key);
+    parts.set(lang, {...parts.get(lang), [stage]: manifest[key].file});
+  }
+  const heaviest = stages => {
+    const sets = [...parts.values()].map(own => stages.flatMap(stage => (own[stage] ? [own[stage]] : [])));
+    return sets.reduce((best, files) => (files.reduce((sum, file) => sum + size(file), 0) > best.reduce((sum, file) => sum + size(file), 0) ? files : best));
+  };
   const shell = withClosure(manifest, [entryKey]);
   const activity = union(shell, withClosure(manifest, [activityKey, ...chartKeys]));
   const login = union(shell, withClosure(manifest, [loginKey]));
   const result = [
-    entry('startupLogin', 'login', union(login, [locale]), '.js', size),
-    entry('startupActivity', 'activity', union(activity, [locale]), '.js', size),
+    entry('startupLogin', 'login', union(login, heaviest(['core'])), '.js', size),
+    entry('startupActivity', 'activity', union(activity, heaviest(['core', 'activity'])), '.js', size),
     entry('startupCss', 'activity', activity, '.css', size),
     // The mock loads on top of the shell, so only what it adds counts.
     entry(
