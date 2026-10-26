@@ -972,6 +972,7 @@
   "nodes.tagTaken": "已有其他订阅使用此名称",
   "nodes.testAll": "全部测试",
   "nodes.testBusy": "请等待当前测试完成。",
+  "nodes.testNone": "列出的节点都无法测试。",
   "nodes.testingBatch": "正在测试 {n}/{total}",
   "nodes.updated": "更新时间",
   "nodes.url": "订阅网址",
