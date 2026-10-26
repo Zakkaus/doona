@@ -1,5 +1,5 @@
 import type {Page} from '@playwright/test';
-import {expect, paletteBoxes, test, mockBackend, expectHiddenPagesIdle, fulfillStream} from './fixtures';
+import {expect, paletteBoxes, test, mockBackend, expectHiddenPagesIdle, fulfillStream, settleFrames} from './fixtures';
 
 const flavours = ['glass', 'clear', 'frosted', 'tinted'] as const;
 // Glass and Clear draw the sidebar and the bar's capsules as glass of their own; Frosted and Tinted share one chrome sheet.
@@ -366,6 +366,8 @@ test('glass floats the top bar capsules and the sidebar as the card glass', asyn
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-flavour', flavour);
     await expect(page.locator(pageCard).first()).toBeVisible();
+    // Dashboard sections pack their cards in the frame after they mount.
+    await settleFrames(page);
     return page.locator(pageCard).evaluateAll(cards => cards.slice(0, 8).map(card => JSON.stringify(card.getBoundingClientRect())));
   };
   await page.goto('/#/activity');

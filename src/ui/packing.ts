@@ -108,9 +108,9 @@ export function packSection(section: HTMLElement): () => void {
   };
   const fitRows = (list: HTMLElement[], gap: number) => {
     unfit(list);
-    const lineOf = (cell: HTMLElement) => cell.querySelector<HTMLElement>(line);
+    const lines = list.map(cell => cell.querySelector<HTMLElement>(line));
     const style = getComputedStyle(section);
-    if (!list.some(lineOf) || style.getPropertyValue('--rp-dash-snap').trim() === 'none') return;
+    if (!lines.some(Boolean) || style.getPropertyValue('--rp-dash-snap').trim() === 'none') return;
     const visible = section.getBoundingClientRect().width + Math.min(0, Number.parseFloat(style.marginInlineStart) || 0);
     const boxes = list.map(cell => cell.getBoundingClientRect());
     const rows = new Map<number, number[]>();
@@ -121,15 +121,15 @@ export function packSection(section: HTMLElement): () => void {
     const full = [...rows.values()].filter(
       row =>
         row.length > 1 &&
-        row.every(i => !list[i].dataset.width && list[i].dataset.size !== 'wide' && lineOf(list[i])) &&
+        row.every(i => !list[i].dataset.width && list[i].dataset.size !== 'wide' && lines[i]) &&
         Math.abs(Math.max(...row.map(i => boxes[i].right)) - Math.min(...row.map(i => boxes[i].left)) - visible) <= 1
     );
     if (!full.length) return;
     // A card's padding is its width less its line's; the line's own width is then read at its content, with a pixel to
     // spare for the whole-pixel widths the layout check reads.
-    const padding = new Map(full.flat().map(i => [i, boxes[i].width - lineOf(list[i])!.getBoundingClientRect().width]));
+    const padding = new Map(full.flat().map(i => [i, boxes[i].width - lines[i]!.getBoundingClientRect().width]));
     section.dataset.lines = 'probe';
-    const natural = new Map(full.flat().map(i => [i, Math.ceil(lineOf(list[i])!.getBoundingClientRect().width + padding.get(i)!) + 1]));
+    const natural = new Map(full.flat().map(i => [i, Math.ceil(lines[i]!.getBoundingClientRect().width + padding.get(i)!) + 1]));
     delete section.dataset.lines;
     for (const row of full) {
       const spans = fitSpans(
@@ -166,7 +166,7 @@ export function packSection(section: HTMLElement): () => void {
     const style = getComputedStyle(section);
     const row = section.getBoundingClientRect().width + Math.min(0, Number.parseFloat(style.marginInlineStart) || 0);
     const tablet = style.getPropertyValue('--rp-dash-snap').trim() !== 'none';
-    for (const cell of list) cell.toggleAttribute('data-wide', tablet && cell.getBoundingClientRect().width > (row * 7) / 12);
+    list.map(cell => tablet && cell.getBoundingClientRect().width > (row * 7) / 12).forEach((wide, i) => list[i].toggleAttribute('data-wide', wide));
     // Columns depend on width alone, so whether a tile stacks is known before packing; its row is known after.
     const tiles = list.filter(cell => cell.querySelector(valueTile));
     const own = tiles.map(stacks);
@@ -210,8 +210,8 @@ export function packSection(section: HTMLElement): () => void {
     });
   };
   // Content that grows or a new width packs again in the next frame, which keeps the observer out of a loop.
-  const sizes = new ResizeObserver(() => later());
-  const texts = new MutationObserver(() => later());
+  const sizes = new ResizeObserver(later);
+  const texts = new MutationObserver(later);
   sizes.observe(section);
   // Cards added, removed, moved or resized, and content that changes shape inside a card, such as a chart replacing its
   // placeholder, pack before the next paint, so a card is never drawn at a stale size.

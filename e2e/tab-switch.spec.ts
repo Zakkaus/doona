@@ -97,3 +97,24 @@ test('a tab bar keeps the width of its tabs', async ({page}) => {
   const [barWidth, rowWidth] = await bar.evaluate(el => [el.getBoundingClientRect().width, el.parentElement!.getBoundingClientRect().width]);
   expect(barWidth).toBeLessThan(rowWidth / 2);
 });
+
+// A resize observer made when the tabs appear is notified after the bar's own, in the same rendering step, so it sees
+// the frame the page paints. The marker must already be placed there, not a render later.
+test('a tab bar shows its marker in the frame it first appears', async ({page}) => {
+  await page.goto('/#/');
+  await expect(page.locator('.rp-tabbar')).toHaveCount(0);
+  const placed = page.evaluate(
+    () =>
+      new Promise<boolean>(resolve => {
+        const mutations = new MutationObserver(() => {
+          const list = document.querySelector('.rp-tabbar:has([role=tab]) [role=tablist]');
+          if (!list) return;
+          mutations.disconnect();
+          new ResizeObserver(() => resolve((document.querySelector('.rp-tabbar .rp-slider')?.getBoundingClientRect().width ?? 0) > 0)).observe(list);
+        });
+        mutations.observe(document.body, {childList: true, subtree: true});
+      })
+  );
+  await page.locator('.rp-nav[href="#/dns"]').click();
+  expect(await placed).toBe(true);
+});

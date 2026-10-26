@@ -802,6 +802,13 @@ test('group tags fit their column at 1440 px, the rest behind a +N tag', async (
   await page.goto('/#/nodes');
   await page.evaluate(() => document.fonts.ready);
   await expectFittedGroupTags(page);
+  const link = page.locator('.rp-tags[data-fit]').getByRole('link').first();
+  await link.locator('xpath=ancestor::*[@role="row"]').focus();
+  for (let i = 0; i < 8 && !(await link.evaluate(el => el === document.activeElement)); i++) await page.keyboard.press('ArrowRight');
+  await expect(link).toBeFocused();
+  await page.evaluate(() => document.fonts.dispatchEvent(new Event('loadingdone')));
+  await expect(link).toBeFocused();
+  await expectFittedGroupTags(page);
 });
 
 test('a long unavailable node name wraps inside the latency card', async ({page}) => {
