@@ -120,13 +120,16 @@ export function Logs({go}: PageProps) {
         </Light>
         {vm.recordedText && <span className="rp-label">{vm.recordedText}</span>}
         <span className="rp-grow" />
-        <ActionGroup
-          actions={[
-            {id: 'clear', label: t('log.clear'), isDisabled: !vm.rows.length, onAction: vm.clear},
-            {id: 'export', label: t('log.export'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export},
-            ...(vm.openRecording ? [{id: 'recording', label: t('ui.recordingSettings'), onAction: vm.openRecording}] : [])
-          ]}
-        />
+        {/* The actions fold to the next row together, never one by one. */}
+        <span className="rp-cluster nowrap">
+          <ActionGroup
+            actions={[
+              {id: 'clear', label: t('log.clear'), isDisabled: !vm.rows.length, onAction: vm.clear},
+              {id: 'export', label: t('log.export'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export},
+              ...(vm.openRecording ? [{id: 'recording', label: t('ui.recordingSettings'), onAction: vm.openRecording}] : [])
+            ]}
+          />
+        </span>
       </Toolbar>
       <ErrorMessage error={vm.error} onRetry={vm.retry} />
       <LogActivity records={vm.records} offered={vm.offered} minimum={vm.level} setMinimum={vm.setLevel} waiting={vm.loading} />

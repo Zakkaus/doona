@@ -51,6 +51,8 @@ type Col = {
   hideLabel?: boolean;
   actions?: boolean;
   text?: 'wrap';
+  // On a phone card (TableCards), the value takes a row of its own.
+  wide?: boolean;
 };
 export type TableSort = {column: string; direction: 'ascending' | 'descending'};
 export type TableColumn<T> = Col & {render: (row: T) => ReactNode};

@@ -1,0 +1,31 @@
+/* A table's rows as phone cards (TableCards): the list scrolls in the table's box and the virtualiser places each card
+   with the gap between them. Selection, hover and focus look as they do in a CardView. */
+.rp-table-cards {
+  overflow: auto;
+  outline: none;
+  overscroll-behavior: contain;
+}
+.rp-table-cards .rp-cardview-card:is([data-hovered], [data-focus-visible]) {
+  box-shadow: var(--rp-elevated);
+}
+.rp-table-cards .rp-cardview-card[data-selected] {
+  border-color: var(--rp-text);
+  box-shadow:
+    var(--rp-elevated),
+    inset 0 0 0 1px var(--rp-text);
+}
+/* The ring sits inside the card: the scroll box would clip one drawn outside it. */
+.rp-table-cards .rp-cardview-card[data-focus-visible] {
+  outline-offset: calc(var(--rp-focus-width) * -1);
+}
+/* A card has the width a table cell lacks, so its text wraps instead of being cut. */
+.rp-table-cards .rp-truncate {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.rp-table-cards :is(.rp-rule, .rp-chain) {
+  flex-wrap: wrap;
+}
+.rp-table-cards .rp-rule > span {
+  white-space: normal;
+}

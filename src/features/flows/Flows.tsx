@@ -33,6 +33,7 @@ import {useFlowRecords} from './useFlowRecords';
 import {ruleHref} from '../shared/link';
 import {QuickRuleButton, RuleDialog} from '../shared/RuleDialog';
 import {useFlowsPage} from './useFlowsPage';
+import {TableCards} from '../../ui/TableCards';
 
 type FlowRow = ReturnType<typeof useFlowRecords>['rows'][number];
 
@@ -109,6 +110,7 @@ function FlowRecords(props: PageProps) {
         label: t('nodes.node'),
         minWidth: 96,
         drop: 2,
+        wide: true,
         render: row =>
           row.nodeName ? (
             <NodeName name={row.node} className="rp-chain" text={row.path ?? undefined} />
@@ -122,8 +124,11 @@ function FlowRecords(props: PageProps) {
         id: 'rule',
         label: t('ui.rule'),
         minWidth: 152,
-        grow: 2,
+        // The widest column, wrapping a long expression instead of cutting it.
+        grow: 3,
         drop: 1,
+        text: 'wrap',
+        wide: true,
         render: row => (
           <span className="rp-rule">
             <RuleRef expression={row.expression} href={ruleHref(row.ruleId, view.rulesListed)} />
@@ -131,7 +136,8 @@ function FlowRecords(props: PageProps) {
           </span>
         )
       },
-      {id: 'network', label: t('ui.protocol'), minWidth: 64, grow: 0, drop: 3, render: row => row.network},
+      // Wide enough for the longest header, "Protocol", with the cell's padding.
+      {id: 'network', label: t('ui.protocol'), minWidth: 96, grow: 0, drop: 3, render: row => row.network},
       {id: 'state', label: t('ui.state'), minWidth: 112, grow: 0, drop: 5, render: row => row.state},
       {id: 'started', label: t('ui.started'), minWidth: 140, grow: 0, drop: 4, render: row => <TimeCell at={row.startedAt} />},
       {
@@ -187,18 +193,31 @@ function FlowRecords(props: PageProps) {
         )}
       </Toolbar>
       <div className="rp-with-panel" data-open={view.panelOpen ? '' : undefined}>
-        <DataTable
-          label={t('flow.records')}
-          rowDetail
-          loading={view.loading}
-          rows={view.rows}
-          height={442}
-          selected={view.id}
-          onSelect={view.select}
-          selectOnFocus={view.wide}
-          empty={t('flow.empty')}
-          cols={columns}
-        />
+        {view.phone ? (
+          <TableCards
+            label={t('flow.records')}
+            loading={view.loading}
+            rows={view.rows}
+            getTextValue={row => row.target}
+            selected={view.id}
+            onSelect={view.select}
+            empty={t('flow.empty')}
+            cols={columns}
+          />
+        ) : (
+          <DataTable
+            label={t('flow.records')}
+            rowDetail
+            loading={view.loading}
+            rows={view.rows}
+            height={442}
+            selected={view.id}
+            onSelect={view.select}
+            selectOnFocus={view.wide}
+            empty={t('flow.empty')}
+            cols={columns}
+          />
+        )}
         <DetailPanel open={view.panelOpen} title={view.panelTitle} onClose={() => view.select(null)}>
           <ErrorMessage error={view.detailError} onRetry={view.detailRetry} />
           {view.detailLoading && <SkeletonBody shape="rows" count={4} label={t('flow.detailLoading')} />}
