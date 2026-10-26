@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      :root { color-scheme: light dark; --boot-bg: light-dark(#F8F4ED, #111112); }
+      html[data-theme="light"] { color-scheme: light; }
+      html[data-theme="dark"] { color-scheme: dark; }
+      html { background: var(--boot-bg); }
+      body { margin: 0; background: transparent; }
+    </style>
+    <meta name="darkreader-lock" />
+    <title>doona lite</title>
+    <link rel="icon" href="./logo.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
+    <script>
+      try {
+        const mode = localStorage.getItem('doona-lite.theme');
+        if (['light', 'dark', 'system'].includes(mode)) document.documentElement.dataset.theme = mode;
+        const locale = localStorage.getItem('doona-lite.locale');
+        if (['en', 'zh-CN', 'zh-TW'].includes(locale)) document.documentElement.lang = locale;
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./src/main.tsx"></script>
+  </body>
+</html>

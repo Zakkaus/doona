@@ -64,7 +64,7 @@ describe('fixture sharding', () => {
   const shardTitles = (current, weights) => {
     const env = {...process.env, PWTEST_SHARD_WEIGHTS: weights};
     if (!weights) delete env.PWTEST_SHARD_WEIGHTS;
-    const listed = execFileSync('pnpm', ['exec', 'playwright', 'test', '-c', fixture, '--list', '--reporter=json', `--shard=${current}/2`], {
+    const listed = execFileSync('pnpm', ['--silent', 'exec', 'playwright', 'test', '-c', fixture, '--list', '--reporter=json', `--shard=${current}/2`], {
       encoding: 'utf8',
       env
     });
