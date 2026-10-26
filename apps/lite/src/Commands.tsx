@@ -11,7 +11,7 @@ import {readProviders, type Connection} from './api';
 import {usePreferences} from './app/preferences';
 import {readNodes} from './config';
 import {describeRule, describeTarget, phraseText} from './describe';
-import {useMessages} from './i18n';
+import {localeNames, useMessages, type Locale} from './i18n';
 import {resourceIndex, searchNameRank, type ResourceResult} from './searchIndex';
 import {useRead} from './state';
 import {dispatchCommand, jumpToResource, requestPageCommand} from './ui/commands';
@@ -115,11 +115,7 @@ export default function Commands({
     }
   add('settings', t.settings, t.actions, settings);
   for (const mode of ['light', 'dark', 'system'] as const) add(`theme:${mode}`, t[mode], t.appearance, () => preferences.setMode(mode));
-  for (const [locale, label] of [
-    ['en', 'English'],
-    ['zh-CN', '简体中文'],
-    ['zh-TW', '繁體中文']
-  ] as const)
+  for (const [locale, label] of Object.entries(localeNames) as [Locale, string][])
     add(`language:${locale}`, label, t.language, () => preferences.setLocale(locale));
   add('help', t.shortcuts, t.actions, () => setShowHelp(true));
   // Rules read as plain phrases; their dae text stays searchable as a keyword.

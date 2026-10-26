@@ -1,8 +1,6 @@
 const {chromium, expect} = require('@playwright/test');
 const fs = require('node:fs');
 const base = process.env.LITE_PREVIEW_URL ?? 'http://127.0.0.1:5198';
-const output = process.env.LITE_SHOTS ?? '/scratch/ssd/doona-lite-shots/ux3-part2';
-fs.mkdirSync(output, {recursive: true});
 const titles = {nodes: 'Nodes', subscriptions: 'Subscriptions', groups: 'Groups', routing: 'Routing', dns: 'DNS'};
 const first = {nodes: 'tbody tr', subscriptions: '[data-provider-id]', groups: '[data-group-row]', routing: '[data-rule-index]', dns: '[data-upstream]'};
 const records = [];

@@ -2,8 +2,9 @@ const {chromium, expect} = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
 const base = process.env.LITE_PREVIEW_URL ?? 'http://127.0.0.1:5198';
-const shots = process.env.LITE_SHOTS ?? '/scratch/ssd/doona-lite-shots/v7';
-fs.mkdirSync(shots, {recursive: true});
+// Screenshots are written only when LITE_SHOTS names a directory.
+const shots = process.env.LITE_SHOTS;
+if (shots) fs.mkdirSync(shots, {recursive: true});
 async function settle(p) {
   await p.evaluate(async () => {
     await document.fonts.ready;
@@ -69,7 +70,7 @@ async function go(p, route) {
       console.log('SCREEN', name, width, theme);
       await settle(p);
       expect(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
-      await p.screenshot({path: path.join(shots, `${name}-${width}-${theme}.png`), fullPage: true});
+      if (shots) await p.screenshot({path: path.join(shots, `${name}-${width}-${theme}.png`), fullPage: true});
     };
     await p.goto(base);
     await p.getByRole('button', {name: 'Try the demo', exact: true}).click();

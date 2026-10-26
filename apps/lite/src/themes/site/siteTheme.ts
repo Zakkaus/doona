@@ -1,7 +1,6 @@
 /**
  * The official Astryx site's theme, ported from the `astryx` theme at
- * apps/docsite/src/themes/astryxTheme.ts in https://github.com/facebook/astryx
- * (a local copy sits at /scratch/ssd/astryx-home-research/src/themes/).
+ * apps/docsite/src/themes/astryxTheme.ts in https://github.com/facebook/astryx.
  * Upstream extends nothing: it sets a few tokens on core's defaults, so this
  * port extends nothing either. Colours, radii, display weights, pill buttons,
  * TopNav and pagination dots are upstream's; the panel's shared adjustments
@@ -60,7 +59,7 @@ export const siteTheme = defineTheme({
   components: {
     ...panelShared.components,
     // The brand mark (landing nav and footer, panel heading) in the accent, like
-    // primary buttons (owner 2026-10-14: brand blue was too blue for the theme).
+    // primary buttons; the brand blue was too blue for this theme.
     'nav-icon': {base: {backgroundColor: 'var(--color-accent)', color: 'var(--color-on-accent)'}},
     // Pill buttons across all variants and sizes.
     button: {base: {...panelShared.components.button.base, borderRadius: 'var(--radius-full)'}},

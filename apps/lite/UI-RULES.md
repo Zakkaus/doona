@@ -1,7 +1,7 @@
 # Doona lite UI rules
 
-Astryx 0.6.8 templates own the frames. These rules adapt the private project's AGENTS.md and
-UI-RULES.md to the lite console. Keep the site theme, Figtree and BrandMark.
+Astryx 0.6.8 templates own the frames. These rules apply them to the lite console.
+Keep the site theme, Figtree and BrandMark.
 Changes must satisfy these rules and the browser checks in the same milestone.
 
 ## 1. Page frames and spacing

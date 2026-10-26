@@ -3,8 +3,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const base = process.env.LITE_PREVIEW_URL;
 if (!base) throw new Error('Set LITE_PREVIEW_URL.');
-const output = process.env.LITE_SHOTS ?? '/scratch/ssd/doona-lite-shots/nodes';
-fs.mkdirSync(output, {recursive: true});
+// Screenshots are written only when LITE_SHOTS names a directory.
+const output = process.env.LITE_SHOTS;
+if (output) fs.mkdirSync(output, {recursive: true});
 const link = 'vless://b831381d-6324-4d53-ad4f-8cda48b30811@jp.example.org:443?security=tls#Japan-one';
 (async () => {
   const browser = await chromium.launch();
@@ -32,7 +33,7 @@ const link = 'vless://b831381d-6324-4d53-ad4f-8cda48b30811@jp.example.org:443?se
     await p.getByRole('link', {name: '节点', exact: true}).click();
     await p.locator('[data-node-id]').first().waitFor();
     await p.waitForTimeout(600);
-    const shot = name => p.screenshot({path: path.join(output, `${name}.png`)});
+    const shot = async name => output && p.screenshot({path: path.join(output, `${name}.png`)});
     await shot('nodes-light');
     const rows = p.locator('tbody tr:has([data-node-id])');
     const heights = await rows.evaluateAll(rows => rows.map(row => row.getBoundingClientRect().height));

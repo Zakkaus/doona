@@ -26,7 +26,7 @@ import {blockFields, scanConfig} from '../../../src/dae/text';
 import {applyContent, readMain, type Connection} from './api';
 import {usePreferences} from './app/preferences';
 import {canWrite, validateContent} from './config';
-import {useMessages, type MessageKey} from './i18n';
+import {localeNames, useMessages, type MessageKey} from './i18n';
 import {docsHref} from './docs';
 import {useRead, useTask} from './state';
 import {Feedback, ReadState, useNoticeToast} from './ui';
@@ -272,11 +272,7 @@ export function SettingsDialog({
                   width={192}
                   value={prefs.locale}
                   onChange={v => prefs.setLocale(v as typeof prefs.locale)}
-                  options={[
-                    {value: 'en', label: 'English'},
-                    {value: 'zh-CN', label: '简体中文'},
-                    {value: 'zh-TW', label: '繁體中文'}
-                  ]}
+                  options={Object.entries(localeNames).map(([value, label]) => ({value, label}))}
                 />
               </VStack>
             </Card>

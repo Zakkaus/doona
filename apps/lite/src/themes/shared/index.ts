@@ -15,8 +15,8 @@ declare module '@astryxdesign/core/Card' {
 }
 
 /**
- * Shared type scale. The owner found the default ramp too small (14px text,
- * 32px controls), so the base is 15px on every theme. The ratio is 1.2 on all
+ * Shared type scale. The base is 15px on every theme, one step above the
+ * default ramp's 14px text with 32px controls. The ratio is 1.2 on all
  * of them so headings land at the same size and position whichever theme is
  * picked (the official gothic, matcha and y2k themes use 1.25 on a 16px base).
  * `typography` replaces the base theme's config, so each variant repeats its
