@@ -1,0 +1,26 @@
+@layer product {
+  .lite-demo-badge {
+    position: fixed;
+    inset-inline-end: var(--spacing-3);
+    inset-block-end: var(--spacing-3);
+    z-index: 2147483647;
+    padding: var(--spacing-0-5);
+    padding-inline-start: calc(var(--spacing-2) + var(--spacing-0-5));
+    border-radius: var(--radius-full);
+    background: var(--lite-demo-background);
+    color: var(--lite-demo-foreground);
+    font-family: system-ui, sans-serif;
+    font-size: var(--font-size-sm);
+    line-height: 1.6;
+  }
+
+  .lite-demo-badge a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .lite-demo-badge a:focus-visible {
+    outline: var(--focus-outline-width) var(--focus-outline-style) currentColor;
+    outline-offset: var(--focus-outline-offset);
+  }
+}

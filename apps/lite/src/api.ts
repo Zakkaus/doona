@@ -42,7 +42,7 @@ export async function connect(address: string, token: string): Promise<Connectio
     throw error;
   });
   try {
-    writeConnection({address: normalized, token});
+    if (import.meta.env.VITE_LITE_DEMO !== '1') writeConnection({address: normalized, token});
   } catch {
     throw new LiteError('connectionSaveError');
   }
