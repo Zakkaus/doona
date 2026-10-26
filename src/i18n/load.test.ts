@@ -52,6 +52,25 @@ it('loads a later stage for every language, before and after it is asked for', a
   expect(i18n.translate('zh-TW', 'ui.activity' as Key)).toBe('zh-TW activity');
 });
 
+it('loads a stage when the shown language has it, retrying an idle language that failed once it is asked for', async () => {
+  const i18n = await import('./index');
+  vi.stubGlobal('localStorage', {getItem: () => 'en'});
+  let offline = true;
+  const read = vi.fn((lang: string, stage: string) =>
+    offline && `${lang}/${stage}` !== 'en/activity' && stage !== 'core'
+      ? Promise.reject(new Error('offline'))
+      : Promise.resolve({[`ui.${stage}`]: `${lang} ${stage}`} as Partial<Catalogue>)
+  );
+  await i18n.loadLanguage('zh-TW', read);
+  await i18n.loadLanguage('en', read);
+  await expect(i18n.withCatalogue('activity', () => Promise.resolve('page'))()).resolves.toBe('page');
+  await expect(i18n.loadStage('rest')).rejects.toThrow('offline');
+  offline = false;
+  await i18n.loadLanguage('zh-TW', read);
+  expect(i18n.translate('zh-TW', 'ui.activity' as Key)).toBe('zh-TW activity');
+  vi.unstubAllGlobals();
+});
+
 it('falls back to a loaded language when the saved one has not loaded', async () => {
   const i18n = await import('./index');
   await i18n.loadLanguage('en');

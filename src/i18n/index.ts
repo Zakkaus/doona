@@ -86,7 +86,8 @@ function loadPart(lang: Lang, stage: Stage, read: Reader): Promise<void> {
 // A partial language loads the reference catalogue too; translation resolves its missing keys from English.
 export function loadLanguage(lang: Lang, read: Reader = readCatalogue): Promise<void> {
   let pending = loading.get(lang);
-  if (!pending) {
+  // A part that failed while the language was not shown loads again here.
+  if (!pending || stages.slice(0, reached + 1).some(stage => !partLoads.has(`${lang}/${stage}`))) {
     readers.set(lang, read);
     const {complete} = languages.find(language => language.id === lang)!;
     const own = Promise.all(stages.slice(0, reached + 1).map(stage => loadPart(lang, stage, read)));
@@ -102,11 +103,17 @@ export function loadLanguage(lang: Lang, read: Reader = readCatalogue): Promise<
   }
   return pending;
 }
-// The parts up to `stage` of every language this page loads, now and later.
+// The parts up to `stage` of every language this page loads, now and later. Only the shown language's parts, with
+// English for a partial language, can fail the stage; another language's failed part loads again with that language.
 export function loadStage(stage: Stage): Promise<void> {
   const index = stages.indexOf(stage);
   reached = Math.max(reached, index);
-  const wanted = [...loading.keys()].flatMap(lang => stages.slice(1, index + 1).map(next => loadPart(lang, next, readers.get(lang)!)));
+  const shown = loadedLang(readLang());
+  const needed = languages.find(language => language.id === shown)!.complete ? [shown] : [shown, REFERENCE_LANG];
+  const wanted = [...loading.keys()].map(lang => {
+    const parts = Promise.all(stages.slice(1, index + 1).map(next => loadPart(lang, next, readers.get(lang)!)));
+    return needed.includes(lang) ? parts : parts.catch(() => undefined);
+  });
   return Promise.all(wanted).then(() => undefined);
 }
 // A dynamic import that resolves once the module and its stage's messages have arrived, so what it renders never shows
