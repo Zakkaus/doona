@@ -261,8 +261,7 @@ test('a tile whose value links to its source answers hover as a linked card', as
   await expect(page).toHaveURL(/#\/activity/);
 });
 
-// rc.1 review: invalid settings and uncommitted dialogs must stay recoverable.
-test('rc1 backend validation blocks empty and malformed URLs without a success toast', async ({page}) => {
+test('backend validation blocks empty and malformed URLs without a success toast', async ({page}) => {
   await page.goto('/#/settings');
   const field = page.locator('[name=api]');
   const before = await page.evaluate(() => localStorage.getItem('doona-profiles'));
@@ -276,7 +275,7 @@ test('rc1 backend validation blocks empty and malformed URLs without a success t
   }
 });
 
-test('rc1 search closes on one Escape and restores the trigger', async ({page}) => {
+test('search closes on one Escape and restores the trigger', async ({page}) => {
   await page.goto('/#/activity');
   const trigger = page.getByRole('button', {name: /^Search pages/});
   for (const origin of [trigger, page.getByRole('button', {name: 'Refresh', exact: true})]) {
@@ -290,22 +289,22 @@ test('rc1 search closes on one Escape and restores the trigger', async ({page}) 
   }
 });
 
-test('rc1 new group requires a name and confirms discarding on Escape', async ({page}) => {
+test('new group requires a name and confirms discarding on Escape', async ({page}) => {
   await page.goto('/#/policies');
   await page.getByRole('button', {name: 'New group', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'New group', exact: true});
   const name = dialog.getByRole('textbox', {name: 'Group name'});
   await dialog.getByRole('button', {name: 'Create', exact: true}).click();
   await expect(dialog.locator('.rp-field-error')).toHaveText('Enter a name');
-  await name.fill('rc1-draft');
+  await name.fill('draft');
   await page.keyboard.press('Escape');
   const discard = page.getByRole('alertdialog');
   await expect(discard).toBeVisible();
   await discard.getByRole('button', {name: 'Cancel', exact: true}).click();
-  await expect(name).toHaveValue('rc1-draft');
+  await expect(name).toHaveValue('draft');
 });
 
-test('rc1 global port keeps an out-of-range value and blocks saving', async ({page}) => {
+test('global port keeps an out-of-range value and blocks saving', async ({page}) => {
   await page.goto('/#/config?tab=global');
   const port = page.locator('[data-setting=tproxy_port]').getByRole('textbox');
   await port.fill('99999');
@@ -316,7 +315,7 @@ test('rc1 global port keeps an out-of-range value and blocks saving', async ({pa
   await expect(page.locator('#config-global-form button[type=submit]')).toBeDisabled();
 });
 
-test('rc1 top bar reload explains why it is pending', async ({page}) => {
+test('top bar reload explains why it is pending', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
   let release!: () => void;
   const pending = new Promise<void>(resolve => {

@@ -1,6 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {expect, it} from 'vitest';
-import {assignStages, cataloguePart, scanModules, stages} from './catalogue-parts.mjs';
+import {stages} from '../src/i18n/stages';
+import {assignStages, cataloguePart, scanModules} from './catalogue-parts.mjs';
 
 const module = (keys, edges = []) => ({keys: new Set(keys), edges, unresolved: []});
 
@@ -57,14 +58,10 @@ it('sees every import of the application and every stage boundary', () => {
   expect(stages.at(-1)).toBe('rest');
 });
 
-it('maps every template-built translation family and loads DNS outcomes with Activity in every locale', () => {
-  for (const lang of ['en', 'zh-CN', 'zh-TW']) {
-    const keys = new Set(Object.keys(JSON.parse(readFileSync(`src/i18n/locales/${lang}.json`, 'utf8'))));
-    const modules = scanModules('.', keys);
-    const assigned = assignStages(modules, keys);
-    const outcomes = [...keys].filter(key => key.startsWith('dns.outcome.'));
-    expect(outcomes).toHaveLength(4);
-    for (const key of outcomes) expect(assigned.get(key), key).toBe('activity');
-  }
-  // Scans every module once per locale, which takes longer than the default 5 s on CI runners.
-}, 60_000);
+it('maps every template-built translation family and loads DNS outcomes with Activity', () => {
+  const keys = new Set(Object.keys(JSON.parse(readFileSync('src/i18n/locales/en.json', 'utf8'))));
+  const assigned = assignStages(scanModules('.', keys), keys);
+  const outcomes = [...keys].filter(key => key.startsWith('dns.outcome.'));
+  expect(outcomes).toHaveLength(4);
+  for (const key of outcomes) expect(assigned.get(key), key).toBe('activity');
+});

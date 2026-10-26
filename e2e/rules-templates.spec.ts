@@ -742,7 +742,7 @@ for (const variant of [
   });
 
 for (const destination of ['DNS rules', 'Policies']) {
-  test(`rc1 template selection guards leaving for ${destination}`, async ({page}) => {
+  test(`template selection guards leaving for ${destination}`, async ({page}) => {
     await backend(page);
     await page.goto('/#/rules?tab=list&view=simple');
     await choose(page, 'Global proxy');

@@ -248,7 +248,7 @@ test('the log list stays in place when the first records arrive', async ({page})
 });
 
 for (const width of [1280, 390]) {
-  test(`rc1 log actions stay in the toolbar and wrap whole controls at ${width}`, async ({page}) => {
+  test(`log actions stay in the toolbar and wrap whole controls at ${width}`, async ({page}) => {
     await page.setViewportSize({width, height: 900});
     await page.goto('/#/logs');
     const toolbar = page.locator('main [data-page-toolbar]');
