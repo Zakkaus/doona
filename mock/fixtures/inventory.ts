@@ -39,7 +39,7 @@ function node(
     id: name,
     name,
     protocol,
-    subscription_tag: source,
+    subscription_tag: source === 'inline' ? null : source,
     provider_id: source === 'inline' ? 'inline' : source,
     // honk reports raw TCP for a Trojan, VMess or VLESS link that names no transport.
     ...(protocol && ['trojan', 'vmess', 'vless'].includes(protocol) && {stream_transport: 'tcp'}),
