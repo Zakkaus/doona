@@ -389,6 +389,8 @@ export const zhTW: Messages = {
   settings: '設定',
   connectDescription: '使用示範模式，或連線至代理服務。',
   demo: '試用示範',
+  demoBadge: '示範：範例資料',
+  hideDemoBadge: '隱藏示範標記',
   demoName: '示範',
   backend: '後端網址',
   token: '權杖',

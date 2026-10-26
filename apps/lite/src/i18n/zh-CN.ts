@@ -389,6 +389,8 @@ export const zhCN: Messages = {
   settings: '设置',
   connectDescription: '使用演示模式，或连接代理服务。',
   demo: '试用演示',
+  demoBadge: '演示：示例数据',
+  hideDemoBadge: '隐藏演示标记',
   demoName: '演示',
   backend: '后端地址',
   token: '令牌',
