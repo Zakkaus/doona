@@ -10,7 +10,7 @@ import {storageKeys} from '../../api/storage';
 import {toast} from '../../ui/ui';
 import {readSettings} from '../../shell/preferences';
 import {useDraftGuard} from '../../shell/draft';
-import {parseHash, replaceRoute} from '../../shell/route';
+import {parseHash, replaceAddress, replaceRoute} from '../../shell/route';
 import {defaultRoute, type RoutePath} from '../../shell/routes';
 import {useConnectionTest} from './connectionTest';
 import {cardHeadingId} from './nav';
@@ -198,7 +198,7 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
     } catch {
       /* Storage can be unavailable. */
     }
-    if (destination) replaceRoute(destination.route, destination.query);
+    if (destination) replaceAddress(destination.route, destination.query);
     // Rebuild requests, SSE subscriptions, and module-level observation state for the new backend.
     location.reload();
   };

@@ -113,7 +113,7 @@ it('says a geodata update needs its status, and nothing while it loads', () => {
 import {hookHarness} from '../../store/testHelpers';
 import {useBackendForm} from './useBackendForm';
 import {writeProfiles} from '../../api/profiles';
-import {replaceRoute} from '../../shell/route';
+import {replaceAddress} from '../../shell/route';
 import {toast} from '../../ui/ui';
 vi.mock('react', async original => ({
   ...(await original<typeof import('react')>()),
@@ -126,7 +126,7 @@ vi.mock('../../shell/preferences', () => ({
   readSettings: () => ({api: 'mock', token: '', activeId: 'demo', profiles: [{id: 'demo', name: 'Demo', api: 'mock', token: ''}]})
 }));
 vi.mock('../../shell/draft', () => ({useDraftGuard: () => ({clear: vi.fn(), leave: (action: () => void) => action()})}));
-vi.mock('../../shell/route', async original => ({...(await original<typeof import('../../shell/route')>()), replaceRoute: vi.fn()}));
+vi.mock('../../shell/route', async original => ({...(await original<typeof import('../../shell/route')>()), replaceAddress: vi.fn()}));
 vi.mock('../../api/profiles', async original => ({...(await original<typeof import('../../api/profiles')>()), writeProfiles: vi.fn()}));
 vi.mock('../../api/session', () => ({dropOrphanSession: vi.fn()}));
 vi.mock('../../ui/ui', async original => ({...(await original<typeof import('../../ui/ui')>()), toast: vi.fn()}));
@@ -151,13 +151,13 @@ it('refuses an invalid backend URL without persisting or scheduling a saved toas
 });
 it.each(['activity', 'settings'] as const)('sends a changed connection through a protected page when the start page is %s', start => {
   hookHarness.reset();
-  vi.mocked(replaceRoute).mockClear();
+  vi.mocked(replaceAddress).mockClear();
   const reload = vi.fn();
   vi.stubGlobal('sessionStorage', {setItem: vi.fn()});
   vi.stubGlobal('location', {reload});
   const read = () => hookHarness.render(() => useBackendForm('', start));
   read().changeApi('https://router.test');
   read().save();
-  expect(replaceRoute).toHaveBeenCalledExactlyOnceWith('activity', '');
+  expect(replaceAddress).toHaveBeenCalledExactlyOnceWith('activity', '');
   expect(reload).toHaveBeenCalledOnce();
 });
