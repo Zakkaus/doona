@@ -238,7 +238,7 @@ export function parseLayout(value: unknown): Layout {
     'panel',
     (value.version as number) < 3
   );
-  // Earlier versions' placement and dock fields are dropped: the panel floats until docked again.
+  // Earlier versions' placement fields are dropped; a dock (`docked`, `dockHeight`) is kept as written.
   return {
     version: 4,
     items,

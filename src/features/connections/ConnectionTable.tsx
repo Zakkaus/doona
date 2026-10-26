@@ -1,9 +1,9 @@
 import {useLayoutEffect, useMemo, useRef, type ComponentProps, type ReactNode} from 'react';
 import {useT} from '../../i18n';
-import {NodeName} from '../../ui/NodeName';
 import {Badge, DataTable, TextTooltip, TimeCell, useFillHeight, RuleRef, type TableColumn} from '../../ui/ui';
 import {columns, connectionId, connectionKey, isCollapsed, type ConnectionView, type GroupCollapse} from './viewState';
 import type {ConnectionRowView, ConnectionTableRow} from './tableRows';
+import {NodePath} from '../shared/NodePath';
 import {QuickRuleButton} from '../shared/RuleDialog';
 import type {ConnectionRowRule} from './useConnectionRule';
 
@@ -27,14 +27,7 @@ export function ConnectionTable({collection, view, collapse, onToggleGroup, load
     const renderers: Record<string, (c: ConnectionRowView) => ReactNode> = {
       dst: c => <TextTooltip>{c.target}</TextTooltip>,
       src: c => <TextTooltip className="rp-code">{c.source}</TextTooltip>,
-      node: c =>
-        c.nodeName ? (
-          <NodeName name={c.node} className="rp-chain" text={c.path ?? undefined} />
-        ) : (
-          <TextTooltip className="rp-chain" text={c.path ?? undefined}>
-            {c.node}
-          </TextTooltip>
-        ),
+      node: c => <NodePath row={c} />,
       rule: c => (
         <span className="rp-rule">
           <RuleRef {...c.rule} />

@@ -8,6 +8,12 @@ export type Series = {label: string; color: string; values: Array<number | null>
 const LazyAreaChart = lazy(() => import('./AreaChart').then(module => ({default: module.AreaPlot})));
 const LazySpark = lazy(() => import('./Sparkline').then(module => ({default: module.SparkPlot})));
 const LazyDonut = lazy(() => import('./Donut').then(module => ({default: module.DonutPlot})));
+export function seriesTipLines(series: Series[], index: number, fmt: (v: number) => string, t: ReturnType<typeof useT>) {
+  return series
+    .filter(s => s.values[index] != null)
+    .sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0))
+    .map(s => t('ui.valuePair', {label: s.label, value: fmt(s.values[index]!)}));
+}
 export function Legend({series, fmt, widest}: {series: Series[]; fmt: (v: number | null | undefined) => string; widest?: string}) {
   return (
     <div className="rp-legend">

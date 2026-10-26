@@ -1,8 +1,8 @@
 import {useEffect, useLayoutEffect, useRef, useState, type RefObject} from 'react';
 import {mergeProps, useDrop, VisuallyHidden} from 'react-aria';
+import {cardType} from './dragAndDrop';
 import type {CanvasPlace} from './SortableCanvas';
 
-const cardType = 'application/x-doona-card';
 // The card being dragged in edit mode, set by its canvas: a drag's data is unreadable until the drop. A drag over a
 // space asks often whether the card fits, so each drag measures the card once per space.
 const dragged: {card?: string} = {};

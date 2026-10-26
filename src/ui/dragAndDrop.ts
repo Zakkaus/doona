@@ -1,6 +1,8 @@
 import {useMemo} from 'react';
 import {useDragAndDrop as useAriaDragAndDrop, type DragAndDropHooks, type DragAndDropOptions} from 'react-aria-components';
 
+export const cardType = 'application/x-doona-card';
+
 // React Aria begins a keyboard or screen reader drag when the handle is pressed but listens for the drag's keys only
 // from the next frame. A second press in between (Enter pressed twice quickly, or a slow frame in WebKit) reached the
 // handle again and began another drag, which throws "Cannot begin dragging while already dragging". The handle ignores

@@ -1,6 +1,6 @@
 import {useEffect, useRef, type ReactNode} from 'react';
 import {Button as RButton, DropIndicator, GridList, GridListItem, type DragAndDropOptions, type GridListProps} from 'react-aria-components';
-import {useDragAndDrop} from './dragAndDrop';
+import {cardType, useDragAndDrop} from './dragAndDrop';
 import {buttonClass} from './Button';
 import {cellSize} from './WidgetGrid';
 import {DashboardBody, sectionGrid, tileAttributes, usePacking, type TileProps} from './DashboardTile';
@@ -9,7 +9,6 @@ import {DashboardGaps, dragStarted} from './DashboardGaps';
 import './styles/dashboard.css';
 import './styles/sortable.css';
 
-const type = 'application/x-doona-card';
 const unpacked = {current: null};
 export type CanvasPlace = {target?: string; after?: boolean};
 
@@ -87,12 +86,12 @@ export function SortableCanvas<T extends TileProps>({
     ref.current?.querySelector<HTMLElement>(`[data-key="${CSS.escape(rearm.focus)}"]`)?.focus();
   }, [rearm]);
   const read = async (event: {items: Parameters<NonNullable<DragAndDropOptions['onRootDrop']>>[0]['items']}) => {
-    for (const item of event.items) if (item.kind === 'text' && item.types.has(type)) return item.getText(type);
+    for (const item of event.items) if (item.kind === 'text' && item.types.has(cardType)) return item.getText(cardType);
   };
   const {dragAndDropHooks} = useDragAndDrop({
-    getItems: keys => [...keys].map(key => ({[type]: String(key), 'text/plain': textValue(items.find(item => item.id === key)!)})),
+    getItems: keys => [...keys].map(key => ({[cardType]: String(key), 'text/plain': textValue(items.find(item => item.id === key)!)})),
     getAllowedDropOperations: () => ['move'],
-    acceptedDragTypes: [type],
+    acceptedDragTypes: [cardType],
     getDropOperation: () => 'move',
     onDragStart: event => dragStarted(String([...event.keys][0])),
     onDragEnd: () => {
