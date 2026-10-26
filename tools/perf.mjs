@@ -84,6 +84,9 @@ async function run(scenario, {big = false, busy = false, storage = {}} = {}) {
   return Object.fromEntries(keys.map(key => [key, median(samples.map(sample => sample[key]))]));
 }
 
+// The nodes page shows one table of nodes; its rows carry `data-key`.
+const nodeTable = page => page.locator('.rp-table', {has: page.locator('[role=row][data-key]')}).first();
+
 const rows = [];
 const wanted = name => !only || only.test(name);
 async function measure(name, scenario, options) {
@@ -112,7 +115,7 @@ await measure(
   'nodes: scroll 3,000 rows',
   async (page, session) => {
     await page.goto(`${base}/#/nodes?provider=harbor`);
-    const table = page.locator('.rp-table').nth(1);
+    const table = nodeTable(page);
     await table.locator('[role=row][data-key]').first().waitFor();
     const before = await metrics(session);
     for (let i = 0; i < 20; i++) {
@@ -130,7 +133,7 @@ await measure(
   'nodes: type and clear a search',
   async (page, session) => {
     await page.goto(`${base}/#/nodes?provider=harbor`);
-    await page.locator('.rp-table').nth(1).locator('[role=row][data-key]').first().waitFor();
+    await nodeTable(page).locator('[role=row][data-key]').first().waitFor();
     const field = page.getByRole('searchbox', {name: 'Search nodes'});
     await field.click();
     const before = await metrics(session);
@@ -148,7 +151,7 @@ await measure(
   'nodes: probe 5 nodes',
   async (page, session) => {
     await page.goto(`${base}/#/nodes?provider=harbor`);
-    const table = page.locator('.rp-table').nth(1);
+    const table = nodeTable(page);
     await table.locator('[role=row][data-key]').first().waitFor();
     const buttons = table.getByRole('button', {name: /^Test /});
     const before = await metrics(session);
