@@ -1,0 +1,21 @@
+.rule-chip {
+  height: auto;
+  padding-block: var(--spacing-1);
+}
+.rule-chip > span,
+.rule-chip > button,
+.rule-chip > button > span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+}
+.rule-chip > button {
+  text-align: start;
+}
+
+.lite-rule-row {
+  align-items: flex-start;
+}
+.lite-rule-target {
+  max-width: calc(var(--spacing-10) * 3);
+}

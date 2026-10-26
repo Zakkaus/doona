@@ -8,3 +8,5 @@ pnpm-lock.yaml
 *.html
 src/fonts-sc.css
 src/fonts-tc.css
+apps/lite/src/themes/site/site.css
+apps/lite/src/themes/site/site.js

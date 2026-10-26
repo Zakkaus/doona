@@ -1,0 +1,18 @@
+// Drawn for doona, not an Adobe icon: a stroked gear on the Spectrum 20px grid.
+import type {SVGProps} from 'react';
+import IconSvg from './IconSvg';
+
+export default function Settings(props: SVGProps<SVGSVGElement>) {
+  return (
+    <IconSvg {...props}>
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinejoin="round"
+        d="M8 2h4l.5 2.2 1.3.8 2.2-.6 2 3.4-1.7 1.5v1.4l1.7 1.5-2 3.4-2.2-.6-1.3.8L12 18H8l-.5-2.2-1.3-.8-2.2.6-2-3.4 1.7-1.5V9.3L2 7.8l2-3.4 2.2.6 1.3-.8Z"
+      />
+      <circle cx={10} cy={10} r={3} fill="none" stroke="currentColor" strokeWidth={1.5} />
+    </IconSvg>
+  );
+}

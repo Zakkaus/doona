@@ -1,0 +1,51 @@
+import {afterAll, describe, expect, it} from 'vitest';
+import {mkdtempSync, mkdirSync, writeFileSync, rmSync} from 'node:fs';
+import {resolve, join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {spawnSync} from 'node:child_process';
+
+const base = resolve(process.env.LITE_TEST_CACHE ?? tmpdir());
+mkdirSync(base, {recursive: true});
+const fixture = mkdtempSync(join(base, 'ui-check-'));
+mkdirSync(join(fixture, 'src'));
+const shell =
+  "const nav = [{id: 'nodes', icon: Data}, {id: 'subscriptions', icon: Download}, {id: 'groups', icon: Share}, {id: 'routing', icon: ListBulleted}, {id: 'dns', icon: GlobeGrid}];";
+const check = (source: string, shellSource = shell) => {
+  writeFileSync(join(fixture, 'src/Shell.tsx'), shellSource);
+  writeFileSync(join(fixture, 'src/Example.tsx'), source);
+  return spawnSync(process.execPath, [resolve('tools/check-ui.mjs'), fixture], {encoding: 'utf8'});
+};
+afterAll(() => rmSync(fixture, {recursive: true, force: true}));
+
+describe('UI boundary negative controls', () => {
+  it('accepts the shared patterns and local icons', () => {
+    expect(
+      check(
+        "import {Add} from './ui/icons'; const Page = () => { const ready = true; usePageMotion(ready); return <VStack gap={4}><Heading level={1}>Nodes</Heading><RowEntrance><Table /></RowEntrance></VStack>; }"
+      ).status
+    ).toBe(0);
+  });
+  it.each([
+    ['layout', '<div><span>Layout</span></div>'],
+    ['tokens', '<VStack style={{padding: "12px"}} />'],
+    ['spacing', '<VStack gap={7} />'],
+    ['grid', '<Grid columns={{minWidth: 320}} />'],
+    ['rows', '<Table />'],
+    ['number-input', '<NumberInput hasClear />'],
+    ['number-input', '<NumberInput hasNumberSteppers />'],
+    ['number-input', '<NumberInput hasNumberSteppers={false} />'],
+    ['ready', '<Heading level={1}>Nodes</Heading>'],
+    ['icon-import', "import {Add} from '../../../src/ui/icons';"],
+    ['icon-import', "const icons = import('../../../src/ui/icons/Add');"],
+    ['icon-import', "import {Add} from './ui/icons-other';"]
+  ])('rejects %s violations', (rule, source) => {
+    const result = check(source);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(`[${rule}]`);
+  });
+  it('rejects duplicate navigation icons', () => {
+    const result = check('<VStack />', shell.replace('icon: Share', 'icon: Data'));
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('[icons]');
+  });
+});

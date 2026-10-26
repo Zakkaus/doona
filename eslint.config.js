@@ -59,6 +59,15 @@ export default [
     }
   },
   {
+    files: ['apps/lite/scripts/*.cjs'],
+    rules: {'@typescript-eslint/no-require-imports': 'off'}
+  },
+  {
+    files: ['apps/lite/src/**/*.{ts,tsx}'],
+    plugins: {'react-hooks': reactHooks},
+    rules: {'react-hooks/exhaustive-deps': 'warn'}
+  },
+  {
     files: ['src/**/*.{ts,tsx}', 'mock/**/*.ts'],
     languageOptions: {globals: globals.browser}
   },
