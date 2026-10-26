@@ -7,7 +7,7 @@ import {groupQuery} from '../shared/link';
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../../api/model';
 import {refusalDetails} from '../shared/pending';
 import {downloadFile, isMac, toast, toastFailure, useLinked} from '../../ui/ui';
-import {allGroupNames, fileName, restartRequired, restartSettings} from '../../dae/sources';
+import {allGroupNames, allUpstreamNames, fileName, restartRequired, restartSettings} from '../../dae/sources';
 import type {PageProps} from '../../shell/routes';
 import {buildHash, href, pickTab, tabQuery, within} from '../../shell/route';
 import {
@@ -222,8 +222,9 @@ export function useSourceCard({
   useLinked(generation, () => setFound(null));
   const marks = useMemo(() => sourceMarks(shown, source.id, t), [shown, source.id, t]);
   const text = draft?.text ?? source.content ?? '';
-  // Names to complete after "->": the groups of every source, this one as edited.
-  const outbounds = () => allGroupNames(sources, {id: source.id, content: text});
+  // Names to complete after "->": the groups and DNS upstreams of every source, this one as edited.
+  const edited = {id: source.id, content: text};
+  const names = () => ({groups: allGroupNames(sources, edited), upstreams: allUpstreamNames(sources, edited)});
   // A line the card moves the editor to; the key makes a second request for the same line move it again.
   const [jump, setJump] = useState<{line: number; key: number} | null>(null);
   const jumps = useRef(0);
@@ -360,7 +361,7 @@ export function useSourceCard({
     restart: dirty ? restartSettings(saveErrors ?? refusal ?? []) : [],
     marks,
     text,
-    outbounds,
+    names,
     focus: jump?.line ?? focusLine,
     focusKey: jump?.key ?? 0,
     dirty,

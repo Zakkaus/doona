@@ -5,8 +5,15 @@ import {preloadEditor, SourceCard} from './SourceCard';
 import type {SourceCardProps} from './useConfigPage';
 import type {DiagnosticRow} from './view';
 
+const names = vi.hoisted(() => () => ({groups: [], upstreams: []}));
 const state = vi.hoisted(() => ({diagnostics: {} as Record<string, unknown>, restart: [] as unknown[]}));
-vi.mock('../../ui/code/CodeEditor', () => ({CodeEditor: ({banner}: {banner: ReactNode}) => banner}));
+const editor = vi.hoisted(() => ({props: undefined as {names?: unknown} | undefined}));
+vi.mock('../../ui/code/CodeEditor', () => ({
+  CodeEditor: (props: {banner: ReactNode; names?: unknown}) => {
+    editor.props = props;
+    return props.banner;
+  }
+}));
 // The editor loads lazily; once loaded it renders without suspending, so static markup includes it.
 beforeAll(() => preloadEditor());
 vi.mock('./useConfigPage', () => ({
@@ -18,7 +25,8 @@ vi.mock('./useConfigPage', () => ({
     text: '',
     view: {label: 'main'},
     saveButton: {},
-    note: ''
+    note: '',
+    names
   })
 }));
 
@@ -75,4 +83,9 @@ it('tells a write refused for a restart: the settings, that nothing was written 
   expect(markup).toContain('rules.dae:3');
   expect(markup).toContain('systemctl restart honk-core');
   expect(markup).toContain('install.html#reload-and-restart');
+});
+
+it('gives the editor the names to complete after the arrow', () => {
+  render({});
+  expect(editor.props?.names).toBe(names);
 });

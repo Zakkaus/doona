@@ -2,9 +2,12 @@ import {expect, it} from 'vitest';
 import {CompletionContext} from '@codemirror/autocomplete';
 import {EditorState} from '@codemirror/state';
 import {completeDae} from './daeComplete';
+import {builtinOutbounds} from '../../dae/vocab';
 import {readGroupEntries} from '../../dae/groups';
+import {allUpstreamNames} from '../../dae/sources';
+import type {ConfigSource} from '../../api/model';
 
-const complete = (doc: string) => completeDae(new CompletionContext(EditorState.create({doc}), doc.length, true), () => []);
+const complete = (doc: string) => completeDae(new CompletionContext(EditorState.create({doc}), doc.length, true), () => ({groups: [], upstreams: []}));
 
 it('inserts a policy value without duplicating an existing key', () => {
   const doc = 'group {\n  proxy {\n    policy: min';
@@ -29,7 +32,7 @@ it('inserts a group after the arrow as its header writes it', () => {
   const content = `group {\n  proxy { policy: min }\n  'hk' { policy: min }\n  'my group' { policy: min }\n  "dq group" { policy: min }\n}\n`;
   const groups = readGroupEntries(content);
   const doc = 'routing {\n  domain(a) -> ';
-  const result = completeDae(new CompletionContext(EditorState.create({doc}), doc.length, false), () => groups)!;
+  const result = completeDae(new CompletionContext(EditorState.create({doc}), doc.length, false), () => ({groups, upstreams: []}))!;
   const inserted = (label: string) => {
     const option = result.options.find(item => item.label === label)!;
     return option.apply ?? option.label;
@@ -39,4 +42,18 @@ it('inserts a group after the arrow as its header writes it', () => {
   expect(inserted('hk')).toBe("'hk'");
   expect(inserted('my group')).toBe("'my group'");
   expect(inserted('dq group')).toBe('"dq group"');
+});
+
+it('offers DNS upstreams with the actions of their list after an arrow in dns, and outbounds in routing', () => {
+  const groups = readGroupEntries('group {\n  proxy { policy: min }\n}\n');
+  const config = "dns {\n  upstream {\n    alidns: 'udp://223.5.5.5:53'\n    'my dns': 'tls://1.1.1.1:853'\n  }\n  routing {\n";
+  const upstreams = allUpstreamNames([{id: 'main', content: config} as ConfigSource]);
+  const labels = (doc: string) =>
+    completeDae(new CompletionContext(EditorState.create({doc}), doc.length, false), () => ({groups, upstreams}))!.options.map(
+      item => item.apply ?? item.label
+    );
+  expect(labels(`${config}    request {\n      qname(a) -> `)).toEqual(['alidns', "'my dns'", 'asis', 'reject']);
+  expect(labels(`${config}    request {\n      fallback: `)).toEqual(['alidns', "'my dns'", 'asis', 'reject']);
+  expect(labels(`${config}    request {\n    }\n    response {\n      upstream(alidns) -> `)).toEqual(['alidns', "'my dns'", 'accept', 'reject']);
+  expect(labels('routing {\n  domain(a) -> ')).toEqual(['proxy', ...builtinOutbounds]);
 });

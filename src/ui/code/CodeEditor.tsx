@@ -23,10 +23,9 @@ import {lintGutter, setDiagnostics} from '@codemirror/lint';
 import {highlightSelectionMatches, searchKeymap, gotoLine, openSearchPanel} from '@codemirror/search';
 import {tags} from '@lezer/highlight';
 import {dae} from './dae';
-import {daeCompletion} from './daeComplete';
+import {daeCompletion, type CompletionNames} from './daeComplete';
 import {closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
 import {toDiagnostics} from './diagnostics';
-import type {GroupEntry} from '../../dae/groups';
 import {readOnlyAttempts} from './readOnlyAttempt';
 import {Button, PrimaryActions} from '../Button';
 import {MenuButton} from '../Menu';
@@ -226,7 +225,7 @@ export function CodeEditor({
   marks = noMarks,
   focusLine,
   label,
-  outbounds,
+  names,
   onSave,
   onReadOnlyAttempt,
   compact,
@@ -240,8 +239,8 @@ export function CodeEditor({
   marks?: EditorMark[];
   focusLine?: number | null;
   label: string;
-  // Group names to offer after "->"; the caller keeps it current with the text.
-  outbounds?: () => Pick<GroupEntry, 'name' | 'written'>[];
+  // Names to offer after "->"; the caller keeps it current with the text.
+  names?: () => CompletionNames;
   // Mod-S inside the editor; the caller decides what saving means.
   onSave?: () => void;
   // Typing, paste, cut or a touch tap while read-only; the caller explains why the text cannot change.
@@ -266,12 +265,12 @@ export function CodeEditor({
   const view = useRef<EditorView | null>(null);
   // The latest callbacks, read from inside CodeMirror's listeners; updated in an effect, not during render.
   const change = useRef(onChange);
-  const names = useRef(outbounds);
+  const completions = useRef(names);
   const save = useRef(onSave);
   const refused = useRef(onReadOnlyAttempt);
   useEffect(() => {
     change.current = onChange;
-    names.current = outbounds;
+    completions.current = names;
     save.current = onSave;
     refused.current = onReadOnlyAttempt;
   });
@@ -305,7 +304,7 @@ export function CodeEditor({
           indentUnit.of('  '),
           indentOnInput(),
           daeIndent,
-          daeCompletion(() => names.current?.() ?? []),
+          daeCompletion(() => completions.current?.() ?? {groups: [], upstreams: []}),
           dae,
           syntaxHighlighting(highlight),
           theme,

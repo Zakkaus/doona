@@ -25,7 +25,7 @@ export function SourceCard(props: SourceCardProps) {
     restart,
     marks,
     text,
-    outbounds,
+    names,
     focus,
     focusKey,
     dirty,
@@ -181,7 +181,7 @@ export function SourceCard(props: SourceCardProps) {
           focusLine={focus}
           focusKey={focusKey}
           banner={banner}
-          outbounds={outbounds}
+          names={names}
           onSave={dirty && !busy ? () => void save() : undefined}
         />
         <AfterMount run={focusPanel} />
