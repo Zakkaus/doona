@@ -2,7 +2,7 @@ import {beforeEach, expect, it} from 'vitest';
 import {diagnostics} from '../api/diagnostics';
 import {ApiError, LocalError} from '../api/error';
 import {translate} from '../i18n';
-import {toast, toastErrorDetail, toastFailure} from './Feedback';
+import {toast, toastErrorDetail, toastFailure} from './Toast';
 
 const en = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate('en', key, params);
 beforeEach(() => diagnostics.clear());

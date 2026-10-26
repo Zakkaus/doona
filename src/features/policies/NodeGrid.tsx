@@ -1,7 +1,7 @@
 import {Button, GridLayout, GridList, GridListItem, Size, Virtualizer} from 'react-aria-components';
 import {useCallback, useState, type ReactNode} from 'react';
 import {NodeTile, type NodeStatus} from '../../ui/Tile';
-import {Empty} from '../../ui/Feedback';
+import {Empty} from '../../ui/Empty';
 import {cx} from '../../ui/cx';
 import {useContentWidth} from '../../ui/hooks';
 

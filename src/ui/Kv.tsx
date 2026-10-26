@@ -4,7 +4,7 @@ import type {ReactNode} from 'react';
 import {cx} from './cx';
 import {TextTooltip} from './Tooltip';
 import {HelpRow, type Help} from './ContextualHelp';
-import {MeterTrack} from './Feedback';
+import {MeterTrack} from './Meter';
 
 // A label and its value, as a pair or, with more, an object: `full` is the full value, shown as a tooltip, and `help`
 // explains the label or the value in a help popover beside the label. `row` keeps label and value on one line.

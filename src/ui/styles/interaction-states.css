@@ -163,7 +163,7 @@ h3.rp-label {
   font-size: var(--rp-text-sm);
   color: color-mix(in srgb, currentColor 82%, transparent);
 }
-/* S2's ProgressCircle (Feedback.tsx): M is 32px with a 3px stroke, S 16px with 2px; the track is the meter track's fill
+/* S2's ProgressCircle (ProgressCircle.tsx): M is 32px with a 3px stroke, S 16px with 2px; the track is the meter track's fill
    and the arc the accent. */
 .rp-progress-circle {
   display: inline-block;

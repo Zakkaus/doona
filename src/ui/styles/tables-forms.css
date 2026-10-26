@@ -156,7 +156,7 @@
   flex-shrink: 0;
   max-width: 100%;
 }
-/* The first-load Skeleton (Feedback.tsx) draws its own row lines, so its cell drops the empty state's. Each cell is a
+/* The first-load Skeleton (Skeleton.tsx) draws its own row lines, so its cell drops the empty state's. Each cell is a
    real row's height and inset; the bars take the kit Skeleton's fill and shimmer (cards-dashboard.css). */
 .rp-table [role='rowheader']:has(> .rp-table-empty > .rp-table-skeleton) {
   border-bottom: 0;

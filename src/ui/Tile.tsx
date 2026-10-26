@@ -5,7 +5,7 @@ import {useT} from '../i18n';
 import {cx} from './cx';
 import {TextTooltip} from './Tooltip';
 import {NodeName} from './NodeName';
-import {Badge} from './Feedback';
+import {Badge} from './Badge';
 import {TileHead, type TileHeader} from './Card';
 
 // A tile that opens a page; `tile` captions it with its label.

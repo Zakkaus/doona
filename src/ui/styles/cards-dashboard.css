@@ -15,7 +15,7 @@
 .rp-chart-wait.form {
   min-height: 204px;
 }
-/* S2's Skeleton (Feedback.tsx): placeholder blocks in the loaded body's own grid and lines, so the card keeps its
+/* S2's Skeleton (Skeleton.tsx): placeholder blocks in the loaded body's own grid and lines, so the card keeps its
    height when the values arrive. The shimmer is S2's: a 300% gradient from the base fill to a lighter one, swept every
    2s; reduced motion keeps the still base fill. */
 .rp-skeleton {
@@ -692,10 +692,10 @@
     box-shadow var(--rp-duration) var(--rp-ease),
     border-color var(--rp-duration) var(--rp-ease);
 }
-.rp-cardview > .rp-card.rp-cardview-card:is([data-hovered], [data-focus-visible]) {
+:is(.rp-cardview > .rp-card, .rp-table-cards .rp-card).rp-cardview-card:is([data-hovered], [data-focus-visible]) {
   box-shadow: var(--rp-elevated);
 }
-.rp-cardview > .rp-card.rp-cardview-card[data-selected] {
+:is(.rp-cardview > .rp-card, .rp-table-cards .rp-card).rp-cardview-card[data-selected] {
   border-color: var(--rp-text);
   box-shadow:
     var(--rp-elevated),

@@ -22,7 +22,7 @@ vi.mock('../../store/config', async original => ({
 }));
 vi.mock('../../ui/ui', async () => {
   // The hoisted mock factory runs before static imports are initialized.
-  const {toast, toastFailure} = await import('../../ui/Feedback');
+  const {toast, toastFailure} = await import('../../ui/Toast');
   return {toast, toastFailure, downloadFile: vi.fn()};
 });
 vi.mock('../../i18n', async original => {

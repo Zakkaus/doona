@@ -1,5 +1,5 @@
 import {useSyncExternalStore} from 'react';
-import {toast, toastErrorDetail} from '../ui/Feedback';
+import {toast, toastErrorDetail} from '../ui/Toast';
 import {useT} from '../i18n';
 
 // Keeps beforeinstallprompt for a later button. Only Chrome and Edge emit it; elsewhere the button stays hidden.

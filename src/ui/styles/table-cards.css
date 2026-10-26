@@ -1,18 +1,9 @@
 /* A table's rows as phone cards (TableCards): the list scrolls in the table's box and the virtualiser places each card
-   with the gap between them. Selection, hover and focus look as they do in a CardView. */
+   with the gap between them. Selection, hover and focus look as they do in a CardView (cards-dashboard.css). */
 .rp-table-cards {
   overflow: auto;
   outline: none;
   overscroll-behavior: contain;
-}
-.rp-table-cards .rp-cardview-card:is([data-hovered], [data-focus-visible]) {
-  box-shadow: var(--rp-elevated);
-}
-.rp-table-cards .rp-cardview-card[data-selected] {
-  border-color: var(--rp-text);
-  box-shadow:
-    var(--rp-elevated),
-    inset 0 0 0 1px var(--rp-text);
 }
 /* The ring sits inside the card: the scroll box would clip one drawn outside it. */
 .rp-table-cards .rp-cardview-card[data-focus-visible] {

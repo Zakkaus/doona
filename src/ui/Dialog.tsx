@@ -7,7 +7,7 @@ import {useT} from '../i18n';
 import {errorText} from '../api/error';
 import {cx} from './cx';
 import {ActionHelp, Button, PrimaryActions} from './Button';
-import {ProblemAlert, type Problem} from './Feedback';
+import {ProblemAlert, type Problem} from './Alert';
 import {useMediaQuery, panelQuery, escapeLayers} from './hooks';
 import {ControlSizeContext} from './controlSize';
 import {Form, FormContext} from './Form';
