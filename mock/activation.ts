@@ -39,8 +39,8 @@ export function activateInventory(
 ) {
   const {blocks, tokens} = scanConfig(text);
   const fields = (section: string) => blocks.filter(block => block.name === section).flatMap(block => blockFields(text, block, tokens));
-  const subscriptions = fields('subscription');
-  const providerIds = new Set(subscriptions.map(field => field.name));
+  const subscriptions = readSubscriptionEntries(text);
+  const providerIds = new Set(subscriptions.map(entry => entry.tag));
   const inline = fields('node');
   const inlineNames = new Set(inline.map(field => field.name));
   const nextNodes = nodes.filter(node => (node.provider_id === 'inline' ? inlineNames.has(node.name) : providerIds.has(node.provider_id!)));
@@ -54,23 +54,16 @@ export function activateInventory(
       nextNodes.push({id: field.name, name: field.name, protocol, stream_transport, provider_id: 'inline', subscription_tag: null, group_ids: [], health: []});
   }
   const nextProviders = providers.filter(provider => provider.kind === 'inline' || providerIds.has(provider.name));
-  // A block entry (`tag: {url: …}`) carries its URL as a field of that block.
-  const blockUrl = (name: string) =>
-    blocks
-      .filter(block => block.name === 'subscription')
-      .flatMap(block => block.children.filter(child => child.name === name))
-      .flatMap(child => blockFields(text, child, tokens))
-      .find(field => field.name === 'url')?.value;
-  for (const field of subscriptions) {
-    const url_redacted = displayUrl(unquote(blockUrl(field.name) ?? field.value));
-    const existing = nextProviders.find(provider => provider.name === field.name);
+  for (const entry of subscriptions) {
+    const url_redacted = displayUrl(entry.url);
+    const existing = nextProviders.find(provider => provider.name === entry.tag);
     if (existing) {
       existing.url_redacted = url_redacted;
       continue;
     }
     nextProviders.push({
-      id: field.name,
-      name: field.name,
+      id: entry.tag,
+      name: entry.tag,
       kind: 'subscription',
       url_redacted,
       node_count: 0,
@@ -172,7 +165,7 @@ export function activateInventory(
   for (const provider of nextProviders) provider.node_count = nextNodes.filter(node => node.provider_id === provider.id).length;
   // Like honk, a subscription reports the route its fetches take: empty or `routing` follows the rules, `direct` goes
   // straight out, and anything else names a group.
-  const routes = new Map(readSubscriptionEntries(text).map(entry => [entry.tag, entry.route]));
+  const routes = new Map(subscriptions.map(entry => [entry.tag, entry.route]));
   for (const provider of nextProviders) {
     if (provider.kind !== 'subscription') continue;
     const route = routes.get(provider.name) || 'routing';
