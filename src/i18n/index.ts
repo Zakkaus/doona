@@ -3,6 +3,7 @@ import type en from './locales/en.json';
 import {storageKeys} from '../api/storage';
 import {loadFaces} from '../fonts';
 import {browserLang, DEFAULT_LANG, isLang, languages, REFERENCE_LANG, type Lang} from './languages';
+import {stages, type Stage} from './stages';
 // English is the reference: every catalogue's keys are among its keys.
 export type Key = keyof typeof en;
 export {browserLang, DEFAULT_LANG, languages, REFERENCE_LANG, type Lang};
@@ -40,8 +41,6 @@ export type Catalogue = Record<Key, Message>;
 // A catalogue loads in stages (tools/catalogue-parts.mjs): the core part at startup, the later ones with the code that
 // first shows their keys, which wraps its dynamic import in withCatalogue. A build splits each catalogue by stage; the
 // dev server serves it whole as the core part.
-export const stages = ['core', 'activity', 'rest'] as const;
-export type Stage = (typeof stages)[number];
 // Built on first read: Node runs this module in the e2e specs, without import.meta.glob, and passes its own reader.
 let parts: Record<Stage, Record<string, () => Promise<Partial<Catalogue>>>> | undefined;
 const partLoaders = () =>
@@ -52,7 +51,7 @@ const partLoaders = () =>
   });
 // Each part is its own chunk, loaded on first use; `translate` reads only what has loaded. The core part resolves with
 // its language's faces declared, so the page never renders in it before they are.
-export type Reader = (lang: Lang, stage: Stage) => Promise<Partial<Catalogue>>;
+type Reader = (lang: Lang, stage: Stage) => Promise<Partial<Catalogue>>;
 function readCatalogue(lang: Lang, stage: Stage): Promise<Partial<Catalogue>> {
   const part = partLoaders()[stage][`./locales/${lang}.json`]();
   if (stage !== 'core') return part;
