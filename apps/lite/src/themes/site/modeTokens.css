@@ -1,0 +1,38 @@
+@layer astryx-theme {
+  @scope ([data-astryx-theme="site"]) to ([data-astryx-theme]) {
+    :scope {
+      --color-text-secondary: light-dark(#4e606f, var(--color-data-gray-3));
+      --color-icon-secondary: var(--color-text-secondary);
+      --color-border-emphasized: light-dark(#ccd3db, var(--color-border-gray));
+      --color-on-error: light-dark(#fff, var(--color-on-light));
+
+      --lite-diff-added: light-dark(var(--color-success), var(--color-text-green));
+      --lite-diff-removed: light-dark(var(--color-error), var(--color-text-red));
+
+      /* Keep CodeMirror's light appearance while adapting its default UI. */
+      --lite-editor-cursor: light-dark(#000, var(--color-text-primary));
+      --lite-editor-border: light-dark(var(--color-border), var(--color-border-emphasized));
+      --lite-editor-match: light-dark(#99ff7780, var(--color-background-green));
+      --lite-editor-bracket: light-dark(#328c8252, var(--color-background-blue));
+      --lite-editor-search-match: light-dark(#ffff0054, var(--color-background-yellow));
+      --lite-editor-search-selected: light-dark(#ff6a0054, var(--color-background-orange));
+      --lite-editor-panel: light-dark(#f5f5f5, var(--color-background-surface));
+      --lite-editor-panel-text: light-dark(#000, var(--color-text-primary));
+      --lite-editor-panel-border: light-dark(#ddd, var(--color-border-emphasized));
+      --lite-editor-field: light-dark(#fff, var(--color-background-surface));
+      --lite-editor-field-border: light-dark(silver, var(--color-border-emphasized));
+      --lite-editor-button-start: light-dark(#eff1f5, var(--color-background-surface));
+      --lite-editor-button-end: light-dark(#d9d9df, var(--color-background-surface));
+      --lite-editor-button-pressed-start: light-dark(#b4b4b4, var(--color-background-muted));
+      --lite-editor-button-pressed-end: light-dark(#d0d3d6, var(--color-background-muted));
+      --lite-editor-button-border: light-dark(#888, var(--color-border-emphasized));
+
+      /* Brand artwork and the public demo badge retain fixed colours. */
+      --lite-brand-outline: #0b0a09;
+      --lite-brand-body: #fff;
+      --lite-brand-yellow: #fd0;
+      --lite-demo-background: rgb(0 0 0 / 72%);
+      --lite-demo-foreground: #fff;
+    }
+  }
+}

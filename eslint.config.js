@@ -50,13 +50,33 @@ const engineChecks = [
 
 export default [
   {
-    ignores: ['dist/**', 'contract/**', 'src/api/types.ts', 'src/fonts.css', 'src/fonts-sc.css', 'node_modules/**', 'test-results/**']
+    ignores: [
+      'dist/**',
+      'contract/**',
+      'src/api/types.ts',
+      'src/fonts.css',
+      'src/fonts-sc.css',
+      'node_modules/**',
+      'test-results/**',
+      'apps/lite/dist/**',
+      'apps/lite/test-results/**',
+      'apps/lite/src/themes/site/*.d.ts'
+    ]
   },
   ...tseslint.configs.recommended,
   {
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', {ignoreRestSiblings: true, argsIgnorePattern: '^_'}]
     }
+  },
+  {
+    files: ['apps/lite/scripts/*.cjs'],
+    rules: {'@typescript-eslint/no-require-imports': 'off'}
+  },
+  {
+    files: ['apps/lite/src/**/*.{ts,tsx}'],
+    plugins: {'react-hooks': reactHooks},
+    rules: {'react-hooks/rules-of-hooks': 'error', 'react-hooks/exhaustive-deps': 'error'}
   },
   {
     files: ['src/**/*.{ts,tsx}', 'mock/**/*.ts'],

@@ -1,0 +1,196 @@
+@layer product {
+  /* Astryx's floating grabber overlaps the top half of this button. */
+  [data-sheet-close] button {
+    position: relative;
+    z-index: 2;
+  }
+
+  body {
+    background: var(--color-background-body);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-body);
+    overflow-wrap: anywhere;
+  }
+}
+@layer product {
+  [data-code-editor] .astryx-text-area-control {
+    font-family: var(--font-family-code);
+    tab-size: 2;
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: auto;
+  }
+}
+
+@layer product {
+  .rule-values span:has(> .rule-value-token) {
+    max-width: 100%;
+    min-width: 0;
+  }
+  .rule-value-token {
+    max-width: 100%;
+    height: auto;
+  }
+  .rule-value-token > span {
+    min-width: 0;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer product {
+  /* Page headings receive screen-reader focus, but are not interactive controls. */
+  h1[tabindex='-1']:focus {
+    outline: none;
+  }
+}
+
+@layer product {
+  /* AppShell also supplies LayoutContent; only the page body owns scrolling. */
+  .lite-shell #astryx-app-shell-main {
+    overflow: clip;
+  }
+  .lite-page-content {
+    scrollbar-gutter: stable;
+  }
+}
+
+@layer product {
+  .lite-table-inset {
+    --container-padding-inline-start: var(--spacing-0);
+    --container-padding-inline-end: var(--spacing-0);
+    --container-padding-block-start: var(--spacing-0);
+    --container-padding-block-end: var(--spacing-0);
+  }
+}
+
+@layer product {
+  /* The footer status reads as two lines: the state, then the backend name. */
+  [data-backend-status],
+  [data-backend-status] * {
+    white-space: pre-line;
+  }
+  [data-backend-status] {
+    height: auto;
+    min-height: var(--spacing-12);
+    padding-block: var(--spacing-1);
+  }
+}
+
+@layer product {
+  .lite-collection-toolbar > * {
+    flex-shrink: 0;
+    max-width: 100%;
+  }
+  .lite-collection-toolbar .lite-toolbar-search {
+    flex: 1 1 calc(var(--spacing-10) * 5);
+    min-width: 0;
+  }
+  .lite-collection-toolbar button,
+  .lite-collection-toolbar button * {
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+  .lite-collection-toolbar .astryx-text-input {
+    max-width: 100%;
+  }
+}
+
+@layer product {
+  .lite-subscription-row {
+    border-block-end: var(--border-width) solid var(--color-border);
+  }
+  .lite-subscription-row .astryx-collapsible-trigger {
+    padding-inline: var(--spacing-3);
+  }
+}
+
+@layer product {
+  /* Keep each row's layout; only its text and controls become placeholders. */
+  [data-placeholder] :is(.astryx-list-item, .lite-subscription-row, tbody tr) {
+    pointer-events: none;
+  }
+  [data-placeholder] :is(.astryx-text, .astryx-link, [data-placeholder-text]) {
+    position: relative;
+    visibility: hidden;
+  }
+  [data-placeholder][data-loading-shape] :is(.astryx-text, .astryx-link, [data-placeholder-text])::after {
+    content: '';
+    position: absolute;
+    inset-block: var(--spacing-1);
+    inset-inline-start: 0;
+    width: min(16ch, 100%);
+    border-radius: var(--radius-element);
+    background: var(--color-background-muted);
+    visibility: visible;
+  }
+  [data-placeholder][data-loading-shape] .astryx-text[data-type='supporting']::after {
+    width: min(12ch, 100%);
+  }
+  [data-placeholder] :is(.astryx-token, .astryx-badge, .lite-disclosure-actions > :first-child, .astryx-button:not([data-drag-handle])) {
+    position: relative;
+    visibility: hidden;
+  }
+  [data-placeholder][data-loading-shape]
+    :is(.astryx-token, .astryx-badge, .lite-disclosure-actions > :first-child, .astryx-button:not([data-drag-handle]))::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--color-background-muted);
+    visibility: visible;
+  }
+  [data-placeholder] :is(.astryx-token, .astryx-badge, .lite-disclosure-actions > :first-child) .astryx-text::after {
+    visibility: hidden;
+  }
+  [data-placeholder][data-loading-shape] .astryx-button:not([data-drag-handle])::after {
+    border-radius: var(--radius-element);
+  }
+  [data-placeholder][data-loading-shape] .lite-disclosure-actions > :first-child::after {
+    border-radius: var(--radius-full);
+  }
+  [data-placeholder] :is(.astryx-status-dot, [data-drag-handle], .astryx-collapsible-trigger > .astryx-icon) {
+    color: var(--color-text-secondary);
+  }
+  [data-placeholder] .astryx-status-dot {
+    background: var(--color-background-muted);
+  }
+  [data-placeholder] thead .astryx-text {
+    visibility: visible;
+  }
+  [data-placeholder] thead .astryx-text::after {
+    content: none;
+  }
+  [data-placeholder] :is(.astryx-segmented-control-item, .astryx-toggle-button) {
+    color: transparent;
+  }
+}
+
+@layer product {
+  .lite-search-field {
+    width: calc(var(--spacing-10) * 8);
+    max-width: 100%;
+  }
+  .lite-toolbar-search .lite-search-field {
+    width: 100%;
+  }
+  @media (max-width: 47.9375rem) {
+    .lite-collection-toolbar .lite-search-field,
+    .lite-collection-toolbar .lite-toolbar-search {
+      flex-basis: 100%;
+      width: 100%;
+    }
+  }
+}

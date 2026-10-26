@@ -1,0 +1,46 @@
+{
+  "name": "doona-lite",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "check-ui": "node tools/check-ui.mjs",
+    "test:browser": "../../node_modules/.bin/playwright test --grep-invert @timing",
+    "test:timing": "../../node_modules/.bin/playwright test --grep @timing",
+    "test:roundtrip": "../../node_modules/.bin/vitest run --config vitest.config.ts",
+    "check:theme": "astryx theme build src/themes/site/siteTheme.ts --check",
+    "check:size": "node tools/size.mjs",
+    "check": "pnpm typecheck && pnpm check-ui && pnpm check:theme && pnpm test:roundtrip"
+  },
+  "dependencies": {
+    "@astryxdesign/core": "0.6.8",
+    "@astryxdesign/theme-neutral": "0.6.8",
+    "@codemirror/autocomplete": "6.20.3",
+    "@codemirror/commands": "6.11.1",
+    "@codemirror/language": "6.12.4",
+    "@codemirror/lint": "6.9.7",
+    "@codemirror/search": "6.7.2",
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.13",
+    "@fontsource-variable/figtree": "5.3.0",
+    "@lezer/highlight": "1.2.5",
+    "@stylexjs/stylex": "0.19.1",
+    "qrcode.react": "4.2.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@astryxdesign/build": "0.6.8",
+    "@astryxdesign/cli": "0.6.8",
+    "@stylexjs/unplugin": "0.19.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "typescript": "^5.8.0",
+    "vite": "^8.3.4"
+  }
+}

@@ -1,0 +1,5 @@
+allowBuilds:
+  # Their postinstalls only print a hint to run `astryx init`.
+  '@astryxdesign/core': false
+  '@astryxdesign/cli': false
+  esbuild: true

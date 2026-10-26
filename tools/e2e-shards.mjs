@@ -48,7 +48,7 @@ export function recordDurations(reports) {
 // The test groups of `playwright test --list` in the order Playwright shards them, for a run cut into `shards` shards.
 export function listGroups(shards, playwrightArgs = []) {
   const reporter = fileURLToPath(new URL('./e2e-groups-reporter.mjs', import.meta.url));
-  const listed = execFileSync('pnpm', ['exec', 'playwright', 'test', '--list', `--reporter=${reporter}`, ...playwrightArgs], {
+  const listed = execFileSync('pnpm', ['--silent', 'exec', 'playwright', 'test', '--list', `--reporter=${reporter}`, ...playwrightArgs], {
     encoding: 'utf8',
     env: {...process.env, DOONA_SHARD_TOTAL: String(shards)},
     maxBuffer: 1 << 28
