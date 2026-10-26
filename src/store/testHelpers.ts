@@ -64,6 +64,9 @@ export const hookHarness = {
     useMemo<T>(read: () => T) {
       return read();
     },
+    useCallback<T>(callback: T) {
+      return callback;
+    },
     useEffect(effect: () => void | (() => void)) {
       effects.push(effect);
     }

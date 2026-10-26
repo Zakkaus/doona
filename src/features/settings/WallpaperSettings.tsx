@@ -25,7 +25,13 @@ export function WallpaperSettings() {
   const helpId = useId();
   // Each pick gets a number; a reset, another pick or leaving the row drops an image still being prepared.
   const pick = useRef(0);
-  useEffect(() => () => void pick.current++, []);
+  useEffect(
+    () => () => {
+      pick.current++;
+      setPending(false);
+    },
+    []
+  );
   const choose = async (files: FileList | null) => {
     const file = files?.[0];
     if (!file) return;
