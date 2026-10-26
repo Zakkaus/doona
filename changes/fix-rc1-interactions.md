@@ -1,5 +1,5 @@
 Fixed
 
-- Confirm suspension, log clearing and Direct or Global mode changes before applying them.
-- Guard unapplied rule templates and group drafts, and show field errors and disabled-action reasons where they are needed.
-- Reject invalid backend URLs, route changed connections through sign-in, and close search with one Escape.
+- doona asks for confirmation before suspending the service, clearing the logs or switching to Direct or Global mode.
+- Leaving an unapplied rule template or a group draft requires confirmation. Form errors appear beside their fields, and disabled actions explain why they are unavailable.
+- Invalid or blank backend URLs cannot be saved. A changed connection requires signing in again, and one Escape closes search.

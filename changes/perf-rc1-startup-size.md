@@ -1,3 +1,3 @@
 Changed
 
-- The sign-in page and the Activity page download only the interface messages they show; the other pages bring theirs as they load.
+- Interface text loads in three parts, for sign-in, Activity and the other pages, so the first screens no longer wait for every page's messages.
