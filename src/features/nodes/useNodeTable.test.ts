@@ -3,7 +3,13 @@ import {useNodeTable} from './useNodeTable';
 import {deferred, hookHarness, steadyBase} from '../../store/testHelpers';
 import {toast} from '../../ui/ui';
 
-const probe = vi.hoisted(() => ({busy: null as string | null, probeMany: vi.fn(), cancel: vi.fn(), probe: vi.fn(), choices: () => []}));
+const probe = vi.hoisted(() => ({
+  busy: null as string | null,
+  probeMany: vi.fn(),
+  cancel: vi.fn(),
+  probe: vi.fn(),
+  choices: (node: {protocol: string | null}) => (node.protocol === 'trojan' ? [] : ['http'])
+}));
 vi.mock('react', async original => ({
   ...(await original<typeof import('react')>()),
   ...(await import('../../store/testHelpers')).hookHarness.hooks,
@@ -91,4 +97,21 @@ it('does not sort or toast a cancelled run', async () => {
   expect(probe.cancel).toHaveBeenCalledOnce();
   expect(read().sort).toEqual({column: 'name', direction: 'ascending'});
   expect(toast).not.toHaveBeenCalled();
+});
+it('tests only the listed nodes a probe can reach', () => {
+  probe.probeMany.mockReturnValue(deferred<undefined>().promise);
+  read().testAll();
+  const [members, progress] = probe.probeMany.mock.calls[0];
+  expect(members.map((node: {id: string}) => node.id)).toEqual(nodes.slice(0, 3).map(node => node.id));
+  progress(1);
+  expect(read().testLabel).toBe('Test all');
+  probe.busy = '*';
+  expect(read().testLabel).toBe('Testing 1/3');
+});
+it('disables the batch when no listed node can be probed', () => {
+  read().setProtocol('trojan');
+  expect(read().rows.map(row => row.canProbe)).toEqual([false]);
+  expect(read().testReason).toBe('None of the listed nodes can be tested.');
+  read().testAll();
+  expect(probe.probeMany).not.toHaveBeenCalled();
 });

@@ -22,7 +22,7 @@ export function groupConfigFields(group: Group): Array<[Key | MessageRef, string
       if (typeof value === 'boolean') return [label, {key: value ? 'ui.yes' : 'ui.no'}];
       if (typeof value === 'number' && units[key]) return [label, {key: units[key], params: {n: value}}];
       if (key === 'default_member_id') return [label, group.members.find(member => member.id === value)?.name ?? String(value)];
-      return [label, String(value)];
+      return [label, typeof value === 'object' ? JSON.stringify(value) : String(value)];
     });
 }
 

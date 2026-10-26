@@ -972,6 +972,7 @@
   "nodes.tagTaken": "已有其他訂閱使用此名稱",
   "nodes.testAll": "全部測試",
   "nodes.testBusy": "請等待目前的測試完成。",
+  "nodes.testNone": "列出的節點都無法測試。",
   "nodes.testingBatch": "正在測試 {n}/{total}",
   "nodes.updated": "更新時間",
   "nodes.url": "訂閱網址",

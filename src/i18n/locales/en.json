@@ -1125,6 +1125,7 @@
   "nodes.tagTaken": "Another subscription already uses this name",
   "nodes.testAll": "Test all",
   "nodes.testBusy": "Wait for the current test to finish.",
+  "nodes.testNone": "None of the listed nodes can be tested.",
   "nodes.testingBatch": "Testing {n}/{total}",
   "nodes.updated": "Updated",
   "nodes.url": "Subscription URL",

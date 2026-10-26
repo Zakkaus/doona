@@ -136,14 +136,15 @@ export function useNodeTable(input: NodeTableInput) {
   );
   const cache = useMemo(() => ({build, rows: new WeakMap<Node, NodeTableView['rows'][number]>()}), [build]);
   const rows = useMemo(() => cachedRows(cache.rows, members, cache.build), [cache, members]);
+  const probeable = useMemo(() => members.filter(node => choices(node).length > 0), [members, choices]);
   return {
     rows,
     probeBusy,
     testAll: () => {
-      if (probeBusy || !members.length) return;
-      setProgress({done: 0, total: members.length});
+      if (probeBusy || !probeable.length) return;
+      setProgress({done: 0, total: probeable.length});
       void probe
-        .probeMany(members, done => setProgress({done, total: members.length}))
+        .probeMany(probeable, done => setProgress({done, total: probeable.length}))
         .then(result => {
           if (!result) return;
           setSort({column: 'latency', direction: 'ascending'});
@@ -152,7 +153,7 @@ export function useNodeTable(input: NodeTableInput) {
     },
     cancelTest: probe.cancel,
     testLabel: probeBusy === '*' ? t('nodes.testingBatch', {n: progress.done, total: progress.total}) : t('nodes.testAll'),
-    testReason: probeBusy ? t('nodes.testBusy') : !members.length ? t('nodes.noMatch') : null,
+    testReason: probeBusy ? t('nodes.testBusy') : !members.length ? t('nodes.noMatch') : !probeable.length ? t('nodes.testNone') : null,
     probeOptions: probeTarget
       ? {
           name: probeTarget.name,
