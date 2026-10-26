@@ -6,7 +6,7 @@ import {storageKeys} from '../api/storage';
 import {readSettings, writeSetting} from './preferences';
 import type {SettingsContext} from './preferences';
 import {FONT, LANGS, languages, LOCALE, loadLanguage, pageDirection, translate, useT, type Lang} from '../i18n';
-import {toast} from '../ui/Feedback';
+import {toast} from '../ui/Toast';
 import {isMac} from '../ui/hooks';
 import {features} from './registry';
 import {searchDialog} from './search/load';

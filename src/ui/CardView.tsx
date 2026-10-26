@@ -2,7 +2,8 @@ import {GridList, GridListItem} from 'react-aria-components';
 import type {ReactNode} from 'react';
 import {useT} from '../i18n';
 import {cardClass} from './Card';
-import {Empty, SkeletonBody} from './Feedback';
+import {Empty} from './Empty';
+import {SkeletonBody} from './Skeleton';
 import {TextTooltip} from './Tooltip';
 
 // S2's CardView with highlight selection: a grid of cards of which one is selected, drawn with S2's dark stroke round

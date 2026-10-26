@@ -4,7 +4,7 @@ import {localClockFormat} from '../../i18n/format';
 import type {LogLevel, LogRecord} from '../../api/model';
 import {usePalette, FactStrip, Heatmap, type ChartFact} from '../../ui/charts';
 import {Card, Button} from '../../ui/ui';
-import {SkeletonCover} from '../../ui/Feedback';
+import {SkeletonCover} from '../../ui/Skeleton';
 import AlertTriangle from '../../ui/icons/AlertTriangle';
 import History from '../../ui/icons/History';
 import Checkmark from '../../ui/icons/Checkmark';

@@ -1,6 +1,7 @@
 import {createContext, use, useLayoutEffect, useRef} from 'react';
 import {cx} from './cx';
-import {SkeletonStatus, TableSkeleton, useWaitAttr} from './Feedback';
+import {useWaitAttr} from './Empty';
+import {SkeletonStatus, TableSkeleton} from './Skeleton';
 
 // What a page draws, top to bottom, for its Skeleton while its code or first reads load: its tab row, rows of M
 // controls (or of a row's own `height`, such as a summary's), a line of text, a fact strip, cards (in a column; `columns` to a row, as a count or a grid template; or a

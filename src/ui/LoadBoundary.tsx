@@ -1,7 +1,7 @@
 import {Component, type ReactNode} from 'react';
 import {useT} from '../i18n';
 import {Button} from './Button';
-import {ErrorMessage, InlineAlert} from './Feedback';
+import {ErrorMessage, InlineAlert} from './Alert';
 import {isChunkLoadError, reloadForStaleChunk} from './staleChunk';
 
 // The chunk is gone because doona was updated; a reload fetches the new build.

@@ -34,7 +34,8 @@ import Close from './icons/Close';
 import {phoneQuery, useContentWidth, useMediaQuery} from './hooks';
 import {TextTooltip} from './Tooltip';
 import {buttonClass} from './Button';
-import {Empty, TableSkeleton} from './Feedback';
+import {Empty} from './Empty';
+import {TableSkeleton} from './Skeleton';
 import {revealFlowRow, useTableFlow} from './tableFlow';
 import {fitColumns, selectedRow, tableLayout, useTableHeight, useTableReveal} from './tableHooks';
 
