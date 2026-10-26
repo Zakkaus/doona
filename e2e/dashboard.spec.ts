@@ -48,11 +48,20 @@ const focusHandle = async (page: Page, id: string, name: string) => {
   await expect(handle).toBeFocused();
 };
 
-test('drags a card into a new place, moves it by keyboard, resizes one card and keeps the draft until Done', async ({page}) => {
+const edit = async (page: Page) => {
   await page.setViewportSize({width: 1440, height: 900});
   await page.goto('/#/activity');
   await expect(tile(page, 'cpu').locator('.rp-card')).toBeVisible();
   await open(page);
+  await expect(tile(page, 'cpu').locator('.rp-dashboard-tools')).toBeVisible();
+};
+const moveUp = async (page: Page, id: string) => {
+  await (await settings(page, id)).getByRole('button', {name: 'Move up', exact: true}).click();
+  await close(page);
+};
+
+test('drags a card by its handle into a new place and moves it by keyboard', async ({page}) => {
+  await edit(page);
   // A pointer drag by the handle: the gap-line indicator shows the slot, and the drop moves the card there.
   const handle = tile(page, 'download').locator('[slot="drag"]');
   const target = await box(tile(page, 'connections'));
@@ -61,7 +70,8 @@ test('drags a card into a new place, moves it by keyboard, resizes one card and 
   await page.mouse.down();
   await page.mouse.move(start.x + 20, start.y + 20, {steps: 4});
   await page.mouse.move(target.x + target.width * 0.85, target.y + target.height / 2, {steps: 12});
-  await expect(page.locator('.rp-canvas-drop[data-drop-target]')).toHaveCount(1);
+  // A drop lands in the slot of the last dragover, so wait for the slot after connections, not for any slot.
+  await expect(page.locator('.rp-dashboard-cell[data-instance="connections"] + .rp-canvas-drop[data-drop-target]')).toHaveCount(1);
   await page.mouse.up();
   await expect.poll(() => order(page)).toEqual(['upload', 'connections', 'download', 'latency', 'cpu']);
   // The keyboard: Enter picks the card up, an arrow chooses the slot, Enter drops it.
@@ -71,7 +81,10 @@ test('drags a card into a new place, moves it by keyboard, resizes one card and 
   await page.keyboard.press('ArrowLeft');
   await page.keyboard.press('Enter');
   await expect.poll(() => order(page)).not.toEqual(['upload', 'connections', 'download', 'latency', 'cpu']);
-  // One resize changes only that card's width.
+});
+
+test('one resize changes only that card width', async ({page}) => {
+  await edit(page);
   const widths = () =>
     page
       .locator('.rp-dashboard-cell')
@@ -83,17 +96,26 @@ test('drags a card into a new place, moves it by keyboard, resizes one card and 
   const after = Object.fromEntries(await widths());
   for (const id of Object.keys(before)) if (id !== 'upload') expect(after[id], id).toBe(before[id]);
   expect(after.upload).toBeGreaterThan(before.upload);
-  // Cancel asks before dropping the changed draft and restores the saved page; Done keeps the draft through a reload.
+});
+
+test('Cancel asks before dropping a changed draft and Done keeps the draft through a reload', async ({page}) => {
+  await edit(page);
+  await moveUp(page, 'cpu');
+  await expect.poll(() => order(page)).toEqual(['download', 'upload', 'connections', 'cpu', 'latency']);
   await page.getByRole('button', {name: 'Cancel', exact: true}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Discard changes', exact: true}).click();
   await expect.poll(() => order(page)).toEqual(['download', 'upload', 'connections', 'latency', 'cpu']);
   await open(page);
-  await (await settings(page, 'cpu')).getByRole('button', {name: 'Move up', exact: true}).click();
-  await page.keyboard.press('Escape');
+  await moveUp(page, 'cpu');
   await page.getByRole('button', {name: 'Done', exact: true}).click();
   await page.reload();
   await expect.poll(() => order(page)).toEqual(['download', 'upload', 'connections', 'cpu', 'latency']);
-  // Restore defaults changes the draft only.
+});
+
+test('Restore defaults changes the draft only', async ({page}) => {
+  await edit(page);
+  await moveUp(page, 'cpu');
+  await page.getByRole('button', {name: 'Done', exact: true}).click();
   await open(page);
   await page.getByRole('button', {name: 'Restore defaults', exact: true}).click();
   await expect.poll(() => order(page)).toEqual(['download', 'upload', 'connections', 'latency', 'cpu']);
@@ -261,24 +283,28 @@ for (const lang of ['zh-TW', 'en'] as const)
   test.describe(`control card titles ${lang}`, () => {
     test.use({storage: {'doona-lang': lang}});
     test.beforeAll(loadCatalogues);
-    for (const editing of [false, true])
-      test(`stay whole from 1100 to 1920px${editing ? ' while editing' : ''}`, async ({page}) => {
-        await page.setViewportSize({width: 1100, height: 900});
-        await page.goto('/#/activity');
-        const titles = page.locator('[data-profile="quick"] .rp-control-card > .rp-row > .rp-qlabel > .rp-truncate');
-        await expect(titles).toHaveCount(2);
-        if (editing) {
-          await page.getByRole('button', {name: translate(lang, 'dashboard.edit'), exact: true}).click();
-          await expect(page.locator('.rp-dashboard-body .rp-control-card')).toHaveCount(3);
-        }
-        for (let width = 1100; width <= 1920; width += 40) {
-          await page.setViewportSize({width, height: 900});
-          // A new width lays the cards out again in the next frame.
-          await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(done)))));
-          const cut = await titles.evaluateAll(nodes => nodes.filter(node => node.scrollWidth > node.clientWidth).map(node => node.textContent));
-          expect(cut, `${width}px`).toEqual([]);
-        }
-      });
+    for (const [from, to] of [
+      [1100, 1500],
+      [1540, 1920]
+    ])
+      for (const editing of [false, true])
+        test(`stay whole from ${from} to ${to}px${editing ? ' while editing' : ''}`, async ({page}) => {
+          await page.setViewportSize({width: from, height: 900});
+          await page.goto('/#/activity');
+          const titles = page.locator('[data-profile="quick"] .rp-control-card > .rp-row > .rp-qlabel > .rp-truncate');
+          await expect(titles).toHaveCount(2);
+          if (editing) {
+            await page.getByRole('button', {name: translate(lang, 'dashboard.edit'), exact: true}).click();
+            await expect(page.locator('.rp-dashboard-body .rp-control-card')).toHaveCount(3);
+          }
+          for (let width = from; width <= to; width += 40) {
+            await page.setViewportSize({width, height: 900});
+            // A new width lays the cards out again in the next frame.
+            await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(done)))));
+            const cut = await titles.evaluateAll(nodes => nodes.filter(node => node.scrollWidth > node.clientWidth).map(node => node.textContent));
+            expect(cut, `${width}px`).toEqual([]);
+          }
+        });
   });
 
 // Control cards in a row share one of two layouts and one height, and end at their content, at every width.
@@ -330,11 +356,24 @@ for (const lang of ['en', 'zh-TW'])
     });
   });
 
-test('sets height by settings: a value tile keeps its type, a chart takes the step', async ({page}) => {
+// Width and height steps chosen in a card's settings.
+const choose = async (page: Page, choices: Array<[string, string, string]>) => {
+  for (const [id, label, option] of choices) {
+    await settings(page, id);
+    await pick(page, label, option);
+    await close(page);
+  }
+};
+const editSmall = async (page: Page) => {
   await page.setViewportSize({width: 1280, height: 1000});
   await page.goto('/#/activity');
   await expect(tile(page, 'cpu').locator('.rp-tile-body')).toBeVisible();
   await open(page);
+  await expect(tile(page, 'cpu').locator('.rp-dashboard-tools')).toBeVisible();
+};
+
+test('sets height by settings: a value tile keeps its type', async ({page}) => {
+  await editSmall(page);
   // Value tiles: each height step changes the tile, never its type.
   const cpu = tile(page, 'cpu');
   const type = () => cpu.locator('.rp-big').evaluate(node => getComputedStyle(node).fontSize);
@@ -351,38 +390,24 @@ test('sets height by settings: a value tile keeps its type, a chart takes the st
   // A short tile still matches the standard tiles in its row.
   expect(steps[0]).toBeLessThanOrEqual(steps[1]);
   expect(steps[2]).toBeGreaterThan(steps[1] + 16);
+});
+
+test('sets height by settings: a chart takes the step', async ({page}) => {
+  await editSmall(page);
   // Memory, short and tall, differ visibly in its chart.
-  const memory = tile(page, 'memory');
-  const chart = memory.locator('.rp-activity-surface');
-  await settings(page, 'memory');
-  await pick(page, 'Height', 'Short');
-  await close(page);
+  const chart = tile(page, 'memory').locator('.rp-activity-surface');
+  await choose(page, [['memory', 'Height', 'Short']]);
   const short = await height(chart);
-  await settings(page, 'memory');
-  await pick(page, 'Height', 'Tall');
-  await close(page);
+  await choose(page, [['memory', 'Height', 'Tall']]);
   await expect.poll(() => height(chart)).toBeGreaterThan(short * 1.5);
 });
 
-// Width and height steps chosen in a card's settings.
-const choose = async (page: Page, choices: Array<[string, string, string]>) => {
-  for (const [id, label, option] of choices) {
-    await settings(page, id);
-    await pick(page, label, option);
-    await close(page);
-  }
-};
-
 test('sets width by settings, the same width in every section, and keeps it', async ({page}) => {
-  await page.setViewportSize({width: 1280, height: 1000});
-  await page.goto('/#/activity');
-  await expect(tile(page, 'cpu').locator('.rp-tile-body')).toBeVisible();
-  await open(page);
+  await editSmall(page);
   const memory = tile(page, 'memory');
   const download = tile(page, 'download');
   // A half in the details section is a half in the metrics section.
   await choose(page, [
-    ['memory', 'Height', 'Tall'],
     ['memory', 'Width', '1/2'],
     ['download', 'Width', '1/2']
   ]);
@@ -390,20 +415,21 @@ test('sets width by settings, the same width in every section, and keeps it', as
   await page.getByRole('button', {name: 'Done', exact: true}).click();
   await page.reload();
   await expect(memory).toHaveAttribute('data-width', '1/2');
-  await expect(memory).toHaveAttribute('data-height', 'tall');
   await expect(download).toHaveAttribute('data-width', '1/2');
 });
 
-test('sets width and height by edge drag and keys, and keeps them', async ({page}) => {
-  await page.setViewportSize({width: 1280, height: 1000});
-  await page.goto('/#/activity');
-  await expect(tile(page, 'cpu').locator('.rp-tile-body')).toBeVisible();
-  await open(page);
-  const cpu = tile(page, 'cpu');
-  await choose(page, [
-    ['cpu', 'Height', 'Tall'],
-    ['download', 'Width', '1/2']
-  ]);
+test('sets height by settings and keeps it', async ({page}) => {
+  await editSmall(page);
+  const memory = tile(page, 'memory');
+  await choose(page, [['memory', 'Height', 'Tall']]);
+  await page.getByRole('button', {name: 'Done', exact: true}).click();
+  await page.reload();
+  await expect(memory).toHaveAttribute('data-height', 'tall');
+});
+
+test('sets width by edge drag and keeps it', async ({page}) => {
+  await editSmall(page);
+  await choose(page, [['download', 'Width', '1/2']]);
   // The width handle snaps a drag to the nearest width and applies it under the pointer.
   const upload = tile(page, 'upload');
   await upload.hover();
@@ -417,7 +443,16 @@ test('sets width and height by edge drag and keys, and keeps them', async ({page
   await page.mouse.up();
   await expect(upload).toHaveAttribute('data-width', '1/2');
   await expect(upload).not.toHaveAttribute('data-resizing');
-  // The keys: an arrow on a focused handle takes the next step.
+  await page.getByRole('button', {name: 'Done', exact: true}).click();
+  await page.reload();
+  await expect(upload).toHaveAttribute('data-width', '1/2');
+});
+
+test('sets width and height by keys on the edge handles, and keeps them', async ({page}) => {
+  await editSmall(page);
+  const cpu = tile(page, 'cpu');
+  await choose(page, [['cpu', 'Height', 'Tall']]);
+  // An arrow on a focused handle takes the next step.
   await focusHandle(page, 'cpu', 'Resize height');
   await page.keyboard.press('ArrowUp');
   await expect(cpu).toHaveAttribute('data-height', 'standard');
@@ -428,7 +463,6 @@ test('sets width and height by edge drag and keys, and keeps them', async ({page
   await page.reload();
   await expect(cpu).toHaveAttribute('data-height', 'standard');
   await expect(cpu).toHaveAttribute('data-width', '1/4');
-  await expect(upload).toHaveAttribute('data-width', '1/2');
 });
 
 test('a list height is its row count and survives a reload', async ({page}) => {
