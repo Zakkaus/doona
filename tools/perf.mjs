@@ -1,7 +1,8 @@
 // Usage: node tools/perf.mjs [URL]; measures a built doona against the mock backend with a throttled CPU.
 // Reports first paint, scripting and layout time per page, the cost of one polling minute on the activity
-// page, the long connection and node tables, a log burst, hovering the routing tree, and the longest task of each
-// side-nav page switch, on the first and the second visit. Numbers are medians
+// page, the long connection and node tables, a log burst, hovering the routing tree, and side-nav page switches:
+// click to ready, the longest task and scripting and layout time of opening a page, of going back to a kept page and
+// of going back to one rebuilt after it was dropped. Numbers are medians
 // of PERF_RUNS runs, three by default. PERF_ONLY=regex runs only the scenarios whose name matches.
 import {chromium} from '@playwright/test';
 import {signInDemo} from './demo-session.mjs';
@@ -41,12 +42,12 @@ async function metrics(session) {
 }
 const delta = (a, b) => ({script: b.script - a.script, layout: b.layout - a.layout, style: b.style - a.style});
 
-// A page counts as ready when its heading is on screen and nothing in it is still loading.
+// A page counts as ready when the side navigation marks the address's page as shown, its content is on screen and
+// nothing in it is still loading. The address changes before a switch commits; the mark changes with it.
 async function ready(page) {
-  const shown = page.locator('.rp-content');
-  await page.locator('.rp-content h1:visible').waitFor();
   const route = new URL(page.url()).hash.slice(2).split('?')[0];
-  await shown.locator(content[route]).filter({visible: true}).first().waitFor();
+  await page.locator(`.rp-side a[href="#/${route}"][aria-current=page]`).waitFor({state: 'attached'});
+  await page.locator('.rp-content').locator(content[route]).filter({visible: true}).first().waitFor();
   await page.waitForFunction(
     () => !Array.from(document.querySelectorAll('.rp-content .rp-empty[role=status]')).some(element => element.checkVisibility()),
     null,
@@ -228,10 +229,19 @@ await measure('flows: hover 20 tree tiles', async (page, session) => {
   for (let i = 0; i < count; i++) await tiles.nth(i).hover();
   return delta(before, await metrics(session));
 });
-// Every page is opened twice from the side navigation, as a person moves around. The activity page opens the tab, so
-// its first switch is the one back to it.
+// Every page but activity, which the tab opens on, is opened once from the side navigation. Five pages stay mounted
+// (src/shell/kept.ts), so by then nodes, policies and activity are dropped: going back to each builds it again, and
+// going back once more shows the kept page.
 if (wanted('page switch')) {
-  const result = await run(async page => {
+  const heavy = ['nodes', 'policies', 'activity'];
+  const switches = [
+    ...Object.keys(content)
+      .filter(route => route !== 'activity')
+      .map(route => `first open: ${route}`),
+    ...heavy.map(route => `rebuilt return: ${route}`),
+    ...heavy.map(route => `kept return: ${route}`)
+  ];
+  const result = await run(async (page, session) => {
     await page.goto(`${base}/#/activity`);
     await ready(page);
     await page.waitForTimeout(2000);
@@ -239,22 +249,24 @@ if (wanted('page switch')) {
       window.longTasks = [];
       new PerformanceObserver(list => window.longTasks.push(...list.getEntries().map(entry => [entry.startTime, entry.duration]))).observe({type: 'longtask'});
     });
-    const longest = {};
-    const order = [...Object.keys(content).filter(route => route !== 'activity'), 'activity'];
-    for (const visit of ['first', 'second'])
-      for (const route of order) {
-        const start = await page.evaluate(() => performance.now());
-        await page.locator(`.rp-side a[href="#/${route}"]`).click();
-        await ready(page);
-        await page.waitForTimeout(1000);
-        longest[`${route} ${visit}`] = await page.evaluate(
-          from => Math.max(0, ...window.longTasks.filter(([at]) => at >= from).map(([, duration]) => duration)),
-          start
-        );
-      }
-    return longest;
+    const sample = {};
+    for (const name of switches) {
+      const route = name.split(': ')[1];
+      const start = await page.evaluate(() => performance.now());
+      const before = await metrics(session);
+      const clicked = performance.now();
+      await page.locator(`.rp-side a[href="#/${route}"]`).click();
+      await ready(page);
+      const shown = performance.now() - clicked;
+      await page.waitForTimeout(1000);
+      const {script, layout} = delta(before, await metrics(session));
+      const longest = await page.evaluate(from => Math.max(0, ...window.longTasks.filter(([at]) => at >= from).map(([, duration]) => duration)), start);
+      for (const [key, value] of Object.entries({ready: shown, longest, script, layout})) sample[`${name} ${key}`] = value;
+    }
+    return sample;
   });
-  for (const route of Object.keys(content)) rows.push({scenario: `page switch: ${route}`, first: result[`${route} first`], second: result[`${route} second`]});
+  for (const name of switches)
+    rows.push({scenario: `page switch, ${name}`, ...Object.fromEntries(['ready', 'longest', 'script', 'layout'].map(key => [key, result[`${name} ${key}`]]))});
 }
 const width = Math.max(...rows.map(row => row.scenario.length));
 for (const row of rows) {
