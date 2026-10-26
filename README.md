@@ -26,22 +26,11 @@ Depending on the features exposed by your backend, doona lets you:
 
 ## Two editions
 
-The standard edition is doona's full interface for monitoring traffic and editing configuration, with Settings and palettes.
-doona lite is a smaller configuration editor for beginners, without traffic pages.
+The standard edition monitors traffic and manages the whole configuration. doona lite edits nodes, subscriptions, groups, routing, DNS and global settings, and has no traffic pages. Both connect to the same honk with the same administrator credentials.
 
-Both editions use the same honk native API and honk configuration, and accept the same administrator password or token for sign-in. honk serves one edition at a time; to switch, point `ui` at the other directory and restart honk. The editions never overwrite each other's files or browser settings.
-
-|         | Standard edition                                                                                                              | doona lite                                                                       |
-| ------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| For     | Traffic monitoring and configuration                                                                                          | Beginners editing configuration                                                  |
-| Pages   | Activity, System status, Connections, Routing log, DNS, Logs, Events, Nodes, Groups, Rules, Trace, Configuration and Settings | Nodes, Subscriptions, Groups, Routing, DNS and global settings; no traffic pages |
-| Install | `doona-<version>.tar.gz` in `/usr/share/doona`, or `ui: embedded` in honk-core release builds (standard edition only)         | `doona-lite-<version>.tar.gz` in `/usr/share/doona-lite`                         |
-| Demo    | [Standard demo](https://demo.daeuniverse.org/)                                                                                | [lite demo](https://demo.daeuniverse.org/lite/)                                  |
-| Docs    | [Standard guide](https://zakkaus.github.io/doona-docs/en/)                                                                    | [lite guide](https://zakkaus.github.io/doona-docs/en/lite.html)                  |
+See the [edition comparison](https://zakkaus.github.io/doona-docs/en/editions.html) for features, backend requirements and switching editions.
 
 <img src="https://zakkaus.github.io/doona-docs/images/lite-nodes-light.webp" width="100%" alt="The doona lite Nodes page">
-
-See the [edition comparison](https://zakkaus.github.io/doona-docs/en/editions.html) for details.
 
 ## Try the demo
 
@@ -84,7 +73,7 @@ WebSocket, gRPC and XHTTP are stream transports, separate from proxy protocols. 
 
 The build, test and packaging commands, the source layout and the contract pin are on the [development page](https://zakkaus.github.io/doona-docs/en/development.html). See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
-doona lite lives in `apps/lite`; from the repository root, build it with `pnpm --dir apps/lite build`.
+For lite’s separate dependency install and build commands, see [Development](https://zakkaus.github.io/doona-docs/en/development.html#doona-lite).
 
 ## Support
 
