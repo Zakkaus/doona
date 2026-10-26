@@ -134,6 +134,30 @@ it('shows a connection state from a newer backend as sent', async () => {
   expect(view.steps.find(row => row.id === step.seq)!.fields).toContainEqual([t('ui.state'), 'closing']);
 });
 
+it('shows the DNS answer status and query type, and a step error only when one is reported', async () => {
+  const api = createMockApi();
+  const detail = await api.flow((await api.flows()).flows[0].id);
+  const dns = detail.trace.steps.find(step => step.stage === 'dns')!;
+  const connection = detail.trace.steps.find(step => step.stage === 'connection')!;
+  const outbound = detail.trace.steps.find(step => step.stage === 'outbound')!;
+  const datapath = detail.trace.steps.find(step => step.stage === 'datapath')!;
+  const dnsFields = () => flowDetailView(detail, t, 'en')!.steps.find(row => row.id === dns.seq)!.fields!;
+  expect(dnsFields()).toContainEqual([t('rule.dns.kind.qtype'), 'A']);
+  expect(dnsFields()).toContainEqual([t('ui.state'), 'NOERROR']);
+  expect(dnsFields().map(([label]) => label)).not.toContain(t('ui.error'));
+  dns.data = {...dns.data, status: 'SERVFAIL', error: 'upstream timed out'};
+  connection.data = {...connection.data, error: 'connection reset'};
+  outbound.data = {...outbound.data, error: 'dial refused'};
+  datapath.data = {...datapath.data, error: 'map full'};
+  const view = flowDetailView(detail, t, 'en')!;
+  const fields = (step: {seq: number}) => view.steps.find(row => row.id === step.seq)!.fields;
+  expect(dnsFields()).toContainEqual([t('ui.state'), 'SERVFAIL']);
+  expect(dnsFields()).toContainEqual([t('ui.error'), 'upstream timed out']);
+  expect(fields(connection)).toContainEqual([t('ui.error'), 'connection reset']);
+  expect(fields(outbound)).toContainEqual([t('ui.error'), 'dial refused']);
+  expect(fields(datapath)).toContainEqual([t('ui.error'), 'map full']);
+});
+
 it('opens on the map and offers the records beside it', async () => {
   const {resources} = await createMockApi().capabilities();
   const view = flowsView(resources, '', t);
