@@ -28,6 +28,10 @@ describe('UI boundary negative controls', () => {
   it.each([
     ['layout', '<div><span>Layout</span></div>'],
     ['tokens', '<VStack style={{padding: "12px"}} />'],
+    ['colors', '<VStack style={{color: "#fff"}} />'],
+    ['colors', '<VStack style={{background: "rgb(0 0 0 / 72%)"}} />'],
+    ['colors', '<VStack style={{color: "white"}} />'],
+    ['colors', '<path fill="black" />'],
     ['spacing', '<VStack gap={7} />'],
     ['grid', '<Grid columns={{minWidth: 320}} />'],
     ['rows', '<Table />'],
@@ -47,5 +51,16 @@ describe('UI boundary negative controls', () => {
     const result = check('<VStack />', shell.replace('icon: Share', 'icon: Data'));
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('[icons]');
+  });
+  it('rejects raw CSS colours', () => {
+    const css = join(fixture, 'src/Example.css');
+    writeFileSync(css, '.example { color: #fff; }');
+    try {
+      const result = check('<VStack />');
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('[colors]');
+    } finally {
+      rmSync(css);
+    }
   });
 });

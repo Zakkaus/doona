@@ -30,12 +30,13 @@ const theme = EditorView.theme({
     backgroundColor: 'var(--color-background-surface)',
     color: 'var(--color-text-primary)',
     fontSize: 'var(--text-supporting-size)',
-    border: 'var(--border-width) solid var(--color-border)',
+    border: 'var(--border-width) solid var(--lite-editor-border)',
     borderRadius: 'var(--radius-element)'
   },
   '&.cm-focused': {outline: 'var(--focus-outline-width) solid var(--color-accent)'},
   '.cm-scroller': {fontFamily: 'var(--font-family-code)', overflow: 'auto', minHeight: '30dvh'},
   '.cm-content': {padding: 'var(--spacing-3)', caretColor: 'var(--color-text-primary)'},
+  '.cm-cursor, .cm-dropCursor': {borderLeftColor: 'var(--lite-editor-cursor)'},
   '.cm-gutters': {backgroundColor: 'var(--color-background-muted)', color: 'var(--color-text-secondary)', border: 'none'},
   '.cm-activeLine, .cm-activeLineGutter': {backgroundColor: 'var(--color-background-muted)'},
   '.cm-tooltip': {
@@ -46,7 +47,21 @@ const theme = EditorView.theme({
   '.cm-tooltip-autocomplete > ul': {fontFamily: 'var(--font-family-code)'},
   '.cm-tooltip-autocomplete > ul > li': {padding: 'var(--spacing-2)'},
   '.cm-tooltip-autocomplete > ul > li[aria-selected]': {backgroundColor: 'var(--color-background-muted)', color: 'var(--color-text-primary)'},
-  '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {backgroundColor: 'var(--color-background-blue)'}
+  '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {backgroundColor: 'var(--color-background-blue)'},
+  '.cm-selectionMatch': {backgroundColor: 'var(--lite-editor-match)'},
+  '.cm-searchMatch .cm-selectionMatch': {backgroundColor: 'transparent'},
+  '&.cm-focused .cm-matchingBracket': {backgroundColor: 'var(--lite-editor-bracket)'},
+  '.cm-searchMatch': {backgroundColor: 'var(--lite-editor-search-match)'},
+  '.cm-searchMatch-selected': {backgroundColor: 'var(--lite-editor-search-selected)'},
+  '.cm-panels': {backgroundColor: 'var(--lite-editor-panel)', color: 'var(--lite-editor-panel-text)'},
+  '.cm-panels-top': {borderBottomColor: 'var(--lite-editor-panel-border)'},
+  '.cm-panels-bottom': {borderTopColor: 'var(--lite-editor-panel-border)'},
+  '.cm-textfield': {backgroundColor: 'var(--lite-editor-field)', borderColor: 'var(--lite-editor-field-border)'},
+  '.cm-button': {
+    backgroundImage: 'linear-gradient(var(--lite-editor-button-start), var(--lite-editor-button-end))',
+    borderColor: 'var(--lite-editor-button-border)'
+  },
+  '.cm-button:active': {backgroundImage: 'linear-gradient(var(--lite-editor-button-pressed-start), var(--lite-editor-button-pressed-end))'}
 });
 export default function LiteCodeEditor({
   value,

@@ -21,7 +21,7 @@ export function ConfigDiff({before, after}: {before: string; after: string}) {
         <Text
           as="span"
           key={i}
-          style={{fontFamily: 'inherit', color: line.kind === 'add' ? 'var(--color-success)' : line.kind === 'del' ? 'var(--color-error)' : undefined}}
+          style={{fontFamily: 'inherit', color: line.kind === 'add' ? 'var(--lite-diff-added)' : line.kind === 'del' ? 'var(--lite-diff-removed)' : undefined}}
         >
           {line.kind === 'gap' ? '…' : `${line.kind === 'add' ? '+' : line.kind === 'del' ? '−' : ' '} ${line.text}`}
           {'\n'}

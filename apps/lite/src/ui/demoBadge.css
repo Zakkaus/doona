@@ -1,9 +1,5 @@
 @layer product {
   .lite-demo-badge {
-    /* The public demo badge keeps the same dark surface in either theme. */
-    --lite-demo-background: rgb(0 0 0 / 72%);
-    --lite-demo-foreground: #fff;
-
     position: fixed;
     inset-inline-end: var(--spacing-3);
     inset-block-end: var(--spacing-3);

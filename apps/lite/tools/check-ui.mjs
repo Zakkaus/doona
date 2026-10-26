@@ -7,6 +7,7 @@ const root = path.resolve(process.argv[2] ?? fileURLToPath(new URL('..', import.
 const spacing = new Set([0, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10]);
 const spacingTokens = new Set(['0', '0-5', '1-5', ...Array.from({length: 12}, (_, i) => String(i + 1))]);
 const errors = [];
+const rawColor = /#[\da-f]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\s*\(|(?:^|[\s,(])(?:white|black)(?=$|[\s,)])/i;
 function files(dir) {
   return fs.readdirSync(dir, {withFileTypes: true}).flatMap(entry => (entry.isDirectory() ? files(path.join(dir, entry.name)) : [path.join(dir, entry.name)]));
 }
@@ -51,10 +52,11 @@ for (const file of files(path.join(root, 'src')).filter(f => /\.(tsx?|css)$/.tes
       errors.push(`${relative} [icon-import] Icons must come from lite src/ui/icons`);
   }
   // Theme files define the token values. Icon/brand SVG coordinates are artwork, not layout.
-  if (relative.startsWith('src/themes/') || relative.startsWith('src/i18n/')) continue;
+  if (relative.startsWith('src/themes/')) continue;
   checked++;
   if (file.endsWith('.css')) {
     const css = source.replace(/\/\*[\s\S]*?\*\//g, '');
+    if (rawColor.test(css)) fail('colors', null, 'Colours must use theme tokens');
     if (/\b\d+(?:\.\d+)?px\b/.test(css)) fail('tokens', null, 'CSS lengths must use tokens');
     if (/(?:padding[\w-]*|margin[\w-]*|gap|row-gap|column-gap|border-radius|font-size)\s*:[^;{}]*\b\d+(?:\.\d+)?(?:rem|em|vh|vw|%)\b/.test(css))
       fail('tokens', null, 'CSS spacing must use tokens');
@@ -89,6 +91,7 @@ for (const file of files(path.join(root, 'src')).filter(f => /\.(tsx?|css)$/.tes
     }
     if (ts.isCallExpression(node) && node.expression.getText() === 'usePageMotion' && node.arguments[0]?.getText() === 'ready') readyHook = true;
     if (ts.isStringLiteralLike(node)) {
+      if (rawColor.test(node.text)) fail('colors', node, 'Colours must use theme tokens');
       for (const match of node.text.matchAll(/var\(--spacing-([\d-]+)\)/g))
         if (!spacingTokens.has(match[1])) fail('tokens', node, `Unknown spacing token: --spacing-${match[1]}`);
     }

@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "check-ui": "node tools/check-ui.mjs",
-    "test:e2e": "node scripts/mock-e2e.cjs && node scripts/round7-e2e.cjs && node scripts/round8-e2e.cjs && node scripts/layout-rhythm.cjs && node scripts/page-cache.cjs && node scripts/loading-layout.cjs && node scripts/nodes-e2e.cjs && node scripts/perf-switch.cjs && node scripts/mode-switch.cjs && node scripts/perf-click.cjs && node scripts/login-e2e.cjs && node scripts/mobile-sheet.cjs && node scripts/features-routing.cjs && node scripts/settings-restart.cjs && node scripts/features-nodes.cjs",
+    "test:e2e": "node scripts/mock-e2e.cjs && node scripts/round7-e2e.cjs && node scripts/round8-e2e.cjs && node scripts/layout-rhythm.cjs && node scripts/page-cache.cjs && node scripts/loading-layout.cjs && node scripts/nodes-e2e.cjs && node scripts/perf-switch.cjs && node scripts/mode-switch.cjs && node scripts/perf-click.cjs && node scripts/login-e2e.cjs && node scripts/mobile-sheet.cjs && node scripts/features-routing.cjs && node scripts/settings-restart.cjs && node scripts/features-nodes.cjs && node scripts/dark-mode.cjs",
     "test:syntax": "node scripts/syntax-scan.cjs",
     "test:motion": "node scripts/motion.cjs && node scripts/motion-replay.cjs && node scripts/motion-editors.cjs && node scripts/stability.cjs && node scripts/scroll-stability.cjs",
     "test:roundtrip": "../../node_modules/.bin/vitest run --config vitest.config.ts",
