@@ -111,6 +111,7 @@ export function rustRegexToJs(source: string): RegExp | null {
   }
   const chars = [...rest];
   let i = 0;
+  let repeats = 0;
   const peek = (offset = 0) => chars[i + offset];
   const take = () => chars[i++] ?? fail();
   const ahead = (text: string) => chars.slice(i, i + text.length).join('') === text;
@@ -221,11 +222,14 @@ export function rustRegexToJs(source: string): RegExp | null {
     const branches: string[] = [];
     let atoms: Array<{text: string; quantified: boolean; varies?: boolean; assertion?: true}> = [];
     let varies = false;
-    const quantify = (suffix: string, max: number) => {
+    const quantify = (suffix: string, max: number, min: number) => {
       // JavaScript backtracks where the crate stays linear: a quantifier on a quantified atom (`a**`), or one that repeats
       // a group holding a quantifier or an alternation (`(a+)+`, `(a|aa)*`, `(a+){10}`), takes exponential time.
       const last = atoms.at(-1) ?? fail();
       if (last.quantified || (max > 1 && last.varies)) fail();
+      // At most three variable-length repetitions in the whole pattern keep backtracking within cubic time on the short
+      // node and group names it runs on; a pattern with more falls back to its text.
+      if (max !== min && ++repeats > 3) fail();
       const base = last.assertion ? `(?:${last.text})` : last.text;
       const lazy = peek() === '?';
       if (lazy) i++;
@@ -250,7 +254,7 @@ export function rustRegexToJs(source: string): RegExp | null {
         continue;
       }
       i++;
-      if (c === '*' || c === '+' || c === '?') quantify(c, c === '?' ? 1 : Infinity);
+      if (c === '*' || c === '+' || c === '?') quantify(c, c === '?' ? 1 : Infinity, c === '+' ? 1 : 0);
       else if (c === '{') {
         let body = '';
         while (peek() !== '}') body += take();
@@ -258,7 +262,7 @@ export function rustRegexToJs(source: string): RegExp | null {
         const count = /^\s*(\d+)\s*(?:(,)\s*(\d*)\s*)?$/.exec(body) ?? fail();
         // The crate rejects counts past its own limits; anything over 1000 is left to the fallback.
         if (Number(count[1]) > 1000 || Number(count[3]) > 1000 || (count[3] && Number(count[3]) < Number(count[1]))) fail();
-        quantify(`{${count[1]}${count[2] ?? ''}${count[3] ?? ''}}`, count[2] && !count[3] ? Infinity : Number(count[3] || count[1]));
+        quantify(`{${count[1]}${count[2] ?? ''}${count[3] ?? ''}}`, count[2] && !count[3] ? Infinity : Number(count[3] || count[1]), Number(count[1]));
       } else if (c === '(') {
         // Captures do not change what matches, so a group is written as `(?:…)`; named groups and flag groups are left
         // to the fallback.
