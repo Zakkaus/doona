@@ -1,6 +1,7 @@
 import {existsSync, readdirSync, readFileSync} from 'node:fs';
 import {dirname, join, relative, resolve} from 'node:path';
 import ts from 'typescript';
+import {stages} from '../src/i18n/stages';
 
 // The message catalogues load in stages, so a page downloads only the messages its code can show. A stage starts where
 // the code wraps a dynamic import in withCatalogue('<stage>', ...) (src/i18n/index.ts), which loads the stage's part of
@@ -9,7 +10,6 @@ import ts from 'typescript';
 //   core      the entry and everything it imports without a stage: the sign-in page and the startup screens
 //   activity  the signed-in frame and the Activity page
 //   rest      the other pages, the search dialog and any key no code reaches
-export const stages = ['core', 'activity', 'rest'];
 const entry = 'src/main.tsx';
 // Template-built keys must be available before any of their callers render.
 const dynamicStages = {'dns.outcome.': 'activity'};
