@@ -98,6 +98,8 @@ test('Back and Forward return a page to where it was left, while a link still op
   await expect.poll(() => page.evaluate(() => (scrollTo(0, 400), scrollY))).toBe(400);
   await bar(page).getByRole('link', {name: 'Monitor'}).click();
   await expect(page).toHaveURL(/#\/connections$/);
+  // The address changes before the switch commits; the bar marks the new page in the same commit that shows it.
+  await expect(bar(page).getByRole('link', {name: 'Monitor'})).toHaveAttribute('aria-current', 'page');
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight > innerHeight + 300)).toBe(true);
   expect(await page.evaluate(() => scrollY)).toBe(0);
   await page.evaluate(() => scrollTo(0, 300));
@@ -109,6 +111,7 @@ test('Back and Forward return a page to where it was left, while a link still op
   await expect.poll(() => page.evaluate(() => scrollY)).toBe(300);
   await bar(page).getByRole('link', {name: 'Activity'}).click();
   await expect(page).toHaveURL(/#\/activity$/);
+  await expect(bar(page).getByRole('link', {name: 'Activity'})).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('.rp-content > *').first()).toBeVisible();
   expect(await page.evaluate(() => scrollY)).toBe(0);
 });
