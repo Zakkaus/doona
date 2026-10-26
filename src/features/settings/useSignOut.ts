@@ -5,7 +5,7 @@ import {clearSession, sessionToken} from '../../api/session';
 import {clearProfileToken, isDemoApi, readProfiles} from '../../api/profiles';
 import {toast, toastErrorDetail} from '../../ui/ui';
 import {useLeave} from '../../shell/draft';
-import {replaceRoute} from '../../shell/route';
+import {replaceAddress} from '../../shell/route';
 import {defaultRoute} from '../../shell/routes';
 
 // Offered while this browser holds a password session for the saved active profile, or that profile keeps a saved token.
@@ -43,7 +43,7 @@ export function useSignOut() {
       return;
     }
     // Settings stays open without a credential, so the reload lands on a page that asks to sign in again.
-    replaceRoute(defaultRoute);
+    replaceAddress(defaultRoute);
     location.reload();
   };
   return {
