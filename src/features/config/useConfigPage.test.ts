@@ -70,6 +70,19 @@ beforeEach(async () => {
   };
 });
 
+it('completes after -> with the groups and DNS upstreams of every source, this one as edited', () => {
+  const upstreams = (text: string) => `dns {\n  upstream {\n    ${text}\n  }\n}\n`;
+  props.sources = [
+    {...props.source, content: upstreams("saved: 'udp://1.1.1.1:53'")},
+    {...config.sources[1], content: upstreams("elsewhere: 'udp://1.0.0.1:53'\n    'quoted': 'tcp://9.9.9.9:53'")}
+  ];
+  props.source = props.sources[0];
+  read().change(upstreams("edited: 'udp://8.8.8.8:53'"));
+  const {upstreams: found} = read().names();
+  expect(found.map(item => item.written)).toEqual(['edited', 'elsewhere', "'quoted'"]);
+  expect(found.map(item => item.name)).toEqual(['edited', 'elsewhere', 'quoted']);
+});
+
 it.each(['writable', 'read-only', 'pending', 'redacted', 'busy', 'conflict'])('guards source application when %s', async state => {
   if (state === 'read-only') props.canWrite = false;
   if (state === 'pending') complete = undefined;

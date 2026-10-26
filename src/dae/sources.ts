@@ -1,14 +1,24 @@
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest} from '../api/model';
 import type {Key} from '../i18n';
 import {readGroupEntries, type GroupEntry} from './groups';
+import {dnsUpstreamNames} from './ruleText';
+import {unquote} from './text';
 
+type Named = Pick<GroupEntry, 'name' | 'written'>;
+type Draft = {id: string; content: string};
+const names = (sources: ConfigSource[], draft: Draft | undefined, read: (text: string) => Named[]): Named[] => {
+  const entries = sources.flatMap(source => {
+    const text = source.id === draft?.id ? draft.content : source.content;
+    return text === undefined ? [] : read(text);
+  });
+  return [...new Map(entries.map(({name, written}) => [written, {name, written}])).values()];
+};
 // The groups a rule in any source may name: every loaded source's, with the one being edited read from its draft.
 // A rule names a group by its header as written, so two headers that unquote alike are still two groups.
-export function allGroupNames(sources: ConfigSource[], draft?: {id: string; content: string}): Pick<GroupEntry, 'name' | 'written'>[] {
-  const texts = sources.map(source => (source.id === draft?.id ? draft.content : source.content));
-  const entries = texts.flatMap(text => (text === undefined ? [] : readGroupEntries(text)));
-  return [...new Map(entries.map(({name, written}) => [written, {name, written}])).values()];
-}
+export const allGroupNames = (sources: ConfigSource[], draft?: Draft) => names(sources, draft, readGroupEntries);
+// The DNS upstreams a DNS rule in any source may name, each by its key as written.
+export const allUpstreamNames = (sources: ConfigSource[], draft?: Draft) =>
+  names(sources, draft, text => dnsUpstreamNames(text).map(written => ({name: unquote(written), written})));
 
 // Hidden paths use a source-kind label and an opaque ID for display and export.
 export const redacted = (source: {path: string}) => source.path === '<redacted>' || source.path === '';

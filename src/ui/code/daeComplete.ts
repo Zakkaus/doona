@@ -1,6 +1,6 @@
 import {autocompletion, type Completion, type CompletionContext, type CompletionResult} from '@codemirror/autocomplete';
 import * as vocab from '../../dae/vocab';
-import {scanConfig} from '../../dae/text';
+import {scanConfig, type TextBlock} from '../../dae/text';
 import type {GroupEntry} from '../../dae/groups';
 
 const sections = ['global', 'subscription', 'node', 'group', 'dns', 'routing'].map(label => ({label, type: 'keyword'}));
@@ -13,12 +13,20 @@ const conditions = ['domain', 'dip', 'sip', 'dport', 'sport', 'l4proto', 'ipvers
 const matchers = ['geosite', 'geoip', 'suffix', 'full', 'keyword', 'regex'].map(label => ({label, type: 'constant', apply: label + ':'}));
 const policies = vocab.policies.map(label => ({label, type: 'constant'}));
 const builtins = vocab.builtinOutbounds.map(label => ({label, type: 'keyword'}));
+const dnsRequestActions = ['asis', 'reject'].map(label => ({label, type: 'keyword'}));
+const dnsResponseActions = ['accept', 'reject'].map(label => ({label, type: 'keyword'}));
 const routingWords = [
   {label: 'fallback', type: 'keyword', apply: 'fallback: '},
   {label: 'include', type: 'keyword', apply: 'include '}
 ];
 
-export function completeDae(context: CompletionContext, outbounds: () => Pick<GroupEntry, 'name' | 'written'>[]): CompletionResult | null {
+type Named = Pick<GroupEntry, 'name' | 'written'>;
+// What `->` may name: groups in routing, upstreams in dns.
+export type CompletionNames = {groups: Named[]; upstreams: Named[]};
+// Listed by name; inserted as the header or key writes it, quotes included, since honk matches that text.
+const written = (list: Named[]) => list.map(item => ({label: item.name, apply: item.written, type: 'variable'}));
+
+export function completeDae(context: CompletionContext, names: () => CompletionNames): CompletionResult | null {
   const word = context.matchBefore(/[\w.-]*/);
   if (!word) return null;
   const line = context.state.doc.lineAt(context.pos);
@@ -30,11 +38,16 @@ export function completeDae(context: CompletionContext, outbounds: () => Pick<Gr
   const {blocks, tokens} = scanConfig(text);
   const last = tokens.at(-1);
   if (last?.to === context.pos && (last.kind === 'quoted' || last.kind === 'comment')) return null;
-  const section = blocks.find(block => block.close === context.pos)?.name;
+  // The blocks the cursor is inside, outermost first.
+  const open: string[] = [];
+  const atCursor = (block: TextBlock) => block.close === context.pos;
+  for (let block = blocks.find(atCursor); block; block = block.children.find(atCursor)) open.push(block.name);
+  const section = open[0];
   let options: Completion[];
   if (afterArrow) {
-    // Listed by name; inserted as the header writes it, quotes included, since honk matches that text.
-    options = [...outbounds().map(group => ({label: group.name, apply: group.written, type: 'variable'})), ...builtins];
+    const {groups, upstreams} = names();
+    if (section !== 'dns') options = [...written(groups), ...builtins];
+    else options = [...written(upstreams), ...(open.includes('response') ? dnsResponseActions : dnsRequestActions)];
   } else if (/\b(domain|dip|sip|qname)\(\s*[\w.-]*$/.test(before)) {
     options = matchers;
   } else if (section === undefined) {
@@ -60,6 +73,6 @@ export function completeDae(context: CompletionContext, outbounds: () => Pick<Gr
   return {from: word.from, options, validFor: /^[\w.-]*$/};
 }
 
-export function daeCompletion(outbounds: () => Pick<GroupEntry, 'name' | 'written'>[]) {
-  return autocompletion({override: [context => completeDae(context, outbounds)]});
+export function daeCompletion(names: () => CompletionNames) {
+  return autocompletion({override: [context => completeDae(context, names)]});
 }
