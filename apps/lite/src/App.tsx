@@ -18,6 +18,7 @@ import {EditDialog} from './ui/EditDialog';
 import {browserLocale, isTyping, shortcuts} from './ui/shortcuts';
 import {ToastViewport} from './ui/ToastViewport';
 import {usePageMotion} from './ui/usePageMotion';
+const Demo = import.meta.env.VITE_LITE_DEMO === '1' ? lazy(() => import('./Demo')) : null;
 const Groups = lazy(() => pageChunks.groups().then(module => ({default: memo(module.Groups)})));
 const Nodes = lazy(() => pageChunks.nodes().then(module => ({default: memo(module.Nodes)})));
 const Subscriptions = lazy(() => pageChunks.subscriptions().then(module => ({default: memo(module.Subscriptions)})));
@@ -175,19 +176,26 @@ export default function App() {
         <PreferencesContext value={preferences}>
           <Theme theme={siteTheme} mode={mode}>
             <ToastViewport position="bottomEnd" maxVisible={1} inset={draftOffset ? {bottom: draftOffset} : undefined}>
+              {Demo && (
+                <Suspense fallback={null}>
+                  <Demo connection={connection} onConnect={setConnection} />
+                </Suspense>
+              )}
               {!connection ? (
-                <Connect
-                  endedAddress={endedAddress}
-                  setBusy={setBusy}
-                  onConnect={next => {
-                    startTransition(() => {
-                      setEndedAddress(undefined);
-                      setConnection(next);
-                      setScreen('groups');
-                    });
-                    history.replaceState(null, '', '#groups');
-                  }}
-                />
+                !Demo && (
+                  <Connect
+                    endedAddress={endedAddress}
+                    setBusy={setBusy}
+                    onConnect={next => {
+                      startTransition(() => {
+                        setEndedAddress(undefined);
+                        setConnection(next);
+                        setScreen('groups');
+                      });
+                      history.replaceState(null, '', '#groups');
+                    }}
+                  />
+                )
               ) : (
                 <DraftContext value={setDirty}>
                   <Shell

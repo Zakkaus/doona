@@ -422,6 +422,8 @@ export const en = {
   settings: 'Settings',
   connectDescription: 'Use the demo or connect to your proxy service.',
   demo: 'Try the demo',
+  demoBadge: 'Demo: sample data',
+  hideDemoBadge: 'Hide demo badge',
   demoName: 'Demo',
   backend: 'Backend URL',
   token: 'Token',
