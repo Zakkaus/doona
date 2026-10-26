@@ -13,7 +13,6 @@ test.describe(() => {
     const total = await rows.count();
     expect(total).toBeGreaterThan(1);
     await expect(page.locator('.rp-panel:visible')).toHaveCount(0);
-    await expect(page.locator('.rp-panel').filter({visible: false})).toHaveCount(0);
     await expect(page.getByRole('group', {name: 'Observation coverage'})).toContainText('3 dropped records');
     await rows.filter({hasText: 'api.telegram.org'}).first().getByRole('rowheader').click();
     await expect(page).toHaveURL(/#\/flows\?tab=records&id=flow-1$/);
@@ -31,7 +30,6 @@ test.describe(() => {
     await page.locator('.rp-panel:visible').getByRole('button', {name: 'Close', exact: true}).click();
     await expect(page).toHaveURL(/#\/flows\?tab=records$/);
     await expect(page.locator('.rp-panel:visible')).toHaveCount(0);
-    await expect(page.locator('.rp-panel').filter({visible: false})).toHaveCount(0);
     await page.locator('.rp-nav[href="#/settings"]').click();
     await expect(page.locator('main h1')).toHaveText('Settings');
     await expect(page.locator('.rp-page').filter({visible: false})).not.toHaveCount(0);

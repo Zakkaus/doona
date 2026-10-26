@@ -1,6 +1,6 @@
 import type {Page, Request} from '@playwright/test';
 import {poll} from '../src/store/cadence';
-import {expect, mockBackend, test} from './fixtures';
+import {detail, expect, mockBackend, test} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 1000}});
 
@@ -83,4 +83,15 @@ test('a discarded draft does not come back on a kept page or ask again from behi
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(page.locator('.cm-content')).toContainText('second draft');
+});
+
+test('a page left with a row open beside its list is kept and comes back with it', async ({page}) => {
+  await page.goto('/#/connections?id=1');
+  await expect(detail(page).getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
+  await detail(page).evaluate(panel => panel.setAttribute('data-left', ''));
+  await open(page, 'rules');
+  await expect(detail(page)).toHaveCount(0);
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/connections\?id=1$/);
+  await expect(detail(page)).toHaveAttribute('data-left', '');
 });

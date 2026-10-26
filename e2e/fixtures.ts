@@ -100,7 +100,6 @@ export const test = base.extend<{storage: Record<string, string>; signedIn: stri
         if (localStorage.getItem('doona-session') === null) localStorage.setItem('doona-session', session);
       }, demoSession(signedIn));
     await use(page);
-    await expect(page.locator('.rp-panel, .rp-drawer').filter({visible: false}), 'Hidden pages hold no open detail panel').toHaveCount(0);
     expect(controls, 'Live observation suite sent control requests').toEqual([]);
     expect(errors, 'Browser errors').toEqual([]);
   }
@@ -168,7 +167,6 @@ export async function scrollTableToEnd(grid: Locator) {
 
 // Call after leaving a page, with its resource paths and an installed clock.
 export async function expectHiddenPagesIdle(page: Page, requests: Request[], paths: RegExp) {
-  await expect(page.locator('.rp-panel, .rp-drawer').filter({visible: false})).toHaveCount(0);
   const reads = () => requests.filter(request => paths.test(new URL(request.url()).pathname)).length;
   const before = reads();
   expect(before, 'The hidden page read its resources while shown').toBeGreaterThan(0);
