@@ -1,6 +1,6 @@
 import {createContext, useContext, type ComponentProps} from 'react';
 import {useT} from '../../i18n';
-import {AreaChart, Legend, Spark} from './Charts';
+import {AreaChart, Legend, Spark, seriesTipLines} from './Charts';
 
 export const WidgetChartInset = createContext(2);
 
@@ -41,11 +41,7 @@ export function WidgetAreaChart({
       </figure>
     );
   const indices = compactSamples(props.timestamps);
-  const lines = (at: number) =>
-    props.series
-      .filter(s => s.values[indices[at]] != null)
-      .sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0))
-      .map(s => t('ui.valuePair', {label: s.label, value: props.fmt(s.values[indices[at]]!)}));
+  const lines = (at: number) => seriesTipLines(props.series, indices[at], props.fmt, t);
   return (
     <figure className="rp-compact-chart" aria-label={props.label}>
       {legend}

@@ -77,7 +77,7 @@ export function Card({
   children?: ReactNode;
   // A card that pauses its reads off screen observes itself.
   ref?: Ref<HTMLElement>;
-  // L for a card in a row with a segmented control, such as the control cards, so the row's controls match it.
+  // The size of the controls inside the card; unset, they are M.
   size?: ControlSize;
 }) {
   const ownTitleId = useId();

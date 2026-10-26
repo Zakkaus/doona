@@ -1,5 +1,5 @@
-/* A page's tab bar is the segmented control at S2's L size: segmented.css draws its track, slider and items at L, and
-   this file gives the tabs L's height and lets the bar scroll. */
+/* A page's tab bar is the segmented control at S2's M size: segmented.css draws its track, slider and items at M, and
+   this file gives the tabs their height and lets the bar scroll. */
 /* The panels share one grid row, so a kept panel hidden behind the shown one keeps its width and its top. */
 .rp-tabs {
   display: grid;

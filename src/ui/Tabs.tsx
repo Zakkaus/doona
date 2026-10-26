@@ -4,7 +4,7 @@ import {TabShown} from './useTabShown';
 import {useSlider, useScrollStrip} from './hooks';
 import {Toolbar} from './Toolbar';
 
-// Tabs: a page's navigation between its sections, drawn as S2's SegmentedControl at L (40px) while keeping the tab and
+// Tabs: a page's navigation between its sections, drawn as S2's SegmentedControl at M (32px) while keeping the tab and
 // tabpanel roles. The selected key is the caller's (URL-backed); a panel mounts the first time it is selected.
 export function Tabs({
   label,

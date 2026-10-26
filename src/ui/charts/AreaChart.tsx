@@ -7,7 +7,7 @@ import {ChartTip, tipBounds, useChartTip} from './tip';
 import {linearPosition, visibleTicks, nearestIndex} from './layout';
 import {pointerPosition, useSelection} from './interaction';
 import {Curve, Gradient} from './AreaCurve';
-import type {Series} from './Charts';
+import {seriesTipLines, type Series} from './Charts';
 const niceMax = (v: number) => {
   const p = Math.pow(10, Math.floor(Math.log10(v)));
   const n = v / p;
@@ -175,10 +175,7 @@ export function AreaPlot({
       // A bare plot is too short for its tip, which stays inside the card instead, as a sparkline's does.
       bounds: bare && ref.current ? tipBounds(ref.current) : bounds,
       label: localTimeFormat(locale).format(timestamps[selected]),
-      lines: series
-        .filter(s => s.values[selected] != null)
-        .sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0))
-        .map(s => t('ui.valuePair', {label: s.label, value: fmt(s.values[selected]!)}))
+      lines: seriesTipLines(series, selected, fmt, t)
     });
   });
   const selection = useSelection(timestamps.length, select, clear);
