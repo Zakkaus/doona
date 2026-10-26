@@ -26,22 +26,11 @@ doona 是用于管理代理后端的静态 Web 界面。查看真实数据需要
 
 ## 两个版本
 
-标准版是 doona 的完整界面，提供流量监控、配置编辑、设置与配色。
-doona lite 是面向新手的精简配置编辑器，不含流量页面。
+标准版用于监控流量并管理全部配置。doona lite 用于编辑节点、订阅、策略组、路由、DNS 与全局设置，不含流量页面。两者连接同一个 honk，使用相同的管理员凭据。
 
-两个版本使用相同的 honk 原生 API 与 honk 配置，均使用管理员密码或令牌登录。honk 一次只提供一个版本；将 `ui` 指向另一个目录并重启 honk 即可切换。两个版本不会覆盖彼此的文件或浏览器设置。
-
-|          | 标准版                                                                                                          | doona lite                                                        |
-| -------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| 适用场景 | 监控流量与管理配置                                                                                              | 新手编辑配置                                                      |
-| 页面     | 活动、系统状态、连接、路由日志、DNS、日志、事件、节点、群组、规则、跟踪、配置与设置                             | 节点、订阅、群组、路由、DNS 与全局设置；不含流量页面              |
-| 安装     | 将 `doona-<version>.tar.gz` 解压到 `/usr/share/doona`，或在 honk-core 发布构建中使用 `ui: embedded`（仅标准版） | 将 `doona-lite-<version>.tar.gz` 解压到 `/usr/share/doona-lite`   |
-| 演示     | [标准版演示](https://demo.daeuniverse.org/)                                                                     | [lite 演示](https://demo.daeuniverse.org/lite/)                   |
-| 文档     | [标准版指南](https://zakkaus.github.io/doona-docs/zh-CN/)                                                       | [lite 指南](https://zakkaus.github.io/doona-docs/zh-CN/lite.html) |
+功能、后端要求及版本切换方式见[版本比较](https://zakkaus.github.io/doona-docs/zh-CN/editions.html)。
 
 <img src="https://zakkaus.github.io/doona-docs/images/lite-nodes-light.webp" width="100%" alt="doona lite 节点页面">
-
-详细区别见[版本比较](https://zakkaus.github.io/doona-docs/zh-CN/editions.html)。
 
 ## 体验演示版
 
@@ -68,7 +57,7 @@ WebSocket、gRPC 与 XHTTP 是流传输方式，与代理协议不同。在支�
 
 ## 最新版本
 
-[rc.1](CHANGELOG.md) 在 http 页面上建议后端地址，建议中的 IPv6 主机不再重复方括号，并修复表格换行对齐与路由跟踪的进程字段。
+[rc.1](CHANGELOG.md) 在 http 页面上建议后端地址，建议中的 IPv6 主机不再重复方括号，并修复表格换行对齐与路由追踪的进程字段。
 
 ## 文档
 
@@ -84,7 +73,7 @@ WebSocket、gRPC 与 XHTTP 是流传输方式，与代理协议不同。在支�
 
 构建、测试与打包命令、源码布局与契约的固定提交，见[开发](https://zakkaus.github.io/doona-docs/zh-CN/development.html)一页；提交 pull request 前先读 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-doona lite 的源码位于 `apps/lite`，在仓库根目录执行 `pnpm --dir apps/lite build` 即可构建。
+lite 的独立依赖安装与构建命令见[开发](https://zakkaus.github.io/doona-docs/zh-CN/development.html#doona-lite)一页。
 
 ## 支持
 

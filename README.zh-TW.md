@@ -26,22 +26,11 @@ doona 是用於管理代理後端的靜態 Web 介面。檢視真實資料需要
 
 ## 兩個版本
 
-標準版是 doona 的完整介面，提供流量監控、組態編輯、設定與配色。
-doona lite 是面向新手的精簡組態編輯器，不含流量頁面。
+標準版用於監控流量並管理全部組態。doona lite 用於編輯節點、訂閱、策略群組、路由、DNS 與全域設定，不含流量頁面。兩者連線同一個 honk，使用相同的管理員憑證。
 
-兩個版本使用相同的 honk 原生 API 與 honk 組態，均使用管理員密碼或權杖登入。honk 一次只提供一個版本；將 `ui` 指向另一個目錄並重新啟動 honk 即可切換。兩個版本不會覆寫彼此的檔案或瀏覽器設定。
-
-|          | 標準版                                                                                                            | doona lite                                                        |
-| -------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| 適用情境 | 監控流量與管理組態                                                                                                | 新手編輯組態                                                      |
-| 頁面     | 活動、系統狀態、連線、路由日誌、DNS、日誌、事件、節點、群組、規則、追蹤、組態與設定                               | 節點、訂閱、群組、路由、DNS 與全域設定；不含流量頁面              |
-| 安裝     | 將 `doona-<version>.tar.gz` 解壓縮到 `/usr/share/doona`，或在 honk-core 發布建置中使用 `ui: embedded`（僅標準版） | 將 `doona-lite-<version>.tar.gz` 解壓縮到 `/usr/share/doona-lite` |
-| 示範     | [標準版示範](https://demo.daeuniverse.org/)                                                                       | [lite 示範](https://demo.daeuniverse.org/lite/)                   |
-| 文件     | [標準版指南](https://zakkaus.github.io/doona-docs/zh-TW/)                                                         | [lite 指南](https://zakkaus.github.io/doona-docs/zh-TW/lite.html) |
+功能、後端要求及版本切換方式見[版本比較](https://zakkaus.github.io/doona-docs/zh-TW/editions.html)。
 
 <img src="https://zakkaus.github.io/doona-docs/images/lite-nodes-light.webp" width="100%" alt="doona lite 節點頁面">
-
-詳細差異見[版本比較](https://zakkaus.github.io/doona-docs/zh-TW/editions.html)。
 
 ## 體驗示範版
 
@@ -84,7 +73,7 @@ WebSocket、gRPC 與 XHTTP 是串流傳輸方式，與代理協定不同。在�
 
 建置、測試與打包指令、原始碼配置與契約的固定提交，見[開發](https://zakkaus.github.io/doona-docs/zh-TW/development.html)一頁；送出 pull request 前先讀 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-doona lite 的原始碼位於 `apps/lite`，在儲存庫根目錄執行 `pnpm --dir apps/lite build` 即可建置。
+lite 的獨立相依套件安裝與建置指令見[開發](https://zakkaus.github.io/doona-docs/zh-TW/development.html#doona-lite)一頁。
 
 ## 支援
 
