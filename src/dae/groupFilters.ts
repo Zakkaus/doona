@@ -54,4 +54,13 @@ export function compileFilters(filters: string[]): (node: FilterNode) => boolean
         )
     );
 }
-export const groupAdmits = (filters: string[], node: FilterNode) => compileFilters(filters)(node);
+// The mock's activation passes each parsed entry's filter array for every candidate node, so compile it once.
+const compiled = new WeakMap<string[], (node: FilterNode) => boolean>();
+export function groupAdmits(filters: string[], node: FilterNode) {
+  let predicate = compiled.get(filters);
+  if (!predicate) {
+    predicate = compileFilters(filters);
+    compiled.set(filters, predicate);
+  }
+  return predicate(node);
+}
