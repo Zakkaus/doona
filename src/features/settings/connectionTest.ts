@@ -26,16 +26,13 @@ export async function probeBackend(base: string, token: string, signal: AbortSig
 export function useConnectionTest() {
   const [pending, setPending] = useState(false);
   const request = useRef<AbortController | null>(null);
-  const abort = useCallback(() => {
+  const cancel = useCallback(() => {
     const controller = request.current;
     request.current = null;
     controller?.abort();
-  }, []);
-  useEffect(() => abort, [abort]);
-  const cancel = useCallback(() => {
-    abort();
     setPending(false);
-  }, [abort]);
+  }, []);
+  useEffect(() => cancel, [cancel]);
   const run = async (base: string, token: string, settle: (outcome: ProbeOutcome) => void) => {
     const controller = new AbortController();
     request.current = controller;

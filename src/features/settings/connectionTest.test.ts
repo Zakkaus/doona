@@ -1,5 +1,8 @@
+import {hookHarness} from '../../store/testHelpers';
 import {afterEach, expect, it, vi} from 'vitest';
-import {probeBackend} from './connectionTest';
+import {probeBackend, useConnectionTest} from './connectionTest';
+
+vi.mock('react', async original => ({...(await original<typeof import('react')>()), ...hookHarness.hooks}));
 
 const base = 'https://router.test';
 const origin = 'https://ui.test';
@@ -57,4 +60,21 @@ it('reports a timed-out test and nothing for a cancelled one', async () => {
   const cancelling = probeBackend(base, '', cancelled.signal, origin);
   cancelled.abort();
   expect(await cancelling).toBeNull();
+});
+
+it('offers the test again after a hidden page cancels the one in flight', async () => {
+  hookHarness.reset();
+  vi.stubGlobal('location', {origin});
+  vi.stubGlobal('fetch', stalled());
+  const read = () => hookHarness.render(useConnectionTest);
+  read();
+  hookHarness.runEffects();
+  const running = read().run(base, '', vi.fn());
+  expect(read().pending).toBe(true);
+  // A hidden <Activity> runs the effect cleanups and keeps the state.
+  hookHarness.unmount();
+  await running;
+  read();
+  hookHarness.runEffects();
+  expect(read().pending).toBe(false);
 });
