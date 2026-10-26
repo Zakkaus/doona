@@ -117,6 +117,8 @@ test.describe('language loading', () => {
   // Chunks fetched by the service worker would bypass page.route.
   test.use({serviceWorkers: 'block'});
   test('fetches only the saved language, and only the parts Activity shows', async ({page}) => {
+    // The idle warm-up fetches the other pages' part once the browser is idle; held back, only rendering fetches remain.
+    await page.addInitScript(() => (window.requestIdleCallback = () => 0));
     const fetched: string[] = [];
     page.on('request', request => {
       if (localeChunk().test(request.url())) fetched.push(request.url());
