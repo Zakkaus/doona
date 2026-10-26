@@ -63,6 +63,15 @@ export function useRead<T>(load: (signal?: AbortSignal) => Promise<T>) {
   return {data, setData, error, loading, reload};
 }
 
+// A draft keeps the source of its first edit: a re-read may refresh the page, but must not move the If-Match base under the draft.
+export const draftBase = <T>(pinned: T | undefined, current: T | undefined, editing: boolean) => (editing ? (pinned ?? current) : current);
+export function useDraftBase<T>(current: T | undefined, editing: boolean) {
+  const [pinned, setPinned] = useState<T>();
+  const base = draftBase(pinned, current, editing);
+  if ((editing ? base : undefined) !== pinned) setPinned(editing ? base : undefined);
+  return base;
+}
+
 export type Notice = {key: MessageKey; values?: Record<string, string>} | {error: unknown};
 export const noticeText = (template: string, values?: Record<string, string>) =>
   Object.entries(values ?? {}).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, value), template);

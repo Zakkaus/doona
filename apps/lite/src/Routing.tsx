@@ -22,7 +22,7 @@ import {RuleTester} from './RuleTester';
 import {useExportDraft} from './ui/exportDraft';
 import {RuleList} from './RuleList';
 import {ruleReview} from './ruleReview';
-import {useFocusRefresh, useRead, useTask} from './state';
+import {useDraftBase, useFocusRefresh, useRead, useTask} from './state';
 import {Feedback, ReadState, useNoticeToast} from './ui';
 import {hasPendingRuleCommand, requestPageCommand, useCommand} from './ui/commands';
 import {DraftBar} from './ui/DraftBar';
@@ -86,19 +86,20 @@ export function Routing({connection, setBusy}: {connection: Connection; setBusy:
   const ready = read.data !== undefined;
   const task = useTask(setBusy);
   useNoticeToast(task.notice);
-  const layoutSource = read.data?.source ?? mainSnapshot(api);
+  const base = useDraftBase(read.data?.source, draft !== null || rules !== null);
+  const layoutSource = base ?? mainSnapshot(api);
   const current = layoutSource ? readMode(layoutSource.content) : ({mode: 'rule'} as const);
   const shown = draft ?? current;
   const writable = canWrite(connection, read.data?.source);
   const enabled = writable && !read.loading && read.error === undefined && task.busy === null;
   const modeDirty = current && draft && !sameMode(current, draft);
-  const dirty = modeDirty || (rules !== null && read.data && rules !== sectionText(read.data.source.content, 'routing'));
+  const dirty = modeDirty || (rules !== null && base && rules !== sectionText(base.content, 'routing'));
   useDraftGuard(!!dirty, () => {
     setDraft(null);
     setRules(null);
   });
-  useExportDraft(read.data?.source, !!dirty, () => {
-    let content = rules === null ? read.data!.source.content : writeSection(read.data!.source.content, 'routing', rules);
+  useExportDraft(base, !!dirty, () => {
+    let content = rules === null ? base!.content : writeSection(base!.content, 'routing', rules);
     if (draft && modeDirty) content = writeMode(content, draft);
     return content;
   });
@@ -119,10 +120,10 @@ export function Routing({connection, setBusy}: {connection: Connection; setBusy:
   };
   const review = () =>
     void task.run('validate', async () => {
-      let content = rules === null ? read.data!.source.content : writeSection(read.data!.source.content, 'routing', rules);
+      let content = rules === null ? base!.content : writeSection(base!.content, 'routing', rules);
       if (draft && modeDirty) content = writeMode(content, draft);
       else if (rules !== null) writeMode(content, readMode(content)); // Validate mode precedence without rewriting its marker.
-      await validateContent(connection, read.data!.source, content);
+      await validateContent(connection, base!, content);
       setCandidate(content);
       setOpen(true);
       return undefined;
@@ -172,9 +173,7 @@ export function Routing({connection, setBusy}: {connection: Connection; setBusy:
         <DraftPresence>
           {dirty && read.data ? (
             <DraftBar
-              count={
-                (modeDirty ? 1 : 0) + changeCount(sectionText(read.data!.source.content, 'routing'), rules ?? sectionText(read.data!.source.content, 'routing'))
-              }
+              count={(modeDirty ? 1 : 0) + changeCount(originalRules, rules ?? originalRules)}
               discard={() => {
                 setDraft(null);
                 setRules(null);
@@ -298,12 +297,12 @@ export function Routing({connection, setBusy}: {connection: Connection; setBusy:
                               <Suspense fallback={null}>
                                 <LiteCodeEditor
                                   label={t.rulesEditor}
-                                  value={rules ?? sectionText(read.data!.source.content, 'routing')}
+                                  value={rules ?? sectionText(base!.content, 'routing')}
                                   onChange={setRules}
                                   disabled={!enabled}
                                   kind="routing"
                                   connection={connection}
-                                  source={read.data!.source}
+                                  source={base!}
                                   targets={(read.data?.groups ?? []).map(item => item.name)}
                                 />
                               </Suspense>
@@ -339,19 +338,18 @@ export function Routing({connection, setBusy}: {connection: Connection; setBusy:
                 disabled={!enabled}
                 summary={[
                   ...(modeDirty && draft ? [t.reviewModeChange.replace('{before}', label(current)).replace('{after}', label(draft))] : []),
-                  ...(rules !== null && rules !== sectionText(read.data!.source.content, 'routing')
-                    ? ruleReview(writeMode(originalRules, {mode: 'rule'}), authoredRules, 'routing', t)
-                    : [])
+                  ...(rules !== null && rules !== originalRules ? ruleReview(writeMode(originalRules, {mode: 'rule'}), authoredRules, 'routing', t) : [])
                 ]}
-                before={read.data?.source.content ?? ''}
-                after={candidate ?? read.data?.source.content ?? ''}
+                before={base?.content ?? ''}
+                after={candidate ?? base?.content ?? ''}
                 confirm={() => {
-                  if (!candidate || !dirty || !enabled || !read.data) return;
+                  if (!candidate || !dirty || !enabled || !read.data || !base) return;
                   const snapshot = read.data;
+                  const draftSource = base;
                   const change = candidate;
                   void task.run('routing', async () => {
                     try {
-                      const source = await applyContent(connection, snapshot.source, change);
+                      const source = await applyContent(connection, draftSource, change);
                       read.setData({...snapshot, source});
                       setDraft(null);
                       setRules(null);

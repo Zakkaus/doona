@@ -19,7 +19,7 @@ import {useMessages} from './i18n';
 import {changeCount, findBlocks} from './ruleDraft';
 import {RuleList} from './RuleList';
 import {dnsReview} from './ruleReview';
-import {useFocusRefresh, useRead, useTask} from './state';
+import {useDraftBase, useFocusRefresh, useRead, useTask} from './state';
 import {codeEditorChunk} from './preload';
 import {Feedback, ReadState, useNoticeToast} from './ui';
 import {DraftBar} from './ui/DraftBar';
@@ -37,6 +37,7 @@ export function Dns({connection, setBusy}: {connection: Connection; setBusy: (bu
   const task = useTask(setBusy);
   useNoticeToast(task.notice);
   const [text, setText] = useState<string | null>(null);
+  const base = useDraftBase(read.data, text !== null);
   const [textMode, setTextMode] = useState(false);
   const [advanced, setAdvanced] = useState(() => hasPendingRuleCommand('response'));
   useCommand(command => {
@@ -48,11 +49,11 @@ export function Dns({connection, setBusy}: {connection: Connection; setBusy: (bu
   const [candidate, setCandidate] = useState<string | null>(null);
   const writable = canWrite(connection, read.data);
   const disabled = !writable || read.loading || task.busy !== null;
-  const original = sectionText((read.data ?? mainSnapshot(connection.api))?.content ?? '', 'dns');
+  const original = sectionText((base ?? mainSnapshot(connection.api))?.content ?? '', 'dns');
   const shown = text ?? original;
   const dirty = text !== null && text !== original;
   useDraftGuard(dirty, () => setText(null));
-  useExportDraft(read.data ?? undefined, dirty, () => writeSection(read.data!.content, 'dns', shown));
+  useExportDraft(base, dirty, () => writeSection(base!.content, 'dns', shown));
   useFocusRefresh(read.reload, !!read.data && !dirty && task.busy === null);
   const reload = async () => {
     setText(null);
@@ -61,8 +62,8 @@ export function Dns({connection, setBusy}: {connection: Connection; setBusy: (bu
   const targets = dnsUpstreamNames(shown);
   const review = () =>
     void task.run('validate', async () => {
-      const content = writeSection(read.data!.content, 'dns', shown);
-      await validateContent(connection, read.data!, content);
+      const content = writeSection(base!.content, 'dns', shown);
+      await validateContent(connection, base!, content);
       setCandidate(content);
       return undefined;
     });
@@ -144,7 +145,7 @@ export function Dns({connection, setBusy}: {connection: Connection; setBusy: (bu
                               disabled={disabled}
                               kind="dns"
                               connection={connection}
-                              source={read.data!}
+                              source={base!}
                               targets={targets}
                             />
                           </Suspense>
@@ -207,13 +208,13 @@ export function Dns({connection, setBusy}: {connection: Connection; setBusy: (bu
                 notice={task.notice}
                 disabled={disabled}
                 summary={dnsReview(original, shown, t)}
-                before={read.data?.content ?? ''}
-                after={candidate ?? read.data?.content ?? ''}
+                before={base?.content ?? ''}
+                after={candidate ?? base?.content ?? ''}
                 confirm={() =>
                   void task.run('apply', async () => {
                     if (!candidate) return undefined;
                     try {
-                      const source = await applyContent(connection, read.data!, candidate);
+                      const source = await applyContent(connection, base!, candidate);
                       read.setData(source);
                       setText(null);
                       setCandidate(null);
