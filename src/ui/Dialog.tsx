@@ -1,6 +1,7 @@
 import {useEffect, useId, useRef, useState, type ComponentProps, type ReactElement, type ReactNode, type RefObject} from 'react';
 import {Button as RButton, DialogTrigger, Modal, ModalOverlay, Dialog, Heading, Text, Popover, type PopoverProps} from 'react-aria-components';
 import {useTabShown} from './useTabShown';
+import {OpenOverlay} from './openOverlays';
 import Close from './icons/Close';
 import {useT} from '../i18n';
 import {errorText} from '../api/error';
@@ -63,6 +64,7 @@ export function ModalDialog({
       onOpenChange={onOpenChange}
     >
       <Modal className={cx('rp-modal', narrow && 'narrow')} data-size={size}>
+        <OpenOverlay />
         <Dialog
           className={cx('rp-dialog', scrollBody && 'split')}
           role={alert ? 'alertdialog' : 'dialog'}
@@ -476,6 +478,7 @@ export function DetailPanel({
   return (
     <ModalOverlay className={cx('rp-underlay rp-drawer-underlay', was.seen && 'still')} isDismissable isOpen onOpenChange={o => !o && onClose()}>
       <Modal className={cx('rp-modal rp-drawer', fit && 'rp-drawer-fit')}>
+        <OpenOverlay />
         <Dialog className="rp-dialog" aria-label={title}>
           {head}
           {children}

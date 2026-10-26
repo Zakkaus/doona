@@ -12,7 +12,7 @@ test.beforeAll(loadCatalogues);
 
 type ProbeResultItem = ProbeResult['results'][number];
 
-const nodeRows = (page: import('@playwright/test').Page) => page.locator('.rp-table').first().locator('[role=row][data-key]');
+const nodeRows = (page: import('@playwright/test').Page) => page.locator('.rp-table:visible').first().locator('[role=row][data-key]');
 
 const rows = (table: Locator) => table.locator('[role=rowgroup]:last-child [role=row][data-key]');
 // The node sources, as cards.
@@ -108,7 +108,7 @@ test('a share link becomes an inline node and can be removed again', async ({pag
   await expect(list).toHaveCount(5);
   // The management write landed in the main source as a new generation.
   await page.locator('.rp-nav[href="#/config"]').click();
-  await expect(page.locator('.rp-toolbar').first()).toContainText('42');
+  await expect(page.locator('.rp-toolbar:visible').first()).toContainText('42');
 });
 
 for (const transport of ['xhttp', 'splithttp'])
@@ -1212,7 +1212,7 @@ test('the time format setting switches a source expiry and the log clock between
     ])
   );
   const expiry = () => sourceCards(page).first().locator('.rp-kv > div').filter({hasText: 'Expires'}).locator('.v');
-  const marks = page.locator('.rp-heatmap .times .ends span');
+  const marks = page.locator('.rp-heatmap:visible .times .ends span');
   const pick = async (name: string) => {
     await page.goto('/#/settings?tab=appearance');
     await page.getByRole('button', {name: /Time format$/}).click();

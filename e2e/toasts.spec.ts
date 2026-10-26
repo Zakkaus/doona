@@ -22,7 +22,7 @@ async function failingFirstFetch(page: Page, failures: number) {
   return {fetches: () => fetches};
 }
 async function addSubscription(page: Page, name: string) {
-  const toolbar = page.locator('.rp-content .rp-toolbar').first();
+  const toolbar = page.locator('.rp-content .rp-toolbar:visible').first();
   await expect(toolbar).toBeVisible();
   const add = toolbar.getByRole('button', {name: 'Add subscription', exact: true});
   if (await add.isVisible()) await add.click();

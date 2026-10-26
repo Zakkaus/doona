@@ -1,6 +1,6 @@
-import {Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState, type ContextType} from 'react';
+import {Activity, memo, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ContextType} from 'react';
 import {useT, type Lang} from '../i18n';
-import {Button, ErrorMessage, Empty, PageSkeleton, PageShapeContext} from '../ui/ui';
+import {Button, ErrorMessage, Empty, PageSkeleton, PageShapeContext, type PageShape} from '../ui/ui';
 import {PageActionsTarget} from '../ui/PageActions';
 import {useApplyHeld} from '../features/shared/usePendingApply';
 import {useLifecycle} from '../features/shared/useLifecycle';
@@ -16,6 +16,8 @@ import {topBarCommands} from './view';
 import {LoadBoundary} from '../ui/LoadBoundary';
 import type {PageProps} from './routes';
 import {RefusalWait} from './RefusalWait';
+import {keepPages, type KeptPage} from './kept';
+import {hasOpenOverlay, OverlayScopeContext, type OverlayScope} from '../ui/openOverlays';
 
 export type FrameProps = {
   settings: Settings;
@@ -110,19 +112,21 @@ function Layout({lang, pickLang, ap, route, query, go, openSearch, mac, view}: F
           <PageActionsTarget value={actions}>
             <PageShapeContext value={view.current.skeleton}>
               <SettingsContext.Provider value={settingsValue}>
+                <Pages
+                  shown={view.content.kind === 'page' ? {id: view.current.id, page: {Page, skeleton: view.current.skeleton, overlays: {}}} : null}
+                  query={query}
+                  go={go}
+                  formats={`${ap.dateFormat} ${ap.timeFormat}`}
+                />
                 {view.content.kind === 'loading' ? (
                   <PageSkeleton />
-                ) : view.content.kind === 'unavailable' ? (
-                  <Empty>
-                    {t('shell.notOffered')}
-                    <Button onPress={() => go('activity')}>{t('shell.toActivity')}</Button>
-                  </Empty>
                 ) : (
-                  <LoadBoundary key={view.current.id}>
-                    <Suspense fallback={<PageSkeleton />}>
-                      <Page go={go} query={query} />
-                    </Suspense>
-                  </LoadBoundary>
+                  view.content.kind === 'unavailable' && (
+                    <Empty>
+                      {t('shell.notOffered')}
+                      <Button onPress={() => go('activity')}>{t('shell.toActivity')}</Button>
+                    </Empty>
+                  )
                 )}
               </SettingsContext.Provider>
             </PageShapeContext>
@@ -133,3 +137,40 @@ function Layout({lang, pickLang, ap, route, query, go, openSearch, mac, view}: F
     </div>
   );
 }
+
+type Shown = {Page: ComponentType<PageProps>; skeleton: PageShape; overlays: OverlayScope};
+
+// Pages already opened stay mounted under a hidden Activity, so going back to one shows it as it was left instead of
+// building it again; keepPages says which. A hidden page keeps its state and DOM under display: none, which also
+// takes it out of the accessibility tree, and runs no effects: its subscriptions, polls and listeners stop, and start
+// again when it shows, which reads its resources again as opening it anew did.
+function Pages({shown, query, go, formats}: {shown: {id: string; page: Shown} | null; query: string; go: PageProps['go']; formats: string}) {
+  const [kept, setKept] = useState<ReadonlyArray<KeptPage<Shown>>>([]);
+  // Pages format dates and times when they render, so a new clock or date format drops the hidden ones. A page left
+  // with a dialog open is not kept either: the dialog would come back with it.
+  const [formatted, setFormatted] = useState(formats);
+  if (formatted !== formats) setFormatted(formats);
+  const left = kept.filter(entry => entry.id === shown?.id || (formatted === formats && !hasOpenOverlay(entry.page.overlays)));
+  const next = keepPages(left.length === kept.length ? kept : left, shown && {...shown, query});
+  if (next !== kept) setKept(next);
+  return next.map(entry => (
+    <Activity key={entry.id} mode={entry.id === shown?.id ? 'visible' : 'hidden'}>
+      <PageFrame page={entry.page} query={entry.query} go={go} />
+    </Activity>
+  ));
+}
+
+// Memoised, so a page that stays hidden or stays shown is not rendered again when another page opens.
+const PageFrame = memo(function PageFrame({page: {Page, skeleton, overlays}, query, go}: {page: Shown; query: string; go: PageProps['go']}) {
+  return (
+    <OverlayScopeContext value={overlays}>
+      <PageShapeContext value={skeleton}>
+        <LoadBoundary>
+          <Suspense fallback={<PageSkeleton />}>
+            <Page go={go} query={query} />
+          </Suspense>
+        </LoadBoundary>
+      </PageShapeContext>
+    </OverlayScopeContext>
+  );
+});

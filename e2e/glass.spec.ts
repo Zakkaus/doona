@@ -260,7 +260,7 @@ test.describe('glass lens', () => {
     for (const route of ['logs', 'events']) {
       await page.goto(`/#/${route}`);
       await expect(page.locator('html')).toHaveAttribute('data-lens', '');
-      await expect(page.locator('.rp-table[data-flow]')).toBeVisible();
+      await expect(page.locator('.rp-table[data-flow]:visible')).toBeVisible();
       await expect(page.locator('.rp-floating-frame .rp-floating-panel')).toBeVisible();
       const panel = (await surface(page, '.rp-floating-frame .rp-floating-panel')).filter;
       expect(panel).toContain('url("#doona-lens")');

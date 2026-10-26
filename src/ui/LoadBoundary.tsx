@@ -42,7 +42,16 @@ export class LoadBoundary extends Component<{children: ReactNode; fallback?: Rea
     this.timer = setTimeout(() => this.setState({reloading: false}), RELOAD_WAIT_MS);
   }
 
+  // A hidden Activity unmounts its layout effects and mounts them again when it shows, which calls these two. A part
+  // that failed is tried again when it shows, as it was when showing it built it anew.
+  private hidden = false;
+  override componentDidMount() {
+    if (this.hidden && this.state.error) this.setState({error: null, reloading: false});
+    this.hidden = false;
+  }
+
   override componentWillUnmount() {
+    this.hidden = true;
     clearTimeout(this.timer);
   }
 

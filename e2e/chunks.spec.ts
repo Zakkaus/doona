@@ -346,7 +346,7 @@ test('a stale chunk whose reload is cancelled says doona was updated, and so doe
     await page.goto('/#/settings');
     await expect(page.locator('#settings-backend')).toBeVisible();
     await page.locator('.rp-nav[href="#/policies"]').click();
-    const alert = page.locator('.rp-content .rp-alert').first();
+    const alert = page.locator('.rp-content .rp-alert:visible').first();
     await expect(alert.getByRole('button', {name: 'Reload'})).toBeVisible();
     expect(prompts).toEqual(['beforeunload']);
     await page.locator('.rp-nav[href="#/nodes"]').click();

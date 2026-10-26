@@ -10,23 +10,23 @@ test.describe(() => {
     await expect(rows.first()).toBeVisible();
     const total = await rows.count();
     expect(total).toBeGreaterThan(1);
-    await expect(page.locator('.rp-panel')).toHaveCount(0);
+    await expect(page.locator('.rp-panel:visible')).toHaveCount(0);
     await expect(page.getByRole('group', {name: 'Observation coverage'})).toContainText('3 dropped records');
     await rows.filter({hasText: 'api.telegram.org'}).first().getByRole('rowheader').click();
     await expect(page).toHaveURL(/#\/flows\?tab=records&id=flow-1$/);
-    const panel = page.locator('.rp-panel');
+    const panel = page.locator('.rp-panel:visible');
     await expect(panel.getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
     await expect(panel.getByText('Complete', {exact: true})).toBeVisible();
     expect(await panel.locator('.rp-step').count()).toBeGreaterThan(3);
     await expect(panel.locator('.rp-step').first()).toContainText('Input');
     await panel.getByRole('link', {name: 'View connection', exact: true}).click();
     await expect(page).toHaveURL(/#\/connections\?id=1$/);
-    await expect(page.locator('.rp-panel').getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
-    await moreAction(page.locator('.rp-panel'), 'View flow');
+    await expect(page.locator('.rp-panel:visible').getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
+    await moreAction(page.locator('.rp-panel:visible'), 'View flow');
     await expect(page).toHaveURL(/#\/flows\?tab=records&id=flow-1$/);
-    await page.locator('.rp-panel').getByRole('button', {name: 'Close', exact: true}).click();
+    await page.locator('.rp-panel:visible').getByRole('button', {name: 'Close', exact: true}).click();
     await expect(page).toHaveURL(/#\/flows\?tab=records$/);
-    await expect(page.locator('.rp-panel')).toHaveCount(0);
+    await expect(page.locator('.rp-panel:visible')).toHaveCount(0);
   });
 });
 
@@ -104,7 +104,7 @@ test('a flow opens the add-rule dialog for its target on the flows page', async 
   await expect(dialog).toHaveCount(0);
   await expect(page).toHaveURL(/#\/flows\?tab=records$/);
   await page.locator('.rp-table [data-key="flow-1"]').getByRole('rowheader').click();
-  const panel = page.locator('.rp-panel');
+  const panel = page.locator('.rp-panel:visible');
   await expect(panel.getByRole('heading', {name: 'api.telegram.org', exact: true})).toBeVisible();
   await expect(panel.getByRole('button', {name: /Add.*rule/})).toHaveCount(0);
   // A different row uses its own target, not the selected record's.
