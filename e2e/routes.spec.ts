@@ -116,16 +116,26 @@ test('an unknown history entry is replaced so Back can reach the preceding page'
 test('first loads draw skeletons on every page', async ({page}) => {
   test.skip(isLive, 'holds the mock backend');
   await mockBackend(page);
-  let hold = true;
+  let first = '';
+  let held = 0;
+  let release = () => {};
+  let gate = Promise.resolve();
+  // Each first load is a fresh document marked by ?first=; same-origin reads carry that query in Referer,
+  // so only the current document's reads are held and none can outlive its document.
   await page.route(/\/api\/v1\/(?!capabilities|version)/, async route => {
-    if (hold) await new Promise(resolve => setTimeout(resolve, 1500));
+    const referer = await route.request().headerValue('referer');
+    if (referer && new URL(referer).searchParams.get('first') === first) {
+      held++;
+      await gate;
+    }
     await route.fallback();
   });
   await page.emulateMedia({reducedMotion: 'reduce'});
   for (const route of ['activity', 'policies', 'nodes', 'dns?tab=stats', 'settings', 'config']) {
-    hold = true;
-    await page.goto(`/#/${route}`);
-    await page.reload();
+    first = route;
+    held = 0;
+    gate = new Promise<void>(resolve => (release = resolve));
+    await page.goto(`/?first=${encodeURIComponent(route)}#/${route}`);
     const skeleton = page.locator(`.rp-content ${loadingState}`).first();
     await expect(skeleton, route).toBeVisible();
     await expect(page.locator('.rp-content .rp-empty[role=status]'), route).toHaveCount(0);
@@ -135,7 +145,8 @@ test('first loads draw skeletons on every page', async ({page}) => {
       return bar ? getComputedStyle(bar).animationName : card && getComputedStyle(card, '::after').animationName;
     });
     expect(shimmer, route).toBe('none');
-    hold = false;
+    await expect.poll(() => held, route).toBeGreaterThan(0);
+    release();
     await expect(page.locator(`.rp-content ${loadingState}`), route).toHaveCount(0, {timeout: 10_000});
   }
 });
