@@ -63,7 +63,7 @@ export function useRead<T>(load: (signal?: AbortSignal) => Promise<T>) {
   return {data, setData, error, loading, reload};
 }
 
-export type Notice = {key: MessageKey; warning?: boolean; values?: Record<string, string>} | {error: unknown};
+export type Notice = {key: MessageKey; values?: Record<string, string>} | {error: unknown};
 export const noticeText = (template: string, values?: Record<string, string>) =>
   Object.entries(values ?? {}).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, value), template);
 

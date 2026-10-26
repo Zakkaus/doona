@@ -6,23 +6,33 @@ import {useToast} from '@astryxdesign/core/Toast';
 import {VStack} from '@astryxdesign/core/VStack';
 import {useEffect, useRef} from 'react';
 import {LiteError, errorKey} from './api';
-import {useMessages} from './i18n';
+import {useMessages, type MessageKey} from './i18n';
 import {noticeText, type Notice} from './state';
 
-const uncertainKeys = new Set(['unknownOutcome', 'writtenNotRead', 'degraded', 'savedDegraded', 'savedUnconfirmed', 'notSaved', 'writtenNotApplied']);
+const warningKeys = new Set<MessageKey>([
+  'unknownOutcome',
+  'writtenNotRead',
+  'degraded',
+  'savedDegraded',
+  'savedUnconfirmed',
+  'notSaved',
+  'writtenNotApplied',
+  'refreshPartial'
+]);
+// The banner and the toast both read this: a result the client cannot confirm is a warning, even when it arrives as an error.
+export function noticeLevel(notice: Notice) {
+  const key = 'error' in notice ? errorKey(notice.error) : notice.key;
+  return {key, level: warningKeys.has(key) ? 'warning' : 'error' in notice ? 'error' : 'success'} as const;
+}
+
 export function Feedback({notice}: {notice?: Notice}) {
   const t = useMessages();
   if (!notice) return null;
-  const key = 'error' in notice ? errorKey(notice.error) : notice.key;
-  const warning = uncertainKeys.has(key) || ('warning' in notice && notice.warning);
+  const {key, level} = noticeLevel(notice);
   const detail = 'error' in notice && notice.error instanceof LiteError ? notice.error.detail : undefined;
   return (
     <VStack gap={2}>
-      <Banner
-        status={warning ? 'warning' : 'error' in notice ? 'error' : 'success'}
-        title={noticeText(t[key], 'values' in notice ? notice.values : undefined)}
-        collapsible={false}
-      />
+      <Banner status={level} title={noticeText(t[key], 'values' in notice ? notice.values : undefined)} collapsible={false} />
       {detail && (
         <Text type="supporting" style={{whiteSpace: 'pre-wrap'}}>
           {detail}
@@ -39,13 +49,13 @@ export function useNoticeToast(notice?: Notice) {
   useEffect(() => {
     if (!notice || last.current === notice) return;
     last.current = notice;
-    const key = 'error' in notice ? errorKey(notice.error) : notice.key;
+    const {key, level} = noticeLevel(notice);
     const dismiss = show({
       body: noticeText(t[key], 'values' in notice ? notice.values : undefined),
-      type: 'error' in notice ? 'error' : 'info',
-      isAutoHide: !('error' in notice) && !uncertainKeys.has(key)
+      type: level === 'error' ? 'error' : 'info',
+      isAutoHide: level === 'success'
     });
-    return 'error' in notice ? dismiss : undefined;
+    return level === 'success' ? undefined : dismiss;
   }, [notice, show, t]);
 }
 
