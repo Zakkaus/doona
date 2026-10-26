@@ -180,6 +180,23 @@ it('admits AnyTLS share links and retains their protocol through reload', async 
   expect((await api.nodes({limit: 1000})).nodes.find(node => node.id === created.id)?.protocol).toBe('anytls');
 });
 
+it('adds the section a created node or subscription needs when the main source has none', async () => {
+  vi.useFakeTimers();
+  const api = createMockApi();
+  const main = (await api.config()).sources.find(source => source.kind === 'main')!;
+  const bare = main.content!.replace(/^(node|subscription) \{\n[\s\S]*?^\}\n/gm, '');
+  expect(bare).not.toMatch(/^(node|subscription) \{/m);
+  await api.replaceConfigSource(main.id, bare, `"${main.content_sha256}"`);
+  await vi.advanceTimersByTimeAsync(1000);
+  const node = (await api.createNode({name: 'fresh-node', link: 'anytls://demo@edge.example.net:443'})) as Node;
+  const provider = (await api.createProvider({name: 'fresh-sub', kind: 'subscription', url: 'https://example.net/sub'})) as Provider;
+  expect(node.name).toBe('fresh-node');
+  expect(provider.name).toBe('fresh-sub');
+  const written = (await api.config()).sources.find(source => source.kind === 'main')!.content!;
+  expect(written).toMatch(/^node \{\n  'fresh-node': 'anytls:\/\/demo@edge\.example\.net:443'\n\}\n/m);
+  expect(written).toMatch(/^subscription \{\n  fresh-sub: 'https:\/\/example\.net\/sub'\n\}\n/m);
+});
+
 it('refuses names the configuration cannot quote instead of altering them', async () => {
   const api = createMockApi();
   const before = (await api.config()).sources.find(source => source.kind === 'main')!.content;

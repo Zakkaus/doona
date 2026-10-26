@@ -5,3 +5,4 @@ Fixed
 - Engine-specific group settings that hold objects or lists show their JSON text instead of `[object Object]`.
 - A group filter such as `name(keyword: harbor)` no longer blocks renaming or removing a subscription tagged `harbor`; only `subtag(...)` arguments count.
 - In the config editor, completion after `->` or `fallback:` inside `dns` offers the defined upstreams with `asis` and `reject` for requests, or `accept` and `reject` for responses, instead of traffic outbounds.
+- In the demo backend, adding a node or subscription to a configuration without a `node` or `subscription` section creates the section instead of silently writing nothing.
