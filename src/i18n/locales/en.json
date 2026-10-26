@@ -1744,7 +1744,7 @@
   "search.sources": "Config files",
   "settings.about": "About",
   "settings.addProfile": "Add profile",
-  "settings.apiHelp": "Backend root or reverse-proxy prefix, not /api/v1. Leave empty or enter mock for built-in demo data.",
+  "settings.apiHelp": "Backend root or reverse-proxy prefix, not /api/v1. Enter mock for built-in demo data.",
   "settings.apiMajor": "The backend uses API major version {major}. This panel implements the contract for major version 1, so fields may be incompatible.",
   "settings.appearance": "Appearance",
   "settings.apply": "Apply",

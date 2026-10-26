@@ -107,21 +107,19 @@ export function Logs({go}: PageProps) {
       <ConfirmDialog {...vm.confirmClear} title={t('log.clear')} confirmLabel={t('log.clear')}>
         <p className="rp-label">{t('log.clearHelp')}</p>
       </ConfirmDialog>
-      <Toolbar page>
-        <LabeledSelect side label={t('log.level')} value={vm.level} onChange={vm.setLevel} items={vm.levels} />
-        {vm.filtersTarget && (
-          <TextField search label={t('log.target')} value={vm.target} width={240} placeholder={t('log.targetPlaceholder')} onChange={vm.setTarget} />
-        )}
-        <Switch isSelected={vm.paused} onChange={vm.setPaused}>
-          {t('log.pause')}
-        </Switch>
-        <Light small tone={vm.status.tone}>
-          {vm.status.text}
-        </Light>
-        {vm.recordedText && <span className="rp-label">{vm.recordedText}</span>}
-        <span className="rp-grow" />
-        {/* The actions fold to the next row together, never one by one. */}
-        <span className="rp-cluster nowrap">
+      <div className="rp-col">
+        <Toolbar page>
+          <LabeledSelect side label={t('log.level')} value={vm.level} onChange={vm.setLevel} items={vm.levels} />
+          {vm.filtersTarget && (
+            <TextField search label={t('log.target')} value={vm.target} width={160} placeholder={t('log.targetPlaceholder')} onChange={vm.setTarget} />
+          )}
+          <Switch isSelected={vm.paused} onChange={vm.setPaused}>
+            {t('log.pause')}
+          </Switch>
+          <Light small tone={vm.status.tone}>
+            {vm.status.text}
+          </Light>
+          <span className="rp-grow" />
           <ActionGroup
             actions={[
               {id: 'clear', label: t('log.clear'), isDisabled: !vm.rows.length, onAction: vm.clear},
@@ -129,8 +127,9 @@ export function Logs({go}: PageProps) {
               ...(vm.openRecording ? [{id: 'recording', label: t('ui.recordingSettings'), onAction: vm.openRecording}] : [])
             ]}
           />
-        </span>
-      </Toolbar>
+        </Toolbar>
+        {vm.recordedText && <span className="rp-label">{vm.recordedText}</span>}
+      </div>
       <ErrorMessage error={vm.error} onRetry={vm.retry} />
       <LogActivity records={vm.records} offered={vm.offered} minimum={vm.level} setMinimum={vm.setLevel} waiting={vm.loading} />
       <DataTable label={t('nav.logs')} stream flow rows={vm.rows} loading={vm.loading} empty={vm.empty} cols={columns} detail={detail} />

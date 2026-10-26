@@ -1543,7 +1543,7 @@
   "search.sources": "設定檔",
   "settings.about": "關於",
   "settings.addProfile": "新增連線設定檔",
-  "settings.apiHelp": "填寫後端的根網址或反向代理前綴，不是 /api/v1；留空或填入 mock 可使用內建示範資料。",
+  "settings.apiHelp": "填寫後端的根網址或反向代理前綴，不是 /api/v1；填入 mock 可使用內建示範資料。",
   "settings.apiMajor": "後端 API 主版本為 {major}，本面板依 API 主版本 1 的契約實作；欄位可能不相容。",
   "settings.appearance": "外觀",
   "settings.apply": "套用",

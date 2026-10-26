@@ -72,6 +72,7 @@ test('the shortcut help fits a 1280x720 window, and g d and g v open DNS and Eve
   await page.keyboard.press('d');
   await expect(page).toHaveURL(/#\/dns(\?|$)/);
   await expect(page.getByRole('heading', {level: 1})).toBeVisible();
+  await expect(page.getByRole('heading', {level: 1, name: 'DNS', exact: true})).toBeVisible();
   await page.keyboard.press('g');
   await page.keyboard.press('v');
   await expect(page).toHaveURL(/#\/events(\?|$)/);

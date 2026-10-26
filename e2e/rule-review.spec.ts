@@ -30,6 +30,7 @@ for (const lang of ['en', 'zh-TW', 'zh-CN'] as const) {
       .getByRole('button', {name: t('rule.edit'), exact: true})
       .click();
     const dialog = page.getByRole('dialog');
+    await expect(dialog.getByRole('button', {name: t('settings.save'), exact: true})).toBeVisible();
     await expect(dialog.getByRole('textbox', {name: t('rule.expression'), exact: true})).toBeVisible();
     await expect(dialog.getByText(t('rule.editExpressionHelp'), {exact: true})).toBeVisible();
     await expect(dialog.getByText(t('rule.editHelp'), {exact: true})).toHaveCount(0);
