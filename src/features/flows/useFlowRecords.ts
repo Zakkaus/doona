@@ -3,7 +3,7 @@ import {useCapabilities, useFlow, useFlows, useGroups, useOutboundNames, useRule
 import {connectionStates, outboundLabel} from '../../api/selectors';
 import {useLang, useT} from '../../i18n';
 import {within} from '../../shell/route';
-import {panelQuery, useMediaQuery} from '../../ui/ui';
+import {panelQuery, phoneQuery, useMediaQuery} from '../../ui/ui';
 import type {PageProps} from '../../shell/routes';
 import {flowsThrough, pinnedLabel} from './map';
 import {flowDetailView, flowRecordsView} from './view';
@@ -15,6 +15,8 @@ export function useFlowRecords({go, query}: PageProps) {
   const t = useT();
   const lang = useLang();
   const wide = useMediaQuery(panelQuery);
+  // A phone reads each record as a card: the table's seven columns cannot share its width.
+  const phone = useMediaQuery(phoneQuery);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   // Filters live in the address, so they survive a tab switch like the other pages' filters.
   const requestedNetwork = params.get('network');
@@ -58,6 +60,7 @@ export function useFlowRecords({go, query}: PageProps) {
     state,
     setState: (value: string) => go('flows', within(query, {state: value === 'all' ? null : value})),
     wide,
+    phone,
     id,
     rulesListed,
     error: resource.error,

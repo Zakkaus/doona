@@ -90,6 +90,7 @@ export function Dns(props: PageProps) {
           </Toolbar>
         </ActionHelp>
       </Form>
+      {!vm.cards.length && !vm.queryError && <Empty>{t('dns.queryIntro')}</Empty>}
       {vm.cards.length > 0 && (
         <div className="rp-col">
           {vm.cards.map(card => (
@@ -345,23 +346,30 @@ function DnsLog({
       <Toolbar page>
         <TextField search label={t('ui.domain')} value={vm.name} onChange={vm.setName} placeholder={t('dns.logFilterHint')} width={240} />
         <LabeledSelect label={t('ui.type')} side value={vm.type} onChange={vm.setType} items={vm.choices} />
-        <TextField search label={t('ui.device')} value={vm.src} onChange={vm.setSrc} error={vm.srcError} placeholder="10.0.0.12" width={160} />
-        {vm.total && (
-          <HelpRow help={vm.totalHelp}>
-            <span className="rp-label">{vm.total}</span>
-          </HelpRow>
-        )}
-        {vm.loaded && <span className="rp-label">{vm.loaded}</span>}
+        <TextField side label={t('ui.device')} value={vm.src} onChange={vm.setSrc} error={vm.srcError} placeholder="10.0.0.12" width={200} />
+      </Toolbar>
+      {/* The counts and the actions take the row under the filters, each kept together as the row folds. */}
+      <Toolbar page>
+        <span className="rp-cluster">
+          {vm.total && (
+            <HelpRow help={vm.totalHelp}>
+              <span className="rp-label">{vm.total}</span>
+            </HelpRow>
+          )}
+          {vm.loaded && <span className="rp-label">{vm.loaded}</span>}
+        </span>
         <span className="rp-grow" />
-        <ActionGroup
-          actions={[
-            // On a phone the first action stays a button, so Refresh keeps its place ahead of Export.
-            {id: 'refresh', label: t('ui.refresh'), icon: <Refresh className="rp-spin-on-press" />, isPending: vm.refreshing, onAction: vm.refresh},
-            {id: 'export', label: t('dns.exportLog'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export},
-            ...links,
-            ...(vm.hasOlder ? [{id: 'older', label: t('dns.loadOlder'), isPending: vm.loadingOlder, onAction: vm.loadOlder}] : [])
-          ]}
-        />
+        <span className="rp-cluster nowrap">
+          <ActionGroup
+            actions={[
+              // On a phone the first action stays a button, so Refresh keeps its place ahead of Export.
+              {id: 'refresh', label: t('ui.refresh'), icon: <Refresh className="rp-spin-on-press" />, isPending: vm.refreshing, onAction: vm.refresh},
+              {id: 'export', label: t('dns.exportLog'), icon: <Download />, isDisabled: !vm.rows.length, onAction: vm.export},
+              ...links,
+              ...(vm.hasOlder ? [{id: 'older', label: t('dns.loadOlder'), isPending: vm.loadingOlder, onAction: vm.loadOlder}] : [])
+            ]}
+          />
+        </span>
       </Toolbar>
       {vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />}
       {vm.newerWaiting && <p className="rp-note">{t('dns.newerWaiting')}</p>}

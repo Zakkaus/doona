@@ -366,8 +366,8 @@
     "other": "{n} settings take effect only after a restart; nothing written"
   },
   "conn.activeCount": {
-    "one": "{n} active connection",
-    "other": "{n} active connections"
+    "one": "{n} active",
+    "other": "{n} active"
   },
   "conn.addRuleFor": "Add routing rule for {target}",
   "conn.allDevices": "All devices",
@@ -412,7 +412,7 @@
   "conn.f.observedBy": "Observed by",
   "conn.f.started": "Start time",
   "conn.f.uploadRate": "Upload rate",
-  "conn.filterHint": "Domain, IP, device, process",
+  "conn.filterHint": "Target, device, process",
   "conn.filterPick": "Filter devices and rules",
   "conn.filters": "Filters",
   "conn.filtersActive": "Filters, {n} applied",
@@ -620,6 +620,7 @@
   "dns.positive": "Positive cache",
   "dns.query": "Query",
   "dns.queryFailed": "Could not run the query: {error}",
+  "dns.queryIntro": "Enter a domain and run the query to see its answers and whether they came from the cache.",
   "dns.queryUnavailable": "This backend cannot run DNS queries right now",
   "dns.regexHelp": "JavaScript regex syntax, ignoring case, matched without the trailing dot",
   "dns.regexTimeout": "Regex matching timed out. Use a simpler pattern.",
@@ -1716,6 +1717,7 @@
   "rule.templates": "Rule templates",
   "rule.trace": "Trace simulation",
   "rule.traceFailed": "Could not run the trace",
+  "rule.traceIntro": "Enter a domain or destination IP and run the trace to see which rule and outbound a connection would match.",
   "rule.traceUnavailable": "The backend cannot run a trace right now",
   "rule.unchanged": "This rule does not change where this traffic goes now.",
   "rule.unknownRule": "Unknown rule",

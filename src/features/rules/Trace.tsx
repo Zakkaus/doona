@@ -9,6 +9,7 @@ import {
   cardClass,
   DataTable,
   Disclosure,
+  Empty,
   TextTooltip,
   Kv,
   LabeledSelect,
@@ -140,6 +141,7 @@ export function Trace({form: state, go}: {form: TraceForm; go: PageProps['go']})
         </Disclosure>
         {trace.ipOnly && <span className="rp-label">{t('rule.ipOnly')}</span>}
       </Form>
+      {!trace.result && <Empty>{t('rule.traceIntro')}</Empty>}
       {trace.result && (
         <section className="rp-col" aria-label={t('rule.result')}>
           <Toolbar>

@@ -225,7 +225,7 @@ test('DNS source filters send IP literals only on head and older requests', asyn
     next_cursor: new URL(request.url()).searchParams.has('cursor') ? null : 'older'
   });
   await page.goto('/#/dns?tab=log');
-  const source = page.getByRole('searchbox', {name: 'Device', exact: true});
+  const source = page.getByRole('textbox', {name: 'Device', exact: true});
   await source.fill('2001:db8::1');
   await expect.poll(() => requests.filter(request => new URL(request.url()).searchParams.get('src') === '2001:db8::1').length).toBeGreaterThan(0);
   await page.getByRole('button', {name: 'Load older records'}).click();
@@ -262,7 +262,7 @@ test('a mistyped device address keeps the last filter and says so', async ({page
   const src = () =>
     requests.filter(request => new URL(request.url()).pathname === '/api/v1/dns/log').map(request => new URL(request.url()).searchParams.get('src'));
   await page.goto('/#/dns?tab=log');
-  const source = page.getByRole('searchbox', {name: 'Device', exact: true});
+  const source = page.getByRole('textbox', {name: 'Device', exact: true});
   await source.fill('10.0.0.12');
   await expect.poll(() => src().at(-1)).toBe('10.0.0.12');
   const before = src().length;
@@ -525,7 +525,7 @@ test('the statistics lead to the DNS configuration, the cache and the log filter
   const address = (await device.innerText()).trim();
   await device.click();
   await expect(page).toHaveURL(new RegExp(`#/dns\\?tab=log&device=${encodeURIComponent(address).replace(/[.[\]]/g, '\\$&')}$`));
-  await expect(page.getByRole('searchbox', {name: 'Device', exact: true})).toHaveValue(address);
+  await expect(page.getByRole('textbox', {name: 'Device', exact: true})).toHaveValue(address);
   await expect(page.getByRole('grid', {name: 'Resolution log'}).getByRole('row').nth(1)).toContainText(address);
   await page.goBack();
   await ranking.getByRole('radio', {name: 'Domains', exact: true}).click();

@@ -132,3 +132,12 @@
   font-variant-numeric: tabular-nums;
   color: var(--rp-subtle);
 }
+/* A record's rule wraps in its cell, its badge on the next line when the expression leaves no room. */
+.rp-cell-wrap > .rp-rule {
+  flex-wrap: wrap;
+  row-gap: var(--rp-space-1);
+}
+.rp-cell-wrap > .rp-rule > .rp-truncate {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
