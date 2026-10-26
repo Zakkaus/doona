@@ -104,6 +104,17 @@ const rows: Array<[string, string, boolean | null]> = [
   [r`(ab+)*`, 'abb', null], // accepted by the crate
   [r`^(a|aa)*$`, 'aaa', null], // accepted by the crate
   [r`^(a+){10}$`, 'a'.repeat(10), null], // accepted by the crate
+  // Up to three variable-length repetitions anywhere in the pattern.
+  [r`(ab)*(cd)*`, 'abcd', true],
+  [r`^(ab)*(cd)*$`, 'abcab', false],
+  [r`.*\w+`, 'ab', true],
+  [r`.*\w+`, '..', false],
+  [r`^[a-z]+\.[a-z]+\.[a-z]{2,6}$`, 'hk.node.com', true],
+  [r`^[a-z]+\.[a-z]+\.[a-z]{2,6}$`, 'hk.node.c', false],
+  [r`^a+b+$`, 'aabb', true],
+  [r`^[a-z]+\d+$`, 'hk01', true],
+  [r`^a*b?a*$`, 'aaba', true],
+  [r`^\w+\.\w+$`, 'a.b', true],
   [r`(ab+)?`, 'abb', true],
   [r`(ab){2,3}`, 'aba', false],
   [r`^(ab){2,3}$`, 'ababab', true],
@@ -180,4 +191,10 @@ describe('rustRegexToJs', () => {
     const compiled = rustRegexToJs(pattern);
     expect(compiled && compiled.test(input)).toBe(expected);
   });
+
+  // Accepted by the crate; each would backtrack for seconds on a long run of the repeated character, so none is run.
+  it.each([`^${'😀*'.repeat(12)}b$`, `^${'a*a?'.repeat(12)}b$`, `^${'(?:a*)'.repeat(12)}b$`, `^${'a{0,64}'.repeat(12)}b$`, r`a*a+a?a{2,}b`])(
+    'declines %s, which has more than three variable-length repetitions',
+    pattern => expect(rustRegexToJs(pattern)).toBeNull()
+  );
 });
