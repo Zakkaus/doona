@@ -41,8 +41,8 @@
     "check": "pnpm typecheck && pnpm lint && pnpm check:i18n && pnpm format:check && pnpm test && pnpm check:gen"
   },
   "sizeBudget": {
-    "startupLogin": 213600,
-    "startupActivity": 325300,
+    "startupLogin": 213700,
+    "startupActivity": 326000,
     "startupCss": 30520,
     "locale": 24000,
     "fontCss": 36000,

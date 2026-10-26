@@ -471,6 +471,7 @@ export function DetailPanel({
   if (wide)
     return (
       <aside className="rp-panel rp-card" aria-label={title}>
+        <OpenOverlay />
         {head}
         {children}
       </aside>

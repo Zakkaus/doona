@@ -1,7 +1,8 @@
-import {Suspense, type ComponentProps} from 'react';
+import {Activity, Suspense, type ComponentProps, type ReactNode} from 'react';
 import {useT} from '../../i18n';
 import {useTraceForm} from './useTraceForm';
 import {ErrorMessage, PageSkeleton, Tabs, type PageShape} from '../../ui/ui';
+import {useTabShown} from '../../ui/useTabShown';
 import {LoadBoundary} from '../../ui/LoadBoundary';
 import {preloadable} from '../../ui/preloadable';
 import {RuleList} from './RuleList';
@@ -39,10 +40,18 @@ export function Rules(props: PageProps) {
         page
         keepMounted
         label={t('nav.rules')}
-        items={view.tabs.map(tab => ({...tab, content: content[tab.id], onIntent: tab.id === 'trace' ? preloadTrace : undefined}))}
+        items={view.tabs.map(tab => ({
+          ...tab,
+          content: <RuleTab>{content[tab.id]}</RuleTab>,
+          onIntent: tab.id === 'trace' ? preloadTrace : undefined
+        }))}
         value={view.tab}
         onChange={view.changeTab}
       />
     </div>
   );
+}
+
+function RuleTab({children}: {children: ReactNode}) {
+  return <Activity mode={useTabShown() ? 'visible' : 'hidden'}>{children}</Activity>;
 }

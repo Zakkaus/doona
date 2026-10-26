@@ -3,11 +3,14 @@ import type {ConfigSource} from '../api/model';
 import {sha256} from '../api/hash';
 
 // One render of the hook at a time: state lives here, effects run at once, and each state update is recorded.
-const hook = vi.hoisted(() => ({state: [] as unknown[], updates: 0, slot: 0}));
+const hook = vi.hoisted(() => ({state: [] as unknown[], updates: 0, slot: 0, cleanup: undefined as (() => void) | undefined}));
 vi.mock('react', async importOriginal => ({
   ...(await importOriginal<typeof import('react')>()),
   useCallback: <T>(callback: T) => callback,
-  useEffect: (effect: () => void) => void effect(),
+  useEffect: (effect: () => () => void) => {
+    hook.cleanup?.();
+    hook.cleanup = effect();
+  },
   useState: <T>(initial: T) => {
     const slot = hook.slot++;
     if (!(slot in hook.state)) hook.state[slot] = initial;
@@ -55,4 +58,22 @@ it('answers at once on a second mount of the same texts, and re-renders only for
   // A text edited since keeps no answer until it is checked.
   const edited = {...sources[0], content: 'global { }\n'} as ConfigSource;
   expect(again(edited)).toBeUndefined();
+});
+
+it('keeps the active main verdict while more than 64 include versions are checked', async () => {
+  const main = {id: 'active-main', content: 'global {}', content_sha256: await sha256('global {}')} as ConfigSource;
+  mount([main]);
+  await vi.waitFor(() => expect(hook.updates).toBe(1));
+  for (let version = 0; version < 66; version++) {
+    const content = `# include ${version}`;
+    const include = {id: 'rotating-include', content, content_sha256: await sha256(content)} as ConfigSource;
+    const sources = [main, include];
+    const before = hook.updates;
+    rerender(sources);
+    await vi.waitFor(() => expect(hook.updates).toBeGreaterThan(before));
+    const checked = rerender(sources);
+    expect(checked(main), `main at include version ${version}`).toBe(true);
+    expect(checked(include)).toBe(true);
+  }
+  hook.cleanup?.();
 });

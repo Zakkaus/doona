@@ -1,6 +1,6 @@
 // How many opened pages stay mounted, the shown one included. A hidden page holds its tree and DOM but runs no
 // effects, so the cost of keeping one is memory alone; five covers going back and forth between the pages of a task.
-export const KEPT_PAGES = 5;
+const KEPT_PAGES = 5;
 
 export type KeptPage<P> = {id: string; page: P; query: string; used: number};
 

@@ -1,16 +1,19 @@
-import {box, expect, faults, mockBackend, setAppearance, settle, test, moreAction} from './fixtures';
+import {box, expect, faults, mockBackend, setAppearance, settle, test, moreAction, expectHiddenPagesIdle} from './fixtures';
 
 test.use({viewport: {width: 1440, height: 900}});
 
 test.describe(() => {
   test.use({storage: faults});
   test('a flow opens its trace beside the list and links to its connection', async ({page}) => {
+    const {requests} = await mockBackend(page, {faults: true});
+    await page.clock.install();
     await page.goto('/#/flows?tab=records');
     const rows = page.locator('.rp-table [role=rowgroup]:last-child [role=row][data-key]');
     await expect(rows.first()).toBeVisible();
     const total = await rows.count();
     expect(total).toBeGreaterThan(1);
     await expect(page.locator('.rp-panel:visible')).toHaveCount(0);
+    await expect(page.locator('.rp-panel').filter({visible: false})).toHaveCount(0);
     await expect(page.getByRole('group', {name: 'Observation coverage'})).toContainText('3 dropped records');
     await rows.filter({hasText: 'api.telegram.org'}).first().getByRole('rowheader').click();
     await expect(page).toHaveURL(/#\/flows\?tab=records&id=flow-1$/);
@@ -22,11 +25,17 @@ test.describe(() => {
     await panel.getByRole('link', {name: 'View connection', exact: true}).click();
     await expect(page).toHaveURL(/#\/connections\?id=1$/);
     await expect(page.locator('.rp-panel:visible').getByRole('heading', {name: 'api.telegram.org'})).toBeVisible();
+    await expectHiddenPagesIdle(page, requests, /\/flows(?:\/|$)/);
     await moreAction(page.locator('.rp-panel:visible'), 'View flow');
     await expect(page).toHaveURL(/#\/flows\?tab=records&id=flow-1$/);
     await page.locator('.rp-panel:visible').getByRole('button', {name: 'Close', exact: true}).click();
     await expect(page).toHaveURL(/#\/flows\?tab=records$/);
     await expect(page.locator('.rp-panel:visible')).toHaveCount(0);
+    await expect(page.locator('.rp-panel').filter({visible: false})).toHaveCount(0);
+    await page.locator('.rp-nav[href="#/settings"]').click();
+    await expect(page.locator('main h1')).toHaveText('Settings');
+    await expect(page.locator('.rp-page').filter({visible: false})).not.toHaveCount(0);
+    await expectHiddenPagesIdle(page, requests, /\/flows(?:\/|$)/);
   });
 });
 
