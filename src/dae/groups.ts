@@ -260,11 +260,19 @@ export function describeFilters(filters: string[]) {
   return {everyNode, groups: [...new Set(groups)], rules};
 }
 
-// Whether a filter written as an expression (`subtag(a) && name(keyword: HK)`, `!subtag(a)`) names the tag anywhere.
+// Whether a filter written as an expression (`subtag(a) && name(keyword: HK)`, `!subtag(a)`) passes the tag as a plain
+// `subtag` argument. A `keyword:` or `regex:` value, or an argument of another call, is not a subscription tag.
 const expressionNames = (entry: Pick<GroupEntry, 'filters'>, tag: string) =>
-  classifyFilters(entry).rules.some(filter =>
-    scanConfig(filter).tokens.some(token => (token.kind === 'text' || token.kind === 'quoted') && unquote(filter.slice(token.from, token.to)) === tag)
-  );
+  classifyFilters(entry).rules.some(filter => {
+    const {tokens} = scanConfig(filter);
+    const raw = tokens.map(token => filter.slice(token.from, token.to));
+    let call = '';
+    return tokens.some((token, i) => {
+      if (token.parens === 0 && raw[i + 1] === '(') call = raw[i].replace(/^!/, '');
+      const value = token.parens === 1 && (token.kind === 'text' || token.kind === 'quoted') && raw[i - 1] !== ':' && raw[i + 1] !== ':';
+      return call === 'subtag' && value && unquote(raw[i]) === tag;
+    });
+  });
 const citesExactly = (entry: Pick<GroupEntry, 'filters'>, tag: string) => classifyFilters(entry).subtags.includes(tag);
 
 // The groups of a source whose exact subtag filter names a subscription tag.
