@@ -57,6 +57,10 @@ export const toast = (kind: ToastKind, text: string, {detail, action, requestId,
   return key;
 };
 export const closeToast = (key: string) => toasts.close(key);
+export const clearToasts = () => {
+  toasts.clear();
+  queued.clear();
+};
 // A failed action's toast: its summary, with the error as the detail. An unknown operation outcome is shown on its own,
 // neutrally.
 export const toastFailure = (error: unknown, t: Translator, summary: string, action?: ToastAction) => {
@@ -137,7 +141,7 @@ export function Toasts({
       {expanded && <RButton className="rp-toast-underlay" aria-label={t('toast.collapse')} onPress={() => setExpanded(false)} />}
       {expanded && (
         <div className="rp-toast-controls">
-          <RButton className="rp-btn sm" onPress={() => toasts.clear()}>
+          <RButton className="rp-btn sm" onPress={clearToasts}>
             {t('toast.clearAll')}
           </RButton>
           <RButton className="rp-btn sm" onPress={() => setExpanded(false)}>
