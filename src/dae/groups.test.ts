@@ -315,6 +315,18 @@ it('names the groups whose filters cite a subscription tag, exactly or inside an
   expect(groupsNamingTag(text, 'sub-z')).toEqual([]);
 });
 
+it('takes only plain subtag arguments for a subscription tag, not keyword, regex or name values', () => {
+  const text = `group {
+  keyword { filter: subtag(sub-y) && name(keyword: harbor) }
+  quotedKeyword { filter: !name(keyword: 'harbor') && subtag(sub-y) }
+  regex { filter: subtag(regex: harbor) && name(hk) }
+  nameValue { filter: name(harbor) && subtag(sub-y) }
+  tagged { filter: name(keyword: hk) && subtag(regex: '^s', harbor) }
+}
+`;
+  expect(groupsNamingTag(text, 'harbor')).toEqual(['tagged']);
+});
+
 it.each([
   {group: 'streaming', final: undefined, header: 'streaming', finalLine: ''},
   {group: 'streaming', final: 'direct', header: 'streaming', finalLine: '        final: direct\n'},
