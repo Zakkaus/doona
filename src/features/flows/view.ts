@@ -37,6 +37,7 @@ const inputLabels: Record<string, Key | string> = {
   pid: 'PID'
 };
 const yesNo = (value: boolean | null | undefined): string | MessageRef => (value == null ? '—' : {key: value ? 'ui.yes' : 'ui.no'});
+const errorRow = (error: string | null): Array<[Key, string]> => (error ? [['ui.error', error]] : []);
 
 function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | MessageRef]> | null {
   const text = (value: unknown) => (value == null ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value));
@@ -72,10 +73,13 @@ function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | Messa
     case 'dns':
       return [
         ['ui.name', step.data.name],
+        ['rule.dns.kind.qtype', step.data.qtype],
         ['ui.source', word(step.data.source)],
         ['ui.cache', word(step.data.cache)],
         ['ui.upstream', text(step.data.upstream)],
-        ['flow.f.selectedIp', text(step.data.selected_ip)]
+        ['flow.f.selectedIp', text(step.data.selected_ip)],
+        ['ui.state', step.data.status],
+        ...errorRow(step.data.error)
       ];
     case 'outbound':
       return [
@@ -83,19 +87,22 @@ function flowStepFields(step: FlowStep): Array<[Key | MessageRef, string | Messa
         ['flow.f.selectionPath', step.data.selection_path.map(p => p.group_id + ' → ' + text(p.member_name ?? p.member_id)).join(' / ') || '—'],
         ['flow.f.leafNode', text(step.data.leaf_node_id)],
         ['ui.target', text(step.data.target)],
-        ['ui.state', word(step.data.status)]
+        ['ui.state', word(step.data.status)],
+        ...errorRow(step.data.error)
       ];
     case 'connection':
       return [
         ['ui.state', Object.hasOwn(connectionStates, step.data.state) ? {key: connectionStates[step.data.state]} : step.data.state],
         ['flow.f.milestone', word(step.data.milestone)],
-        ['flow.f.reason', word(step.data.reason)]
+        ['flow.f.reason', word(step.data.reason)],
+        ...errorRow(step.data.error)
       ];
     case 'datapath':
       return [
         ['flow.f.plane', word(step.data.plane)],
         ['flow.f.action', word(step.data.action)],
-        ['flow.f.reason', word(step.data.reason)]
+        ['flow.f.reason', word(step.data.reason)],
+        ...errorRow(step.data.error)
       ];
     case 'reroute':
       return [
