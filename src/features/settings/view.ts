@@ -38,12 +38,14 @@ export function recorderView(id: Recorder, choice: RecorderChoice, state: Record
     status: t(forbidden ? 'settings.recordingForbidden' : state?.active ? 'settings.recordingActive' : 'settings.recordingIdle')
   };
 }
-export function recordingNote(recording: RuntimeSettings['recording'] | undefined, t: Translator) {
+// engineGrace is how long the engine keeps a recorder after its demand ends, when the engine defines one.
+export function recordingNote(recording: RuntimeSettings['recording'] | undefined, engineGrace: number | null, t: Translator) {
   if (!recording) return null;
   const grace = recording.grace_remaining_seconds ?? 0;
   if (grace > 0) return t('settings.recordingGrace', {n: grace});
   if (!recording.events) return null;
-  return t(recording.events.active ? 'settings.recordingEvents' : 'settings.recordingDetached');
+  if (!recording.events.active) return t('settings.recordingDetached');
+  return engineGrace === null ? t('settings.recordingEvents') : t('settings.recordingEventsGrace', {n: engineGrace});
 }
 export const flowRecordingNote = (choice: RecorderChoice, grace: number | null, t: Translator) =>
   choice === 'auto' && grace !== null ? t('settings.recordFlowsAuto', {n: grace}) : null;
