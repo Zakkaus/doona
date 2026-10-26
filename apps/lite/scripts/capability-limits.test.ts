@@ -8,7 +8,7 @@ it('pages providers with the backend default page size', async () => {
   const caps = structuredClone(capabilities);
   caps.resources.providers.max_page_size = 25;
   const api = await createMockApi({capabilities: caps, isolated: true});
-  const all = (await createMockApi({isolated: true}).then(full => full.providers())).providers;
+  const all = (await createMockApi({isolated: true}).providers()).providers;
   expect((await readProviders(api)).map(item => item.id)).toEqual(all.map(item => item.id));
 });
 

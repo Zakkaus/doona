@@ -2,7 +2,7 @@ import type {Api} from '../src/api/api';
 import type {Capabilities, ConfigSource, RuleList, Runtime} from '../src/api/model';
 import {ApiError} from '../src/api/error';
 import {logLevelLabels} from '../src/api/selectors';
-import * as fixtures from './fixtures/configuration';
+import * as standardFixtures from './fixtures/configuration';
 import {found} from './common';
 import {diagnose, includedFiles, includePaths, sectionLines, stored, validate} from './config';
 import {globMatch, newSourcePathProblem, resolveIncludePath} from '../src/dae/newSource';
@@ -42,7 +42,8 @@ export function createConfiguration(
   groupNames: () => Set<string>,
   activateInventory: (text: string, revision: string) => void,
   geodata: MockGeodataState,
-  faults = false
+  faults = false,
+  fixtures: typeof standardFixtures = standardFixtures
 ) {
   const configured = faults ? fixtures.faultSettings : fixtures.runtimeSettings;
   const settings = structuredClone(configured);

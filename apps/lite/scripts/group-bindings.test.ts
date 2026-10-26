@@ -2,11 +2,11 @@ import {expect, it} from 'vitest';
 import {nodeBinding, subscriptionFilter, honkPolicy} from '../src/groupBindings';
 import {compileFilters} from '../../../src/dae/groupFilters';
 import type {Node, Provider} from '../../../src/api/model';
-import {nodeFixtures, providers as demoProviders} from '../src/demo/inventory';
+import {demoFixtures} from '../src/demo/createMockApi';
 
 it('seeds three usable demo subscriptions without script-specific node names', () => {
-  const {nodes, groups} = nodeFixtures(120);
-  const subscriptions = demoProviders.filter(provider => provider.kind === 'subscription');
+  const {nodes, groups} = demoFixtures.inventory.nodeFixtures(120);
+  const subscriptions = demoFixtures.inventory.providers.filter(provider => provider.kind === 'subscription');
   expect(subscriptions).toHaveLength(3);
   for (const provider of subscriptions) expect(nodes.filter(node => node.provider_id === provider.id)).toHaveLength(40);
   expect(nodes.some(node => /台灣|美國|韓國|英國|德國|澳洲|家寬|解鎖|流媒體/.test(node.name))).toBe(false);
