@@ -1,4 +1,4 @@
-import type {ApiEvent, EventKind} from '../../api/model';
+import type {ApiEvent, Capabilities, EventKind} from '../../api/model';
 import {eventKey} from '../../api/eventKey';
 import {enumLabel} from '../../i18n/enum';
 import {eventKindLabels, eventSummary} from '../../api/selectors';
@@ -30,25 +30,30 @@ export function eventHelp(event: ApiEvent, t: LabelFn): Help | undefined {
   return keys && {title: t(keys[0]), text: t(keys[1])};
 }
 // Where an event's subject is shown: the flow record it names, the configuration a new generation was loaded from,
-// and, for a gap in the flow records, the settings that decide what is recorded and kept.
-export function eventLinks(event: ApiEvent, t: LabelFn): EventLink[] {
+// and, for a gap in the flow records, the settings that decide what is recorded and kept. The settings and configuration
+// links appear only once capabilities say the backend offers those pages.
+type Resources = Capabilities['resources'] | undefined;
+export function eventLinks(event: ApiEvent, t: LabelFn, resources: Resources): EventLink[] {
   const flow = (id: string | null): EventLink[] => (id ? [{id: 'flow', label: t('event.viewFlow'), href: href('flows', {tab: 'records', id})}] : []);
   switch (event.event) {
     case 'flow.updated':
       return flow(event.data.resource_id);
     case 'flow.gap':
-      return [...flow(event.data.resource_id), {id: 'recording', label: t('ui.recordingSettings'), href: recordingSettingsHref}];
+      return [
+        ...flow(event.data.resource_id),
+        ...(resources?.runtime_settings.available ? [{id: 'recording', label: t('ui.recordingSettings'), href: recordingSettingsHref}] : [])
+      ];
     case 'generation.changed':
-      return [{id: 'config', label: t('event.viewConfig'), href: href('config')}];
+      return resources?.config.available ? [{id: 'config', label: t('event.viewConfig'), href: href('config')}] : [];
     default:
       return [];
   }
 }
-// An event never changes once received, so its row is built once per locale and the table sees the same object.
-const rows = new WeakMap<ApiEvent, {locale: string; row: EventRow}>();
-function eventRow(event: ApiEvent, locale: string, t: LabelFn, lost: boolean): EventRow {
+// An event never changes once received, so its row is built once per locale and set of resources, and the table sees the same object.
+const rows = new WeakMap<ApiEvent, {locale: string; resources: Resources; row: EventRow}>();
+function eventRow(event: ApiEvent, locale: string, t: LabelFn, lost: boolean, resources: Resources): EventRow {
   const hit = rows.get(event);
-  if (hit && hit.locale === locale) return hit.row;
+  if (hit && hit.locale === locale && hit.resources === resources) return hit.row;
   const summary = lost ? {key: 'event.lostHistory' as const} : eventSummary(event, t);
   const row = {
     id: eventKey(event),
@@ -58,10 +63,10 @@ function eventRow(event: ApiEvent, locale: string, t: LabelFn, lost: boolean): E
     kindText: enumLabel(eventKindLabels, event.event, t),
     summary: t(summary.key, summary.params),
     help: eventHelp(event, t),
-    links: eventLinks(event, t),
+    links: eventLinks(event, t, resources),
     event
   };
-  rows.set(event, {locale, row});
+  rows.set(event, {locale, resources, row});
   return row;
 }
 
@@ -75,7 +80,8 @@ export function eventsView(
   t: LabelFn,
   advertised: EventKind[],
   failed = false,
-  lost: (event: ApiEvent) => boolean = () => false
+  lost: (event: ApiEvent) => boolean = () => false,
+  resources?: Resources
 ) {
   const kind = selected === 'without-runtime' || advertised.includes(selected as EventKind) ? selected : 'all';
   const shown = events
@@ -83,7 +89,7 @@ export function eventsView(
     .slice(0, limit);
   return {
     kind,
-    rows: shown.map(event => eventRow(event, locale, t, lost(event))),
+    rows: shown.map(event => eventRow(event, locale, t, lost(event), resources)),
     kinds: [
       {id: 'without-runtime', label: t('event.withoutRuntime')},
       {id: 'all', label: t('event.allKinds')},

@@ -1,5 +1,6 @@
 import {expect, it} from 'vitest';
 import type {ApiEvent} from '../../api/model';
+import {createMockApi} from '../../../mock';
 import {localTime} from '../../i18n/format';
 import {translate, type Translator} from '../../i18n';
 import {eventHelp, eventLinks, eventsExport, eventsView, eventText} from './view';
@@ -67,9 +68,10 @@ it('explains the gaps that lose flow records and leaves other events alone', () 
   expect(eventHelp(gap('sampled'), t)).toBeUndefined();
 });
 
-it('links the flow an event names, the configuration of a new generation and the recording settings of a gap', () => {
+it('links the flow an event names, the configuration of a new generation and the recording settings of a gap', async () => {
   const data = {instance_id: 'i', observed_at: '2026-01-01T00:00:00Z'};
-  const links = (event: ApiEvent) => eventLinks(event, t).map(link => [link.label, link.href]);
+  const {resources} = await createMockApi().capabilities();
+  const links = (event: ApiEvent) => eventLinks(event, t, resources).map(link => [link.label, link.href]);
   const flow = ['View flow record', '#/flows?tab=records&id=f1'];
   const recording = ['Recording settings', '#/settings?card=runtime'];
   expect(links({id: '1', event: 'flow.updated', data: {...data, resource_id: 'f1', revision: 2, href: '/api/v1/flows/f1'}} as ApiEvent)).toEqual([flow]);
@@ -80,4 +82,23 @@ it('links the flow an event names, the configuration of a new generation and the
     ['View configuration', '#/config']
   ]);
   expect(links({id: '4', event: 'stream.ready', data} as ApiEvent)).toEqual([]);
+  resources.runtime_settings.available = false;
+  resources.config.available = false;
+  expect(links(gap('f1'))).toEqual([flow]);
+  expect(links({id: '3', event: 'generation.changed', data: {...data, previous_generation_id: '1', generation_id: '2'}} as ApiEvent)).toEqual([]);
+  expect(eventLinks(gap(null), t, undefined)).toEqual([]);
+});
+
+it('rebuilds the links of an event already shown when the offered pages change', async () => {
+  const event = {
+    id: '3',
+    event: 'generation.changed',
+    data: {instance_id: 'i', observed_at: '2026-01-01T00:00:00Z', previous_generation_id: '1', generation_id: '2'}
+  } as ApiEvent;
+  const {resources} = await createMockApi().capabilities();
+  const links = (offered?: typeof resources) =>
+    eventsView([event], 'all', true, true, 10, 'en', t, [], false, undefined, offered).rows[0].links.map(link => link.href);
+  expect(links()).toEqual([]);
+  expect(links(resources)).toEqual(['#/config']);
+  expect(links({...resources, config: {...resources.config, available: false}})).toEqual([]);
 });
