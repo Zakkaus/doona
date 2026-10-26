@@ -111,7 +111,7 @@ export function useRuntimeSettingsForm() {
   return {
     numeric,
     recorders,
-    recordingNote: recordingNote(baseline?.recording, t),
+    recordingNote: recordingNote(baseline?.recording, engineOf(version).flowDemandGraceSeconds, t),
     flowNote: fields.has('record_flows')
       ? flowRecordingNote(edits.modes.record_flows ?? modeOf('record_flows'), engineOf(version).flowDemandGraceSeconds, t)
       : null,
