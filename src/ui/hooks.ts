@@ -32,17 +32,19 @@ export function useSlider(value: string, selector = '[data-selected]', keepVisib
       if (!el.offsetWidth) return;
       const sel = el.querySelector<HTMLElement>(selector);
       if (!sel) return setPos(null);
-      if (keepVisible) {
-        const box = el.getBoundingClientRect();
-        const item = sel.getBoundingClientRect();
-        if (item.top < box.top) el.scrollTop -= box.top - item.top;
-        else if (item.bottom > box.bottom) el.scrollTop += item.bottom - box.bottom;
-      }
       const next = {...layoutOffset(sel, el), w: sel.offsetWidth, h: sel.offsetHeight, still};
+      if (keepVisible) {
+        const bottom = next.y + next.h - el.clientHeight;
+        if (next.y < el.scrollTop) el.scrollTop = next.y;
+        else if (bottom > el.scrollTop) el.scrollTop = bottom;
+      }
       setPos(prev => (prev && prev.x === next.x && prev.y === next.y && prev.w === next.w && prev.h === next.h ? prev : next));
     };
-    measure(false);
-    const ro = new ResizeObserver(() => measure(true));
+    let still = false;
+    const ro = new ResizeObserver(() => {
+      flushSync(() => measure(still));
+      still = true;
+    });
     ro.observe(el);
     for (const child of el.children) ro.observe(child);
     return () => ro.disconnect();
@@ -102,7 +104,6 @@ export function useOverflow(ref: RefObject<HTMLElement | null>, key: string) {
     const el = ref.current;
     if (!el) return;
     const measure = () => setOver(el.scrollWidth > el.clientWidth);
-    measure();
     const ro = new ResizeObserver(() => flushSync(measure));
     ro.observe(el);
     for (const child of el.children) ro.observe(child);

@@ -13,6 +13,8 @@ const settings = async (page: Page, id: string) => {
 const pick = async (page: Page, label: string, option: string) => {
   const dialog = page.getByRole('dialog').first();
   const radio = dialog.getByRole('radio', {name: option, exact: true});
+  // A control that does not fit collapses to its picker in the frame after it mounts.
+  await settleFrames(page, 1);
   if (await radio.isVisible()) return radio.click();
   await dialog.getByRole('button', {name: new RegExp(`${label}$`)}).click();
   await page.getByRole('option', {name: option, exact: true}).click();
@@ -1413,10 +1415,11 @@ test('a chart set tall, by settings or by its edge, fills the card it grew', asy
       };
     });
   const check = async () => {
+    // The chart follows its card's new height in the next frame.
     await expect.poll(async () => (await plot()).height).toBeGreaterThanOrEqual(2 * 120 - 2);
+    await expect.poll(async () => Math.abs((await plot()).gap)).toBeLessThanOrEqual(2);
     const chart = await plot();
     expect(Math.abs(chart.width - chart.inner)).toBeLessThanOrEqual(2);
-    expect(Math.abs(chart.gap)).toBeLessThanOrEqual(2);
   };
   await open(page);
   await choose(page, [['history', 'Height', 'Tall']]);

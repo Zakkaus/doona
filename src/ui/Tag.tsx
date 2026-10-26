@@ -60,8 +60,13 @@ function MoreTag({count, label, names}: {count: number; label: string; names: st
 }
 
 type Sizes = {key: string; tags: number[]; more: number[]; gap: number};
-// The overflow tag's width for a count, read from one tag per digit count; its digits are tabular.
-const moreWidth = (sizes: Sizes) => (hidden: number) => sizes.more[String(hidden).length - 1];
+// The overflow tag's width for a count comes from one tag per digit count; its digits are tabular.
+const fitCount = (sizes: Sizes, width: number) => fitTags(sizes.tags, hidden => sizes.more[String(hidden).length - 1], width, sizes.gap);
+
+function tagSizes(el: HTMLElement, key: string, length: number): Sizes {
+  const widths = [...el.children].map(child => child.getBoundingClientRect().width);
+  return {key, tags: widths.slice(0, length), more: widths.slice(length), gap: Number.parseFloat(getComputedStyle(el).columnGap) || 0};
+}
 
 // Every FitTags box shares one observer. A column resize reports every row at once: all boxes are read first and
 // all refits then commit in one synchronous render, before the browser paints. A font that arrives measures every
@@ -111,17 +116,17 @@ export function FitTags({
   const sizes = useRef<Sizes | null>(null);
   const watched = useRef(new Set<Element>());
   const key = `${lang}\n${items.map(item => item.label).join('\n')}`;
+  // Initial probes avoid mounting links that will be hidden. Later measures keep live links and their focus.
   // A null count lays out every tag to be measured; a new object asks for a fresh measure.
-  const [fit, setFit] = useState<{key: string; count: number | null}>({key, count: null});
+  const [fit, setFit] = useState<{key: string; count: number | null; probe?: boolean}>({key, count: null, probe: true});
   const count = fit.key === key ? fit.count : null;
   useLayoutEffect(() => {
     const el = ref.current;
     // A hidden element (a kept-mounted tab panel) measures zero; it is measured once it shows.
-    if (count !== null || !el?.getClientRects().length) return;
-    const widths = [...el.children].map(child => child.getBoundingClientRect().width);
-    const known = {key, tags: widths.slice(0, items.length), more: widths.slice(items.length), gap: Number.parseFloat(getComputedStyle(el).columnGap) || 0};
+    if (fit.probe || count !== null || !el?.getClientRects().length) return;
+    const known = tagSizes(el, key, items.length);
     sizes.current = known;
-    setFit({key, count: fitTags(known.tags, moreWidth(known), el.getBoundingClientRect().width, known.gap)});
+    setFit({key, count: fitCount(known, el.getBoundingClientRect().width)});
   }, [fit, key, count, items.length]);
   // The box and the tags on show are watched, so a resize refits and a changed tag width measures again.
   useLayoutEffect(() => {
@@ -131,11 +136,18 @@ export function FitTags({
     fitters.set(el, {
       remeasure,
       read: () => {
-        const known = sizes.current;
         if (!el.getClientRects().length) return null;
+        // Initial probes are read together after layout, before the observer commits their visible links.
+        if (fit.probe) {
+          const known = tagSizes(el, key, items.length);
+          sizes.current = known;
+          const next = fitCount(known, el.getBoundingClientRect().width);
+          return () => setFit({key, count: next});
+        }
+        const known = sizes.current;
         const tags = [...el.children].filter(child => !child.classList.contains('rp-tag-more'));
         if (known?.key !== key || tags.some((tag, i) => Math.abs(tag.getBoundingClientRect().width - known.tags[i]) > 0.5)) return remeasure;
-        const next = fitTags(known.tags, moreWidth(known), el.getBoundingClientRect().width, known.gap);
+        const next = fitCount(known, el.getBoundingClientRect().width);
         return next === count ? null : () => setFit({key, count: next});
       }
     });
@@ -163,11 +175,17 @@ export function FitTags({
   const probes = count === null && items.length ? Array.from({length: String(items.length).length}, (_, i) => 10 ** (i + 1) - 1) : [];
   return (
     <div ref={ref} className="rp-tags" role="group" aria-label={label} data-fit="">
-      {items.slice(0, count ?? items.length).map(item => (
-        <LinkTag key={item.id} href={item.href}>
-          {item.label}
-        </LinkTag>
-      ))}
+      {items.slice(0, count ?? items.length).map(item =>
+        fit.probe ? (
+          <span key={item.id} className="rp-tag rp-tag-link" aria-hidden="true">
+            <span className="rp-tag-label">{item.label}</span>
+          </span>
+        ) : (
+          <LinkTag key={item.id} href={item.href}>
+            {item.label}
+          </LinkTag>
+        )
+      )}
       {probes.map(n => (
         <MoreProbe key={n} count={n} />
       ))}
