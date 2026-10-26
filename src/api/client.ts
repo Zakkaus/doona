@@ -107,7 +107,7 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     fetch: async (request: Request) => {
       if (request.method !== 'GET' || !expectsJson(request)) return exchange(request);
       try {
-        return await filled(request, await exchange(request.clone()));
+        return await filled(request, await exchange(request));
       } catch (error) {
         if (!(error instanceof ApiError) || (error.code !== 'empty_response' && error.code !== 'network_error')) throw error;
         await pause(READ_RETRY_MS, request.signal);
@@ -134,7 +134,7 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     if (!retryable) return send(request, undefined, write);
     // A refusal with Retry-After is waited out a few times; the caller sees the last refusal after that.
     for (let refused = 0; ; refused++) {
-      const response = await send(request.clone(), undefined, write);
+      const response = await send(request.clone(), {signal: request.signal}, write);
       if ((response.status !== 503 && response.status !== 429) || refused >= MAX_REFUSALS) return response;
       const error = await responseError(response.clone());
       if (!error.transient) return response;

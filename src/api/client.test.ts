@@ -494,6 +494,20 @@ describe('native transport', () => {
     controller.abort();
     await failure;
   });
+  // Node's Request.clone() holds its abort link weakly; a clone sent after a collection must still follow the caller.
+  it.each([
+    ['a read', (api: Api, signal: AbortSignal) => api.runtime(signal)],
+    ['an operation start', (api: Api, signal: AbortSignal) => api.refreshProvider('remote', signal)]
+  ])('keeps a caller abort after garbage collection for %s', async (_name, call) => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', hanging());
+    const controller = new AbortController();
+    const failure = expect(call(createApi('https://honk.test'), controller.signal)).rejects.toMatchObject({name: 'AbortError'});
+    await vi.advanceTimersByTimeAsync(0);
+    (globalThis as unknown as {gc: () => void}).gc();
+    controller.abort();
+    await failure;
+  });
   it('releases the deadline once the response is read or the request fails', async () => {
     vi.useFakeTimers();
     vi.stubGlobal(
