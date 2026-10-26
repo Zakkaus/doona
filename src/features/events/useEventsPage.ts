@@ -10,14 +10,15 @@ export function useEventsPage() {
   const t = useT();
   const locale = LOCALE[useLang()];
   const capabilities = useCapabilities();
-  const kinds = capabilities.data?.resources.events.kinds;
+  const resources = capabilities.data?.resources;
+  const kinds = resources?.events.kinds;
   const [kind, setKind] = useState('without-runtime');
   // Heartbeats are only fetched for a view that can show them; an unadvertised kind falls back to all.
   const single = kind !== 'all' && kind !== 'runtime.updated' && (kinds as string[] | undefined)?.includes(kind);
   const feed = useEventFeed(kind !== 'without-runtime' && !single);
   const view = useMemo(
-    () => eventsView(feed.events, kind, feed.connected, feed.available, EVENT_FEED_LIMIT, locale, t, kinds ?? [], !!feed.error, historyLost),
-    [feed.events, kind, feed.connected, feed.available, feed.error, locale, t, kinds]
+    () => eventsView(feed.events, kind, feed.connected, feed.available, EVENT_FEED_LIMIT, locale, t, kinds ?? [], !!feed.error, historyLost, resources),
+    [feed.events, kind, feed.connected, feed.available, feed.error, locale, t, kinds, resources]
   );
   useLinked(view.kind, setKind);
   return {
