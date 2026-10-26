@@ -83,7 +83,11 @@ for (const width of [1440, 390]) {
       handlers['GET flows/flow-1'] = () => api.flow('flow-1');
       await page.goto('/#/' + route);
       if (route.startsWith('nodes')) await page.getByRole('rowheader', {name: 'hk-01', exact: true}).click();
-      const panel = route.startsWith('nodes') ? page.locator('.rp-table-detail') : width === 390 ? page.getByRole('dialog') : page.locator('.rp-panel');
+      const panel = route.startsWith('nodes')
+        ? page.locator('.rp-table-detail:visible')
+        : width === 390
+          ? page.getByRole('dialog')
+          : page.locator('.rp-panel:visible');
       await expect(panel.locator('.rp-tag').first()).toBeVisible();
       if (route.startsWith('nodes')) {
         const group = panel.getByRole('group', {name: 'Groups', exact: true});

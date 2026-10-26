@@ -85,7 +85,7 @@ for (const [width, phone] of [
         await expect(page.locator('.rp-content h1')).toBeVisible();
         await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
         await page.evaluate(() => document.fonts.ready);
-        const tabs = page.locator('.rp-content [data-page-tabrow] [role=tab]');
+        const tabs = page.locator('.rp-content [data-page-tabrow] [role=tab]:visible');
         const count = await tabs.count();
         for (let index = -1; index < count; index++) {
           if (index >= 0) await tabs.nth(index).click();

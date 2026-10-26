@@ -165,7 +165,7 @@ export async function scrollTableToEnd(grid: Locator) {
     .not.toBe('none');
 }
 
-export const detail = (page: Page) => page.locator('.rp-panel, .rp-drawer');
+export const detail = (page: Page) => page.locator('.rp-panel, .rp-drawer').filter({visible: true});
 // A panel's secondary actions sit in its trailing More menu. Opens it and returns the item; the menu itself is
 // portalled out of the panel.
 export async function moreItem(scope: Locator, name: string | RegExp, menu = 'More actions') {

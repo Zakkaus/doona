@@ -60,10 +60,10 @@ export function Shortcuts({
         setOpen(true);
         return;
       }
-      // The page's own filter field, where it has one.
+      // The shown page's own filter field, where it has one; a page kept hidden is in the DOM but draws no box.
       if (event.key === '/') {
         reset();
-        const field = document.querySelector<HTMLInputElement>('.rp-content input[type="search"]');
+        const field = [...document.querySelectorAll<HTMLInputElement>('.rp-content input[type="search"]')].find(input => input.getClientRects().length);
         if (field) {
           event.preventDefault();
           field.focus();

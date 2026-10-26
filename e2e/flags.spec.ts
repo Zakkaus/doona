@@ -146,7 +146,7 @@ test('Flows records, tree nodes and latency chart tooltips use the same decorati
   await expect(unmeasured.locator('.rp-node-flag')).toHaveAttribute('data-flag', '🇯🇵');
   await expect(row.getByRole('link', {name: 'hk-01', exact: true})).toHaveAccessibleName('hk-01');
   await row.hover();
-  await expect(page.locator('.rp-charttip .rp-node-flag')).toHaveAttribute('data-flag', '🇭🇰');
+  await expect(page.locator('.rp-charttip:visible .rp-node-flag')).toHaveAttribute('data-flag', '🇭🇰');
 });
 
 test('edits node flags from the existing menu and updates the table, picker and Flows', async ({page}) => {

@@ -12,7 +12,7 @@ for (const width of [1280, 390]) {
         await expect(page.locator('.rp-content h1')).toBeVisible();
         await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
         await page.evaluate(() => document.fonts.ready);
-        const tabs = page.locator('.rp-content [data-page-tabrow] [role=tab]');
+        const tabs = page.locator('.rp-content [data-page-tabrow] [role=tab]:visible');
         const count = await tabs.count();
         for (let index = -1; index < count; index++) {
           if (index >= 0) await tabs.nth(index).click();
@@ -84,8 +84,8 @@ test.describe('page rows on a phone', () => {
         expect(await lineCount(page, scope, '.rp-btn, [role=tab]'), `${route} ${scope}`).toBeLessThanOrEqual(1);
     }
     await page.goto('/#/connections');
-    await page.locator('.rp-content [role=tab]').nth(1).click();
-    await expect(page.locator('.rp-content .rp-toolbar').first()).toBeVisible();
+    await page.locator('.rp-content [role=tab]:visible').nth(1).click();
+    await expect(page.locator('.rp-content .rp-toolbar:visible').first()).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     await settleFrames(page);
     expect(await lineCount(page, '.rp-content .rp-toolbar', '.rp-btn, .rp-input, .rp-selectbtn, .rp-select, .rp-seg, .rp-switch')).toBeLessThanOrEqual(

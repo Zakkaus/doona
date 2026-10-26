@@ -8,7 +8,7 @@ for (const width of [1024, 1280, 1440]) {
       // The connections table sits behind the traffic tab.
       await page.goto(`/#/${route}${route === 'connections' ? '?tab=list' : ''}`);
       if (!(await offered(page, route))) continue;
-      await expect(page.locator('.rp-content > .rp-page')).toBeVisible();
+      await expect(page.locator('.rp-content > .rp-page:visible')).toBeVisible();
       await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
       // Tables that sit behind a tab or a fold are opened first; the fit rule applies to all of them.
       if (route === 'dns') await page.getByRole('tab', {name: 'Cache', exact: true}).click();
@@ -16,7 +16,7 @@ for (const width of [1024, 1280, 1440]) {
       if (route === 'rules' && (await page.getByRole('tab', {name: 'Trace simulation', exact: true}).count())) {
         await page.getByRole('tab', {name: 'Trace simulation', exact: true}).click();
         // A name the demo DNS cache answers, so the evaluation table renders.
-        await page.getByLabel('Domain', {exact: true}).fill('api.telegram.org');
+        await page.getByRole('textbox', {name: 'Domain', exact: true}).fill('api.telegram.org');
         await page.getByRole('textbox', {name: 'Destination port', exact: true}).fill('443');
         await page.getByRole('button', {name: 'Run trace', exact: true}).click();
         await expect(page.getByRole('grid', {name: 'Rule evaluation 1'})).toBeVisible();

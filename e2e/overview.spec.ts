@@ -200,7 +200,7 @@ test('Activity and Overview keep cards in each grid row equal height', async ({p
       for (const route of ['activity', 'overview']) {
         await page.goto('/#/' + route);
         // The page Skeleton's cards stand in until the page's first reads arrive; wait for a card of the page itself.
-        await expect(page.locator('.rp-card:not(.rp-skeleton-cards > *)').first()).toBeVisible();
+        await expect(page.locator('.rp-card:not(.rp-skeleton-cards > *):visible').first()).toBeVisible();
         await expect(page.locator('.rp-content > .rp-skeleton-cards')).toHaveCount(0);
         if (route === 'overview') await expect(page.locator('.rp-capability').first()).toBeVisible();
         const rows = await page.locator('.rp-strip, .rp-g21, .rp-g3, .rp-dash-section').evaluateAll(grids =>
