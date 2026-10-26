@@ -27,8 +27,8 @@ import {lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useRef
 import type {Node} from '../../../src/api/model';
 import {nodeReferenced, readNodeEntries, writeNodeEntry, type NodeEntry} from '../../../src/dae/nodes';
 import {quote} from '../../../src/dae/text';
-import {applyContent, configSnapshot, mainSnapshot, providerSnapshot, LiteError, errorKey, readMain, readProviders, type Connection} from './api';
-import {appendEntry, canWrite, inspectLinks, linkInfo, nodeSnapshot, readNodes, removeEntry, type ImportRow} from './config';
+import {applyContent, configSnapshot, mainSnapshot, providerSnapshot, LiteError, errorKey, type Connection} from './api';
+import {appendEntry, canWrite, inspectLinks, linkInfo, nodeSnapshot, readNodePage, removeEntry, type ImportRow} from './config';
 import {useMessages} from './i18n';
 import {useFocusRefresh, useRead, useTask} from './state';
 import {ReadState, useNoticeToast} from './ui';
@@ -51,20 +51,7 @@ export function Nodes({connection, setBusy}: {connection: Connection; setBusy: (
   const compact = useMediaQuery(MEDIA.phone);
   const [formReady, setFormReady] = useState(!!LoadedNodeForm);
   const NodeForm = formReady ? LoadedNodeForm : undefined;
-  const read = useRead(
-    useCallback(
-      async (signal?: AbortSignal) => {
-        const [nodes, source, config, providers] = await Promise.all([
-          readNodes(connection, signal),
-          connection.capabilities.resources.config.available ? readMain(connection.api, signal) : Promise.resolve(undefined),
-          connection.capabilities.resources.config.available ? connection.api.config(signal) : Promise.resolve(undefined),
-          readProviders(connection.api, signal)
-        ]);
-        return {nodes, source, config, providers};
-      },
-      [connection]
-    )
-  );
+  const read = useRead(useCallback((signal?: AbortSignal) => readNodePage(connection, signal), [connection]));
   const ready = read.data !== undefined;
   const expectedCount = useExpectedCount(connection.api, 'nodes', (read.data?.nodes ?? nodeSnapshot(connection.api))?.length);
   const task = useTask(setBusy);

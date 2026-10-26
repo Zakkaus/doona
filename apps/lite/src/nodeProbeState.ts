@@ -1,6 +1,6 @@
 import type {Node} from '../../../src/api/model';
 import {supportsNodeProbe} from '../../../src/dae/probes';
-import type {Connection} from './api';
+import {probeIpVersion, type Connection} from './api';
 import {finished, settle} from './operations';
 import {yieldToBrowser} from './ui/yieldToBrowser';
 
@@ -10,8 +10,7 @@ export function createNodeProbes(connection: Connection) {
     api,
     capabilities: {resources}
   } = connection;
-  const versions = resources.probes.ip_versions ?? [];
-  const ipVersion = versions.includes('ipv4') && versions.includes('ipv6') ? 'any' : versions[0];
+  const ipVersion = probeIpVersion(connection.capabilities);
   const available = !!(
     ipVersion &&
     resources.probes.available &&

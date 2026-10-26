@@ -23,7 +23,7 @@ import * as stylex from '@stylexjs/stylex';
 import {Suspense, lazy, startTransition, useMemo, useCallback, useEffect, useRef, useState, type KeyboardEvent} from 'react';
 import type {ConfigSource, Group, GroupSelectionRequest} from '../../../src/api/model';
 import {readGroupEntries, type GroupEntry} from '../../../src/dae/groups';
-import {applyContent, groupSnapshot, readGroups, readMain, readProviders, selectMember, type Connection} from './api';
+import {applyContent, groupProbeSize, groupSnapshot, probeGroup, readGroups, readMain, readProviders, selectMember, type Connection} from './api';
 import {canWrite, readNodes, validateContent} from './config';
 import {describeGroupChanges, describeGroupFilters, phraseText} from './describe';
 import {deleteGroup, emptyGroups, groupChanges} from './groupDraft';
@@ -33,7 +33,7 @@ import {groupStatus, healthFallback, memberName, type GroupStatus} from './group
 import {GroupInspector, GroupInspectorPlaceholder} from './GroupInspector';
 import {GroupTextDialog} from './GroupTextDialog';
 import {useMessages} from './i18n';
-import {finished, readBackUnconfirmed, settle} from './operations';
+import {readBackUnconfirmed} from './operations';
 import {useFocusRefresh, useRead, useTask} from './state';
 import {Feedback, ReadState, useNoticeToast} from './ui';
 import {CollectionToolbar} from './ui/CollectionToolbar';
@@ -226,24 +226,13 @@ export function Groups({connection, setBusy}: {connection: Connection; setBusy: 
     capabilities.resources.probes.targets?.includes('group') &&
     capabilities.resources.probes.kinds?.includes('http') &&
     capabilities.resources.probes.transports?.includes('tcp') &&
+    groupProbeSize(capabilities) > 0 &&
+    group.members.length > 0 &&
     group.capabilities.probe_transports.includes('tcp');
   const probe = (group: Group) => {
     setPendingMember('probe');
     void task.run(`quick:${group.id}`, async () => {
-      finished(
-        await settle(
-          api,
-          await api.startProbe({
-            target: {type: 'group', group_id: group.id},
-            kind: 'http',
-            transport: ['tcp'],
-            ip_version: 'any',
-            warmth: 'cold',
-            members: 'direct'
-          })
-        ),
-        'probe'
-      );
+      await probeGroup(connection, group);
       await Promise.all([read.reload(), resources.reload()]);
       return {key: 'probeDone'};
     });

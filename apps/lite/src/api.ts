@@ -2,7 +2,7 @@ import {rememberCount} from './ui/useExpectedCount';
 import {yieldToBrowser} from './ui/yieldToBrowser';
 import {invalidateReads} from './state';
 import type {Api} from '../../../src/api/api';
-import type {Capabilities, ConfigSource, Group, GroupSummary, GroupSelectionRequest, Provider} from '../../../src/api/model';
+import type {Capabilities, ConfigSource, Group, GroupSummary, GroupSelectionRequest, ProbeRequest, Provider} from '../../../src/api/model';
 import {createApi} from '../../../src/api/client';
 import {DEMO_ACCOUNT, openSession} from '../../../src/api/auth';
 import {DEMO_API, normalizeApi} from '../../../src/api/profiles';
@@ -96,7 +96,7 @@ export async function readProviders(api: Api, signal?: AbortSignal): Promise<Pro
   const all: Provider[] = [];
   let cursor: string | undefined;
   do {
-    const page = await api.providers({limit: 1000, cursor}, signal);
+    const page = await api.providers({cursor}, signal);
     all.push(...page.providers);
     cursor = page.next_cursor ?? undefined;
   } while (cursor);
@@ -108,6 +108,29 @@ export async function selectMember(api: Api, group: Group, member_id: string, ne
   const result = await api.selectGroup(group.id, {member_id, network}).catch(readBackUnconfirmed(reread));
   await reread().catch(() => {});
   return result.source === 'override' ? 'pinned' : result.connections_interrupted ? 'selectedInterrupted' : 'selected';
+}
+
+export function probeIpVersion({resources}: Capabilities): ProbeRequest['ip_version'] | undefined {
+  const versions = resources.probes.ip_versions ?? [];
+  return versions.includes('ipv4') && versions.includes('ipv6') ? 'any' : versions[0];
+}
+
+// Members per group probe job: 'any' answers twice per member, and both declared limits bound one job.
+export function groupProbeSize(capabilities: Capabilities) {
+  const ipVersion = probeIpVersion(capabilities);
+  const limits = capabilities.resources.probes.limits;
+  if (!ipVersion || !limits) return 0;
+  return Math.min(limits.max_members_per_job, Math.floor(limits.max_results_per_job / (ipVersion === 'any' ? 2 : 1)));
+}
+
+export async function probeGroup({api, capabilities}: Connection, group: Group) {
+  const size = groupProbeSize(capabilities);
+  const ip_version = probeIpVersion(capabilities)!;
+  for (let offset = 0; offset < group.members.length; offset += size) {
+    const members = group.members.slice(offset, offset + size).map(member => member.id);
+    const accepted = await api.startProbe({target: {type: 'group', group_id: group.id}, kind: 'http', transport: ['tcp'], ip_version, warmth: 'cold', members});
+    finished(await settle(api, accepted), 'probe');
+  }
 }
 
 export async function refreshProvider(api: Api, id: string) {
