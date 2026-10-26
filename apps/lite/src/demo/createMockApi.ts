@@ -1,137 +1,58 @@
-import {yieldToBrowser} from '../ui/yieldToBrowser';
-import type {Api} from '../../../../src/api/api';
-import type {OperationReader} from '../../../../mock/lifecycle';
-import {capabilities as fullCapabilities, capabilitiesBase, capabilitiesM1} from '../../../../mock/fixtures/capabilities';
-import {createConfiguration} from '../../../../mock/configuration';
-import {createInventory} from '../../../../mock/inventory';
-import {createLifecycle} from '../../../../mock/lifecycle';
-import {createNetwork} from '../../../../mock/network';
-import {createRuntime} from '../../../../mock/runtime';
-import {createGeodataState} from '../../../../mock/geodata';
-import {mockSessionValid, refuseWithoutSession, withPasswordAuth} from '../../../../mock/auth';
+import {createMockApi as createSharedMockApi, type MockOptions} from '../../../../mock';
+import {activateInventory} from '../../../../mock/activation';
+import * as configuration from '../../../../mock/fixtures/configuration';
+import * as inventory from '../../../../mock/fixtures/inventory';
 
-export type MockApi = Api & OperationReader;
+// The demo adds two subscriptions to the shared fixtures, so nodes and bindings span more than one source.
+const configMain = configuration.configMain.replace(
+  /subscription \{\n/,
+  "subscription {\n  pacific: 'https://pacific.example.net/subscribe?token=demo'\n  atlas: 'https://atlas.example.net/subscribe?token=demo'\n"
+);
+const withMain = <T extends {kind: string; content: string}>(source: T): T => (source.kind === 'main' ? {...source, content: configMain} : source);
+const providers = [
+  ...inventory.providers,
+  ...['pacific', 'atlas'].map(name => ({
+    ...inventory.providers.find(provider => provider.id === 'harbor')!,
+    id: name,
+    name,
+    url_redacted: `https://${name}.example.net/subscribe?token=<redacted>`
+  }))
+];
+// Node names stay in one script whatever the interface language.
+const neutralNames: Record<string, string> = {
+  台灣: 'Taiwan',
+  美國: 'US',
+  韓國: 'Korea',
+  英國: 'UK',
+  德國: 'Germany',
+  澳洲: 'Australia',
+  家寬: 'Residential',
+  解鎖: 'Unlocked',
+  流媒體: 'Streaming'
+};
+// The standard fixtures put every subscription node in harbor; split them across the three subscriptions.
+function nodeFixtures(count: number, faults = false) {
+  const result = inventory.nodeFixtures(count, faults);
+  let index = 0;
+  for (const node of result.nodes) {
+    if (node.provider_id !== 'harbor') continue;
+    node.name = node.name.replace(/台灣|美國|韓國|英國|德國|澳洲|家寬|解鎖|流媒體/g, name => neutralNames[name]);
+    node.provider_id = ['harbor', 'pacific', 'atlas'][Math.floor(index++ / Math.max(1, Math.ceil(count / 3)))];
+    node.subscription_tag = node.provider_id;
+  }
+  activateInventory(configMain, '40', result.nodes, result.groups, structuredClone(providers), name => name);
+  return result;
+}
 
-// A saved demo profile signs in as a password backend does; with no profile at all (development, the test suites)
-// the mock serves every read straight away. `faults` selects the faults scenario where storage cannot, as for the
-// specs' in-process backend. `acceptWrites` answers node and provider writes with 202 and an operation, as a honk
-// that runs them in the background does.
-export type MockOptions = {
-  capabilities?: typeof fullCapabilities;
-  faults?: boolean;
-  signIn?: true;
-  session?: string | null;
-  acceptWrites?: boolean;
-  isolated?: boolean;
+export const demoFixtures = {
+  configuration: {
+    ...configuration,
+    configMain,
+    configSources: configuration.configSources.map(withMain),
+    faultSources: configuration.faultSources.map(withMain),
+    faultDisk: configuration.faultDisk.map(withMain)
+  },
+  inventory: {...inventory, providers, nodeFixtures}
 };
 
-export async function createMockApi(options: MockOptions = {}): Promise<MockApi> {
-  let count = 120;
-  let big = false;
-  // A busy backend for tools/perf.mjs: byte counters move on every poll and logs arrive every 20 ms.
-  let busy = false;
-  if (!options.isolated)
-    try {
-      const value = localStorage.getItem('doona-mock-big');
-      big = value !== null;
-      if (value !== null) count = Math.max(0, Math.floor(Number(value) || 0));
-      busy = localStorage.getItem('doona-mock-busy') !== null;
-    } catch {
-      /* Storage can be unavailable. */
-    }
-  let capabilities = fullCapabilities;
-  let profile: string | null = null;
-  // The default demo is a healthy honk; the faults scenario seeds the degraded states that specs need.
-  let faults = options.faults ?? false;
-  let latency = 0;
-  if (!options.isolated)
-    try {
-      // ?scenario=faults in the page address turns the scenario on for this browser, and an empty ?scenario= turns it
-      // off, so the public demo can show the error states from a link.
-      const scenario = new URLSearchParams(globalThis.location?.search).get('scenario');
-      if (scenario === 'faults') localStorage.setItem('doona-mock-scenario', 'faults');
-      else if (scenario === '') localStorage.removeItem('doona-mock-scenario');
-      faults ||= localStorage.getItem('doona-mock-scenario') === 'faults';
-      // ?slow=<ms> (or ?slow alone, two seconds) holds every call for this page load, so a first load's placeholders
-      // can be seen in the demo.
-      const slow = new URLSearchParams(globalThis.location?.search).get('slow');
-      if (slow !== null) latency = Number(slow) || 2000;
-      profile = localStorage.getItem('doona-mock-profile');
-      if (profile === 'base') capabilities = capabilitiesBase;
-      if (profile === 'm1') capabilities = capabilitiesM1;
-    } catch {
-      /* Storage can be unavailable. */
-    }
-  capabilities = options.capabilities ?? capabilities;
-  const runtime = createRuntime(capabilities, big, () => configuration.flowRecorder(), faults);
-  const geodata = createGeodataState(capabilities, () => inventory.groupIds(), faults);
-  const configuration = createConfiguration(
-    capabilities,
-    runtime.runtime,
-    {
-      enqueue: (kind, finish) => lifecycle.enqueue(kind, finish),
-      log: (level, target, message, fields) => lifecycle.log(level, target, message, fields),
-      publish: event => lifecycle.publish(event),
-      eventData: () => lifecycle.eventData(),
-      trimRecords: () => {
-        lifecycle.trimLogs();
-        network.trimRecords();
-      }
-    },
-    () => inventory.groupNames(),
-    (text, revision) => inventory.activate(text, revision),
-    geodata,
-    faults
-  );
-  await yieldToBrowser();
-  const lifecycle = createLifecycle(
-    capabilities.resources.logs,
-    capabilities.resources.events,
-    capabilities.resources.operations,
-    runtime.runtime,
-    configuration.logSettings,
-    configuration.revision,
-    configuration.recording,
-    busy ? 20 : 2500,
-    faults
-  );
-  await yieldToBrowser();
-  const network = createNetwork(
-    capabilities,
-    big,
-    profile,
-    runtime.outbounds,
-    configuration.revision,
-    configuration.ruleSnapshot,
-    configuration.dnsUpstreams,
-    configuration.recording,
-    configuration.networkSettings,
-    busy,
-    faults
-  );
-  await yieldToBrowser();
-  const inventory = createInventory(
-    capabilities,
-    count,
-    lifecycle,
-    configuration.advance,
-    configuration.editSource,
-    network.interrupt,
-    geodata,
-    faults,
-    options.acceptWrites
-  );
-  await yieldToBrowser();
-  let api = {...runtime.api, ...lifecycle.api, ...network.api, ...inventory.api, ...configuration.api};
-  if (latency) api = withLatency(api, latency);
-  if (!options.signIn) return api;
-  return mockSessionValid(options.session) ? withPasswordAuth(api) : refuseWithoutSession(api);
-}
-
-// Every API call returns a promise, so each can start late.
-function withLatency<T extends object>(api: T, ms: number): T {
-  const wait = () => new Promise(resolve => setTimeout(resolve, ms));
-  return Object.fromEntries(
-    Object.entries(api).map(([key, call]) => [key, (...args: unknown[]) => wait().then(() => (call as (...args: unknown[]) => unknown)(...args))])
-  ) as T;
-}
+export const createMockApi = (options: MockOptions) => createSharedMockApi({...options, fixtures: demoFixtures});

@@ -2,7 +2,7 @@ import {nodeProbeSupport} from '../src/dae/probes';
 import type {Api} from '../src/api/api';
 import type {Capabilities, GroupSelectionResult} from '../src/api/model';
 import {ApiError} from '../src/api/error';
-import * as fixtures from './fixtures/inventory';
+import * as standardFixtures from './fixtures/inventory';
 import {observedAt} from './fixtures/clock';
 import {found, createPager} from './common';
 import {patchGroupConfig, probeMembers, probeResult, resolveLeaf} from './control';
@@ -59,7 +59,8 @@ export function createInventory(
   interrupt: (groupId: string, network: 'tcp' | 'udp') => boolean,
   geodata: MockGeodataState,
   faults = false,
-  acceptWrites = false
+  acceptWrites = false,
+  fixtures: typeof standardFixtures = standardFixtures
 ) {
   const nodePage = createPager('nodes');
   const providerPage = createPager('providers');

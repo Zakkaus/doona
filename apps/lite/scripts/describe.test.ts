@@ -15,7 +15,7 @@ import {rustRegexToJs} from '../../../src/dae/rustRegex';
 import {quote} from '../../../src/dae/text';
 import {compileFilters} from '../../../src/dae/groupFilters';
 import {regionOf} from '../src/regions';
-import {nodeFixtures} from '../src/demo/inventory';
+import {demoFixtures} from '../src/demo/createMockApi';
 
 const zh = catalogs['zh-CN'];
 const tw = catalogs['zh-TW'];
@@ -252,7 +252,7 @@ describe('subscription bindings', () => {
     ].map(name => [name, false] as const)
   ])('selects %s: %s', (name, expected) => expect(matches(name)).toBe(expected));
   it('agrees with region detection over the demo inventory', () => {
-    const names = nodeFixtures(600).nodes.map(node => node.name);
+    const names = demoFixtures.inventory.nodeFixtures(600).nodes.map(node => node.name);
     expect(names.some(matches)).toBe(true);
     for (const name of names.filter(matches)) expect(selected, name).toContain(regionOf(name));
   });

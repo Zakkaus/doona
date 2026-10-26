@@ -1,5 +1,7 @@
 import type {Api} from '../src/api/api';
 import type {OperationReader} from './lifecycle';
+import type * as configurationFixtures from './fixtures/configuration';
+import type * as inventoryFixtures from './fixtures/inventory';
 import {capabilities as fullCapabilities, capabilitiesBase, capabilitiesM1} from './fixtures/capabilities';
 import {createConfiguration} from './configuration';
 import {createInventory} from './inventory';
@@ -14,7 +16,8 @@ export type MockApi = Api & OperationReader;
 // A saved demo profile signs in as a password backend does; with no profile at all (development, the test suites)
 // the mock serves every read straight away. `faults` selects the faults scenario where storage cannot, as for the
 // specs' in-process backend. `acceptWrites` answers node and provider writes with 202 and an operation, as a honk
-// that runs them in the background does.
+// that runs them in the background does. `fixtures` replaces the seeded configuration and inventory, as lite's demo
+// does to show more subscriptions.
 export type MockOptions = {
   capabilities?: typeof fullCapabilities;
   faults?: boolean;
@@ -22,6 +25,7 @@ export type MockOptions = {
   session?: string | null;
   acceptWrites?: boolean;
   isolated?: boolean;
+  fixtures?: {configuration: typeof configurationFixtures; inventory: typeof inventoryFixtures};
 };
 
 export function createMockApi(options: MockOptions = {}): MockApi {
@@ -80,7 +84,8 @@ export function createMockApi(options: MockOptions = {}): MockApi {
     () => inventory.groupNames(),
     (text, revision) => inventory.activate(text, revision),
     geodata,
-    faults
+    faults,
+    options.fixtures?.configuration
   );
   const lifecycle = createLifecycle(
     capabilities.resources.logs,
@@ -115,7 +120,8 @@ export function createMockApi(options: MockOptions = {}): MockApi {
     network.interrupt,
     geodata,
     faults,
-    options.acceptWrites
+    options.acceptWrites,
+    options.fixtures?.inventory
   );
   let api = {...runtime.api, ...lifecycle.api, ...network.api, ...inventory.api, ...configuration.api};
   if (latency) api = withLatency(api, latency);

@@ -16,15 +16,6 @@ export default defineConfig({
       name: 'lite-boundary',
       enforce: 'pre',
       resolveId(source, importer) {
-        if (source === '../src/dae/groupFilters' && importer?.endsWith('/mock/activation.ts')) {
-          return fileURLToPath(new URL('./src/demo/groupFilters.ts', import.meta.url));
-        }
-        if (source === './fixtures/inventory' && importer?.endsWith('/mock/inventory.ts')) {
-          return fileURLToPath(new URL('./src/demo/inventory.ts', import.meta.url));
-        }
-        if (source === './fixtures/configuration' && importer?.endsWith('/mock/configuration.ts')) {
-          return fileURLToPath(new URL('./src/demo/configuration.ts', import.meta.url));
-        }
         if (source === '../fonts' && importer?.endsWith('/src/i18n/index.ts')) {
           return fileURLToPath(new URL('./src/systemFonts.ts', import.meta.url));
         }
