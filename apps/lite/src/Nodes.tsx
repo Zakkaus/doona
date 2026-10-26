@@ -69,7 +69,7 @@ export function Nodes({connection, setBusy}: {connection: Connection; setBusy: (
   const expectedCount = useExpectedCount(connection.api, 'nodes', (read.data?.nodes ?? nodeSnapshot(connection.api))?.length);
   const task = useTask(setBusy);
   const probes = useNodeProbes(connection);
-  const groupDraft = useFeatureDraft(connection, read.data?.source, setBusy, read.reload);
+  const groupDraft = useFeatureDraft(connection, read.data?.source, setBusy, async () => void (await read.reload()));
   const [groupNode, setGroupNode] = useState<Node | null>(null);
   useNoticeToast(task.notice);
   useFocusRefresh(read.reload, !!read.data && task.busy === null && !groupDraft.dirty);

@@ -126,17 +126,19 @@ async function quickSwitch(b, width) {
   await optionalName.fill('');
   await expect(saveSubscription).toBeEnabled();
   await saveSubscription.click();
-  const hostSubscription = p.locator('[data-provider-id="sub.example.org"]');
-  await hostSubscription.waitFor();
+  const draftSubscription = p.locator('[data-provider-id="draft:sub.example.org"]');
+  await draftSubscription.waitFor();
   await p.waitForFunction(() =>
     document
-      .querySelector('[data-provider-id="sub.example.org"]')
+      .querySelector('[data-provider-id="draft:sub.example.org"]')
       ?.getAnimations()
       .some(animation => animation.id === 'row-highlight')
   );
+  await expect(draftSubscription).toBeInViewport();
+  await apply(p);
+  const hostSubscription = p.locator('[data-provider-id="sub.example.org"]');
   await expect(hostSubscription).toContainText('sub.example.org');
-  await expect(hostSubscription).toBeInViewport();
-  await expect(p.getByRole('status').filter({hasText: 'Added sub.example.org'}).first()).toBeVisible();
+  await expect(p.getByRole('status').filter({hasText: 'Configuration saved and applied.'}).first()).toBeVisible();
   await expect(hostSubscription).toContainText('No nodes');
   await hostSubscription.locator('.astryx-collapsible-trigger').click();
   await expect(hostSubscription.getByText('This subscription returned no nodes', {exact: true})).toBeVisible();
@@ -145,7 +147,7 @@ async function quickSwitch(b, width) {
   await expect(p.getByRole('dialog')).toContainText('The name cannot be changed after creation because groups may refer to it.');
   await p.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(p.getByRole('dialog')).not.toBeVisible();
-  console.log('PASS link-only subscription: validation, host placeholder/name, highlight, viewport, toast, automatic update, empty state and edit hint');
+  console.log('PASS link-only subscription: validation, host placeholder/name, highlight, viewport, review, automatic update, empty state and edit hint');
   await p.getByRole('link', {name: 'Groups', exact: true}).click();
   await p.getByRole('button', {name: 'Create group', exact: true}).click();
   await p.getByRole('textbox', {name: 'Name', exact: true}).fill('test-group');

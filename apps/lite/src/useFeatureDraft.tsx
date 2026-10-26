@@ -1,17 +1,28 @@
 import {useState} from 'react';
 import {useExportDraft} from './ui/exportDraft';
 import type {ConfigSource} from '../../../src/api/model';
-import {applyContent, type Connection} from './api';
+import {applyContent, LiteError, type Connection} from './api';
 import {validateContent} from './config';
-import {useTask} from './state';
+import {useTask, type Notice} from './state';
 import {useNoticeToast} from './ui';
 import {DraftBar} from './ui/DraftBar';
 import {useDraftGuard} from './ui/draftGuard';
 import {DraftPresence} from './ui/motion/DraftPresence';
 import {ReviewDialog} from './ui/ReviewDialog';
 
-export function useFeatureDraft(connection: Connection, source: ConfigSource | undefined, setBusy: (busy: boolean) => void, reload: () => Promise<unknown>) {
-  const [draft, setDraft] = useState<{source: ConfigSource; content: string; summary: Record<string, string>}>();
+type Draft = {source: ConfigSource; content: string; summary: Record<string, string>};
+export function stageDraft(previous: Draft | undefined, source: ConfigSource, content: string, key: string, summary: string): Draft | undefined {
+  const base = previous?.source ?? source;
+  return content === base.content ? undefined : {source: base, content, summary: {...previous?.summary, [key]: summary}};
+}
+
+export function useFeatureDraft(
+  connection: Connection,
+  source: ConfigSource | undefined,
+  setBusy: (busy: boolean) => void,
+  reload: () => Promise<Notice | void>
+) {
+  const [draft, setDraft] = useState<Draft>();
   const [reviewing, setReviewing] = useState(false);
   const task = useTask(setBusy);
   const dirty = !!draft && draft.source.content !== draft.content;
@@ -19,11 +30,7 @@ export function useFeatureDraft(connection: Connection, source: ConfigSource | u
   useExportDraft(draft?.source, dirty, () => draft!.content);
   useNoticeToast(task.notice);
   const stage = (content: string, key: string, summary: string) => {
-    if (source)
-      setDraft(previous => {
-        const base = previous?.source ?? source;
-        return content === base.content ? undefined : {source: base, content, summary: {...previous?.summary, [key]: summary}};
-      });
+    if (source) setDraft(previous => stageDraft(previous, source, content, key, summary));
   };
   return {
     dirty,
@@ -63,11 +70,12 @@ export function useFeatureDraft(connection: Connection, source: ConfigSource | u
             await applyContent(connection, draft.source, draft.content);
             setDraft(undefined);
             try {
-              await reload();
+              return (await reload()) ?? {key: 'changesSaved'};
+            } catch {
+              throw new LiteError('writtenNotRead');
             } finally {
               setReviewing(false);
             }
-            return {key: 'changesSaved'};
           })
         }
       />

@@ -32,20 +32,20 @@ import {Text} from '@astryxdesign/core/Text';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import {lazy, Suspense, useCallback, useContext, useEffect, useState} from 'react';
 import type {Node, Provider} from '../../../src/api/model';
-import {applyContent, LiteError, readMain, readProviders, providerSnapshot, mainSnapshot, refreshProvider, type Connection} from './api';
+import {LiteError, readMain, readProviders, providerSnapshot, mainSnapshot, refreshProvider, type Connection} from './api';
 import {LocaleContext, useMessages} from './i18n';
-import {noticeText, useFocusRefresh, useRead, useTask, type Notice} from './state';
+import {noticeText, useFocusRefresh, useRead, useTask} from './state';
 import {Feedback, ReadState, useNoticeToast} from './ui';
 import {DateStamp} from './ui/DateStamp';
 import {StatusLabel} from './ui/StatusLabel';
 import {RowEntrance} from './ui/motion';
 import {revealRow} from './ui/motion/revealRow';
-import {PAGE_SIZE, usePaged} from './ui/usePaged';
+import {usePaged} from './ui/usePaged';
 
-import {groupsNamingTag} from '../../../src/dae/groups';
-import {completeSubscriptionUrl, isSubscriptionUrl, readSubscriptionEntries, writeSubscriptionEntry} from '../../../src/dae/subscriptions';
-import {isQuotable, quote} from '../../../src/dae/text';
-import {appendEntry, canWrite, readNodes, removeEntry} from './config';
+import {completeSubscriptionUrl, isSubscriptionUrl, readSubscriptionEntries} from '../../../src/dae/subscriptions';
+import {isQuotable} from '../../../src/dae/text';
+import {canWrite, readNodes} from './config';
+import {refreshAdded, stageSubscription} from './subscriptionDraft';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
 import {Layout, LayoutContent, LayoutFooter} from '@astryxdesign/core/Layout';
 import {DialogActions} from './ui/DialogActions';
@@ -59,6 +59,7 @@ const status = {
   never: {key: 'providerNever', variant: 'neutral'},
   empty: {key: 'providerEmpty', variant: 'warning'}
 } as const;
+const summaryKeys = {add: 'reviewSubscriptionAdded', edit: 'reviewSubscriptionChanged', delete: 'reviewSubscriptionRemoved'} as const;
 
 export function Subscriptions({connection, setBusy}: {connection: Connection; setBusy: (busy: boolean) => void}) {
   const {api, capabilities} = connection;
@@ -72,12 +73,11 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
   useProbeUpdates(probes);
   const [groupNode, setGroupNode] = useState<Node | null>(null);
   const draft = useFeatureDraft(connection, config.data, setBusy, async () => {
-    const previous = new Set((read.data ?? []).map(provider => provider.id));
+    const before = read.data ?? [];
     const providers = await reload();
-    for (const provider of providers.filter(provider => provider.kind === 'subscription' && !previous.has(provider.id))) {
-      if (canRefresh) await refreshProvider(api, provider.id);
-    }
+    const notice = canRefresh ? await refreshAdded(connection, before, providers) : undefined;
     await read.reload();
+    return notice;
   });
   const [interval, setInterval] = useState('');
   const [originalInterval, setOriginalInterval] = useState<number | null>(null);
@@ -102,10 +102,7 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
   const [original, setOriginal] = useState('');
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
-  const [added, setAdded] = useState<Notice>();
   const [reveal, setReveal] = useState<string | null>(null);
-  const [fetchingNew, setFetchingNew] = useState<string | null>(null);
-  useNoticeToast(added);
   const close = () => {
     setDialog(null);
     setUrl('');
@@ -230,7 +227,7 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                 }
                 setBatch({done, failed});
                 await read.reload().catch(() => {});
-                return {key: failed.length ? 'refreshPartial' : 'refreshed', warning: failed.length > 0};
+                return {key: failed.length ? 'refreshPartial' : 'refreshed'};
               })
             }
           />
@@ -311,15 +308,13 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                   ))}
                 {pageRows.map(provider => {
                   const state =
-                    fetchingNew === provider.name
-                      ? status.never
-                      : provider.status === 'error' || (!provider.updated_at && provider.last_error)
-                        ? status.error
-                        : !provider.updated_at
-                          ? status.never
-                          : provider.node_count === 0
-                            ? status.empty
-                            : status[provider.status];
+                    provider.status === 'error' || (!provider.updated_at && provider.last_error)
+                      ? status.error
+                      : !provider.updated_at
+                        ? status.never
+                        : provider.node_count === 0
+                          ? status.empty
+                          : status[provider.status];
                   return (
                     <VStack as="li" key={provider.id} data-provider-id={provider.id} tabIndex={-1} className="lite-subscription-row">
                       <Grid className="lite-disclosure-grid" style={compact ? {gridTemplateColumns: 'minmax(0, 1fr) fit-content(50%)'} : undefined}>
@@ -402,7 +397,7 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                               icon={<Icon icon={Refresh} size="sm" />}
                               variant="ghost"
                               size="sm"
-                              isLoading={task.busy === provider.id || fetchingNew === provider.name}
+                              isLoading={task.busy === provider.id}
                               isDisabled={!canRefresh || task.busy !== null || read.loading || provider.id.startsWith('draft:')}
                               onClick={() =>
                                 void task.run(provider.id, async () => {
@@ -446,8 +441,7 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                               },
                               {
                                 label: t.delete,
-                                isDisabled:
-                                  !writable || draft.dirty || draft.busy || task.busy !== null || read.loading || !entries.some(e => e.tag === provider.name),
+                                isDisabled: !writable || task.busy !== null || draft.busy || read.loading || !entries.some(e => e.tag === provider.name),
                                 onClick: () => edit(provider, 'delete')
                               }
                             ]}
@@ -543,75 +537,32 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                             }
                           : undefined
                       }
-                      onConfirm={() =>
+                      onConfirm={() => {
+                        const kind = dialog;
+                        if (!kind) return;
                         void task.run('save', async () => {
                           if (!config.data || !writable) throw new LiteError('readOnly');
                           if (
                             !isQuotable(savedName) ||
-                            (dialog === 'add' && (entries.some(e => e.tag === savedName) || read.data?.some(item => item.name === savedName)))
+                            (kind === 'add' && (entries.some(e => e.tag === savedName) || read.data?.some(item => item.name === savedName)))
                           )
                             throw new LiteError('invalidField');
-                          const current = await api.config();
-                          if (
-                            dialog !== 'add' &&
-                            readSubscriptionEntries(config.data.content).some(entry => entry.tag === original) &&
-                            current.sources.flatMap(source => readSubscriptionEntries(source.content)).filter(entry => entry.tag === original).length !== 1
-                          )
-                            throw new LiteError('incomplete');
-                          let content = draft.content;
-                          if (dialog === 'add') content = appendEntry(content, 'subscription', `${quote(savedName)}: ${quote(completeSubscriptionUrl(url))}`);
-                          else if (dialog === 'edit')
-                            content = writeSubscriptionEntry(content, original, {
-                              url: completeSubscriptionUrl(url),
-                              ...(interval !== '' ? {interval: intervalSeconds} : {})
-                            });
-                          else {
-                            const entry = entries.find(e => e.tag === original);
-                            if (!entry) throw new LiteError('conflict');
-                            // Refuse removal while any source still names this subscription.
-                            const all = await api.config();
-                            if (all.sources.some(source => groupsNamingTag(source.content, original).length)) throw new LiteError('referenced');
-                            content = removeEntry(content, entry);
-                          }
-                          if (dialog === 'add' && interval !== '') content = writeSubscriptionEntry(content, savedName, {interval: intervalSeconds});
-                          if (dialog !== 'delete' && (draft.dirty || (interval !== '' && intervalSeconds !== originalInterval))) {
-                            draft.stage(
-                              content,
-                              `subscription:${savedName}`,
-                              t.intervalChanged.replace('{name}', savedName).replace('{interval}', intervalSummary(intervalSeconds, t) || t.intervalDisabled)
-                            );
-                            close();
-                            if (dialog === 'add') {
-                              setSearch(savedName);
-                              setReveal(`draft:${savedName}`);
-                            }
-                            return undefined;
-                          }
-                          await applyContent(connection, config.data, content);
-                          const providers = await reload().catch(() => {
-                            throw new LiteError('writtenNotRead');
-                          });
+                          const subject = kind === 'add' ? savedName : original;
+                          await stageSubscription(
+                            connection,
+                            config.data,
+                            draft,
+                            {kind, name: subject, url, interval: interval === '' ? undefined : intervalSeconds},
+                            noticeText(t[summaryKeys[kind]], {name: subject})
+                          );
                           close();
-                          if (dialog === 'add') {
-                            const provider = providers.find(item => item.kind === 'subscription' && item.name === savedName);
-                            setAdded({key: 'subscriptionAdded', values: {name: savedName}});
-                            if (provider) {
-                              if (search || providers.filter(item => item.kind === 'subscription').length > PAGE_SIZE) setSearch(savedName);
-                              setReveal(provider.id);
-                              setFetchingNew(savedName);
-                              try {
-                                const result = await refreshProvider(api, provider.id);
-                                if ('degraded' in result) return {key: 'degraded', warning: true};
-                              } finally {
-                                setFetchingNew(null);
-                                await read.reload().catch(() => {});
-                              }
-                            }
-                            return;
+                          if (kind === 'add') {
+                            setSearch(savedName);
+                            setReveal(`draft:${savedName}`);
                           }
-                          return {key: 'changesSaved'};
-                        })
-                      }
+                          return undefined;
+                        });
+                      }}
                     />
                   </LayoutFooter>
                 }
