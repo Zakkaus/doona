@@ -303,3 +303,25 @@ test('long template explanations remain available in contextual help', async ({p
   await page.keyboard.press('Escape');
   await expect(help).toBeFocused();
 });
+
+test('hidden rule and trace tabs stop fetching flows and inventory', async ({page}) => {
+  const {requests, capabilities} = await mockBackend(page);
+  capabilities.resources.events.available = false;
+  await page.clock.install();
+  await page.goto('/#/rules?view=advanced');
+  await expect(page.getByRole('tabpanel', {name: 'Routing rules'}).getByRole('rowheader').first()).toBeVisible();
+  await page.getByRole('tab', {name: 'Trace simulation', exact: true}).click();
+  await expect(page.getByRole('tabpanel', {name: 'Trace simulation'})).toBeVisible();
+  await expect.poll(() => requests.filter(request => new URL(request.url()).pathname === '/api/v1/nodes').length).toBeGreaterThan(0);
+  await page.getByRole('tab', {name: 'DNS rules', exact: true}).click();
+  await expect(page.getByRole('tabpanel', {name: 'DNS rules'})).toBeVisible();
+  const reads = () => requests.filter(request => /\/api\/v1\/(flows|nodes|groups)(?:\?|$)/.test(request.url())).length;
+  await settleFrames(page);
+  const before = reads();
+  expect(before).toBeGreaterThan(0);
+  await page.clock.fastForward(60_000);
+  await settleFrames(page);
+  expect(reads()).toBe(before);
+  await page.getByRole('tab', {name: 'Routing rules', exact: true}).click();
+  await expect.poll(reads).toBeGreaterThan(before);
+});

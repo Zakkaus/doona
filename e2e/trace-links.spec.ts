@@ -77,7 +77,7 @@ test('a connection opens the trace of its target and source', async ({page}) => 
   await page.goto('/#/connections?tab=list&id=1');
   await moreAction(detail(page), 'Trace this connection');
   await expect(page).toHaveURL(/#\/rules\?tab=trace&network=tcp&domain=api\.telegram\.org&dst_ip=149\.154\.167\.220&dst_port=443&src_ip=10\.0\.0\.12$/);
-  await expect(page.getByLabel('Domain', {exact: true})).toHaveValue('api.telegram.org');
+  await expect(page.getByRole('textbox', {name: 'Domain', exact: true})).toHaveValue('api.telegram.org');
   await expect(page.getByLabel('Destination IP', {exact: true})).toHaveValue('149.154.167.220');
   await expect(page.getByLabel('Source IP', {exact: true})).toHaveValue('10.0.0.12');
   // The link pushed history: Back returns to the connection.
@@ -154,7 +154,7 @@ test('a resolved name opens in DNS Query and the DNS cache', async ({page}) => {
     .first();
   await dns.getByRole('link', {name: 'Query DNS', exact: true}).click();
   await expect(page).toHaveURL(/#\/dns\?tab=query&domain=api\.telegram\.org$/);
-  await expect(page.getByLabel('Domain', {exact: true})).toHaveValue('api.telegram.org');
+  await expect(page.getByRole('textbox', {name: 'Domain', exact: true})).toHaveValue('api.telegram.org');
   await page.goBack();
   await page.getByRole('button', {name: 'Run trace', exact: true}).click();
   await dns.getByRole('link', {name: 'View cache', exact: true}).click();

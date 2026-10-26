@@ -43,10 +43,15 @@ const delta = (a, b) => ({script: b.script - a.script, layout: b.layout - a.layo
 
 // A page counts as ready when its heading is on screen and nothing in it is still loading.
 async function ready(page) {
-  await page.locator('.rp-content').getByRole('heading').first().waitFor();
+  const shown = page.locator('.rp-content');
+  await page.locator('.rp-content h1:visible').waitFor();
   const route = new URL(page.url()).hash.slice(2).split('?')[0];
-  await page.locator('.rp-content').locator(content[route]).first().waitFor();
-  await page.waitForFunction(() => !document.querySelector('.rp-content .rp-empty[role=status]'), null, {timeout: 60_000});
+  await shown.locator(content[route]).filter({visible: true}).first().waitFor();
+  await page.waitForFunction(
+    () => !Array.from(document.querySelectorAll('.rp-content .rp-empty[role=status]')).some(element => element.checkVisibility()),
+    null,
+    {timeout: 60_000}
+  );
 }
 
 // `big` loads the long-list fixture (3,000 nodes and their connections and flows). Ordinary page

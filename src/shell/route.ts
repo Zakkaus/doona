@@ -126,23 +126,24 @@ export function useRoute(api: string | null, startPage: RoutePath = defaultRoute
   const current = useRef(loc);
   // A new page renders as a transition, so the old page stays on screen and responsive while React builds the next one
   // in slices; an update within one page stays urgent, so what it changes shows with the event that changed it.
-  const accept = useCallback((next: Route) => {
+  const accept = useCallback((next: Route, urgent = false) => {
     const from = current.current;
     current.current = next;
-    if (from.route === next.route) setLoc(next);
+    if (urgent || from.route === next.route) setLoc(next);
     else startTransition(() => setLoc(next));
   }, []);
   const push = useCallback(
-    (next: Route, replace = false) => {
+    (next: Route, replace = false, urgent = false) => {
       if (replace) history.replaceState({...history.state, doonaPosition: position.current}, '', buildHash(next.route, next.query));
       else history.pushState({doonaPosition: ++position.current}, '', buildHash(next.route, next.query));
-      accept(next);
+      accept(next, urgent);
     },
     [accept]
   );
   // A layout effect, so it is in place before a page's own effects run on the first render.
   useLayoutEffect(() => {
-    replaceShellRoute = next => push(updateRoute(current.current, buildHash(next.route, next.query)), true);
+    // Replacements can run during submit before a reload; do not start a React form transition.
+    replaceShellRoute = next => push(updateRoute(current.current, buildHash(next.route, next.query)), true, true);
     return () => {
       replaceShellRoute = null;
     };

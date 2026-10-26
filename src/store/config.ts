@@ -33,6 +33,7 @@ async function completeSource(source: Pick<ConfigSource, 'content' | 'content_sh
 type Verdicts = ReadonlyMap<string, {content: string | undefined; complete: boolean}>;
 let verdicts: Verdicts = new Map();
 const VERDICTS_KEPT = 64;
+const activeSources = new Set<ReadonlySet<string>>();
 const verdictKey = (source: ConfigSource) => `${source.id}\u0000${source.content_sha256}`;
 const verdictIn = (known: Verdicts, source: ConfigSource) => {
   const found = known.get(verdictKey(source));
@@ -44,25 +45,28 @@ const answered = (known: Verdicts, sources: ConfigSource[]) => sources.every(sou
 export function useCompleteness(sources: ConfigSource[]): (source: ConfigSource) => boolean | undefined {
   const [known, setKnown] = useState(verdicts);
   useEffect(() => {
+    const held = new Set(sources.map(verdictKey));
+    activeSources.add(held);
+    let live = true;
     const show = () => setKnown(current => (answered(current, sources) ? current : verdicts));
     const unknown = sources.filter(source => verdictIn(verdicts, source) === undefined);
     if (!unknown.length) {
       show();
-      return;
-    }
-    let live = true;
-    void Promise.all(unknown.map(async source => [source, await completeSource(source)] as const)).then(results => {
-      const next = new Map(verdicts);
-      for (const [source, complete] of results) {
-        next.delete(verdictKey(source));
-        next.set(verdictKey(source), {content: source.content, complete});
-      }
-      for (const key of next.keys()) if (next.size > VERDICTS_KEPT) next.delete(key);
-      verdicts = next;
-      if (live) show();
-    });
+    } else
+      void Promise.all(unknown.map(async source => [source, await completeSource(source)] as const)).then(results => {
+        const next = new Map(verdicts);
+        for (const [source, complete] of results) {
+          next.delete(verdictKey(source));
+          next.set(verdictKey(source), {content: source.content, complete});
+        }
+        const active = new Set([...activeSources].flatMap(keys => [...keys]));
+        for (const key of next.keys()) if (next.size > VERDICTS_KEPT && !active.has(key)) next.delete(key);
+        verdicts = next;
+        if (live) show();
+      });
     return () => {
       live = false;
+      activeSources.delete(held);
     };
   }, [sources]);
   return useCallback((source: ConfigSource) => verdictIn(known, source), [known]);
