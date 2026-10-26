@@ -1543,7 +1543,7 @@
   "search.sources": "配置文件",
   "settings.about": "关于",
   "settings.addProfile": "新建配置方案",
-  "settings.apiHelp": "填写后端的根网址或反向代理前缀，不是 /api/v1；留空或填写 mock 可使用内置演示数据。",
+  "settings.apiHelp": "填写后端的根网址或反向代理前缀，不是 /api/v1；填写 mock 可使用内置演示数据。",
   "settings.apiMajor": "后端 API 主版本为 {major}，本面板按 API 主版本 1 的契约实现；字段可能不兼容。",
   "settings.appearance": "外观",
   "settings.apply": "应用",

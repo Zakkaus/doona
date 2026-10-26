@@ -740,3 +740,17 @@ for (const variant of [
     await expect(dialog).toHaveCount(0);
     expect((await main()).content).toContain(`# 🇨🇳 ${variant.group}\n  cn {`);
   });
+
+for (const destination of ['DNS rules', 'Policies']) {
+  test(`rc1 template selection guards leaving for ${destination}`, async ({page}) => {
+    await backend(page);
+    await page.goto('/#/rules?tab=list&view=simple');
+    await choose(page, 'Global proxy');
+    if (destination === 'DNS rules') await page.getByRole('tab', {name: destination, exact: true}).click();
+    else await page.locator('nav').getByRole('link', {name: destination, exact: true}).click();
+    const discard = page.getByRole('alertdialog');
+    await expect(discard).toBeVisible();
+    await discard.getByRole('button', {name: 'Cancel', exact: true}).click();
+    await expect(modes(page).getByRole('radio', {name: 'Global proxy', exact: true})).toBeChecked();
+  });
+}

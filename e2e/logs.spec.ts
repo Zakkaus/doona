@@ -246,3 +246,23 @@ test('the log list stays in place when the first records arrive', async ({page})
   await expect(page.getByRole('group', {name: 'Log activity over time'})).toBeVisible();
   expect(Math.abs((await top()) - before)).toBeLessThanOrEqual(1);
 });
+
+for (const width of [1280, 390]) {
+  test(`rc1 log actions stay in the toolbar and wrap whole controls at ${width}`, async ({page}) => {
+    await page.setViewportSize({width, height: 900});
+    await page.goto('/#/logs');
+    const toolbar = page.locator('main [data-page-toolbar]');
+    const names = width === 1280 ? ['Clear', 'Export', 'Recording settings'] : ['Clear', 'More actions'];
+    const buttons = names.map(name => toolbar.getByRole('button', {name, exact: true}).and(toolbar.locator('.rp-btn')));
+    for (const button of buttons) await expect(button).toBeVisible();
+    const controls = await Promise.all(buttons.map(button => button.boundingBox()));
+    if (width === 1280) {
+      const level = await toolbar.getByRole('button', {name: /Level$/}).boundingBox();
+      for (const control of controls) expect(Math.abs(control!.y - level!.y)).toBeLessThanOrEqual(1);
+    }
+    for (const control of controls) {
+      expect(control!.x).toBeGreaterThanOrEqual(0);
+      expect(control!.x + control!.width).toBeLessThanOrEqual(width);
+    }
+  });
+}

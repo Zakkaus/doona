@@ -155,6 +155,10 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
     }
   })();
   const validate = (value: string) => {
+    if (!value.trim()) {
+      setInvalid(true);
+      return null;
+    }
     try {
       const base = normalizeApi(value);
       setInvalid(false);
