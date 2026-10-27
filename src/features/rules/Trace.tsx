@@ -137,6 +137,7 @@ export function Trace({form: state, go}: {form: TraceForm; go: PageProps['go']})
               onChange={value => setForm({...form, dscp: textFromNumber(value)})}
               error={trace.errors.dscp}
             />
+            <TextField label={t('rule.mark')} value={form.mark} placeholder="0x1" onChange={mark => setForm({...form, mark})} error={trace.errors.mark} />
           </Toolbar>
         </Disclosure>
         {trace.ipOnly && <span className="rp-label">{t('rule.ipOnly')}</span>}
