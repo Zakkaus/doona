@@ -4,7 +4,7 @@
 
 ## 頁面
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-TW/policies-light.webp" alt="策略頁" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/zh-TW/policies-light.webp" alt="策略頁" width="100%">
 
 | 頁面       | 內容                                                                                                                       |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -22,11 +22,11 @@
 
 只有頁面需要的資源全部不可用時，頁面才會標為不可用。後端列出 DNS 規則時才顯示對應分頁；編輯須有可寫入的來源檔案。連線、分流與規則頁開啟期間會請求流程，無須將流程記錄設為常開。
 
-任何頁面按 `Ctrl K` 可搜尋頁面、連線、節點、群組、規則與來源。各頁面需要的資源與 doona 自身設定的存放位置，見[功能](https://zakkaus.github.io/doona-docs/zh-TW/features.html#pages)一頁。不易理解的狀態與術語旁設有說明按鈕，按下即顯示說明。
+任何頁面按 `Ctrl K` 可搜尋頁面、連線、節點、群組、規則與來源。各頁面需要的資源與 doona 自身設定的存放位置，見[功能](https://doona.daeuniverse.org/zh-TW/features.html#pages)一頁。不易理解的狀態與術語旁設有說明按鈕，按下即顯示說明。
 
 登入為獨立頁面：登入卡片置中顯示於主題背景上，右上角設有語言、配色與主題三個控制項。示範版預先填入使用者名稱 `demo` 與密碼 `demo`。
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-TW/rules-light.webp" alt="規則頁" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/zh-TW/rules-light.webp" alt="規則頁" width="100%">
 
 ## 頁面導覽
 
@@ -44,9 +44,9 @@
 
 連線頁的流量分頁以散佈圖呈現每條連線的上傳量與下載量，並依出站著色；選取資料點即可開啟對應的連線。連線分頁依裝置或出站將即時連線分組，可依協定與出站篩選，並匯出為 CSV。
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-TW/connections-traffic.webp" alt="連線頁的流量分頁" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/zh-TW/connections-traffic.webp" alt="連線頁的流量分頁" width="100%">
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-TW/connections-list.webp" alt="依裝置分組的即時連線" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/zh-TW/connections-list.webp" alt="依裝置分組的即時連線" width="100%">
 
 ### DNS
 
@@ -56,25 +56,25 @@
 
 關鍵字會比對網域名稱中任意位置的文字，例如 `cdn` 會比對到 `cdn.example.com`。後綴 `cdn` 只比對 `cdn` 或以 `.cdn` 結尾的網域。選擇記錄類型可進一步縮小結果範圍。清除篩選會重設比對條件，並移除頁面網址中的網域篩選條件。
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-TW/dns.webp" alt="DNS 頁的統計分頁" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/zh-TW/dns.webp" alt="DNS 頁的統計分頁" width="100%">
 
 ### 日誌時間分布
 
 日誌列表上方的熱圖按時間統計各級別的記錄數。點選級別的列標題，即可設定列表顯示的最低級別。
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-TW/logs.webp" alt="日誌時間分布熱圖" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/zh-TW/logs.webp" alt="日誌時間分布熱圖" width="100%">
 
 ### 分流總覽
 
 分流頁的分流總覽依規則或裝置，經出站追蹤到節點。將指標移到規則、出站或節點上，或選取其中一項，即可標示經過該項的路徑。規則頁追蹤模擬的進階欄位接受可選的 DSCP 整數，範圍為 0 至 63，用於評估 `dscp(...)` 規則。
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-TW/routing.webp" alt="在分流總覽中依序選取規則與節點" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/zh-TW/routing.webp" alt="在分流總覽中依序選取規則與節點" width="100%">
 
 ### 節點延遲
 
 節點頁的延遲分頁依策略群組或協定分組，顯示每個節點的目前延遲；後端提供時，另顯示移動平均與近 10 次平均。無法使用的節點列在所屬群組下方。在節點分頁開啟節點列，可檢視後端回報的各類探測最新結果，包括 TCP、HTTP、UDP 與 DNS，每項顯示延遲或失敗原因。
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-TW/latency.webp" alt="節點頁的延遲分頁" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/zh-TW/latency.webp" alt="節點頁的延遲分頁" width="100%">
 
 ### 組態與設定
 
@@ -82,9 +82,9 @@
 
 honk 的儲存訂閱內容（`global.store_subscribe`）將成功取得並通過檢查的訂閱內容儲存到 `<data_dir>/state/honk.db` 的 `subscription_body` 表，預設路徑為 `/var/lib/honk/state/honk.db`。變更這項設定須重新啟動 honk；訂閱的 `cache: false` 會停用其內容儲存與還原。獨立的 `.sub` 檔案屬於舊版儲存格式，啟動時的遷移規則見[固定版本的 honk 參考文件](https://github.com/Glassyiris/honk/blob/a949f1f1ff7e8e8852e76e02b60870e6bb1fd440/doc/en/reference/subscription.md#fetch-persistence-and-recovery)。
 
-![設定檔與來源編輯器](https://zakkaus.github.io/doona-docs/screenshots/zh-TW/config-source-light.webp)
+![設定檔與來源編輯器](https://doona.daeuniverse.org/screenshots/zh-TW/config-source-light.webp)
 
-![全域設定表單](https://zakkaus.github.io/doona-docs/screenshots/zh-TW/config-global-light.webp)
+![全域設定表單](https://doona.daeuniverse.org/screenshots/zh-TW/config-global-light.webp)
 
 設定頁分為一般與外觀兩個分頁。一般包含後端、執行時期、地理資料與探測設定；外觀包含配色、桌布與顯示偏好。
 
@@ -102,4 +102,4 @@ honk 的儲存訂閱內容（`global.store_subscribe`）將成功取得並通過
 
 透過 HTTPS 或在 localhost 上開啟時，doona 可安裝為應用程式。在 Chrome 與 Edge 中，設定頁的關於卡片提供安裝為應用程式按鈕。Safari 沒有安裝提示，因此卡片改為顯示操作步驟：iPhone 與 iPad 上點一下分享，再點一下加入主畫面；macOS 上的 Safari 26 選擇檔案 > 加入 Dock 中。
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/zh-TW/phone.webp" alt="手機上的 doona：連線表格、溢位選單及其配色子選單" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/zh-TW/phone.webp" alt="手機上的 doona：連線表格、溢位選單及其配色子選單" width="100%">

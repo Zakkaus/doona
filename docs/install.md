@@ -31,7 +31,7 @@ If the HTML opens but JavaScript or CSS requests return 403, inspect those reque
 
 Administrator creation has a separate restriction: honk checks the actual connection peer for a loopback, private or link-local address. The Host and Origin allowlists do not change that restriction.
 
-The [documentation](https://zakkaus.github.io/doona-docs/en/) covers the requirements, installing honk and doona, an example configuration, the first sign-in, checking each feature and troubleshooting.
+The [documentation](https://doona.daeuniverse.org/en/) covers the requirements, installing honk and doona, an example configuration, the first sign-in, checking each feature and troubleshooting.
 
 ## Release files
 
@@ -97,7 +97,7 @@ The attached honk builds embed the same doona version as the release; `ui: embed
 | No suffix             | mimalloc, the default allocator                       |
 | `-stock`              | The system allocator instead of mimalloc              |
 
-[Install honk](https://zakkaus.github.io/doona-docs/en/install.html#install) explains which build fits a gateway and how to verify and install it.
+[Install honk](https://doona.daeuniverse.org/en/install.html#install) explains which build fits a gateway and how to verify and install it.
 
 ### Checksums and source
 

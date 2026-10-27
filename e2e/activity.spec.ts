@@ -198,7 +198,7 @@ test('read-only main configuration keeps the current mode and explains the write
   await expect(page.getByRole('dialog', {name: 'Why is the mode read-only?'})).toContainText('honk requires configuration writes');
   await expect(page.getByRole('link', {name: 'Read-only config files'})).toHaveAttribute(
     'href',
-    'https://zakkaus.github.io/doona-docs/en/troubleshooting.html#read-only'
+    'https://doona.daeuniverse.org/en/troubleshooting.html#read-only'
   );
   await expect(page.getByRole('button', {name: 'Apply', exact: true})).toHaveCount(0);
 });
