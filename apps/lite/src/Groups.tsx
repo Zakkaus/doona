@@ -43,7 +43,7 @@ import {useDraftGuard} from './ui/draftGuard';
 import {EditDialog} from './ui/EditDialog';
 import {policyLabel} from './ui/groupLabels';
 import {Close, Search} from './ui/icons';
-import {MEDIA} from './ui/metrics.stylex';
+import {groupListMinRem, MEDIA} from './ui/metrics.stylex';
 import {Crossfade, RowEntrance} from './ui/motion';
 import {DraftPresence} from './ui/motion/DraftPresence';
 import {revealRow} from './ui/motion/revealRow';
@@ -73,6 +73,7 @@ const dots: Record<GroupStatus, 'success' | 'warning' | 'error' | 'neutral'> = {
 export function Groups({connection, setBusy}: {connection: Connection; setBusy: (busy: boolean) => void}) {
   const t = useMessages();
   const phone = useMediaQuery(MEDIA.phone);
+  const wide = useMediaQuery(MEDIA.wide);
   const {api, capabilities} = connection;
   const read = useRead(useCallback((signal?: AbortSignal) => readGroups(api, signal), [api]));
   const resources = useRead(
@@ -126,7 +127,26 @@ export function Groups({connection, setBusy}: {connection: Connection; setBusy: 
   const [copyFrom, setCopyFrom] = useState<string | null>(null);
   const [groupText, setGroupText] = useState<{name: string; duplicate: boolean} | null>(null);
   const [pendingMember, setPendingMember] = useState<string | null>(null);
-  const panel = useResizable({defaultSize: 640, minSize: 480, maxSize: 880});
+  const [panelBounds, setPanelBounds] = useState({min: 480, max: 880});
+  const panel = useResizable({defaultSize: 640, minSize: wide ? 480 : panelBounds.min, maxSize: wide ? 880 : panelBounds.max});
+  const watchPanel = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!node || wide) return;
+      const row = node.parentElement!;
+      const update = () => {
+        const width = row.getBoundingClientRect().width;
+        if (!width) return;
+        const min = width * 0.45;
+        const listMin = groupListMinRem * parseFloat(getComputedStyle(document.documentElement).fontSize);
+        setPanelBounds({min, max: Math.min(880, Math.max(min, width - listMin))});
+      };
+      const observer = new ResizeObserver(update);
+      observer.observe(row);
+      update();
+      return () => observer.disconnect();
+    },
+    [wide]
+  );
   const list = useRef<HTMLDivElement>(null);
   const [reveal, setReveal] = useState<{name: string; added: boolean} | null>(null);
 
@@ -463,7 +483,7 @@ export function Groups({connection, setBusy}: {connection: Connection; setBusy: 
           phone ? undefined : (
             <>
               <ResizeHandle resizable={panel.props} isReversed isAlwaysVisible={false} label={t.resizeInspector} />
-              <LayoutPanel resizable={panel.props} hasDivider padding={0} label={t.groupDetails}>
+              <LayoutPanel ref={watchPanel} resizable={panel.props} hasDivider padding={0} label={t.groupDetails}>
                 <VStack gap={0} xstyle={styles.inspector}>
                   <CollectionLoading loading={!inspectorReady} name="group-inspector" prepared={expectedCount !== undefined}>
                     {showPlaceholder =>

@@ -5,6 +5,8 @@ export const geometry = stylex.defineVars({
   settingsHeight: 'min(50rem, calc(100dvh - var(--spacing-8)))',
   editorColumns: '15rem minmax(0, 1fr)'
 });
+// Room for list insets, a status dot, the policy, the latency and a name.
+export const groupListMinRem = 22;
 export const MEDIA = {
   wide: '(min-width: 1280px)',
   tablet: '(min-width: 768px)',
