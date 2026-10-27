@@ -2,29 +2,35 @@
 
 [English](themes.md) / 简体中文 / [繁體中文](themes.zh-TW.md)
 
-## 配色
+标准版定义了 15 套配色，每套都有浅色与深色。配色、壁纸及透明度的选择方法见[外观设置](https://doona.daeuniverse.org/zh-CN/config-and-settings.html#外观)。
 
-十五套配色各有浅色与深色。Rosé Pine 有两种，Catppuccin 有三种，玻璃有四种；另外六种是 Nord、Kary Pro Colors、Ant Design、Arco Design、Semi Design 与中国。中国配色的两种模式是白班与夜班。
+各套配色的浅色与深色效果见[配色图集](https://doona.daeuniverse.org/zh-CN/features.html#主题与配色)。
 
-玻璃系列是叠在壁纸上的材质。液态玻璃遵循 Apple 的 Liquid Glass，在 Chrome 与 Edge 中会让浮动面板、菜单与通知的边缘折射下方的页面。玻璃使用模糊与填色，不做折射；Firefox 与 Safari 中的液态玻璃也采用这种呈现方式。毛玻璃让所有表面使用同一种均匀模糊，背后的形状仍可隐约辨认。着色遵循 Microsoft 的 Mica，表面接近不透明，不做模糊。系统开启“降低透明度”或“增强对比度”时，所有玻璃配色都改用不透明表面与清晰的边框。
+## 源码索引
 
-中国配色将良好与运行中显示为稳中向好，将不可用与降级显示为严峻挑战。可在顶栏切换配色，或使用登录页的配色菜单。
+| 源码                                                        | 职责                                                               |
+| ----------------------------------------------------------- | ------------------------------------------------------------------ |
+| [src/shell/palettes.ts](../src/shell/palettes.ts)           | 配色 ID、菜单顺序、标签键、可选文案替换与默认配色 `rose-pine/moon` |
+| [src/shell/preferences.ts](../src/shell/preferences.ts)     | 已保存配色的校验，以及 `system`、`light`、`dark` 颜色模式          |
+| [src/shell/useAppearance.ts](../src/shell/useAppearance.ts) | 将 `data-family`、`data-flavour` 与 `data-scheme` 应用到文档根元素 |
+| [src/ui/styles/palettes/](../src/ui/styles/palettes/)       | 每个配色系列一个 CSS 文件，包含浅色与深色变量                      |
+| [src/ui/styles/palettes.css](../src/ui/styles/palettes.css) | 非玻璃配色系列的导入                                               |
+| [src/shell/glass.ts](../src/shell/glass.ts)                 | 按需加载玻璃样式与壁纸                                             |
+| [src/ui/charts/palette.ts](../src/ui/charts/palette.ts)     | 为图表读取 CSS 变量并监听配色变化                                  |
 
-设置页分为通用与外观两个标签页。配色菜单末尾的外观设置可打开外观标签页，选择配色或自定义壁纸。使用玻璃配色时，壁纸也会显示在登录卡片后方。
+## 配色约定
 
-<img src="https://doona.daeuniverse.org/screenshots/palettes.webp" alt="全部配色的浅色与深色" width="100%">
+配色 ID 的格式为 `family/flavour`。只有一种变体的系列重复名称，例如 `nord/nord`。CSS 选择器依据这两个值与 `data-scheme` 选择变量，组件使用共用的 `--rp-*` 变量。
 
-## 配色示例
+每套配色都提供表面、文字、强调色、图表、高亮与阴影变量。完整变量表及对比度规则见[新增配色](../CONTRIBUTING.md#add-a-palette)。[tools/palettes.test.mjs](../tools/palettes.test.mjs) 检查系列文件、导入与必需变量。
 
-下图展示活动页的八种配色。可在顶栏切换配色和模式。
+玻璃配色变量通过 [src/ui/styles/glass.css](../src/ui/styles/glass.css) 与材质样式一起加载。修改玻璃配色时须保留此独立加载方式。
 
-| 配色         | 浅色                                                                                         | 深色                                                                                        |
-| ------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Rosé Pine    | ![Rosé Pine 浅色](https://doona.daeuniverse.org/screenshots/en/theme-rose-pine-light.webp)   | ![Rosé Pine 深色](https://doona.daeuniverse.org/screenshots/en/theme-rose-pine-dark.webp)   |
-| Catppuccin   | ![Catppuccin 浅色](https://doona.daeuniverse.org/screenshots/en/theme-catppuccin-light.webp) | ![Catppuccin 深色](https://doona.daeuniverse.org/screenshots/en/theme-catppuccin-dark.webp) |
-| Nord         | ![Nord 浅色](https://doona.daeuniverse.org/screenshots/en/theme-nord-light.webp)             | ![Nord 深色](https://doona.daeuniverse.org/screenshots/en/theme-nord-dark.webp)             |
-| Liquid Glass | ![Liquid Glass 浅色](https://doona.daeuniverse.org/screenshots/en/theme-glass-light.webp)    | ![Liquid Glass 深色](https://doona.daeuniverse.org/screenshots/en/theme-glass-dark.webp)    |
-| Glass        | ![Glass 浅色](https://doona.daeuniverse.org/screenshots/en/theme-glass-clear-light.webp)     | ![Glass 深色](https://doona.daeuniverse.org/screenshots/en/theme-glass-clear-dark.webp)     |
-| Frosted      | ![Frosted 浅色](https://doona.daeuniverse.org/screenshots/en/theme-glass-frosted-light.webp) | ![Frosted 深色](https://doona.daeuniverse.org/screenshots/en/theme-glass-frosted-dark.webp) |
-| Tinted       | ![Tinted 浅色](https://doona.daeuniverse.org/screenshots/en/theme-glass-tinted-light.webp)   | ![Tinted 深色](https://doona.daeuniverse.org/screenshots/en/theme-glass-tinted-dark.webp)   |
-| 中国         | ![中国白班](https://doona.daeuniverse.org/screenshots/en/theme-qiangguo-light.webp)          | ![中国夜班](https://doona.daeuniverse.org/screenshots/en/theme-qiangguo-dark.webp)          |
+强国配色将运行状态显示为稳中向好，不可用与降级状态显示为严峻挑战。文案替换由 `src/shell/palettes.ts` 与语言目录定义。
+
+## 新增或更新配色
+
+1. 更新 `src/shell/palettes.ts` 与系列样式表。新增非玻璃系列时，在 `src/ui/styles/palettes.css` 中导入。
+2. 在 [src/i18n/locales/](../src/i18n/locales/) 中加入标签键。注册表的可选 `words` 映射可将已有翻译键指向配色专用键。
+3. 系列图片放在样式表旁的 `src/ui/styles/palettes/<family>/` 中，并在 [NOTICE](../NOTICE) 与 [REUSE.toml](../REUSE.toml) 中记录来源及许可证。
+4. 更新 [e2e/contrast.spec.ts](../e2e/contrast.spec.ts) 中的配色表。执行 [CONTRIBUTING.md](../CONTRIBUTING.md#add-a-palette) 要求的配色与对比度检查，并检查浅色及深色效果。对比度测试不对半透明玻璃表面执行数值检查。

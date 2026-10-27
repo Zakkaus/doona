@@ -2,110 +2,57 @@
 
 English / [简体中文](install.zh-CN.md) / [繁體中文](install.zh-TW.md)
 
-## Status
+doona is distributed as static web files. The current release is v0.1.0-rc.2; doona lite is a preview in testing.
 
-doona targets the native API implemented by honk's `feat/native-api` branch; that API is not released yet. The contract it is built against is pinned in [SOURCE.md](../contract/api-standardize/SOURCE.md). Backends that omit newer resource keys are accepted: doona fills those keys as unavailable. With no backend configured, a built-in mock supplies demo data; all screenshots in the READMEs and these docs pages show the mock.
+For installation, use the documentation site's [system requirements](https://doona.daeuniverse.org/en/requirements.html), [installation guide](https://doona.daeuniverse.org/en/install.html) and [doona lite guide](https://doona.daeuniverse.org/en/lite.html). Those pages cover backend setup, distribution-specific instructions and first sign-in. This page describes the files built by this repository. For current honk download names and attachment status, see [Matching honk builds](#matching-honk-builds).
 
-## Install
+## Release archives
 
-doona needs honk's native API, which only the `debug` release of [Glassyiris/honk `feat/native-api`](https://github.com/Glassyiris/honk/tree/feat/native-api) provides so far. Download the program archive and `SHA256SUMS` from the same tag on the [releases page](https://github.com/Zakkaus/doona/releases).
+[tools/package.sh](../tools/package.sh) creates these archives under `release/`. `<version>` is the version without the tag's leading `v`.
 
-Extract `doona-<version>.tar.gz` into the directory that honk's `native_api` block names in `ui`, and honk serves doona at `/ui/`. Extract optional archives into the same directory.
+| Archive                                | Contents                                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `doona-<version>.tar.gz`               | Standard edition from `dist/`, excluding `fonts/` and `.vite/`, plus licence and notice files     |
+| `doona-lite-<version>.tar.gz`          | Lite edition from `apps/lite/dist/`, plus licence and notice files; uses system fonts             |
+| `doona-fonts-<version>.tar.gz`         | Optional `fonts/` directory with Noto Sans TC and SC subsets, `OFL.txt` and `README`              |
+| `doona-precompressed-<version>.tar.gz` | Optional `.br` and `.gz` copies of the standard edition's text assets, at matching relative paths |
 
-### Access through a hostname
+Both program archives have `index.html` at the archive root. Each includes `LICENSE`, `LICENSES/`, `NOTICE`, `README.md` and `THIRD-PARTY-NOTICES.txt`. [tools/notices.mjs](../tools/notices.mjs) collects licence texts for bundled dependencies. The program archives do not include `CHANGELOG.md`.
 
-For `http://owrt.lan:9527/ui/`, add the following entries to the allowlists in your existing `experimental` → `native_api` block. This is an excerpt, not a replacement configuration: retain other list entries and the existing `listen`, `secret`, `password_auth` and `ui` settings.
+The precompressed archive contains copies of selected text assets at least 1 KiB in size. Packaging uses `brotli -q 11` and `gzip -9 -n` and keeps a copy only when it is smaller than the original. Fonts are packaged separately; see [Fonts](fonts.md).
 
-```dae
-experimental {
-    native_api {
-        allowed_hosts: 'owrt.lan:9527'
-        allow_origins: 'http://owrt.lan:9527'
-    }
-}
-```
+## Matching honk builds
 
-`allowed_hosts` permits the request's `Host`: hostname and port, without a scheme or path. It does not automatically permit an `Origin`. `allow_origins` permits an HTTP origin: scheme, hostname and port, without `/ui/`, another path or a trailing slash. For multiple entries, quote each value separately and separate them with commas; do not use JSON brackets or quote the entire list.
+The standalone UI is published first. Matching honk builds and corresponding sources are attached afterward; check the [release notes and assets](https://github.com/Zakkaus/doona/releases/tag/v0.1.0-rc.2) for attachment status.
 
-If the HTML opens but JavaScript or CSS requests return 403, inspect those requests in the browser's Network panel. Compare `Host` and `Origin`, including their ports, with these settings. Restart honk after changing them; a configuration reload is insufficient. Reload the page and check that the failed requests succeed.
+The full builds are named `honk-core-debug-<target>[-stock]-full.tar.gz`. Older releases omit `-full`, so use the current asset names when following older installation examples. The eight variants cover x86_64 and aarch64, musl and GNU, with mimalloc or the system allocator (`-stock`). Choose musl when unsure. When attached, these builds embed the matching doona version, served with `ui: embedded`.
 
-Administrator creation has a separate restriction: honk checks the actual connection peer for a loopback, private or link-local address. The Host and Origin allowlists do not change that restriction.
+[tools/fetch-honk.mjs](../tools/fetch-honk.mjs) verifies the embedded version, revision and program SHA-256 against the published doona release. `HONK-SOURCE.txt` records the honk release and commit, embedded doona version and revision, program SHA-256, and corresponding sources. The source archives are `honk-source-<commit>.tar.gz` and `doona-source-<version>.tar.gz`.
 
-The [documentation](https://doona.daeuniverse.org/en/) covers the requirements, installing honk and doona, an example configuration, the first sign-in, checking each feature and troubleshooting.
+## Package layout
 
-## Release files
+| Package or recipe                                        | UI directory                                 |
+| -------------------------------------------------------- | -------------------------------------------- |
+| Debian `doona-web`                                       | `/usr/share/doona-web`                       |
+| RPM, Arch and OpenWrt `doona`; Alpine and Gentoo recipes | `/usr/share/doona`                           |
+| Nix recipe                                               | `$out/share/doona`                           |
+| Manual archive                                           | Directory chosen when extracting the archive |
 
-Standalone UI files are published first; matching honk builds and corresponding sources are attached afterward. Most people need two: the program file for their system and `SHA256SUMS`. The names below are for v0.1.0-rc.2; other versions follow the same [spellings](../install/README.md#version-spellings).
+The Debian add-ons are named `doona-web-fonts` and `doona-web-precompressed`. Other distribution packages use `doona-fonts` and `doona-precompressed`. The font files go under the UI directory's `fonts/`; precompressed files sit beside the original assets. Alpine and OpenWrt use separate apk builds and signing procedures.
 
-### Program
+Package filenames and metadata use different prerelease spellings. See [version spellings](../install/README.md#version-spellings) and [apk signing and installation](../install/README.md#installing-the-apk-packages) in the packaging reference.
 
-Choose one, for a manual install or for your system's package manager.
+Alpine also provides `doona-doc-<version>-r0.alpine.apk`, which contains the `NOTICE` file.
 
-| File                               | What it is                                                 | Choose for                              |
-| ---------------------------------- | ---------------------------------------------------------- | --------------------------------------- |
-| `doona-0.1.0-rc.2.tar.gz`          | The built UI and licences, no installer                    | Manual installation with any web server |
-| `doona-web_0.1.0-rc.2-1_all.deb`   | Debian package                                             | Debian or Ubuntu                        |
-| `doona-0.1.0-rc.2-1.noarch.rpm`    | RPM package                                                | Fedora or openSUSE                      |
-| `doona-0.1.0rc2-1-any.pkg.tar.zst` | pacman package                                             | Arch Linux                              |
-| `doona_0.1.0-rc.2-1_all.ipk`       | opkg package                                               | OpenWrt 24.10 and earlier               |
-| `doona-0.1.0_rc2-r1.apk`           | apk-tools 3 package                                        | OpenWrt 25.12                           |
-| `doona-0.1.0-rc.2-r0.alpine.apk`   | Alpine package                                             | Alpine Linux                            |
-| `doona-lite-0.1.0-rc.2.tar.gz`     | doona lite, the smaller configuration editor, no installer | Manual installation of doona lite       |
+## Build and packaging sources
 
-Debian and Ubuntu ship an unrelated `doona` package, so their deb is named `doona-web` and installs into `/usr/share/doona-web`; set honk's `ui` to that path. The other package formats keep the name `doona` and install into `/usr/share/doona`. Alpine and OpenWrt apk files are not interchangeable.
+| Source                                                                                                                          | Responsibility                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| [tools/package.sh](../tools/package.sh)                                                                                         | Stage both editions, split optional archives and write their `SHA256SUMS`      |
+| [.github/workflows/release.yml](../.github/workflows/release.yml)                                                               | Build distribution packages, collect release files and regenerate `SHA256SUMS` |
+| [install/nfpm/](../install/nfpm/)                                                                                               | Debian, RPM, Arch and ipk package definitions                                  |
+| [install/alpine/APKBUILD](../install/alpine/APKBUILD)                                                                           | Alpine package and subpackages                                                 |
+| [install/openwrt/doona/Makefile](../install/openwrt/doona/Makefile)                                                             | OpenWrt package and add-ons                                                    |
+| [install/gentoo/net-proxy/doona/](../install/gentoo/net-proxy/doona/) and [install/nix/package.nix](../install/nix/package.nix) | Gentoo and Nix recipes                                                         |
 
-### Optional add-ons
-
-Each add-on comes in the same formats as the program, with `fonts` or `precompressed` in its name: `doona-fonts-0.1.0-rc.2.tar.gz`, `doona-web-fonts_0.1.0-rc.2-1_all.deb`, `doona-fonts_0.1.0-rc.2-1_all.ipk` and so on. Install the add-on in the same format and version as the program.
-
-| Name part       | What it adds                                                                           | When to install                                                                   |
-| --------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `fonts`         | Noto Sans TC and SC, about 8 MB                                                        | You want the bundled Chinese fonts instead of the system's. See [Fonts](fonts.md) |
-| `precompressed` | `.br` and `.gz` copies of the text assets, about 1.6 MB                                | Servers and desktops; optional on a router                                        |
-| `doc` (Alpine)  | `doona-doc-0.1.0-rc.2-r0.alpine.apk`: the NOTICE file, split off as Alpine packages do | Rarely needed                                                                     |
-
-Precompressed means compressed in advance. When a browser accepts compression, honk or a web server sends the `.br` or `.gz` copy instead of compressing the file for each request, so it spends no CPU on compression and pages load faster on a slow link. The copies are made with `brotli -q 11` and `gzip -9 -n` for text assets of at least 1 KiB; only copies smaller than the original are kept. For a manual install, extract the archive into the directory holding doona's files.
-
-### apk signing keys
-
-| File                   | What it is                                   | Used by                                   |
-| ---------------------- | -------------------------------------------- | ----------------------------------------- |
-| `doona-alpine.rsa.pub` | Public key that verifies the Alpine packages | Alpine: copy into `/etc/apk/keys/`        |
-| `doona-openwrt.pem`    | Public key that verifies the OpenWrt index   | OpenWrt 25.12: copy into `/etc/apk/keys/` |
-| `doona-openwrt.adb`    | Signed index of the OpenWrt apk packages     | OpenWrt 25.12: `apk add -X` reads it      |
-
-Each release signs with a new key. See [Installing the apk packages](../install/README.md#installing-the-apk-packages).
-
-### honk
-
-The release publishes the standalone UI first so honk can embed that exact version. After the matching honk debug pre-release is built and verified, its eight unmodified builds, `HONK-SOURCE.txt` and both corresponding source archives are attached to the same doona release. Check the release notes for attachment status.
-
-The attached honk builds embed the same doona version as the release; `ui: embedded` serves it. To use a separate archive or package, set `ui` in `native_api` to its installation directory and restart honk: `/usr/share/doona` for most packages, `/usr/share/doona-web` for Debian, or the directory where you extracted the archive. `HONK-SOURCE.txt` records the honk release and commit, the embedded doona version, revision and program SHA-256, and both sources.
-
-| File                                           | What it is                                                                |
-| ---------------------------------------------- | ------------------------------------------------------------------------- |
-| `honk-core-debug-<target>[-stock]-full.tar.gz` | One full honk build per target, eight in all; older releases omit `-full` |
-| `HONK-SOURCE.txt`                              | honk and embedded doona provenance, with build and source SHA-256 hashes  |
-| `honk-source-<commit>.tar.gz`                  | honk's corresponding source at the recorded commit                        |
-| `doona-source-0.1.0-rc.2.tar.gz`               | The embedded UI's corresponding source at the recorded doona revision     |
-
-| Name part             | Choose for                                            |
-| --------------------- | ----------------------------------------------------- |
-| `x86_64` or `aarch64` | The gateway's CPU, as `uname -m` prints it            |
-| `unknown-linux-musl`  | A static binary for gateways; choose this when unsure |
-| `unknown-linux-gnu`   | A glibc-based distribution                            |
-| No suffix             | mimalloc, the default allocator                       |
-| `-stock`              | The system allocator instead of mimalloc              |
-
-[Install honk](https://doona.daeuniverse.org/en/install.html#install) explains which build fits a gateway and how to verify and install it.
-
-### Checksums and source
-
-| File                                    | What it is                                                                                                   |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `SHA256SUMS`                            | SHA-256 of every release file except itself; check downloads with `sha256sum -c --ignore-missing SHA256SUMS` |
-| Source code (zip), Source code (tar.gz) | doona's source at the release tag, added by GitHub                                                           |
-
-## For packagers
-
-See [install/README.md](../install/README.md) for package versions, recipes, signing, local builds and installation commands.
+Packaging requires built output for both editions, even when only the standard archive is needed. See the [development guide](https://doona.daeuniverse.org/en/development.html) for dependency installation and build commands, and [install/README.md](../install/README.md) for package maintenance.
