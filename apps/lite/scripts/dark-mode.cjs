@@ -1,5 +1,6 @@
 const {chromium, expect} = require('@playwright/test');
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 
 async function contrast(locator, foreground, background) {
   return locator.evaluate(
@@ -40,8 +41,7 @@ async function contrast(locator, foreground, background) {
         document.addEventListener('DOMContentLoaded', sample, {once: true});
       }, mode);
       await page.goto(base);
-      await page.getByRole('button', {name: 'Try the demo', exact: true}).click();
-      await page.locator('[data-group-row]').first().waitFor();
+      await waitForDemo(page);
       await page.evaluate(() => (location.hash = 'routing'));
       await page.getByRole('radio', {name: 'Text', exact: true}).click();
       const editor = page.locator('.cm-editor:visible');

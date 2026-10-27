@@ -4,6 +4,7 @@
 const {chromium} = require('@playwright/test');
 
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 const tokens = ['group(', 'name(', 'subtag(', 'dip', 'dport', 'l4proto', 'pname', 'qname', 'fallback', 'must_', '(must)', '->'];
 const strict = /.*/;
 
@@ -40,22 +41,17 @@ function scan(page, tokensToFind, root = 'body') {
     results.set(area, [...(results.get(area) ?? []), ...hits]);
   };
   const go = async hash => {
-    await page.goto(`${base.replace(/\/$/, '')}/#${hash}`);
-    await page.reload();
-    const demo = page.getByRole('button', {name: /demo|演示|示範/i});
-    if (await demo.count()) await demo.first().click();
-    await page.locator('h1').first().waitFor();
+    // Leave the document so unsaved route guards cannot turn this reset into a hash-only navigation.
+    await page.goto('about:blank');
+    await page.goto(base);
+    await waitForDemo(page);
     const labels = {routing: '路由', subscriptions: '订阅', nodes: '节点', dns: 'DNS'};
     await page.getByRole('navigation').getByRole('link', {name: labels[hash], exact: true}).click();
     await page.waitForTimeout(1200);
     console.log(`page ${hash}: ${await page.locator('h1').first().innerText()}`);
   };
   await page.goto(base);
-  await page
-    .getByRole('button', {name: /demo|演示|示範/i})
-    .first()
-    .click();
-  await page.locator('h1').first().waitFor();
+  await waitForDemo(page);
   await page.waitForTimeout(700);
 
   // Groups, both modes, every group.

@@ -352,7 +352,6 @@ export const en = {
   ready: 'Running',
   changesSaved: 'Configuration saved and applied.',
 
-  or: 'or',
   groupsDescription: 'Choose the connection used by each policy group.',
   subscriptionsDescription: 'Keep node lists from your subscriptions up to date.',
   group: 'Group',
@@ -386,7 +385,7 @@ export const en = {
   subscriptions: 'Subscriptions',
   routing: 'Routing',
   settings: 'Settings',
-  connectDescription: 'Connect to the honk native API or try the demo.',
+  connectDescription: 'Connect to the honk native API.',
   signInDescription: 'Enter your honk administrator username and password.',
   setupDescription: 'Create a honk administrator username and password.',
   tokenDescription: 'Sign in to honk with a token.',
@@ -394,7 +393,6 @@ export const en = {
   backendHelp:
     'Enter the honk native API root, for example http://192.168.1.1:9527, including any reverse-proxy prefix. Do not enter a proxy node URL, /ui/, or /api/v1.',
   tokenHelp: 'Leave empty if honk allows anonymous access.',
-  demo: 'Try the demo',
   demoBadge: 'Demo: sample data',
   hideDemoBadge: 'Hide demo badge',
   demoName: 'Demo',

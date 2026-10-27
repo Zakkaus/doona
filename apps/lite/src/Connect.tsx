@@ -6,7 +6,6 @@ import {FormLayout} from '@astryxdesign/core/FormLayout';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import {Heading, Text} from '@astryxdesign/core/Text';
 import {VStack, HStack} from '@astryxdesign/core/Stack';
-import {Divider} from '@astryxdesign/core/Divider';
 import {normalizeApi} from '../../../src/api/profiles';
 import {openSession, type SignIn} from '../../../src/api/auth';
 import {ApiError} from '../../../src/api/error';
@@ -109,12 +108,8 @@ export function Connect({
     restored.current = true;
     restore();
   }, []);
-  const start = (demo: boolean) =>
-    void task.run(demo ? 'demo' : 'backend', async () => {
-      if (demo) {
-        onConnect(await connect('mock', ''));
-        return;
-      }
+  const start = () =>
+    void task.run('backend', async () => {
       if (wait) return;
       if (kind === null || kind === 'no-api') {
         await discover();
@@ -206,7 +201,7 @@ export function Connect({
               }}
               onSubmit={event => {
                 event.preventDefault();
-                start(false);
+                start();
               }}
             >
               {!hosted && (
@@ -300,8 +295,6 @@ export function Connect({
                 }}
               />
             )}
-            <Divider label={t.or} />
-            <Button label={t.demo} size="lg" variant="secondary" isDisabled={task.busy !== null} isLoading={task.busy === 'demo'} onClick={() => start(true)} />
           </VStack>
         </Card>
         <HStack gap={2}>

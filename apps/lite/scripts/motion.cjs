@@ -1,6 +1,7 @@
 // The demo supplies three subscriptions; keep 600 ms latency confined to this test URL.
 const base = require('./preview.cjs');
 const {chromium, expect} = require('@playwright/test');
+const {waitForDemo} = require('./demo.cjs');
 (async () => {
   const browser = await chromium.launch();
   const counts = [];
@@ -16,8 +17,7 @@ const {chromium, expect} = require('@playwright/test');
       };
     });
     await p.goto(base + '/?slow=600');
-    await p.getByRole('button', {name: 'Try the demo', exact: true}).click();
-    await p.locator('[data-group-row]').first().waitFor();
+    await waitForDemo(p);
     // Groups opens first and is retained, so it is measured on that first open.
     for (const route of ['groups', 'nodes', 'subscriptions', 'routing', 'dns']) {
       await p.evaluate(route => (location.hash = route), route);

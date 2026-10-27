@@ -1,5 +1,6 @@
 // Exercises the retained configuration workflow and quick member switching on the local mock.
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 const {chromium, expect} = require('@playwright/test');
 async function settle(p) {
   await p.evaluate(async () => {
@@ -23,8 +24,10 @@ async function quickSwitch(b, width) {
   const errors = [];
   p.on('pageerror', e => errors.push(e.message));
   await p.goto(base + '/?slow=600');
-  await p.getByRole('button', {name: 'Try the demo', exact: true}).click();
-  await p.locator('[data-group-row="auto"]').waitFor();
+  await waitForDemo(p, {keepBadge: true});
+  await expect(p.getByRole('link', {name: 'Demo: sample data', exact: true})).toBeVisible();
+  await p.getByRole('button', {name: 'Hide demo badge', exact: true}).click();
+  await expect(p.locator('[data-group-row="auto"]')).toBeVisible();
   await p.locator('[data-group-row="auto"] button').click();
   const inspector = p.locator('[data-group-inspector="auto"]:visible');
   const search = inspector.getByRole('textbox', {name: 'Search members: auto', exact: true});
@@ -79,8 +82,9 @@ async function quickSwitch(b, width) {
   const errors = [];
   p.on('pageerror', e => errors.push(e.message));
   await p.goto(base);
-  await p.getByRole('button', {name: 'Try the demo'}).click();
-  await p.locator('[data-group-row]').first().waitFor();
+  await waitForDemo(p, {keepBadge: true});
+  await expect(p.getByRole('link', {name: 'Demo: sample data', exact: true})).toBeVisible();
+  await p.getByRole('button', {name: 'Hide demo badge', exact: true}).click();
   await p.evaluate(() => (location.hash = 'nodes'));
   await p.getByRole('heading', {name: 'Nodes', exact: true}).waitFor();
   await expect(p.locator('[data-group-inspector]:visible')).toHaveCount(0);

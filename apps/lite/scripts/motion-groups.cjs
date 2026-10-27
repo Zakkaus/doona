@@ -2,6 +2,7 @@ const {chromium, expect} = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 const copy = {
   'en-US': {
     createGroup: 'Create group',
@@ -59,11 +60,7 @@ async function run(browser) {
     const t = copy[locale];
     await p.addInitScript(locale => localStorage.setItem('doona-lite.locale', locale === 'en-US' ? 'en' : locale), locale);
     await p.goto(base);
-    await p
-      .getByRole('button', {name: /demo|演示|示範/i})
-      .first()
-      .click();
-    await p.locator('[data-group-row]').first().waitFor();
+    await waitForDemo(p);
     await settle(p);
     await p.evaluate(() => {
       window.groupMotion = [];

@@ -8,10 +8,17 @@ export default defineConfig({
   timeout: 5 * 60_000,
   reporter: 'list',
   outputDir: 'test-results',
-  use: {baseURL: 'http://127.0.0.1:5198'},
-  webServer: {
-    command: 'pnpm exec vite preview --host 127.0.0.1 --port 5198 --strictPort',
-    url: 'http://127.0.0.1:5198',
-    reuseExistingServer: false
-  }
+  use: {baseURL: 'http://127.0.0.1:5199'},
+  webServer: [
+    {
+      command: 'pnpm exec vite preview --host 127.0.0.1 --port 5198 --strictPort',
+      url: 'http://127.0.0.1:5198',
+      reuseExistingServer: false
+    },
+    {
+      command: 'VITE_LITE_DEMO=1 pnpm build --outDir build/demo && pnpm exec vite preview --outDir build/demo --host 127.0.0.1 --port 5199 --strictPort',
+      url: 'http://127.0.0.1:5199',
+      reuseExistingServer: false
+    }
+  ]
 });

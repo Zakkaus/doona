@@ -1,5 +1,6 @@
 const {chromium, expect} = require('@playwright/test');
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 const routes = ['groups', 'subscriptions', 'nodes', 'routing', 'dns'];
 async function collectionRows(p) {
   return p.locator('[data-collection][aria-busy]:visible').evaluateAll(collections =>
@@ -63,10 +64,10 @@ async function geometry(p) {
     for (const width of [1440, 390]) {
       for (const route of routes) {
         const p = await browser.newPage({viewport: {width, height: 900}, locale: 'en', reducedMotion: 'reduce'});
-        await p.goto(`${base}?slow=1200`);
-        await p.getByRole('button', {name: 'Try the demo', exact: true}).click();
+        // Auto-start begins during navigation; observe Groups before waiting for its content.
+        await p.goto(`${base}?slow=1200`, {waitUntil: 'domcontentloaded'});
         if (route !== 'groups') {
-          await p.locator('[data-group-row]').first().waitFor();
+          await waitForDemo(p);
           await p.evaluate(route => {
             location.hash = route;
           }, route);
@@ -81,6 +82,7 @@ async function geometry(p) {
         if (process.env.LITE_SHOTS && width === 1440 && ['groups', 'subscriptions'].includes(route))
           await p.screenshot({path: `${process.env.LITE_SHOTS}/loading-${route}.png`});
         await p.waitForFunction(() => [...document.querySelectorAll('[data-collection][aria-busy="true"]')].every(e => !e.checkVisibility()));
+        if (route === 'groups') await waitForDemo(p);
         await p.evaluate(async () => {
           await document.fonts.ready;
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -129,8 +131,7 @@ async function geometry(p) {
       };
     });
     await p.goto(base);
-    await p.getByRole('button', {name: 'Try the demo', exact: true}).click();
-    await p.locator('[data-group-row]').first().waitFor();
+    await waitForDemo(p);
     await p.evaluate(() => (window.headerEntrances = []));
     await p.evaluate(() => (location.hash = 'nodes'));
     await expect(p.locator('h1:visible')).toHaveText('Nodes');

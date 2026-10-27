@@ -1,6 +1,7 @@
 const {chromium, expect} = require('@playwright/test');
 const fs = require('node:fs');
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 const titles = {nodes: 'Nodes', subscriptions: 'Subscriptions', groups: 'Groups', routing: 'Routing', dns: 'DNS'};
 const first = {nodes: 'tbody tr', subscriptions: '[data-provider-id]', groups: '[data-group-row]', routing: '[data-rule-index]', dns: '[data-upstream]'};
 const records = [];
@@ -52,8 +53,8 @@ async function dialogStable(p, label, title) {
   const browser = await chromium.launch({args: ['--disable-features=OverlayScrollbar']});
   const p = await browser.newPage({locale: 'en-US', viewport: {width: 1440, height: 1000}, reducedMotion: 'reduce'});
   p.setDefaultTimeout(10000);
-  await p.goto(base + '/?slow=1200');
-  await p.getByRole('button', {name: 'Try the demo', exact: true}).click();
+  // Preserve the initial Groups skeleton now that navigation starts the demo.
+  await p.goto(base + '/?slow=1200', {waitUntil: 'domcontentloaded'});
   await p.locator('h1:visible').filter({hasText: 'Groups'}).waitFor();
   for (const route of ['groups', 'nodes', 'subscriptions', 'routing', 'dns']) {
     await go(p, route);
@@ -61,7 +62,8 @@ async function dialogStable(p, label, title) {
     await skeleton.waitFor();
     const initial = await box(p.locator('h1:visible'));
     await expect(p.locator(`[data-loading-shape="${route}"]`)).toHaveCount(0, {timeout: 20000});
-    await p.locator(`${first[route]}:visible`).first().waitFor();
+    if (route === 'groups') await waitForDemo(p);
+    else await p.locator(`${first[route]}:visible`).first().waitFor();
     await settle(p);
     same(initial, await box(p.locator('h1:visible')));
     const row = p.locator(`${first[route]}:visible`).first();
@@ -101,8 +103,7 @@ async function dialogStable(p, label, title) {
     const p = await browser.newPage({locale: 'en-US', viewport: {width, height: 1000}});
     p.setDefaultTimeout(10000);
     await p.goto(base);
-    await p.getByRole('button', {name: 'Try the demo', exact: true}).click();
-    await p.locator('[data-group-row]').first().waitFor();
+    await waitForDemo(p);
     for (const route of Object.keys(titles)) {
       await go(p, route);
       await p.locator(`${first[route]}:visible`).first().waitFor();
@@ -173,8 +174,7 @@ async function dialogStable(p, label, title) {
   for (const colorScheme of ['light', 'dark']) {
     const p = await browser.newPage({locale: 'en-US', viewport: {width: 1440, height: 1000}, colorScheme});
     await p.goto(base);
-    await p.getByRole('button', {name: 'Try the demo', exact: true}).click();
-    await p.locator('[data-group-row]').first().waitFor();
+    await waitForDemo(p);
     await p.getByRole('button', {name: 'Collapse sidebar', exact: true}).click();
     await settle(p);
     const centres = await p

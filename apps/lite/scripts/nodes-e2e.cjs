@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {createHash} = require('node:crypto');
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 // Screenshots are written only when LITE_SHOTS names a directory.
 const output = process.env.LITE_SHOTS;
 if (output) fs.mkdirSync(output, {recursive: true});
@@ -15,11 +16,7 @@ const link = 'vless://b831381d-6324-4d53-ad4f-8cda48b30811@jp.example.org:443?se
     const errors = [];
     p.on('pageerror', e => errors.push(e.message));
     await p.goto(base);
-    await p
-      .getByRole('button', {name: /demo|演示/i})
-      .first()
-      .click();
-    await p.locator('[data-group-row]').first().waitFor();
+    await waitForDemo(p);
     await p.getByRole('link', {name: '节点', exact: true}).click();
     await p.locator('[data-node-id]').first().waitFor();
     await p.waitForTimeout(600);
@@ -123,11 +120,7 @@ const link = 'vless://b831381d-6324-4d53-ad4f-8cda48b30811@jp.example.org:443?se
       };
     });
     await tw.goto(base);
-    await tw
-      .getByRole('button', {name: /demo|示範/i})
-      .first()
-      .click();
-    await tw.locator('[data-group-row]').first().waitFor();
+    await waitForDemo(tw);
     await tw.evaluate(() => {
       location.hash = 'nodes';
     });
@@ -184,7 +177,8 @@ const link = 'vless://b831381d-6324-4d53-ad4f-8cda48b30811@jp.example.org:443?se
       }
       throw new Error(`Unexpected backend request: ${request.method()} ${pathname}`);
     });
-    await failed.goto(base.replace(/\/$/, '') + '/#nodes');
+    // A saved backend connection needs the production build; the demo build always opens the demo.
+    await failed.goto(process.env.LITE_PRODUCTION_URL.replace(/\/$/, '') + '/#nodes');
     await failed.getByRole('link', {name: '节点', exact: true}).click();
     await failed.getByRole('button', {name: '添加节点', exact: true}).click();
     const failedDialog = failed.getByRole('dialog', {name: '添加节点', exact: true});

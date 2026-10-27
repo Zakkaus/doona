@@ -88,7 +88,7 @@ it('restores a saved backend with its credential without probing the page origin
   expect(requests[0].headers.get('Authorization')).toBe('Bearer saved-session');
 });
 
-it('leaves saved demo connections on the existing manual demo path', async () => {
+it('ignores saved demo connections without contacting a backend', async () => {
   await expect(connectionStartup({address: 'mock', token: ''}, false, loc)).resolves.toBeNull();
   expect(fetcher).not.toHaveBeenCalled();
 });
