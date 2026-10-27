@@ -53,11 +53,19 @@ WebSocket、gRPC 與 XHTTP 是串流傳輸方式，與代理協定不同。在�
 
 ![活動頁](https://zakkaus.github.io/doona-docs/screenshots/zh-TW/activity-light.webp)
 
-![組態檔與可編輯的原始文字檢視](https://zakkaus.github.io/doona-docs/screenshots/zh-TW/config-source-light.webp)
+![編輯活動頁卡片的寬度與高度](https://zakkaus.github.io/doona-docs/screenshots/zh-TW/dashboard-settings.webp)
+
+![編輯策略群組](https://zakkaus.github.io/doona-docs/screenshots/zh-TW/group-editor.webp)
+
+![進階清單中的路由規則](https://zakkaus.github.io/doona-docs/screenshots/zh-TW/rules-advanced.webp)
+
+![編輯設定檔](https://zakkaus.github.io/doona-docs/screenshots/zh-TW/config-source-light.webp)
 
 ## 最新版本
 
-[rc.1](CHANGELOG.md) 在 http 頁面上建議後端位址，建議中的 IPv6 主機不再重複方括號，並修復表格換行對齊與路由追蹤的程序欄位。
+[0.1.0-rc.2](CHANGELOG.md) 共 41 項更新：新增 4 項、變更 9 項、修正 23 項、內部調整 5 項。
+
+本版新增 doona lite，這是一個更精簡的設定檔編輯器，以獨立壓縮檔發布。節點頁可一次貼上多個節點連結，並測試篩選後的節點清單、依延遲排序；路由追蹤可填寫防火牆標記。首次執行時開啟設定頁的連線表單，最近離開的至多四個頁面返回時保持原樣。暫停服務、清空日誌、切換至直連或全域模式，以及離開尚未套用的規則範本或群組草稿時，皆須確認。
 
 ## 文件
 
