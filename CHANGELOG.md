@@ -6,6 +6,61 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Entries live in [changes/](changes/) until release.
 
+## [0.1.0-rc.2] - 2026-10-27
+
+### Added
+
+- Build and deploy doona with the Lite demo at `/lite/`, with separate demo badges and service worker routing. (#568)
+- doona lite, a simple config editor in `apps/lite` for groups, subscriptions, nodes, routing and DNS, in light and dark themes, with every change reviewed in plain words before it is written. (#566)
+- Paste several node links at once and test all filtered nodes with automatic latency sorting. (#570)
+- The route trace takes an optional firewall mark among its advanced fields, in decimal or 0x hexadecimal, so `mark()` rules can be decided. (#592)
+
+### Changed
+
+- A first run opens Settings on a connect card: backend URL, Token, Test connection as the main action and the built-in demo data as a secondary choice. (#572)
+- The floating widget panel starts collapsed. On pages other than Activity and Overview, an open panel along the content edge keeps a column of its own, so tables and fields end beside it instead of under it. (#572)
+- On phones, a hub's sibling pages are drawn as tabs over a divider, apart from the page's own segmented tabs, and a scrolling tab bar fades its cut end more clearly. (#572)
+- The Connections and Nodes list tabs are named List instead of repeating the page name. (#572)
+- On touch screens, icon buttons, help triggers and number steppers take a 44px hit area without changing their drawn size. (#572)
+- A page left with a row open in its side panel is kept like any other page, so going back shows it as it was left. (#583)
+- Up to four pages you left recently stay as they were, so going back to one shows it at once; pages out of sight stop polling. A page left with a dialog open is rebuilt. (#565)
+- Switching pages keeps the current page responsive while the next one renders, and loading or switching a page does less layout work. (#565)
+- Interface text loads in three parts, for sign-in, Activity and the other pages, so the first screens no longer wait for every page's messages. (#571)
+
+### Fixed
+
+- Include third-party notices for the packages bundled into each edition's release archive, including lite's dependencies and shared modules. (#590)
+- Flow records are cards on a phone, with the target, node and rule each on its own line and the state and start time in view; on wider screens the rule wraps instead of being cut and the protocol header fits in every language. (#572)
+- The DNS log's device filter has a visible label, and its counts and actions fold as one group under the filters. (#572)
+- The routing trace and DNS query tabs explain what they do before the first run. (#572)
+- The connections group row's active count and the phone filter hint are no longer cut. (#572)
+- A cancelled read or operation start no longer keeps waiting for its deadline after a garbage collection. (#576)
+- Test all on the Nodes page tests only the listed nodes with a supported probe, counts only those in its summary, and is disabled when none can be tested. (#588)
+- A policy group's test summary reports a failed or inconclusive test as such instead of always as a success. (#588)
+- Engine-specific group settings that hold objects or lists show their JSON text instead of `[object Object]`. (#588)
+- A group filter such as `name(keyword: harbor)` no longer blocks renaming or removing a subscription tagged `harbor`; only `subtag(...)` arguments count. (#588)
+- In the config editor, completion after `->` or `fallback:` inside `dns` offers the defined upstreams with `asis` and `reject` for requests, or `accept` and `reject` for responses, instead of traffic outbounds. (#588)
+- In the demo backend, adding a node or subscription to a configuration without a `node` or `subscription` section creates the section instead of silently writing nothing. (#588)
+- Flow trace steps show the error the backend reports, and DNS steps show the query type and answer status. (#589)
+- Events link to the recording settings and the configuration page only when the backend offers them. (#589)
+- The event capture note shows the engine's grace period instead of always saying 60 s. (#589)
+- Regex filter previews fall back to the pattern text when it has more than three variable-length repetitions (`*`, `+`, `?`, `{m,n}`), which could stall the page. (#589)
+- doona asks for confirmation before suspending the service, clearing the logs or switching to Direct or Global mode. (#569)
+- Leaving an unapplied rule template or a group draft requires confirmation. Form errors appear beside their fields, and disabled actions explain why they are unavailable. (#569)
+- Invalid or blank backend URLs cannot be saved. A changed connection requires signing in again, and one Escape closes search. (#569)
+- The dialog for unsaved changes names what leaving discards: the config file, runtime overrides, backend profile, group, node, rule or outbound mode. (#569)
+- Interface terms are translated: generation, the latest database revision and re-evaluated rules, with a short explanation where they appear. (#569)
+- Socket mark in global settings has a short explanation. (#569)
+- The rule edit dialog saves with a Save button, and success toasts no longer show operation ids. (#569)
+
+### Internal
+
+- The chart tip rows, the node column of connections and flows, the dashboard card drag type and the mock's subscription parsing each have one implementation instead of two. (#587)
+- Clearing all toasts also forgets their repeat-message markers. (#587)
+- Stale control size comments on tabs, cards and widget layout migration now match the code. (#587)
+- Touch hit areas ship in the main stylesheet instead of a separate chunk, and the catalogue stage list has one source. (#585)
+- Saving a backend or signing out rewrites only the address before the app reloads, instead of rendering a page the reload discards. (#582)
+
 ## [0.1.0-rc.1] - 2026-10-24
 
 ### Added
@@ -834,7 +889,8 @@ Entries live in [changes/](changes/) until release.
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
-[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.1...HEAD
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.2...HEAD
+[0.1.0-rc.2]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.1...v0.1.0-rc.2
 [0.1.0-rc.1]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.20...v0.1.0-rc.1
 [0.1.0-beta.20]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.19...v0.1.0-beta.20
 [0.1.0-beta.19]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.18...v0.1.0-beta.19
