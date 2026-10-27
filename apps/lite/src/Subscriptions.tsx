@@ -253,6 +253,7 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
             label={allExpanded ? t.collapseAll : t.expandAll}
             variant="ghost"
             size="md"
+            style={{marginInlineStart: compact ? 'calc(-1 * var(--spacing-3))' : 0}}
             isDisabled={!ready || !filtered.length}
             onClick={() => setExpanded(allExpanded ? new Set() : new Set(filtered.map(item => item.id)))}
           />

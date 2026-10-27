@@ -286,6 +286,18 @@ async function nodeMenu(p) {
   await p.keyboard.press('Escape');
   await expect(trigger).toBeFocused();
 }
+async function subscriptionActionInset(p) {
+  const inset = await p.locator('[data-page-frame]:visible [data-collection-toolbar]').evaluate(toolbar => {
+    const action = toolbar.querySelector('button.astryx-button');
+    const walker = document.createTreeWalker(action, NodeFilter.SHOW_TEXT, {
+      acceptNode: node => (node.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP)
+    });
+    const label = document.createRange();
+    label.selectNodeContents(walker.nextNode());
+    return {label: label.getBoundingClientRect().left, search: toolbar.querySelector('.astryx-text-input').getBoundingClientRect().left};
+  });
+  expect(inset.label).toBeCloseTo(inset.search, 0);
+}
 (async () => {
   const browser = await chromium.launch();
   try {
@@ -383,6 +395,7 @@ async function nodeMenu(p) {
             await p.locator('.lite-page-content:visible').evaluate(e => (e.scrollTop = 0));
           }
           if (route === 'subscriptions') {
+            if (width === 390) await subscriptionActionInset(p);
             const sub = p.locator('[data-provider-id="harbor"]');
             const trigger = sub.locator('.astryx-collapsible-trigger');
             await trigger.click();
@@ -456,6 +469,46 @@ async function nodeMenu(p) {
         console.log(`PASS node columns, subscription help, compact labels and menu: ${viewport.width} ${locale}`);
         await p.close();
       }
+    const p = await browser.newPage({viewport: {width: 390, height: 900}, locale: 'zh-TW', reducedMotion: 'reduce', colorScheme: 'dark'});
+    await p.addInitScript(() => {
+      localStorage.setItem('doona-lite.locale', 'zh-TW');
+      localStorage.setItem('doona-lite.theme', 'dark');
+    });
+    await p.goto(base);
+    await p.getByRole('button', {name: '試用示範', exact: true}).click();
+    await p.locator('[data-group-row]').first().waitFor();
+    await p.evaluate(() => (location.hash = 'subscriptions'));
+    await p.locator('[data-provider-id]:visible').first().waitFor();
+    await settle(p);
+    await searchInsets(p);
+    await subscriptionActionInset(p);
+    await p.setViewportSize({width: 768, height: 900});
+    await p.locator('h1:visible').focus();
+    await p.keyboard.press('Control+k');
+    const palette = p.locator('dialog[open]').filter({has: p.getByRole('combobox')});
+    const list = palette.getByRole('listbox');
+    await expect(list.getByRole('option').last()).toBeAttached();
+    await settle(p);
+    const bounds = await list.evaluate(list => {
+      const footer = list.closest('.astryx-layout').querySelector('.astryx-layout-footer');
+      return {
+        bottom: list.getBoundingClientRect().bottom,
+        footer: footer.getBoundingClientRect().top,
+        overflow: getComputedStyle(list).overflowY,
+        scrollHeight: list.scrollHeight,
+        clientHeight: list.clientHeight
+      };
+    });
+    expect(bounds.overflow).toBe('auto');
+    expect(bounds.scrollHeight).toBeGreaterThan(bounds.clientHeight);
+    expect(bounds.bottom).toBeLessThanOrEqual(bounds.footer);
+    await list.evaluate(list => (list.scrollTop = list.scrollHeight));
+    const last = await list.getByRole('option').last().boundingBox();
+    const viewport = await list.boundingBox();
+    expect(last.y).toBeGreaterThanOrEqual(viewport.y);
+    expect(last.y + last.height).toBeLessThanOrEqual(viewport.y + viewport.height);
+    console.log('PASS subscription action inset and scrollable palette above footer: zh-TW dark');
+    await p.close();
   } finally {
     await browser.close();
   }
