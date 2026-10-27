@@ -685,6 +685,8 @@ const captures = [
       await page.mouse.move(...Object.values(await center(toast)));
       await page.evaluate(() => (location.hash = '#/activity'));
       await page.locator('.rp-donut path').first().waitFor();
+      // Hover the toast again: the route change can end the hover and let its timer run out.
+      await page.mouse.move(...Object.values(await center(toast)));
       await samples(page);
       await page.locator('.rp-dashboard-cell[data-instance="notices"]').scrollIntoViewIfNeeded();
       await page.mouse.move(...Object.values(await center(toast)));
