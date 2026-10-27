@@ -73,6 +73,37 @@ test('optional DSCP validates the contract bounds and reaches the trace evaluato
   }
 });
 
+test('an optional mark takes decimal or hexadecimal and reaches the trace request as a number', async ({page}) => {
+  const {api, handlers, requests} = await mockBackend(page);
+  handlers['POST routing/trace'] = request => api.routingTrace(request.postDataJSON());
+  await page.goto('/#/rules?tab=trace&domain=example.org&dst_port=443');
+  await page.getByRole('button', {name: 'Advanced', exact: true}).click();
+  const mark = page.getByRole('textbox', {name: 'Mark', exact: true});
+  const run = page.getByRole('button', {name: 'Run trace', exact: true});
+  const message = 'Mark must be an integer from 0 to 4294967295.';
+  await mark.fill('0x100000000');
+  await expect(mark).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByRole('group', {name: 'Advanced', exact: true}).getByText(message, {exact: true})).toBeVisible();
+  await expect(mark).toHaveAccessibleDescription(message);
+  await expect(run).toBeDisabled();
+  const traced = () => requests.filter(request => request.url().endsWith('/routing/trace'));
+  for (const [value, expected] of [
+    ['0x1', 1],
+    ['4294967295', 4294967295],
+    ['', undefined]
+  ] as const) {
+    await mark.fill(value);
+    await expect(mark).not.toHaveAttribute('aria-invalid', 'true');
+    await expect(run).toBeEnabled();
+    const count = traced().length;
+    await run.click();
+    await expect.poll(() => traced().length).toBe(count + 1);
+    const input = traced().at(-1)!.postDataJSON().input;
+    if (expected === undefined) expect(input).not.toHaveProperty('mark');
+    else expect(input.mark).toBe(expected);
+  }
+});
+
 test('a connection opens the trace of its target and source', async ({page}) => {
   await page.goto('/#/connections?tab=list&id=1');
   await moreAction(detail(page), 'Trace this connection');

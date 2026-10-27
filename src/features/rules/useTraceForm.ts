@@ -13,6 +13,7 @@ const blankForm = {
   src_port: '',
   pname: '',
   dscp: '',
+  mark: '',
   // Null until the backend says what it offers: live when it can resolve, else none.
   resolve: null as TraceResolve | null
 };

@@ -16,11 +16,11 @@ import {offered} from '../../api/capabilities';
 import type {PageProps} from '../../shell/routes';
 import {useQuickRule} from '../shared/useQuickRule';
 import {ruleHref} from '../shared/link';
-import {traceInput} from './traceInput';
+import {isMark, traceInput} from './traceInput';
 import type {TraceForm, TraceResolve} from './useTraceForm';
 const isPort = (value: string) => /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 65535;
 const isDscp = (value: string) => /^\d+$/.test(value) && Number(value) >= 0 && Number(value) <= 63;
-type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_ip' | 'src_port' | 'dscp'; key: Key};
+type TraceProblem = {field: 'domain' | 'dst_ip' | 'dst_port' | 'src_ip' | 'src_port' | 'dscp' | 'mark'; key: Key};
 const resolveLabels: Record<TraceResolve, Key> = {none: 'rule.resolveNone', live: 'rule.resolveLive', query: 'rule.resolveQuery'};
 export function useRoutingTrace({form, setForm, advanced, setAdvanced, touched}: TraceForm, go: PageProps['go']) {
   const t = useT();
@@ -62,11 +62,13 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced, touched}:
               ? {field: 'src_port', key: 'rule.invalidPort'}
               : form.dscp.trim() && !isDscp(form.dscp)
                 ? {field: 'dscp', key: 'rule.invalidDscp'}
-                : (form.resolve === 'live' || form.resolve === 'query') && !form.domain.trim()
-                  ? {field: 'domain', key: 'rule.invalidLive'}
-                  : (form.resolve === 'live' || form.resolve === 'query') && form.dst_ip.trim()
-                    ? {field: 'dst_ip', key: 'rule.invalidLive'}
-                    : null;
+                : form.mark.trim() && !isMark(form.mark)
+                  ? {field: 'mark', key: 'rule.invalidMark'}
+                  : (form.resolve === 'live' || form.resolve === 'query') && !form.domain.trim()
+                    ? {field: 'domain', key: 'rule.invalidLive'}
+                    : (form.resolve === 'live' || form.resolve === 'query') && form.dst_ip.trim()
+                      ? {field: 'dst_ip', key: 'rule.invalidLive'}
+                      : null;
   const shown = touched ? invalid : null;
   const resource = capabilities.data?.resources.routing_trace;
   // DNS diagnostics supply query mode when the backend cannot resolve within a trace.
@@ -171,9 +173,10 @@ export function useRoutingTrace({form, setForm, advanced, setAdvanced, touched}:
       dst_port: shown?.field === 'dst_port' ? t(shown.key) : undefined,
       src_ip: shown?.field === 'src_ip' ? t(shown.key) : undefined,
       src_port: shown?.field === 'src_port' ? t(shown.key) : undefined,
-      dscp: shown?.field === 'dscp' ? t(shown.key) : undefined
+      dscp: shown?.field === 'dscp' ? t(shown.key) : undefined,
+      mark: shown?.field === 'mark' ? t(shown.key) : undefined
     },
-    advanced: advanced || invalid?.field === 'src_ip' || invalid?.field === 'src_port' || invalid?.field === 'dscp',
+    advanced: advanced || invalid?.field === 'src_ip' || invalid?.field === 'src_port' || invalid?.field === 'dscp' || invalid?.field === 'mark',
     setAdvanced,
     ipOnly: !invalid && !!form.dst_ip.trim() && !form.domain.trim(),
     result: result && {...result, evaluations: evaluations.map(({seed, ...evaluation}) => ({...evaluation, canAdd: quick.canAdd(seed)}))},
