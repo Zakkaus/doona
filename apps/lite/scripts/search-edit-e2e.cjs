@@ -162,12 +162,12 @@ async function tableTextFits(p) {
     const trigger = sub.locator('.astryx-collapsible-trigger');
     await expect(trigger).toHaveAttribute('aria-expanded', 'false');
     await trigger.click();
-    await sub.locator('[data-subscription-nodes] > li').first().waitFor();
+    // A visible row may still be a loading skeleton. Snapshot loaded nodes on both viewports.
+    await expect(sub.locator('[data-subscription-nodes] > li').first()).toContainText('香港 01 IPLC');
+    await expect(sub.locator('[data-subscription-nodes] > li').first()).toContainText('hysteria2');
     if (width < 768) {
       await expect(sub.locator('[data-subscription-nodes]')).toHaveCount(1);
       await expect(sub.locator('table')).toHaveCount(0);
-      await expect(sub.locator('[data-subscription-nodes] > li').first()).toContainText('香港 01 IPLC');
-      await expect(sub.locator('[data-subscription-nodes] > li').first()).toContainText('hysteria2');
       await tableTextFits(p);
     }
     const before = await sub.locator('[data-subscription-nodes] > li').first().textContent();
