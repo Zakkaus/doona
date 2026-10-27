@@ -160,15 +160,25 @@ export async function detectHostedBackend(
   try {
     storage ??= localStorage;
     if (storage.getItem(storageKeys.profiles) !== null || storage.getItem(storageKeys.legacyApi) !== null || !/^https?:$/.test(loc.protocol)) return false;
+    const api = await probeHostedBackend(loc, fetcher);
+    if (api === null) return false;
+    writeProfiles({profiles: [{id: 'hosted', name: loc.host, api, token: ''}], activeId: 'hosted'}, storage);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function probeHostedBackend(loc: Pick<Location, 'origin' | 'pathname' | 'protocol'>, fetcher: typeof fetch = fetch): Promise<string | null> {
+  try {
+    if (!/^https?:$/.test(loc.protocol)) return null;
     const api = hostedRoot(loc);
     const response = await fetcher(`${api}/api`, {headers: {Accept: 'application/json'}, cache: 'no-store', signal: AbortSignal.timeout(3000)});
     const json = response.headers.get('content-type')?.includes('application/json') ?? false;
     const challenged = response.status === 401 && /bearer/i.test(response.headers.get('www-authenticate') ?? '');
     const discovered = response.status === 200 && json && (await response.json())?.api_major === 1;
-    if (!challenged && !discovered) return false;
-    writeProfiles({profiles: [{id: 'hosted', name: loc.host, api, token: ''}], activeId: 'hosted'}, storage);
-    return true;
+    return challenged || discovered ? api : null;
   } catch {
-    return false;
+    return null;
   }
 }

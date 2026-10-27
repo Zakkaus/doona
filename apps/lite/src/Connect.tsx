@@ -13,6 +13,7 @@ import {ApiError} from '../../../src/api/error';
 import {credentialProblems, resolveSignInKind, secondsLeft, signInRefusal} from '../../../src/shell/useLogin';
 import {connect, LiteError, type Connection} from './api';
 import {clearConnection, readConnection} from './connectionStore';
+import {connectionStartup} from './connectionStartup';
 import {useMessages, type MessageKey} from './i18n';
 import {noticeText, useTask} from './state';
 import {Feedback} from './ui';
@@ -32,6 +33,8 @@ export function Connect({
 }) {
   const t = useMessages();
   const [saved] = useState(readConnection);
+  const [probing, setProbing] = useState(!saved && !endedAddress && import.meta.env.VITE_LITE_DEMO !== '1');
+  const [hosted, setHosted] = useState(false);
   const [address, setAddress] = useState(endedAddress ?? (saved?.address !== 'mock' ? saved?.address : '') ?? '');
   const [token, setToken] = useState('');
   const [username, setUsername] = useState('');
@@ -43,7 +46,7 @@ export function Connect({
   const [now, setNow] = useState(Date.now);
   const task = useTask(setBusy);
   const restored = useRef(false);
-  const ready = true;
+  const ready = !probing;
   const motion = usePageMotion(ready);
   const wait = secondsLeft(until, now);
   useEffect(() => {
@@ -74,17 +77,29 @@ export function Connect({
       });
       return;
     }
-    if (!saved || saved.address === 'mock') return;
+    if (saved?.address === 'mock' || import.meta.env.VITE_LITE_DEMO === '1') return;
     void task.run('backend', async () => {
+      let connected = false;
       try {
-        onConnect(await connect(saved.address, saved.token));
+        const next = await connectionStartup(saved, import.meta.env.VITE_LITE_DEMO === '1', location);
+        if (next && 'connection' in next) {
+          onConnect(next.connection);
+          connected = true;
+        } else if (next) {
+          setAddress(next.address);
+          setKind(next.kind);
+          setHosted(next.kind !== 'no-api');
+          if (next.kind === 'no-api') throw new LiteError('login.noApi');
+        }
       } catch (error) {
-        if (error instanceof ApiError && error.status === 401) {
+        if (saved && error instanceof ApiError && error.status === 401) {
           clearConnection(saved);
           await discover();
           throw new LiteError('login.sessionEnded');
         }
         throw error;
+      } finally {
+        if (!connected) setProbing(false);
       }
       return undefined;
     });
@@ -158,6 +173,12 @@ export function Connect({
         : kind === 'token'
           ? t.connectButton
           : t['login.check'];
+  if (probing)
+    return (
+      <Center axis="both" padding={6} style={{minHeight: '100dvh'}}>
+        <Text role="status">{t.loading}</Text>
+      </Center>
+    );
   return (
     <Center axis="both" padding={6} style={{minHeight: '100dvh', backgroundColor: 'var(--color-background-body)'}}>
       <VStack ref={motion.body} gap={4} hAlign="center" width="100%" maxWidth={400}>
@@ -171,9 +192,9 @@ export function Connect({
         <Card padding={8} width="100%">
           <VStack gap={4}>
             <VStack gap={1} hAlign="center">
-              <Heading level={1}>{kind === 'setup' ? t['login.setupTitle'] : kind === 'login' ? t['login.signIn'] : t.connect}</Heading>
+              <Heading level={1}>{kind === 'setup' ? t['login.setupTitle'] : kind === 'login' || kind === 'token' ? t['login.signIn'] : t.connect}</Heading>
               <Text color="secondary" type="supporting" justify="center">
-                {t.connectDescription}
+                {kind === 'setup' ? t.setupDescription : kind === 'login' ? t.signInDescription : kind === 'token' ? t.tokenDescription : t.connectDescription}
               </Text>
             </VStack>
             <Feedback notice={task.notice ?? (endedAddress ? {error: new LiteError('login.sessionEnded')} : undefined)} />
@@ -188,20 +209,23 @@ export function Connect({
                 start(false);
               }}
             >
-              <FormLayout defaultOptionality="required">
-                <TextInput
-                  label={t.backend}
-                  isLabelHidden
-                  placeholder={t.backend}
-                  size="lg"
-                  value={address}
-                  onChange={editAddress}
-                  width="100%"
-                  isRequired
-                  isDisabled={task.busy !== null}
-                  autoComplete="url"
-                />
-              </FormLayout>
+              {!hosted && (
+                <FormLayout defaultOptionality="required">
+                  <TextInput
+                    label={t.backend}
+                    isLabelHidden
+                    placeholder={t.backend}
+                    description={t.backendHelp}
+                    size="lg"
+                    value={address}
+                    onChange={editAddress}
+                    width="100%"
+                    isRequired
+                    isDisabled={task.busy !== null}
+                    autoComplete="url"
+                  />
+                </FormLayout>
+              )}
               {(kind === 'login' || kind === 'setup') && (
                 <VStack gap={4}>
                   <TextInput
@@ -245,6 +269,7 @@ export function Connect({
                   label={t.token}
                   isLabelHidden
                   placeholder={t.token}
+                  description={t.tokenHelp}
                   size="lg"
                   type="password"
                   value={token}
@@ -263,6 +288,18 @@ export function Connect({
                 isLoading={task.busy === 'backend'}
               />
             </VStack>
+            {hosted && (
+              <Button
+                label={t.useAnotherBackend}
+                variant="ghost"
+                size="lg"
+                isDisabled={task.busy !== null}
+                onClick={() => {
+                  setHosted(false);
+                  editAddress('');
+                }}
+              />
+            )}
             <Divider label={t.or} />
             <Button label={t.demo} size="lg" variant="secondary" isDisabled={task.busy !== null} isLoading={task.busy === 'demo'} onClick={() => start(true)} />
           </VStack>

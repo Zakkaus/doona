@@ -9,7 +9,7 @@ const standardKeys = [...fs.readFileSync(path.resolve(__dirname, '../../../src/a
 );
 const labels = {
   'zh-CN': {
-    backend: '后端地址',
+    backend: 'honk native API 根地址',
     next: '继续',
     username: '用户名',
     password: '密码',
@@ -24,7 +24,7 @@ const labels = {
     ended: '会话已结束，请重新登录。'
   },
   'zh-TW': {
-    backend: '後端位址',
+    backend: 'honk native API 根網址',
     next: '繼續',
     username: '使用者名稱',
     password: '密碼',
@@ -35,7 +35,7 @@ const labels = {
     connect: '連線至後端'
   },
   en: {
-    backend: 'Backend address',
+    backend: 'honk native API root',
     next: 'Continue',
     username: 'Username',
     password: 'Password',
@@ -63,7 +63,16 @@ async function settle(page) {
     );
   });
 }
-async function fixture(browser, kind, {locale = 'zh-CN', width = 1440, height = 900, theme = 'light', seeded = false, saved = false} = {}) {
+async function fixture(
+  browser,
+  kind,
+  {locale = 'zh-CN', width = 1440, height = 900, theme = 'light', seeded = false, saved = false, hosted = false, refusal = 401} = {}
+) {
+  const target = hosted ? new URL(base).origin : backend;
+  let releaseProbe;
+  const probeGate = new Promise(resolve => {
+    releaseProbe = resolve;
+  });
   const page = await browser.newPage({locale, viewport: {width, height}, reducedMotion: 'reduce'});
   const errors = [];
   const state = {kind, expired: false, requests: [], auth: [], accesses: []};
@@ -74,6 +83,10 @@ async function fixture(browser, kind, {locale = 'zh-CN', width = 1440, height = 
       localStorage.setItem('doona-lite.theme', theme);
       if (seeded) for (const key of standardKeys) localStorage.setItem(key, 'standard-app-sentinel');
       if (saved) localStorage.setItem('doona-lite.connection', JSON.stringify({address: backend, token: 'expired'}));
+      window.addressShown = false;
+      new MutationObserver(() => {
+        if (document.querySelector('input[autocomplete="url"]')) window.addressShown = true;
+      }).observe(document, {childList: true, subtree: true});
       window.storageAccesses = [];
       for (const method of ['getItem', 'setItem', 'removeItem']) {
         const original = Storage.prototype[method];
@@ -83,45 +96,50 @@ async function fixture(browser, kind, {locale = 'zh-CN', width = 1440, height = 
         };
       }
     },
-    {locale, theme, seeded, saved, standardKeys, backend}
+    {locale, theme, seeded, saved, standardKeys, backend: target}
   );
-  await page.route(`${backend}/**`, async route => {
-    const request = route.request();
-    const url = new URL(request.url());
-    state.requests.push(url.pathname);
-    const json = (body, status = 200, headers = {}) => route.fulfill({status, contentType: 'application/json', headers, body: JSON.stringify(body)});
-    if (state.kind === 'offline') return route.abort('connectionrefused');
-    if (state.kind === 'no-api') return json({}, 404);
-    if (url.pathname === '/api') {
-      if (state.kind === 'clash') return json({}, 401);
-      if (state.kind === 'legacy') return json({}, 404);
-      return json({name: 'honk-native', auth: {mode: state.kind === 'token' ? 'token' : 'password', setup_required: state.kind === 'setup'}});
+  await page.route(
+    url => url.origin === new URL(target).origin && (url.pathname === '/api' || url.pathname.startsWith('/api/')),
+    async route => {
+      const request = route.request();
+      const url = new URL(request.url());
+      state.requests.push(url.pathname);
+      const json = (body, status = 200, headers = {}) => route.fulfill({status, contentType: 'application/json', headers, body: JSON.stringify(body)});
+      if (state.kind === 'offline') return route.abort('connectionrefused');
+      if (state.kind === 'no-api') return json({}, 404);
+      if (url.pathname === '/api') {
+        if (hosted) await probeGate;
+        if (state.kind === 'clash') return json({}, 401);
+        if (state.kind === 'legacy') return json({}, 404);
+        return json({name: 'honk-native', api_major: 1, auth: {mode: state.kind === 'token' ? 'token' : 'password', setup_required: state.kind === 'setup'}});
+      }
+      if (url.pathname.startsWith('/api/v1/auth/')) {
+        state.auth.push({path: url.pathname, body: request.postDataJSON(), authorization: request.headers().authorization});
+        const {password} = request.postDataJSON();
+        if (password === 'wrong') return json({error: {code: 'invalid_credentials', message: 'RAW SERVER ERROR'}}, 401);
+        if (password === 'switch-kind') return json({error: {code: state.kind === 'setup' ? 'setup_already_completed' : 'setup_required'}}, 409);
+        if (password === 'limited') return json({error: {code: 'rate_limited'}}, 429, {'Retry-After': '1'});
+        return json({token: 'session-from-backend', expires_at: '2026-10-26T00:00:00Z'});
+      }
+      const authorization = request.headers().authorization;
+      if (state.expired || authorization === 'Bearer expired' || authorization === 'Bearer rejected')
+        return json({error: {code: 'invalid_token', message: 'RAW TOKEN ERROR'}}, 401);
+      if (url.pathname === '/api/v1/capabilities') {
+        if (state.kind === 'clash') return json({}, 404);
+        if (hosted && state.kind !== 'anonymous' && !authorization) return json({error: {code: 'authentication_required'}}, refusal);
+        if (state.kind === 'anonymous') expect(authorization).toBeUndefined();
+        else if (state.kind !== 'legacy') expect(authorization).toBe(`Bearer ${state.kind === 'token' ? 'pasted-token' : 'session-from-backend'}`);
+        return json(capabilities);
+      }
+      if (url.pathname === '/api/v1/groups') return json({groups: [], observed_at: '2026-10-25T00:00:00Z'});
+      return json({}, 404);
     }
-    if (url.pathname.startsWith('/api/v1/auth/')) {
-      state.auth.push({path: url.pathname, body: request.postDataJSON(), authorization: request.headers().authorization});
-      const {password} = request.postDataJSON();
-      if (password === 'wrong') return json({error: {code: 'invalid_credentials', message: 'RAW SERVER ERROR'}}, 401);
-      if (password === 'switch-kind') return json({error: {code: state.kind === 'setup' ? 'setup_already_completed' : 'setup_required'}}, 409);
-      if (password === 'limited') return json({error: {code: 'rate_limited'}}, 429, {'Retry-After': '1'});
-      return json({token: 'session-from-backend', expires_at: '2026-10-26T00:00:00Z'});
-    }
-    const authorization = request.headers().authorization;
-    if (state.expired || authorization === 'Bearer expired' || authorization === 'Bearer rejected')
-      return json({error: {code: 'invalid_token', message: 'RAW TOKEN ERROR'}}, 401);
-    if (url.pathname === '/api/v1/capabilities') {
-      if (state.kind === 'clash') return json({}, 404);
-      if (state.kind !== 'legacy') expect(authorization).toBe(`Bearer ${state.kind === 'token' ? 'pasted-token' : 'session-from-backend'}`);
-      return json(capabilities);
-    }
-    if (url.pathname === '/api/v1/groups') return json({groups: [], observed_at: '2026-10-25T00:00:00Z'});
-    return json({}, 404);
-  });
+  );
   await page.goto(base);
   const l = labels[locale];
-  // The backend control keeps its existing accessible label across locales.
   const address = page.locator('input[autocomplete="url"]');
   const discover = async () => {
-    await address.fill(backend);
+    await address.fill(target);
     await page.getByRole('button', {name: l.next, exact: true}).click();
   };
   const checkStorage = async () => {
@@ -133,7 +151,10 @@ async function fixture(browser, kind, {locale = 'zh-CN', width = 1440, height = 
       accesses: window.storageAccesses,
       session: Object.keys(sessionStorage)
     }));
-    expect(result.connection).toEqual({address: backend, token: state.kind === 'token' ? 'pasted-token' : 'session-from-backend'});
+    expect(result.connection).toEqual({
+      address: target,
+      token: state.kind === 'anonymous' ? '' : state.kind === 'token' ? 'pasted-token' : 'session-from-backend'
+    });
     expect(result.connection).not.toHaveProperty('password');
     expect(result.accesses.filter(item => standardKeys.some(key => item.key.startsWith(key)))).toEqual([]);
     if (!seeded) expect(result.keys.filter(key => standardKeys.includes(key))).toEqual([]);
@@ -142,7 +163,7 @@ async function fixture(browser, kind, {locale = 'zh-CN', width = 1440, height = 
     expect(errors).toEqual([]);
     console.log(`STORAGE ${JSON.stringify([...new Set(result.accesses.map(item => `${item.store}:${item.key}`))])}`);
   };
-  return {page, state, l, discover, address, checkStorage, errors};
+  return {page, state, l, discover, address, checkStorage, errors, releaseProbe};
 }
 async function screenshot(page, name) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
@@ -154,6 +175,48 @@ async function screenshot(page, name) {
 async function run() {
   const browser = await chromium.launch();
   try {
+    for (const [kind, refusal] of [
+      ['anonymous', 401],
+      ['login', 401],
+      ['setup', 403],
+      ['token', 403]
+    ]) {
+      const {page, state, l, address, checkStorage, releaseProbe} = await fixture(browser, kind, {hosted: true, refusal, locale: 'zh-TW', seeded: true});
+      await expect(page.getByRole('status')).toHaveText('正在載入…');
+      await expect(address).toHaveCount(0);
+      await expect(page.locator('form')).toHaveCount(0);
+      releaseProbe();
+      if (kind !== 'anonymous') {
+        await expect(page.getByRole('button', {name: '使用其他後端', exact: true})).toBeVisible();
+        await expect(address).toHaveCount(0);
+        await expect(page.getByRole('heading', {level: 1})).toHaveText(kind === 'setup' ? '設定管理員' : '登入');
+        await expect(page.getByLabel(l.username, {exact: true})).toHaveCount(kind === 'token' ? 0 : 1);
+        await expect(page.getByLabel(l.token, {exact: true})).toHaveCount(kind === 'token' ? 1 : 0);
+        await expect(page.getByLabel(l.confirm, {exact: true})).toHaveCount(kind === 'setup' ? 1 : 0);
+        if (kind === 'token') await page.getByLabel(l.token, {exact: true}).fill('pasted-token');
+        else {
+          await page.getByLabel(l.username, {exact: true}).fill('admin');
+          await page.getByLabel(l.password, {exact: true}).fill('valid-password');
+          if (kind === 'setup') await page.getByLabel(l.confirm, {exact: true}).fill('valid-password');
+        }
+        await page.getByRole('button', {name: kind === 'token' ? l.connect : l[kind], exact: true}).click();
+      }
+      await checkStorage();
+      await expect(page).toHaveURL(/#groups$/);
+      expect(await page.evaluate(() => window.addressShown)).toBe(false);
+      expect(state.auth).toHaveLength(kind === 'anonymous' || kind === 'token' ? 0 : 1);
+      await page.close();
+    }
+    const alternate = await fixture(browser, 'login', {hosted: true, locale: 'en'});
+    alternate.releaseProbe();
+    await alternate.page.getByRole('button', {name: 'Use another backend', exact: true}).click();
+    await expect(alternate.address).toBeVisible();
+    await expect(alternate.address).toHaveValue('');
+    await expect(alternate.page.getByLabel(alternate.l.username, {exact: true})).toHaveCount(0);
+    await expect(alternate.page.getByRole('button', {name: alternate.l.next, exact: true})).toBeVisible();
+    await expect(alternate.page.getByText(/honk native API root, for example/)).toBeVisible();
+    await alternate.page.close();
+    console.log('PASS hosted anonymous access, auth steps, no form flash, alternate backend');
     for (const view of [
       {width: 1440, height: 900, theme: 'light'},
       {width: 390, height: 844, theme: 'light'},
@@ -168,7 +231,7 @@ async function run() {
           await screenshot(page, `${kind}-${view.width}-${view.theme}`);
           await page.getByLabel(l.token, {exact: true}).fill('rejected');
           await page.getByRole('button', {name: l.connect, exact: true}).click();
-          await expect(page.getByText('令牌被拒绝，请检查后重新连接。', {exact: true})).toBeVisible();
+          await expect(page.getByText('登录会话或令牌被拒绝，请重新登录或检查令牌。', {exact: true})).toBeVisible();
           await page.getByLabel(l.token, {exact: true}).fill('pasted-token');
         } else {
           await expect(page.getByLabel(l.username, {exact: true})).toBeVisible();

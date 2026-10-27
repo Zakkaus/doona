@@ -1,6 +1,34 @@
 import {expect, it, vi} from 'vitest';
 import {detectHostedBackend, suggestedBackendUrl} from './profiles';
 
+it.each(['discovery', 'challenge'])('keeps standard hosted profile creation after a %s response', async kind => {
+  const values = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => void values.set(key, value),
+    removeItem: (key: string) => void values.delete(key)
+  };
+  const fetcher = vi.fn(async () =>
+    kind === 'discovery' ? Response.json({api_major: 1}) : new Response(null, {status: 401, headers: {'WWW-Authenticate': 'Bearer'}})
+  );
+  await expect(
+    detectHostedBackend(storage, {origin: 'https://honk.example', pathname: '/router/ui/', protocol: 'https:', host: 'honk.example'}, fetcher)
+  ).resolves.toBe(true);
+  expect(fetcher).toHaveBeenCalledWith('https://honk.example/router/api', expect.objectContaining({cache: 'no-store', headers: {Accept: 'application/json'}}));
+  expect(JSON.parse(values.get('doona-profiles')!)).toEqual([{id: 'hosted', name: 'honk.example', api: 'https://honk.example/router', token: ''}]);
+  expect(values.get('doona-profile')).toBe('hosted');
+});
+
+it.each(['doona-profiles', 'doona-api'])('does not probe or overwrite existing standard settings in %s', async key => {
+  const storage = {getItem: (name: string) => (name === key ? '' : null), setItem: vi.fn(), removeItem: vi.fn()};
+  const fetcher = vi.fn();
+  await expect(
+    detectHostedBackend(storage, {origin: 'https://honk.example', pathname: '/ui/', protocol: 'https:', host: 'honk.example'}, fetcher)
+  ).resolves.toBe(false);
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(storage.setItem).not.toHaveBeenCalled();
+});
+
 it('continues startup when accessing browser storage throws', async () => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
   Object.defineProperty(globalThis, 'localStorage', {
