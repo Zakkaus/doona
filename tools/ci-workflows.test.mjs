@@ -33,6 +33,7 @@ it('builds the release once, after the Check run on the tagged commit passed', (
   expect(commands.filter(command => command === 'pnpm build')).toHaveLength(1);
   expect(commands.some(command => /playwright|pnpm e2e/.test(command ?? ''))).toBe(false);
   expect(release.jobs.build.needs).toContain('verified');
+  expect(commands).toContain('pnpm -C apps/lite build');
   expect(release.jobs.verified.permissions).toEqual({actions: 'read'});
   expect(release.jobs.verified.steps.map(step => step.run ?? '').join('\n')).toMatch(/check\.yml/);
 });

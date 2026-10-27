@@ -82,6 +82,8 @@ jobs:
       - run: pnpm check
       - run: pnpm build
       - run: pnpm check:size
+      - run: pnpm -C apps/lite install --frozen-lockfile
+      - run: pnpm -C apps/lite build
       - name: Install asset compressors
         run: sudo apt-get update && sudo apt-get install -y brotli gzip
       - name: Package the archives
