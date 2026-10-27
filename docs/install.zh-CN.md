@@ -41,15 +41,16 @@ HTML 可以打开，但 JavaScript 或 CSS 请求返回 403 时，在浏览器�
 
 手动安装或通过系统的软件包管理器安装，选择其中一个。
 
-| 文件                               | 内容                               | 适用系统或方式                  |
-| ---------------------------------- | ---------------------------------- | ------------------------------- |
-| `doona-0.1.0-rc.1.tar.gz`          | 构建好的 UI 与许可证，不含安装程序 | 手动安装，由任意 Web 服务器提供 |
-| `doona-web_0.1.0-rc.1-1_all.deb`   | Debian 软件包                      | Debian 或 Ubuntu                |
-| `doona-0.1.0-rc.1-1.noarch.rpm`    | RPM 软件包                         | Fedora 或 openSUSE              |
-| `doona-0.1.0rc1-1-any.pkg.tar.zst` | pacman 软件包                      | Arch Linux                      |
-| `doona_0.1.0-rc.1-1_all.ipk`       | opkg 软件包                        | OpenWrt 24.10 及更早版本        |
-| `doona-0.1.0_rc1-r1.apk`           | apk-tools 3 软件包                 | OpenWrt 25.12                   |
-| `doona-0.1.0-rc.1-r0.alpine.apk`   | Alpine 软件包                      | Alpine Linux                    |
+| 文件                               | 内容                                         | 适用系统或方式                  |
+| ---------------------------------- | -------------------------------------------- | ------------------------------- |
+| `doona-0.1.0-rc.1.tar.gz`          | 构建好的 UI 与许可证，不含安装程序           | 手动安装，由任意 Web 服务器提供 |
+| `doona-web_0.1.0-rc.1-1_all.deb`   | Debian 软件包                                | Debian 或 Ubuntu                |
+| `doona-0.1.0-rc.1-1.noarch.rpm`    | RPM 软件包                                   | Fedora 或 openSUSE              |
+| `doona-0.1.0rc1-1-any.pkg.tar.zst` | pacman 软件包                                | Arch Linux                      |
+| `doona_0.1.0-rc.1-1_all.ipk`       | opkg 软件包                                  | OpenWrt 24.10 及更早版本        |
+| `doona-0.1.0_rc1-r1.apk`           | apk-tools 3 软件包                           | OpenWrt 25.12                   |
+| `doona-0.1.0-rc.1-r0.alpine.apk`   | Alpine 软件包                                | Alpine Linux                    |
+| `doona-lite-0.1.0-rc.1.tar.gz`     | doona lite，更精简的配置编辑器，不含安装程序 | 手动安装 doona lite             |
 
 Debian 与 Ubuntu 自带一个无关的 `doona` 软件包，因此 deb 名称为 `doona-web`，安装到 `/usr/share/doona-web`；请将 honk 的 `ui` 设为该路径。其他软件包格式保留 `doona` 名称，安装到 `/usr/share/doona`。Alpine 与 OpenWrt 的 apk 文件不能混用。
 
