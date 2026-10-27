@@ -130,6 +130,76 @@ async function searchInsets(p) {
     if (delta !== null) expect(delta).toBeLessThanOrEqual(1);
   }
 }
+async function groupWidths(browser) {
+  for (const width of [1180, 1470, 1920, 2560])
+    for (const locale of ['en', 'zh-TW']) {
+      const p = await browser.newPage({viewport: {width, height: 900}, locale, reducedMotion: 'reduce', colorScheme: 'dark'});
+      p.setDefaultTimeout(15000);
+      await p.addInitScript(locale => {
+        localStorage.setItem('doona-lite.locale', locale);
+        localStorage.setItem('doona-lite.theme', 'dark');
+      }, locale);
+      await p.goto(base);
+      await p.getByRole('button', {name: locale === 'en' ? 'Try the demo' : '試用示範', exact: true}).click();
+      await p.locator('[data-group-row]').first().waitFor();
+      await settle(p);
+      const rows = await p.locator('[data-group-row]:visible').evaluateAll(rows =>
+        rows.map(row => {
+          const box = row.getBoundingClientRect();
+          const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT);
+          const texts = [];
+          while (walker.nextNode()) if (walker.currentNode.textContent.trim()) texts.push(walker.currentNode);
+          const nameElement = texts.find(node => node.textContent === row.dataset.groupRow).parentElement;
+          const name = nameElement.getBoundingClientRect();
+          const latency = texts.at(-1).parentElement;
+          return {
+            row: row.dataset.groupRow,
+            name: name.width,
+            fontSize: parseFloat(getComputedStyle(nameElement).fontSize),
+            nameInside: name.left >= box.left && name.right <= box.right,
+            latency: latency.textContent,
+            latencyInside: latency.getBoundingClientRect().right <= box.right + 0.5 && latency.scrollWidth <= latency.clientWidth
+          };
+        })
+      );
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(row.name, JSON.stringify(row)).toBeGreaterThanOrEqual(4 * row.fontSize);
+        expect(row.nameInside && row.latencyInside, JSON.stringify(row)).toBe(true);
+      }
+      const insets = await p
+        .locator('nav')
+        .first()
+        .evaluate(nav => {
+          const box = nav.getBoundingClientRect();
+          const scrolled = [nav, ...nav.querySelectorAll('*')].filter(e => e.scrollLeft !== 0).length;
+          const items = [...nav.querySelectorAll('.astryx-side-nav-item')]
+            .filter(e => e.checkVisibility() && !e.parentElement.closest('.astryx-side-nav-item'))
+            .map(e => e.getBoundingClientRect());
+          return {scrolled, items: items.map(r => ({start: r.left - box.left, end: box.right - r.right}))};
+        });
+      expect(insets.scrolled).toBe(0);
+      expect(insets.items.length).toBeGreaterThan(0);
+      for (const item of insets.items) expect(Math.abs(item.start - item.end), JSON.stringify(insets)).toBeLessThanOrEqual(1);
+      await screenshot(p, `groups-${width}-${locale}-dark`);
+      if (width >= 1470) {
+        const inspector = p.getByLabel(locale === 'en' ? 'Group details' : '策略群組詳細資料', {exact: true});
+        const handle = p.getByRole('separator', {name: locale === 'en' ? 'Resize group details' : '調整策略群組詳細資料寬度', exact: true});
+        for (const [key, chosen] of [
+          [null, 640],
+          ['Home', 480],
+          ['End', 880]
+        ]) {
+          if (key) await handle.press(key);
+          await expect(handle).toHaveAttribute('aria-valuenow', String(chosen));
+          expect((await inspector.boundingBox()).width).toBeCloseTo(chosen, 1);
+        }
+        console.log(`PASS inspector default and chosen widths: ${width} ${locale}`);
+      }
+      console.log(`PASS group names and sidebar inset: ${width} ${locale}`);
+      await p.close();
+    }
+}
 (async () => {
   const browser = await chromium.launch();
   try {
@@ -268,6 +338,7 @@ async function searchInsets(p) {
         console.log(`PASS layout rhythm, md controls, single-line labels, insets and footer: ${width} ${locale}`);
         await p.close();
       }
+    await groupWidths(browser);
   } finally {
     await browser.close();
   }
