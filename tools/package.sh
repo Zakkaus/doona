@@ -14,8 +14,8 @@ SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct)}
 case "$SOURCE_DATE_EPOCH" in
     ''|*[!0-9]*) echo 'SOURCE_DATE_EPOCH must be a Unix timestamp' >&2; exit 1 ;;
 esac
-[ -f dist/index.html ] && [ -d dist/fonts ] || {
-    echo 'Build dist/ with pnpm build before packaging' >&2
+[ -f dist/index.html ] && [ -d dist/fonts ] && [ -f apps/lite/dist/index.html ] || {
+    echo 'Build dist/ with pnpm build and apps/lite/dist/ with pnpm -C apps/lite build before packaging' >&2
     exit 1
 }
 for tool in brotli gzip; do
@@ -36,13 +36,16 @@ stage=$(mktemp -d "$PWD/release/.package.XXXXXX")
 trap 'rm -rf "$stage"' 0
 trap 'exit 1' HUP INT TERM
 mkdir "$stage/program" "$stage/font-package" "$stage/precompressed"
-for entry in dist/* dist/.[!.]* dist/..?*; do
-    [ -e "$entry" ] || [ -L "$entry" ] || continue
-    [ "$entry" != dist/fonts ] || continue
-    # The Vite build manifest only serves the size check.
-    [ "$entry" != dist/.vite ] || continue
-    cp -R "$entry" "$stage/program/"
-done
+# Copies a build directory without its fonts and the Vite build manifest, which only serves the size check.
+copy_build() {
+    for entry in "$1"/* "$1"/.[!.]* "$1"/..?*; do
+        [ -e "$entry" ] || [ -L "$entry" ] || continue
+        [ "$entry" != "$1/fonts" ] || continue
+        [ "$entry" != "$1/.vite" ] || continue
+        cp -R "$entry" "$2/"
+    done
+}
+copy_build dist "$stage/program"
 # The optional precompressed archive holds .br and .gz siblings of the staged dist assets, not of the licence and
 # notice files added below.
 (cd "$stage/program" && find . -type f -size +1023c \( \
@@ -66,9 +69,16 @@ sort -z "$stage/assets" > "$stage/sorted-assets"
     done
     rm -f "$sibling"
 ' sh "$stage/precompressed" "$stage/sibling" < "$stage/sorted-assets")
-cp LICENSE NOTICE README.md "$stage/program/"
-# Adds LICENSES/ and THIRD-PARTY-NOTICES.txt, and fails if NOTICE cites a licence file left out.
-node tools/notices.mjs "$stage/program"
+add_notices() {
+    cp LICENSE NOTICE README.md "$1/"
+    # Adds LICENSES/ and THIRD-PARTY-NOTICES.txt, and fails if NOTICE cites a licence file left out.
+    node tools/notices.mjs "$1"
+}
+add_notices "$stage/program"
+# doona lite unpacks beside the standard edition: index.html at the archive root, system fonts, no font archive.
+mkdir "$stage/lite"
+copy_build apps/lite/dist "$stage/lite"
+add_notices "$stage/lite"
 cp -R dist/fonts "$stage/font-package/"
 
 archive() {
@@ -80,9 +90,11 @@ archive() {
 program="doona-$version.tar.gz"
 fonts="doona-fonts-$version.tar.gz"
 precompressed="doona-precompressed-$version.tar.gz"
+lite="doona-lite-$version.tar.gz"
 archive "$stage/program" "$program"
+archive "$stage/lite" "$lite"
 archive "$stage/font-package" "$fonts"
 archive "$stage/precompressed" "$precompressed"
-(cd "$stage" && sha256sum "$program" "$fonts" "$precompressed" > SHA256SUMS)
-mv "$stage/$program" "$stage/$fonts" "$stage/$precompressed" "$stage/SHA256SUMS" release/
-printf 'Created release/%s, release/%s, release/%s and release/SHA256SUMS\n' "$program" "$fonts" "$precompressed"
+(cd "$stage" && sha256sum "$program" "$fonts" "$precompressed" "$lite" > SHA256SUMS)
+mv "$stage/$program" "$stage/$fonts" "$stage/$precompressed" "$stage/$lite" "$stage/SHA256SUMS" release/
+printf 'Created release/%s, release/%s, release/%s, release/%s and release/SHA256SUMS\n' "$program" "$fonts" "$precompressed" "$lite"
