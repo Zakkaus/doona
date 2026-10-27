@@ -69,7 +69,7 @@ export function Dns({connection, setBusy}: {connection: Connection; setBusy: (bu
     });
   const editorMode = (
     <SegmentedControl
-      size="lg"
+      size="md"
       isDisabled={!ready}
       label={t.editorMode}
       value={textMode ? 'text' : 'visual'}

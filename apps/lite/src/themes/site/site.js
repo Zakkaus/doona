@@ -368,14 +368,6 @@ export const siteTheme = {
         "borderStyle": "solid",
         "borderColor": "var(--color-border-emphasized)",
         "padding": "calc(var(--spacing-0-5) - var(--border-width))"
-      },
-      "size:lg": {
-        "padding": "var(--spacing-0)",
-        "borderWidth": "var(--spacing-0)",
-        "outlineWidth": "var(--border-width)",
-        "outlineStyle": "solid",
-        "outlineColor": "var(--color-border-emphasized)",
-        "outlineOffset": "calc(-1 * var(--border-width))"
       }
     },
     "segmented-control-item": {

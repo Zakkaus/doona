@@ -502,16 +502,6 @@
     --_segmented-control-padding: calc(var(--spacing-0-5) - var(--border-width));
   }
 
-  .astryx-segmented-control[data-size="lg"] {
-    padding: var(--spacing-0);
-    border-width: var(--spacing-0);
-    outline-width: var(--border-width);
-    outline-style: solid;
-    outline-color: var(--color-border-emphasized);
-    outline-offset: calc(-1 * var(--border-width));
-    --_segmented-control-padding: var(--spacing-0);
-  }
-
   .astryx-segmented-control-item {
     border-radius: var(--radius-element);
   }

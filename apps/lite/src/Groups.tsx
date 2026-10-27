@@ -358,7 +358,7 @@ export function Groups({connection, setBusy}: {connection: Connection; setBusy: 
         refreshing={!!read.data && read.loading}
         actions={
           <>
-            <SegmentedControl label={t.groupView} value={mode} onChange={value => startTransition(() => setMode(value))} size="lg">
+            <SegmentedControl label={t.groupView} value={mode} onChange={value => startTransition(() => setMode(value))} size="md">
               <SegmentedControlItem value="switch" label={t.switchMode} />
               <SegmentedControlItem value="edit" label={t.editMode} isDisabled={!capabilities.resources.config.available} />
             </SegmentedControl>
