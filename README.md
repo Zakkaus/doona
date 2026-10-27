@@ -51,13 +51,21 @@ honk handles proxying, so protocol support depends on the backend version and bu
 
 WebSocket, gRPC and XHTTP are stream transports, separate from proxy protocols. On honk versions with XHTTP support, Trojan/VMess/VLESS use the [H2 XHTTP profile](https://github.com/daeuniverse/honk/blob/main/doc/en/reference/nodes.md#xhttp-over-h2), with no H1/H3 fallback; the reference lists supported combinations and limitations.
 
-![The activity page](https://zakkaus.github.io/doona-docs/screenshots/en/activity-light.webp)
+![The Activity page](https://zakkaus.github.io/doona-docs/screenshots/en/activity-light.webp)
 
-![Configuration files with the editable source view](https://zakkaus.github.io/doona-docs/screenshots/en/config-source-light.webp)
+![Editing the width and height of an Activity card](https://zakkaus.github.io/doona-docs/screenshots/en/dashboard-settings.webp)
+
+![Editing a policy group](https://zakkaus.github.io/doona-docs/screenshots/en/group-editor.webp)
+
+![Routing rules in the advanced list](https://zakkaus.github.io/doona-docs/screenshots/en/rules-advanced.webp)
+
+![Editing a configuration source file](https://zakkaus.github.io/doona-docs/screenshots/en/config-source-light.webp)
 
 ## Latest release
 
-[rc.1](CHANGELOG.md) suggests the backend address on a plain-http page, keeps the IPv6 brackets in that suggestion, and fixes table row alignment and the route trace process field.
+[0.1.0-rc.2](CHANGELOG.md) has 41 entries: 4 additions, 9 changes, 23 fixes and 5 internal updates.
+
+It adds doona lite, a smaller configuration editor shipped in its own archive. The Nodes page takes several node links at once and tests the filtered list, sorted by latency, and the route trace accepts a firewall mark. A first run opens a connection form in Settings, and up to four recently left pages reopen as they were. Suspending the service, clearing logs, switching to Direct or Global mode and leaving an unapplied rule template or group draft now ask for confirmation.
 
 ## Documentation
 
