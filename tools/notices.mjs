@@ -32,6 +32,12 @@ export const BUILD_RUNTIME = [
     file: 'LICENSE',
     license: 'Apache-2.0',
     note: 'Only the empty.js locale helper emitted by the plugin ships.'
+  },
+  {
+    name: 'rolldown',
+    from: ['vite'],
+    file: 'LICENSE',
+    note: 'Only the module and CommonJS interop helpers that Rolldown writes into the build ship.'
   }
 ];
 
@@ -68,23 +74,19 @@ function resolvePackage(start, name) {
 const readJson = path => JSON.parse(readFileSync(path, 'utf8'));
 const byNameVersion = (a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : a.version < b.version ? -1 : a.version > b.version ? 1 : 0);
 
-// Walks the production dependency closure of the package at root. Packages without a licence file are returned in
-// `skipped` rather than failing the release.
-export function dependencyLicenses(root = ROOT) {
+// Reads the exact installed packages recorded by the build; dependencies absent from the bundle are not followed.
+export function dependencyLicenses(directories, root = ROOT) {
   const checkout = realpathSync(root);
-  const pending = Object.keys(readJson(join(checkout, 'package.json')).dependencies ?? {}).map(name => [checkout, name]);
   const seen = new Set();
   const packages = new Map();
   const skipped = new Map();
-  while (pending.length) {
-    const [start, name] = pending.pop();
-    const directory = resolvePackage(start, name);
+  for (const path of directories) {
+    const directory = realpathSync(path);
     if (seen.has(directory)) continue;
     seen.add(directory);
     const meta = readJson(join(directory, 'package.json'));
     const key = `${meta.name}@${meta.version}`;
     const entry = {name: meta.name, version: meta.version, license: licenseId(meta)};
-    pending.push(...Object.keys(meta.dependencies ?? {}).map(dep => [directory, dep]));
     // The Noto font name tables credit Adobe, unlike the packages' generic Google licence header.
     const noto = ['@fontsource-variable/noto-sans-tc', '@fontsource-variable/noto-sans-sc'].includes(meta.name);
     const file = noto
@@ -127,9 +129,16 @@ export function licenseSections(text, names, source) {
 }
 
 // BUILD_RUNTIME resolved against the installed build tools.
-export function buildRuntimeLicenses(root = ROOT) {
+export function buildRuntimeLicenses(root, names) {
   const checkout = realpathSync(root);
-  return BUILD_RUNTIME.map(({name, from, sections, note, file = 'LICENSE.md', license}) => {
+  return names.map(name => {
+    const runtime = BUILD_RUNTIME.find(entry => entry.name === name);
+    if (!runtime) throw new Error(`Unknown build runtime: ${name}`);
+    let {from, sections, note, file = 'LICENSE.md', license} = runtime;
+    if (name === 'vite' && names.includes('rolldown')) {
+      sections = ['Vite core license'];
+      note = 'Only the module preload polyfill and the preload helper for dynamic imports that Vite writes into the build ship.';
+    }
     const directory = resolvePackage(
       from.reduce((start, parent) => resolvePackage(start, parent), checkout),
       name
@@ -192,24 +201,28 @@ export function formatNotices({packages, skipped}) {
 }
 
 // Copies PROGRAM_LICENSES into stage/LICENSES, fails when NOTICE cites a licence file the stage lacks, and writes
-// the notices of the production dependencies and of the build tools' runtime helpers.
-export function stageNotices(stage, root = ROOT) {
+// the notices of the bundled packages and of the build tools' runtime helpers.
+export function stageNotices(stage, list, root = ROOT) {
   mkdirSync(join(stage, 'LICENSES'), {recursive: true});
   for (const id of PROGRAM_LICENSES) copyFileSync(join(root, 'LICENSES', `${id}.txt`), join(stage, 'LICENSES', `${id}.txt`));
   const missing = missingLicenses(readFileSync(join(stage, 'NOTICE'), 'utf8'), stage);
   if (missing.length) throw new Error(`NOTICE cites licence files the program archive lacks: ${missing.join(', ')}`);
-  const {packages, skipped} = dependencyLicenses(root);
-  const licenses = {packages: [...packages, ...buildRuntimeLicenses(root)].sort(byNameVersion), skipped};
+  const manifest = readJson(list);
+  if (!Array.isArray(manifest.packages) || !Array.isArray(manifest.buildRuntime) || typeof manifest.root !== 'string')
+    throw new Error(`Invalid bundled package list: ${list}`);
+  const directories = manifest.packages.filter(directory => !manifest.buildRuntime.includes(readJson(join(directory, 'package.json')).name));
+  const {packages, skipped} = dependencyLicenses(directories, root);
+  const licenses = {packages: [...packages, ...buildRuntimeLicenses(manifest.root, manifest.buildRuntime)].sort(byNameVersion), skipped};
   writeFileSync(join(stage, NOTICES), formatNotices(licenses));
   return licenses;
 }
 
 export function main(args) {
-  if (args.length !== 1) {
-    console.error('Usage: node tools/notices.mjs STAGE');
+  if (args.length !== 2) {
+    console.error('Usage: node tools/notices.mjs STAGE PACKAGE_LIST');
     return 1;
   }
-  const {packages, skipped} = stageNotices(resolve(args[0]));
+  const {packages, skipped} = stageNotices(resolve(args[0]), resolve(args[1]));
   for (const {name, version} of skipped) console.error(`No licence file, listed by name only: ${name} ${version}`);
   console.log(`${NOTICES}: ${packages.length} packages with licence texts, ${skipped.length} without`);
   return 0;

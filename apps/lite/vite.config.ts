@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
 import {readFileSync} from 'node:fs';
 import {cataloguePart} from '../../tools/catalogue-parts.mjs';
+import {bundledPackagesPlugin} from '../../tools/bundled-packages.mjs';
 
 const editorRequire = createRequire(createRequire(import.meta.url).resolve('@codemirror/language'));
 
@@ -12,6 +13,7 @@ export default defineConfig({
   base: './',
   build: {manifest: true},
   plugins: [
+    bundledPackagesPlugin(['vite', 'rolldown']),
     ...astryxStylex(),
     react(),
     {
