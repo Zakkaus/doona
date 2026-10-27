@@ -36,7 +36,7 @@ stage=$(mktemp -d "$PWD/release/.package.XXXXXX")
 trap 'rm -rf "$stage"' 0
 trap 'exit 1' HUP INT TERM
 mkdir "$stage/program" "$stage/font-package" "$stage/precompressed"
-# Copies a build directory without its fonts and the Vite build manifest, which only serves the size check.
+# Copies a build directory without its fonts and Vite metadata used by size checks and notices.
 copy_build() {
     for entry in "$1"/* "$1"/.[!.]* "$1"/..?*; do
         [ -e "$entry" ] || [ -L "$entry" ] || continue
@@ -72,13 +72,13 @@ sort -z "$stage/assets" > "$stage/sorted-assets"
 add_notices() {
     cp LICENSE NOTICE README.md "$1/"
     # Adds LICENSES/ and THIRD-PARTY-NOTICES.txt, and fails if NOTICE cites a licence file left out.
-    node tools/notices.mjs "$1"
+    node tools/notices.mjs "$1" "$2/.vite/bundled-packages.json"
 }
-add_notices "$stage/program"
+add_notices "$stage/program" dist
 # doona lite unpacks beside the standard edition: index.html at the archive root, system fonts, no font archive.
 mkdir "$stage/lite"
 copy_build apps/lite/dist "$stage/lite"
-add_notices "$stage/lite"
+add_notices "$stage/lite" apps/lite/dist
 cp -R dist/fonts "$stage/font-package/"
 
 archive() {

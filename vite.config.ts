@@ -13,6 +13,7 @@ import {languageFiles} from './src/i18n/offline';
 import {startupTextPlugin} from './tools/startup-text.mjs';
 import {cataloguePart, cataloguePartsPlugin} from './tools/catalogue-parts.mjs';
 import {stampScript} from './tools/stamp.mjs';
+import {bundledPackagesPlugin} from './tools/bundled-packages.mjs';
 
 // lightningcss ships native binaries for x86_64, aarch64 and armv7; on any other architecture the build
 // minifies CSS with esbuild instead, so a packager on riscv64 or loong64 is not stopped by it.
@@ -71,6 +72,7 @@ export default defineConfig({
     )
   },
   plugins: [
+    bundledPackagesPlugin(['vite', 'rollup', '@react-aria/optimize-locales-plugin']),
     react(),
     startupTextPlugin(),
     cataloguePartsPlugin(),

@@ -2,6 +2,7 @@ import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync}
 import {tmpdir} from 'node:os';
 import {dirname, join} from 'node:path';
 import {afterEach, expect, it} from 'vitest';
+import {bundledPackagesPlugin, PACKAGE_LIST} from './bundled-packages.mjs';
 import {citedLicenses, missingLicenses, NOTICES, PROGRAM_LICENSES, ROOT, splitCopyright, stageNotices} from './notices.mjs';
 
 const dirs = [];
@@ -75,6 +76,19 @@ const checkout = () =>
     'node_modules/rollup/package.json': {name: 'rollup', version: '1.0.0', license: 'MIT'}
   });
 
+function packageList(root, names = ['zeta', '@scope/beta', 'nolicence', '@react-aria/optimize-locales-plugin', ...mitPackages.map(([name]) => name)]) {
+  const list = join(root, 'bundled-packages.json');
+  writeFileSync(
+    list,
+    JSON.stringify({
+      root,
+      packages: names.map(name => join(root, 'node_modules', name)),
+      buildRuntime: ['vite', 'rollup', '@react-aria/optimize-locales-plugin']
+    })
+  );
+  return list;
+}
+
 it('ships every licence file NOTICE cites', () => {
   const cited = citedLicenses(readFileSync(join(ROOT, 'NOTICE'), 'utf8'));
   expect(cited.length).toBeGreaterThan(0);
@@ -117,10 +131,10 @@ it.each([
   expect(splitCopyright(text)).toMatchObject({copyright, text: rest});
 });
 
-it('writes sorted notices of the production closure and lists packages without a licence file', () => {
+it('writes sorted notices of the bundled packages and lists packages without a licence file', () => {
   const root = checkout();
   const stage = tree({NOTICE: 'See LICENSES/OFL-1.1.txt.\n'});
-  const {packages, skipped} = stageNotices(stage, root);
+  const {packages, skipped} = stageNotices(stage, packageList(root), root);
   expect(skipped).toEqual([{name: 'nolicence', version: '0.0.1', license: 'MIT'}]);
   expect(packages.map(({name, version, license}) => [name, version, license])).toEqual([
     ['@react-aria/optimize-locales-plugin', '2.0.2', 'Apache-2.0'],
@@ -161,13 +175,13 @@ it('writes sorted notices of the production closure and lists packages without a
   expect(notices).not.toContain('\r');
   // A second run over the same tree gives the same bytes.
   const again = tree({NOTICE: 'See LICENSES/OFL-1.1.txt.\n'});
-  stageNotices(again, root);
+  stageNotices(again, packageList(root), root);
   expect(readFileSync(join(again, NOTICES))).toEqual(readFileSync(join(stage, NOTICES)));
 });
 
 it('fails when NOTICE cites a licence file the archive lacks', () => {
   const stage = tree({NOTICE: 'See LICENSES/OFL-1.1.txt and LICENSES/LicenseRef-Missing.txt.\n'});
-  expect(() => stageNotices(stage, checkout())).toThrow('NOTICE cites licence files the program archive lacks: LICENSES/LicenseRef-Missing.txt');
+  expect(() => stageNotices(stage, packageList(checkout()))).toThrow('NOTICE cites licence files the program archive lacks: LICENSES/LicenseRef-Missing.txt');
 });
 
 it('checks every LICENSES/ path NOTICE cites, whatever its extension or depth', () => {
@@ -191,5 +205,81 @@ it('checks every LICENSES/ path NOTICE cites, whatever its extension or depth', 
 it('fails when a build tool licence lacks a section the build ships', () => {
   const root = checkout();
   writeFileSync(join(root, 'node_modules/vite/LICENSE.md'), '# Vite core license\nVite MIT\n');
-  expect(() => stageNotices(tree({NOTICE: ''}), root)).toThrow('vite/LICENSE.md has no section for @rollup/plugin-commonjs');
+  expect(() => stageNotices(tree({NOTICE: ''}), packageList(root), root)).toThrow('vite/LICENSE.md has no section for @rollup/plugin-commonjs');
+});
+
+it('reads only listed packages, including lite packages and shared root packages', () => {
+  const root = checkout();
+  const lite = tree({
+    'node_modules/astryx/package.json': {name: 'astryx', version: '1.0.0', license: 'MIT'},
+    'node_modules/astryx/LICENSE': 'Astryx licence'
+  });
+  const list = packageList(root, ['@scope/beta']);
+  const manifest = JSON.parse(readFileSync(list, 'utf8'));
+  manifest.packages.push(join(lite, 'node_modules/astryx'), join(lite, 'node_modules/astryx'));
+  writeFileSync(list, JSON.stringify(manifest));
+  const {packages, skipped} = stageNotices(tree({NOTICE: ''}), list, root);
+  expect(packages.map(pkg => pkg.name)).toEqual(['@react-aria/optimize-locales-plugin', '@scope/beta', 'astryx', 'rollup', 'vite']);
+  expect(skipped).toEqual([]);
+});
+
+it('fails on a missing or malformed package list instead of falling back to root dependencies', () => {
+  const root = checkout();
+  const stage = tree({NOTICE: ''});
+  expect(() => stageNotices(stage, join(root, 'missing.json'), root)).toThrow();
+  const list = packageList(root);
+  writeFileSync(list, '{}');
+  expect(() => stageNotices(stage, list, root)).toThrow('Invalid bundled package list');
+});
+
+it('uses lite build helpers without adding standard-only helpers or CommonJS licence sections', () => {
+  const root = checkout();
+  const lite = tree({
+    'node_modules/vite/package.json': {name: 'vite', version: '8.0.0', license: 'MIT'},
+    'node_modules/vite/LICENSE.md': '# Vite core license\nVite MIT\n',
+    'node_modules/vite/node_modules/rolldown/package.json': {name: 'rolldown', version: '1.0.0', license: 'MIT'},
+    'node_modules/vite/node_modules/rolldown/LICENSE': 'Rolldown MIT\n'
+  });
+  const list = packageList(root, []);
+  writeFileSync(list, JSON.stringify({root: lite, packages: [], buildRuntime: ['vite', 'rolldown']}));
+  const {packages} = stageNotices(tree({NOTICE: ''}), list, root);
+  expect(packages.map(({name, version}) => [name, version])).toEqual([
+    ['rolldown', '1.0.0'],
+    ['vite', '8.0.0']
+  ]);
+  expect(packages[1].text).not.toContain('@rollup/plugin-commonjs');
+});
+
+it('records chunk and asset packages, resolves pnpm paths, and excludes unbundled dependencies', () => {
+  const root = checkout();
+  const nested = tree({'node_modules/.pnpm/pkg@2/node_modules/@scope/pkg/package.json': {name: '@scope/pkg', version: '2'}});
+  const plugin = bundledPackagesPlugin(['vite', 'rollup']);
+  plugin.configResolved({root});
+  let manifest;
+  plugin.generateBundle.call(
+    {
+      emitFile(asset) {
+        expect(asset.fileName).toBe(PACKAGE_LIST);
+        manifest = JSON.parse(asset.source);
+      }
+    },
+    {},
+    {
+      'main.js': {
+        type: 'chunk',
+        modules: {
+          [join(root, 'src/main.js')]: {},
+          [join(root, 'node_modules/zeta/index.js')]: {},
+          ['\0' + join(root, 'node_modules/zeta/index.js') + '?commonjs-proxy']: {},
+          [join(nested, 'node_modules/.pnpm/pkg@2/node_modules/@scope/pkg/index.js')]: {}
+        }
+      },
+      'font.woff2': {type: 'asset', originalFileNames: ['node_modules/@scope/beta/font.woff2']}
+    }
+  );
+  expect(manifest).toEqual({
+    root,
+    buildRuntime: ['vite', 'rollup'],
+    packages: [join(root, 'node_modules/zeta'), join(root, 'node_modules/@scope/beta'), join(nested, 'node_modules/.pnpm/pkg@2/node_modules/@scope/pkg')].sort()
+  });
 });
