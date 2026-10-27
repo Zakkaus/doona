@@ -15,17 +15,6 @@ import type {RoutePath} from './routes';
 import {setDateFormat, setTimeFormat} from '../i18n/format';
 import {isChunkLoadError, reloadForStaleChunk} from '../ui/staleChunk';
 
-// The scroll edge of Glass and Clear shows while the root carries data-scrolled. The attribute changes only when the page leaves or
-// returns to the top, so the passive listener costs one comparison per scroll event.
-let watchingScroll = false;
-function watchScroll() {
-  if (watchingScroll) return;
-  watchingScroll = true;
-  const update = () => document.documentElement.toggleAttribute('data-scrolled', scrollY > 0);
-  addEventListener('scroll', update, {passive: true});
-  update();
-}
-
 // Glass's stylesheet and wallpaper load only for the Glass palettes (glass.ts); a failed load is tried again next time.
 let glass: Promise<void> | undefined;
 let glassLoaded = false;
@@ -60,7 +49,6 @@ export function applyAppearance(dark: boolean, palette: PaletteId, wordmark: Wor
       if (installLens() && document.documentElement.dataset.flavour === 'glass') d.lens = '';
     });
   if (palette !== 'glass/glass') delete d.lens;
-  if (palette === 'glass/glass' || palette === 'glass/clear') watchScroll();
 }
 export function useAppearance(stored: Settings) {
   const [scheme, setScheme] = useState<Scheme>(stored.scheme);
