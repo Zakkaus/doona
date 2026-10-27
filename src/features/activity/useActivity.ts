@@ -7,7 +7,7 @@ import {useMemorySeries, useTrafficSeries} from '../shared/useSeries';
 import {isTrafficRange, kernelTrafficUncounted, trafficRanges, trafficWindow, type TrafficRange} from '../shared/traffic';
 import {activityView, trafficState} from './view';
 import {offered} from '../../api/capabilities';
-import {backendLimits} from '../shared/limits';
+import {limitCount} from '../shared/limitCauses';
 import {SettingsContext} from '../../shell/preferences';
 import {foldCpu, sparkPoints, sparkWindow, useCpuRing} from '../shared/widgetSeries';
 
@@ -79,9 +79,8 @@ export function useActivity(kind: 'download' | 'upload' | 'connections' | 'cpu' 
   }, [refetchRuntime, refetchDatapath]);
   // System status lists these with their reasons; here the status card only counts them.
   const limited = useMemo(
-    () =>
-      kind === 'status' && capabilities.data ? backendLimits(capabilities.data, version.data, t, lang).reduce((n, group) => n + group.items.length, 0) : 0,
-    [kind, capabilities.data, version.data, t, lang]
+    () => (kind === 'status' && capabilities.data ? limitCount(capabilities.data, version.data) : 0),
+    [kind, capabilities.data, version.data]
   );
   return {
     ...view,

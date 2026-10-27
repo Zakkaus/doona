@@ -12,6 +12,7 @@ import {
   Light,
   Link,
   PopoverDialog,
+  TextLink,
   TextTooltip,
   ErrorMessage,
   SkeletonBody,
@@ -22,20 +23,11 @@ import {
 import Download from '../../ui/icons/Download';
 import InfoCircle from '../../ui/icons/InfoCircle';
 import {tableLayout} from '../../ui/tableHooks';
-import type {LimitGroup, LimitHelp} from '../shared/limits';
+import type {LimitHelp} from '../shared/limits';
 import {ReloadConfirm} from '../shared/ReloadConfirm';
 import {DaeCode} from '../../ui/DaeCode';
 import type {PageProps} from '../../shell/routes';
 
-// A limit's link; one that leaves the app ends with an arrow.
-function LimitLink({link}: {link: NonNullable<LimitGroup['link']>}) {
-  return (
-    <Link appearance="link" external={link.external} href={link.href}>
-      {link.text}
-      {link.external && <span aria-hidden="true">↗</span>}
-    </Link>
-  );
-}
 // After S2's ContextualHelp, with its label beside the icon: a popover with the cause, the settings that lift it and a link.
 function LimitHelpButton({help}: {help: LimitHelp}) {
   return (
@@ -53,7 +45,9 @@ function LimitHelpButton({help}: {help: LimitHelp}) {
         <>
           <p className="rp-limit-help">{help.text}</p>
           {help.snippet && <DaeCode as="pre" className="rp-limit-snippet" text={help.snippet} />}
-          {help.link && <LimitLink link={help.link} />}
+          {help.links.map(link => (
+            <TextLink key={link.href} link={link} />
+          ))}
         </>
       )}
     </PopoverDialog>
@@ -221,7 +215,7 @@ export function Overview({query}: PageProps) {
                   <span>{group.headline}</span>
                   {group.features && <span className="rp-note">{group.features}</span>}
                 </div>
-                {group.help ? <LimitHelpButton help={group.help} /> : group.link && <LimitLink link={group.link} />}
+                {group.help ? <LimitHelpButton help={group.help} /> : group.link && <TextLink link={group.link} />}
               </li>
             ))}
           </ul>

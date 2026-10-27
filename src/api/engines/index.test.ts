@@ -70,8 +70,7 @@ describe('honk', () => {
     expect(noDb && 'settings' in noDb && noDb.settings.map(setting => setting.key)).toEqual(['assets.geodata.geosite', 'assets.geodata.geoip']);
     expect(noDb && 'settings' in noDb && honk.snippet(noDb.settings)).toMatch(/^assets \{\n {2}geodata \{\n {4}geosite: '.+'\n {4}geoip: '.+'\n {2}\}\n\}$/);
     expect(noDb && 'settings' in noDb && honk.snippet(noDb.settings)).not.toContain('native_api');
-    for (const subject of ['events', 'rules', 'config_validate', 'close'] satisfies EngineSubject[])
-      expect(honk.reason(subject, capabilities)).toEqual({code: 'build-lacks'});
+    for (const subject of ['events', 'rules', 'close'] satisfies EngineSubject[]) expect(honk.reason(subject, capabilities)).toEqual({code: 'build-lacks'});
   });
 
   it('gives an older build that leaves resources or fields out no reason beyond lacking them', () => {
@@ -115,7 +114,74 @@ describe('honk', () => {
   });
 });
 
+describe('honk actions', () => {
+  const readOnly = patched({config: {writable: false}});
+  const store = (caps: Capabilities, db: boolean): Capabilities => ({...caps, extensions: {'x-honk': {config_revisions: {available: db}}}});
+
+  it('puts every write behind the configuration write switch', () => {
+    for (const subject of ['create', 'global_settings', 'mode', 'rule_edit', 'group_edit', 'restore'] satisfies EngineSubject[]) {
+      expect(honk.reason(subject, readOnly)).toEqual(honk.reason('config', readOnly));
+      expect(honk.reason(subject, capabilities)).toBeUndefined();
+    }
+  });
+
+  it('asks for the database store for import and revisions, and the loaded sources for export', () => {
+    const startFlag = {
+      code: 'start-flag',
+      flag: '--store db',
+      settings: [
+        {key: 'experimental.native_api.enabled', value: 'true'},
+        {key: 'experimental.native_api.config_write', value: 'true'}
+      ],
+      credentials: ['password_auth: true', 'secret']
+    };
+    expect(honk.reason('import', store(capabilities, false))).toEqual(startFlag);
+    expect(honk.reason('revisions', store(capabilities, false))).toEqual(startFlag);
+    expect(honk.reason('import', store(readOnly, true))).toEqual(honk.reason('config', readOnly));
+    expect(honk.reason('revisions', store(capabilities, true))).toBeUndefined();
+    const unloaded = store(patched({config: {available: false}}), false);
+    for (const subject of ['export', 'import', 'revisions'] satisfies EngineSubject[])
+      expect(honk.reason(subject, unloaded)).toEqual({code: 'config-unloaded'});
+  });
+
+  it('names the state database, the running engine, and what no setting turns on', () => {
+    expect(honk.reason('geodata_settings', capabilities)).toEqual({code: 'state-db-closed', writeSwitch: 'experimental.native_api.config_write'});
+    // Validation and reload follow honk's `running`: the loaded sources, then the engine itself.
+    for (const subject of ['config_validate', 'reload'] satisfies EngineSubject[]) {
+      expect(honk.reason(subject, capabilities)).toEqual({code: 'starting-or-stopping'});
+      expect(honk.reason(subject, patched({config: {available: false}}))).toEqual({code: 'config-unloaded'});
+      expect(honk.reason(subject, patched({config: {available: false}}))).not.toEqual({code: 'starting-or-stopping'});
+    }
+    for (const subject of ['suspend', 'resume', 'trace_live'] satisfies EngineSubject[])
+      expect(honk.reason(subject, capabilities)).toEqual({code: 'no-switch'});
+    // honk always offers these, so a build without them is not explained.
+    for (const subject of ['validate_full', 'selection', 'dns_cache_read', 'dns_cache_delete', 'dns_cache_flush'] satisfies EngineSubject[])
+      expect(honk.reason(subject, capabilities)).toBeUndefined();
+    const {reload: _reload, ...kept} = capabilities.resources;
+    expect(honk.reason('reload', normalizeCapabilities({...capabilities, resources: kept} as unknown as ReportedCapabilities))).toEqual({code: 'build-lacks'});
+  });
+});
+
 describe('an unknown engine', () => {
+  it('gives no reason for any action', () => {
+    const subjects = [
+      'create',
+      'validate_full',
+      'global_settings',
+      'mode',
+      'rule_edit',
+      'export',
+      'import',
+      'revisions',
+      'restore',
+      'group_edit',
+      'selection',
+      'trace_live'
+    ];
+    for (const subject of [...subjects, 'dns_cache_read', 'dns_cache_flush', 'geodata_settings', 'reload', 'suspend'] as EngineSubject[])
+      expect(other.reason(subject, patched({config: {writable: false}}))).toBeUndefined();
+  });
+
   it('gives no reasons and names no credentials', () => {
     const off = patched({logs: {available: false}, probes: {available: false}, geodata: {available: false}, config: {writable: false}});
     for (const subject of ['logs', 'probes', 'geodata', 'config', 'manage', 'subscriptions', 'close'] satisfies EngineSubject[])
