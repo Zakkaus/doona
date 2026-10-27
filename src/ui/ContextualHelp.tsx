@@ -3,9 +3,11 @@ import InfoCircle from './icons/InfoCircle';
 import {useT} from '../i18n';
 import {Button} from './Button';
 import {PopoverDialog} from './Dialog';
+import {TextLink, type TextLinkTarget} from './Link';
 
-// What a help popover explains: the title names the term or the state, and each string is one paragraph.
-export type Help = {title: string; text: string | string[]};
+// What a help popover explains: the title names the term or the state, each string is one paragraph, and a link
+// after them leads to the docs.
+export type Help = {title: string; text: string | string[]; link?: TextLinkTarget};
 
 // An info button beside a label that opens its explanation in a popover, after S2's ContextualHelp: for a term or a
 // state the label alone cannot explain. The popover holds text only, so it needs no action to close.
@@ -14,6 +16,7 @@ export function ContextualHelp({
   text,
   icon = <InfoCircle />,
   label,
+  link,
   boundaryElement
 }: Help & {icon?: ReactNode; label?: string; boundaryElement?: Element}) {
   const t = useT();
@@ -28,7 +31,14 @@ export function ContextualHelp({
         </Button>
       }
     >
-      {() => (typeof text === 'string' ? [text] : text).map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+      {() => (
+        <>
+          {(typeof text === 'string' ? [text] : text).map(paragraph => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+          {link && <TextLink link={link} />}
+        </>
+      )}
     </PopoverDialog>
   );
 }

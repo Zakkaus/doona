@@ -1,6 +1,7 @@
 import type {Group} from '../../api/model';
 import type {Translator as LabelFn} from '../../i18n';
 import {sameMode, type OutboundMode} from '../../dae/outboundMode';
+import type {EngineReason} from '../../api/engines';
 
 export const modeLabels = {rule: 'mode.rule', direct: 'mode.direct', global: 'mode.global'} as const;
 export function modeView(
@@ -10,7 +11,8 @@ export function modeView(
   writable: boolean,
   configAvailable: boolean,
   t: LabelFn,
-  known = true
+  known = true,
+  reason?: EngineReason
 ) {
   const shown = writable ? (staged ?? current) : current;
   const target = shown.mode === 'global' ? shown.target : ((current.mode === 'global' ? current.target : groups[0]?.name) ?? '');
@@ -24,6 +26,8 @@ export function modeView(
     incomplete: shown.mode === 'global' && !target,
     status: t(configAvailable ? 'act.modeReadOnly' : 'act.modeUnavailable'),
     readOnly: configAvailable && !writable,
+    // Why the read-only mode cannot be written, when the engine gives a reason; the popover words it as the overview does.
+    reason: configAvailable && !writable ? reason : undefined,
     modes: (['rule', 'direct', 'global'] as const).map(mode => [mode, t(modeLabels[mode])] as [string, string]),
     targets: groups.map(group => ({id: group.name, label: group.name}))
   };

@@ -1,5 +1,6 @@
 import {expect, it} from 'vitest';
-import {configNotes, version} from '../../../mock/fixtures';
+import {capabilities, configNotes, version} from '../../../mock/fixtures';
+import {limitHint} from '../shared/limitHint';
 import {createMockApi} from '../../../mock';
 import {engineOf} from '../../api/engines';
 import {translate, type Translator} from '../../i18n';
@@ -89,6 +90,20 @@ it('names the one reason a source is read-only', () => {
     text: t('config.readOnlyHelp')
   });
   expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, true, true, honk, t)!.help).toBeUndefined();
+  // A backend that reports writes as disabled gets the same help as the inferred switch, with the engine's hint.
+  const hint = {text: 'Turn writes on.', setting: 'experimental.native_api.config_write', link: {href: 'https://docs/req', text: 'Docs', external: true}};
+  const disabled = readOnlyBadge({kind: 'main', writable: false, content: '', read_only_reason: 'writes_disabled'}, false, true, honk, t, hint)!;
+  expect(disabled).toEqual({
+    reason: 'disabled',
+    label: 'Read-only',
+    note: t('ui.refusal.writesDisabled'),
+    help: {title: 'Read-only', text: [hint.text, hint.setting], link: hint.link}
+  });
+  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, honk, t, hint)!.help).toEqual(disabled.help);
+  expect(readOnlyBadge({kind: 'main', writable: false, content: '', read_only_reason: 'writes_disabled'}, false, true, honk, t)!.help).toEqual({
+    title: 'Read-only',
+    text: t('config.readOnlyHelp')
+  });
   expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, true, true, honk, t)!.label).toBe('Read-only');
   expect(readOnlyBadge({kind: 'main', writable: false, content: 'experimental { clash_api { secret: x } }'}, true, true, honk, t)!.label).toBe(
     'Contains secrets'
@@ -389,4 +404,18 @@ it('prefers reported source reasons over inferred credentials and falls back for
 
 it('does not invent a source filename when no main file exists', () => {
   expect(sectionSummaries([], honk, t).every(card => card.range === '')).toBe(true);
+});
+
+it('explains writes that are off with the overview text, setting and docs link', () => {
+  const off = {...capabilities, resources: {...capabilities.resources, config: {...capabilities.resources.config, writable: false}}};
+  const hint = limitHint('config', off, version, t, 'en')!;
+  expect(hint.setting).toBe('experimental.native_api.config_write');
+  expect(hint.link.href).toContain('feature-requirements.html#req-config-edit');
+  const badge = readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, honk, t, hint);
+  expect(badge?.help).toEqual({title: t('config.readOnly'), text: [hint.text, hint.setting], link: hint.link});
+  // An engine that gives no reason keeps the generic help.
+  expect(readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, honk, t)?.help?.text).toBe(t('config.readOnlyHelp'));
+  // Writes on: no hint and no badge.
+  expect(limitHint('config', capabilities, version, t, 'en')).toBeUndefined();
+  expect(readOnlyBadge({kind: 'main', writable: true, content: ''}, true, true, honk, t)).toBeNull();
 });

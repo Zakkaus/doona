@@ -14,7 +14,8 @@ import {engineOf} from '../../api/engines';
 
 export function useMode() {
   const t = useT();
-  const resources = useCapabilities().data?.resources;
+  const capabilities = useCapabilities().data;
+  const resources = capabilities?.resources;
   const groups = useGroups(offered(resources, 'groups', {whileLoading: false}));
   const config = useConfig(offered(resources, 'config', {whileLoading: false}));
   const {main, checking, writable, busy, error, retry, apply: write} = useMainSourceEdit();
@@ -29,7 +30,8 @@ export function useMode() {
   const configAvailable = (daeText || !version) && !!resources?.config.available;
   // Each write changes the source, which is then checked again. The card keeps its controls meanwhile instead of
   // flashing the read-only status, so the Apply button a screen reader was just told about stays in place.
-  const view = modeView(current, staged, groups.data ?? [], daeText && writable && (!!main || checking), configAvailable, t, content != null);
+  const reason = capabilities && engineOf(version).reason('mode', capabilities);
+  const view = modeView(current, staged, groups.data ?? [], daeText && writable && (!!main || checking), configAvailable, t, content != null, reason);
   const apply = () =>
     action.run('apply', async () => {
       const submitted = staged;

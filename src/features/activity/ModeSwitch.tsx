@@ -1,9 +1,17 @@
-import {useState} from 'react';
-import {useLang, useT} from '../../i18n';
-import {docsHref} from '../shared/docs';
-import {Button, Card, ConfirmDialog, ErrorMessage, Light, Link, ChoiceMenu, PopoverDialog, Segmented, WidestLabel} from '../../ui/ui';
+import {Suspense, useEffect, useState, type ComponentProps} from 'react';
+import {useT, withCatalogue} from '../../i18n';
+import type {EngineReason} from '../../api/engines';
+import {Button, Card, ConfirmDialog, ErrorMessage, Light, ChoiceMenu, PopoverDialog, Segmented, WidestLabel} from '../../ui/ui';
+import {LoadBoundary} from '../../ui/LoadBoundary';
+import {preloadable} from '../../ui/preloadable';
+import type {ModeReadOnlyHint} from './ModeReadOnlyHint';
 import Shuffle from '../../ui/icons/Shuffle';
 import Filter from '../../ui/icons/Filter';
+// The read-only explanation and its messages load once the status shows, so the popover opens with its text at once.
+const hint = preloadable<ComponentProps<typeof ModeReadOnlyHint>>(
+  withCatalogue('rest', () => import('./ModeReadOnlyHint').then(module => ({default: module.ModeReadOnlyHint})))
+);
+const preloadHint = () => void hint.preload().catch(() => undefined);
 type ModeCardsModel = {
   mode: string;
   target: string;
@@ -13,6 +21,7 @@ type ModeCardsModel = {
   incomplete: boolean;
   status: string;
   readOnly: boolean;
+  reason?: EngineReason;
   modes: Array<[string, string]>;
   targets: Array<{id: string; label: string}>;
   busy: boolean;
@@ -52,7 +61,9 @@ export function ModeApply({model: vm}: {model: Pick<ModeCardsModel, 'mode' | 'mo
 // The mode choice with its apply action, or why it cannot change: Activity's mode card and the widget panel share it.
 export function ModeSwitch({model: vm, fill}: {model: ModeCardsModel; fill?: boolean}) {
   const t = useT();
-  const lang = useLang();
+  useEffect(() => {
+    if (vm.readOnly) preloadHint();
+  }, [vm.readOnly]);
   return (
     <span className="rp-cluster">
       <Segmented label={t('act.mode')} value={vm.mode} onChange={vm.pick} isDisabled={vm.busy || !vm.writable} items={vm.modes} fill={fill} />
@@ -69,13 +80,11 @@ export function ModeSwitch({model: vm, fill}: {model: ModeCardsModel; fill?: boo
           }
         >
           {() => (
-            <>
-              <p>{t('act.modeReadOnlyReason')}</p>
-              <p>{t('act.modeReadOnlyAction')}</p>
-              <Link external appearance="link" href={docsHref(lang, 'read-only')}>
-                {t('act.readOnlyDocs')}
-              </Link>
-            </>
+            <LoadBoundary>
+              <Suspense fallback={null}>
+                <hint.Component reason={vm.reason} />
+              </Suspense>
+            </LoadBoundary>
           )}
         </PopoverDialog>
       ) : (
