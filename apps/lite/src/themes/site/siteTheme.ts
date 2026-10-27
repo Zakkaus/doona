@@ -1,28 +1,22 @@
-/**
- * The official Astryx site's theme, ported from the `astryx` theme at
- * apps/docsite/src/themes/astryxTheme.ts in https://github.com/facebook/astryx.
- * Upstream extends nothing: it sets a few tokens on core's defaults, so this
- * port extends nothing either. Colours, radii, display weights, pill buttons,
- * TopNav and pagination dots are upstream's; the panel's shared adjustments
- * (control sizes, 15px type scale, ...) go on top. Two upstream values changed:
- *  - BRAND_BLUE comes from `../constants` upstream; it is inlined here as the
- *    computed value on the live site (#225BFF light, #3D87FF dark).
- *  - Figtree is named directly instead of `var(--font-figtree, Figtree)`, as
- *    this app has no `--font-figtree` variable.
- */
+// Based on Astryx's site theme, with the console's typography and duck accent.
 import {defineTheme, type TokenValue} from '@astryxdesign/core/theme';
 import {appIconRegistry, cjkFallbacks, systemMono, panelScale, panelShared} from '../shared';
 
-// High-emphasis ink: drives text, icons and the accent tokens (upstream's
-// "PRIMARY"), so buttons, links and focus rings read near-black, not blue.
 const PRIMARY = 'light-dark(#15110C, #DFE2E5)';
-const PRIMARY_MUTED = 'light-dark(rgba(21, 17, 12, 0.08), rgba(223, 226, 229, 0.14))';
-const figtree = `"Figtree Variable", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, ${cjkFallbacks}, Arial, sans-serif`;
+const figtree = `${cjkFallbacks}, sans-serif`;
+const selectionIndicator = {
+  content: '""',
+  position: 'absolute',
+  insetBlock: 'var(--spacing-2)',
+  insetInlineStart: 'var(--spacing-0)',
+  width: 'var(--spacing-0-5)',
+  backgroundColor: 'var(--color-accent)',
+  pointerEvents: 'none'
+} as const;
 
-// Custom (non-core) tokens, both upstream's. The brand blue marks one landing
-// demo card; the feature-card
-// tint is the official landing's bento background (apps/docsite globals.css).
 const customTokens: Record<string, TokenValue> = {
+  '--lite-primary-background': 'light-dark(#15110C, var(--color-accent))',
+  '--lite-primary-text': 'light-dark(var(--color-on-dark), var(--color-on-light))',
   '--color-brand': 'light-dark(#225BFF, #3D87FF)',
   '--astryx-marketing-feature-card-bg': 'light-dark(#E6F0FF, #1A2333)'
 };
@@ -31,19 +25,31 @@ export const siteTheme = defineTheme({
   name: 'site',
   icons: appIconRegistry,
   tokens: {
-    '--color-accent': PRIMARY,
+    // Darkening the duck yellow keeps light-mode indicators above 3:1.
+    '--color-accent': 'light-dark(#8A7800, #FFDD00)',
     '--color-text-accent': PRIMARY,
-    '--color-icon-accent': PRIMARY,
-    '--color-accent-muted': PRIMARY_MUTED,
-    '--color-on-accent': 'light-dark(#FFFFFF, #15110C)',
+    '--color-icon-accent': 'var(--color-accent)',
+    '--color-accent-muted': 'light-dark(rgba(21, 17, 12, 0.08), rgba(223, 226, 229, 0.14))',
+    '--color-on-accent': 'var(--color-on-light)',
     '--color-background-body': 'light-dark(#F8F4ED, #111112)',
+    '--color-background-surface': 'light-dark(#FFFFFF, #1B1B1E)',
+    '--color-background-card': 'light-dark(#FFFFFF, #27272B)',
+    '--color-background-popover': 'light-dark(#FFFFFF, #333338)',
     '--color-text-primary': PRIMARY,
     '--color-icon-primary': PRIMARY,
+    '--text-heading-1-size': '1.5rem',
+    '--text-heading-1-leading': '1.3333',
+    '--text-heading-2-size': '1.125rem',
+    '--text-heading-2-leading': '1.5556',
+    '--text-heading-3-size': '0.9375rem',
+    '--text-heading-3-leading': '1.6',
+    '--text-heading-4-size': '0.78125rem',
+    '--text-heading-4-leading': '1.6',
     '--text-display-1-weight': 'var(--font-weight-semibold)',
     '--text-display-2-weight': 'var(--font-weight-semibold)',
     '--text-display-3-weight': 'var(--font-weight-semibold)',
-    '--radius-inner': '8px',
-    '--radius-element': '12px',
+    '--radius-inner': 'var(--radius-element)',
+    '--radius-element': '8px',
     '--radius-container': '16px',
     '--radius-page': '32px',
     ...panelShared.tokens,
@@ -58,11 +64,45 @@ export const siteTheme = defineTheme({
   adaptations: panelShared.adaptations,
   components: {
     ...panelShared.components,
-    // The brand mark (landing nav and footer, panel heading) in the accent, like
-    // primary buttons; the brand blue was too blue for this theme.
     'nav-icon': {base: {backgroundColor: 'var(--color-accent)', color: 'var(--color-on-accent)'}},
-    // Pill buttons across all variants and sizes.
-    button: {base: {...panelShared.components.button.base, borderRadius: 'var(--radius-full)'}},
+    button: {
+      base: {
+        ...panelShared.components.button.base,
+        borderRadius: 'var(--radius-element)'
+      },
+      'variant:primary': {
+        borderRadius: 'var(--radius-full)',
+        backgroundColor: 'var(--lite-primary-background)',
+        color: 'var(--lite-primary-text)'
+      },
+      'variant:destructive': {borderRadius: 'var(--radius-full)'}
+    },
+    'side-nav-item': {
+      selected: {position: 'relative', '::after': selectionIndicator}
+    },
+    item: {
+      base: {':is([aria-current="true"], [aria-selected="true"])::after': selectionIndicator}
+    },
+    'radio-list-item': {base: {':is([aria-current="true"])': {backgroundColor: 'var(--color-accent-muted)'}}},
+    dialog: {base: {...panelShared.components.dialog.base, backgroundColor: 'var(--color-background-popover)'}},
+    'bottom-sheet': {base: {'--color-background-surface': 'var(--color-background-popover)'}},
+    'segmented-control': {
+      base: {
+        borderWidth: 'var(--border-width)',
+        borderStyle: 'solid',
+        borderColor: 'var(--color-border-emphasized)',
+        padding: 'calc(var(--spacing-0-5) - var(--border-width))'
+      },
+      'size:lg': {
+        padding: 'var(--spacing-0)',
+        borderWidth: 'var(--spacing-0)',
+        outlineWidth: 'var(--border-width)',
+        outlineStyle: 'solid',
+        outlineColor: 'var(--color-border-emphasized)',
+        outlineOffset: 'calc(-1 * var(--border-width))'
+      }
+    },
+    'segmented-control-item': {base: {borderRadius: 'var(--radius-element)'}},
     // TopNav: no pill background on the selected item.
     'top-nav-item': {
       selected: {
