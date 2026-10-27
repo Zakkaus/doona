@@ -12,19 +12,19 @@
 
 設定頁分為一般與外觀兩個分頁。配色選單末尾的外觀設定可開啟外觀分頁，選擇配色或自訂桌布。使用玻璃配色時，桌布也會顯示在登入卡片後方。
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/palettes.webp" alt="全部配色的淺色與深色" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/palettes.webp" alt="全部配色的淺色與深色" width="100%">
 
 ## 配色範例
 
 下圖展示活動頁的八種配色。可在頂欄切換配色和模式。
 
-| 配色         | 淺色                                                                                                | 深色                                                                                               |
-| ------------ | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Rosé Pine    | ![Rosé Pine 淺色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-rose-pine-light.webp)   | ![Rosé Pine 深色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-rose-pine-dark.webp)   |
-| Catppuccin   | ![Catppuccin 淺色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-catppuccin-light.webp) | ![Catppuccin 深色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-catppuccin-dark.webp) |
-| Nord         | ![Nord 淺色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-nord-light.webp)             | ![Nord 深色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-nord-dark.webp)             |
-| Liquid Glass | ![Liquid Glass 淺色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-light.webp)    | ![Liquid Glass 深色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-dark.webp)    |
-| Glass        | ![Glass 淺色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-clear-light.webp)     | ![Glass 深色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-clear-dark.webp)     |
-| Frosted      | ![Frosted 淺色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-frosted-light.webp) | ![Frosted 深色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-frosted-dark.webp) |
-| Tinted       | ![Tinted 淺色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-tinted-light.webp)   | ![Tinted 深色](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-tinted-dark.webp)   |
-| 中國         | ![中國白班](https://zakkaus.github.io/doona-docs/screenshots/en/theme-qiangguo-light.webp)          | ![中國夜班](https://zakkaus.github.io/doona-docs/screenshots/en/theme-qiangguo-dark.webp)          |
+| 配色         | 淺色                                                                                         | 深色                                                                                        |
+| ------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Rosé Pine    | ![Rosé Pine 淺色](https://doona.daeuniverse.org/screenshots/en/theme-rose-pine-light.webp)   | ![Rosé Pine 深色](https://doona.daeuniverse.org/screenshots/en/theme-rose-pine-dark.webp)   |
+| Catppuccin   | ![Catppuccin 淺色](https://doona.daeuniverse.org/screenshots/en/theme-catppuccin-light.webp) | ![Catppuccin 深色](https://doona.daeuniverse.org/screenshots/en/theme-catppuccin-dark.webp) |
+| Nord         | ![Nord 淺色](https://doona.daeuniverse.org/screenshots/en/theme-nord-light.webp)             | ![Nord 深色](https://doona.daeuniverse.org/screenshots/en/theme-nord-dark.webp)             |
+| Liquid Glass | ![Liquid Glass 淺色](https://doona.daeuniverse.org/screenshots/en/theme-glass-light.webp)    | ![Liquid Glass 深色](https://doona.daeuniverse.org/screenshots/en/theme-glass-dark.webp)    |
+| Glass        | ![Glass 淺色](https://doona.daeuniverse.org/screenshots/en/theme-glass-clear-light.webp)     | ![Glass 深色](https://doona.daeuniverse.org/screenshots/en/theme-glass-clear-dark.webp)     |
+| Frosted      | ![Frosted 淺色](https://doona.daeuniverse.org/screenshots/en/theme-glass-frosted-light.webp) | ![Frosted 深色](https://doona.daeuniverse.org/screenshots/en/theme-glass-frosted-dark.webp) |
+| Tinted       | ![Tinted 淺色](https://doona.daeuniverse.org/screenshots/en/theme-glass-tinted-light.webp)   | ![Tinted 深色](https://doona.daeuniverse.org/screenshots/en/theme-glass-tinted-dark.webp)   |
+| 中國         | ![中國白班](https://doona.daeuniverse.org/screenshots/en/theme-qiangguo-light.webp)          | ![中國夜班](https://doona.daeuniverse.org/screenshots/en/theme-qiangguo-dark.webp)          |

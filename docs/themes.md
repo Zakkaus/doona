@@ -12,19 +12,19 @@ In the China palette, a healthy or running state reads Improving and an unavaila
 
 Settings has General and Appearance tabs. Open Appearance settings at the end of the Palette menu to choose a palette or a custom wallpaper. With a Glass palette, the wallpaper also appears behind the sign-in card.
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
 
 ## Theme gallery
 
 The activity page in eight palettes. Select a palette and mode from the top bar.
 
-| Theme gallery | Light                                                                                                | Dark                                                                                               |
-| ------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Rosé Pine     | ![Rosé Pine Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-rose-pine-light.webp)   | ![Rosé Pine Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-rose-pine-dark.webp)   |
-| Catppuccin    | ![Catppuccin Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-catppuccin-light.webp) | ![Catppuccin Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-catppuccin-dark.webp) |
-| Nord          | ![Nord Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-nord-light.webp)             | ![Nord Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-nord-dark.webp)             |
-| Liquid Glass  | ![Liquid Glass Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-light.webp)    | ![Liquid Glass Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-dark.webp)    |
-| Glass         | ![Glass Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-clear-light.webp)     | ![Glass Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-clear-dark.webp)     |
-| Frosted       | ![Frosted Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-frosted-light.webp) | ![Frosted Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-frosted-dark.webp) |
-| Tinted        | ![Tinted Light](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-tinted-light.webp)   | ![Tinted Dark](https://zakkaus.github.io/doona-docs/screenshots/en/theme-glass-tinted-dark.webp)   |
-| China         | ![China Day shift](https://zakkaus.github.io/doona-docs/screenshots/en/theme-qiangguo-light.webp)    | ![China Night shift](https://zakkaus.github.io/doona-docs/screenshots/en/theme-qiangguo-dark.webp) |
+| Theme gallery | Light                                                                                         | Dark                                                                                        |
+| ------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Rosé Pine     | ![Rosé Pine Light](https://doona.daeuniverse.org/screenshots/en/theme-rose-pine-light.webp)   | ![Rosé Pine Dark](https://doona.daeuniverse.org/screenshots/en/theme-rose-pine-dark.webp)   |
+| Catppuccin    | ![Catppuccin Light](https://doona.daeuniverse.org/screenshots/en/theme-catppuccin-light.webp) | ![Catppuccin Dark](https://doona.daeuniverse.org/screenshots/en/theme-catppuccin-dark.webp) |
+| Nord          | ![Nord Light](https://doona.daeuniverse.org/screenshots/en/theme-nord-light.webp)             | ![Nord Dark](https://doona.daeuniverse.org/screenshots/en/theme-nord-dark.webp)             |
+| Liquid Glass  | ![Liquid Glass Light](https://doona.daeuniverse.org/screenshots/en/theme-glass-light.webp)    | ![Liquid Glass Dark](https://doona.daeuniverse.org/screenshots/en/theme-glass-dark.webp)    |
+| Glass         | ![Glass Light](https://doona.daeuniverse.org/screenshots/en/theme-glass-clear-light.webp)     | ![Glass Dark](https://doona.daeuniverse.org/screenshots/en/theme-glass-clear-dark.webp)     |
+| Frosted       | ![Frosted Light](https://doona.daeuniverse.org/screenshots/en/theme-glass-frosted-light.webp) | ![Frosted Dark](https://doona.daeuniverse.org/screenshots/en/theme-glass-frosted-dark.webp) |
+| Tinted        | ![Tinted Light](https://doona.daeuniverse.org/screenshots/en/theme-glass-tinted-light.webp)   | ![Tinted Dark](https://doona.daeuniverse.org/screenshots/en/theme-glass-tinted-dark.webp)   |
+| China         | ![China Day shift](https://doona.daeuniverse.org/screenshots/en/theme-qiangguo-light.webp)    | ![China Night shift](https://doona.daeuniverse.org/screenshots/en/theme-qiangguo-dark.webp) |

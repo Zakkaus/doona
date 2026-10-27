@@ -4,7 +4,7 @@ English / [简体中文](pages.zh-CN.md) / [繁體中文](pages.zh-TW.md)
 
 ## Pages
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/en/policies-light.webp" alt="The policies page" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/en/policies-light.webp" alt="The policies page" width="100%">
 
 | Page          | Shows                                                                                                                                                                                    |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -22,11 +22,11 @@ English / [简体中文](pages.zh-CN.md) / [繁體中文](pages.zh-TW.md)
 
 A page is marked unavailable only when every resource it needs is unavailable. The DNS rules tab appears when the backend lists DNS rules; editing needs a writable source. Connections, Routing log and Rules request flows while open, without setting Flow recording to Always.
 
-`Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere. Which resources each page needs, and where doona keeps its own settings, are on the [features page](https://zakkaus.github.io/doona-docs/en/features.html#pages). Help buttons beside unclear states and terms explain them.
+`Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere. Which resources each page needs, and where doona keeps its own settings, are on the [features page](https://doona.daeuniverse.org/en/features.html#pages). Help buttons beside unclear states and terms explain them.
 
 Sign-in is a page of its own: one card centred on the theme background, with Language, Palette and Theme controls in the upper-right corner. The demo fills in the user name `demo` and the password `demo`.
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/en/rules-light.webp" alt="The rules page" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/en/rules-light.webp" alt="The rules page" width="100%">
 
 ## Page tour
 
@@ -44,9 +44,9 @@ Unfinished header rows are protected as unsaved changes; replacing the raw link 
 
 The Traffic tab of Connections plots each connection's upload against its download, coloured by outbound; select a point to open that connection. The Connections tab groups live connections by device or by outbound, filters them by protocol and outbound, and exports them as CSV.
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/en/connections-traffic.webp" alt="The Traffic tab of the connections page" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/en/connections-traffic.webp" alt="The Traffic tab of the connections page" width="100%">
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/en/connections-list.webp" alt="Live connections grouped by device" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/en/connections-list.webp" alt="Live connections grouped by device" width="100%">
 
 ### DNS
 
@@ -56,25 +56,25 @@ Query offers Automatic, which follows `dns.routing`, or a named upstream from `d
 
 Keywords match text anywhere in the name: `cdn` matches `cdn.example.com`. The suffix `cdn` matches only `cdn` or names ending in `.cdn`. A record type further narrows the results. Clear filters resets the matching criteria and removes any domain filter from the page URL.
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/en/dns.webp" alt="The Statistics tab of the DNS page" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/en/dns.webp" alt="The Statistics tab of the DNS page" width="100%">
 
 ### Log activity
 
 Above the log list, a heatmap counts records per level over time. A level's row header sets the minimum level the list shows.
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/en/logs.webp" alt="The log activity heatmap" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/en/logs.webp" alt="The log activity heatmap" width="100%">
 
 ### Routing map
 
 The routing map on Routing log follows traffic from rules, or from devices, through outbounds to nodes. Point at or select a rule, outbound or node to highlight the paths through it. On Rules > Trace simulation, the advanced fields accept an optional DSCP integer from 0 to 63 to evaluate `dscp(...)` rules.
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/en/routing.webp" alt="Selecting a rule and then a node on the routing map" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/en/routing.webp" alt="Selecting a rule and then a node on the routing map" width="100%">
 
 ### Node latency
 
 The Latency tab of Nodes plots each node's latest latency, and its moving average and the average of the last 10 measurements when the backend reports them. A switch groups the nodes by policy group or by protocol; unavailable nodes appear under their group. Open a node row in the Nodes tab to see the latest TCP, HTTP, UDP and DNS probe results the backend reports, each with its latency or failure reason.
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/en/latency.webp" alt="The Latency tab of the nodes page" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/en/latency.webp" alt="The Latency tab of the nodes page" width="100%">
 
 ### Configuration and settings
 
@@ -82,9 +82,9 @@ Configuration shows the version of the configuration in effect. Modules shows on
 
 With honk, Store subscriptions (`global.store_subscribe`) stores successfully fetched and accepted subscription bodies in the `subscription_body` table of `<data_dir>/state/honk.db`, normally `/var/lib/honk/state/honk.db`. Changing this setting requires restarting honk; a subscription with `cache: false` skips storage and recovery. Separate `.sub` files belong to legacy storage; see the [pinned honk reference](https://github.com/Glassyiris/honk/blob/a949f1f1ff7e8e8852e76e02b60870e6bb1fd440/doc/en/reference/subscription.md#fetch-persistence-and-recovery) for startup migration.
 
-![Config files with the source editor](https://zakkaus.github.io/doona-docs/screenshots/en/config-source-light.webp)
+![Config files with the source editor](https://doona.daeuniverse.org/screenshots/en/config-source-light.webp)
 
-![Global settings form](https://zakkaus.github.io/doona-docs/screenshots/en/config-global-light.webp)
+![Global settings form](https://doona.daeuniverse.org/screenshots/en/config-global-light.webp)
 
 Settings has General and Appearance tabs. General holds backend, runtime, geodata and probe settings; Appearance holds the palette, wallpaper and display preferences.
 
@@ -102,4 +102,4 @@ Below 600 pixels wide, tables keep every column and scroll sideways; on wider sc
 
 Over HTTPS or on localhost, doona installs as an app. In Chrome and Edge, the About card in Settings offers Install as an app. Safari has no install prompt, so the card shows the steps instead. On iPhone and iPad, tap Share, then Add to Home Screen. In Safari 26 on macOS, choose File > Add to Dock.
 
-<img src="https://zakkaus.github.io/doona-docs/screenshots/en/phone.webp" alt="doona on phones: the connections table, the overflow menu and its palette submenu" width="100%">
+<img src="https://doona.daeuniverse.org/screenshots/en/phone.webp" alt="doona on phones: the connections table, the overflow menu and its palette submenu" width="100%">

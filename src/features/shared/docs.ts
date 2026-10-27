@@ -2,7 +2,7 @@ import anchors from './docsAnchors.json';
 import {languages, type Lang} from '../../i18n';
 
 // The docs site, built and published from Zakkaus/doona-docs.
-export const DOCS_URL = 'https://zakkaus.github.io/doona-docs/';
+export const DOCS_URL = 'https://doona.daeuniverse.org/';
 
 export type DocsAnchor = keyof typeof anchors;
 

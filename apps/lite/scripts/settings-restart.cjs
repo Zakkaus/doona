@@ -111,10 +111,7 @@ const labels = {
       await expect(dialog.getByText(`${l.open} ${sourcePath}`, {exact: true})).toBeVisible();
       await expect(dialog.getByText(l.edit, {exact: true})).toBeVisible();
       await expect(dialog.getByText(l.restart, {exact: true})).toBeVisible();
-      await expect(dialog.getByRole('link', {name: l.docs})).toHaveAttribute(
-        'href',
-        `https://zakkaus.github.io/doona-docs/${locale}/install.html#reload-and-restart`
-      );
+      await expect(dialog.getByRole('link', {name: l.docs})).toHaveAttribute('href', `https://doona.daeuniverse.org/${locale}/install.html#reload-and-restart`);
       const logRow = dialog.getByRole('listitem').filter({has: page.getByText(l.log, {exact: true})});
       await expect(logRow.getByText('debug', {exact: true})).toBeVisible();
       await expect(logRow.locator('input, select, [role="combobox"]')).toHaveCount(0);

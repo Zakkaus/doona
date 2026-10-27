@@ -6,7 +6,7 @@
 
 **Static web UI for the [daeuniverse](https://github.com/daeuniverse) engines: manage nodes, groups, rules and configuration in a browser.**
 
-**[Live demo](https://demo.daeuniverse.org/)** / **[Lite demo (preview)](https://demo.daeuniverse.org/lite/)** / **[Documentation](https://zakkaus.github.io/doona-docs/en/)**
+**[Live demo](https://demo.daeuniverse.org/)** / **[Lite demo (preview)](https://demo.daeuniverse.org/lite/)** / **[Documentation](https://doona.daeuniverse.org/en/)**
 
 English / [简体中文](README.zh-CN.md) / [繁體中文](README.zh-TW.md)
 
@@ -16,7 +16,7 @@ English / [简体中文](README.zh-CN.md) / [繁體中文](README.zh-TW.md)
 
 doona is a static web UI for monitoring proxy traffic and managing nodes, groups, rules and configuration. It requires a running [honk](https://github.com/daeuniverse/honk) backend with the native API enabled; dae is not supported yet.
 
-![Activity dashboard with traffic charts and status cards](https://zakkaus.github.io/doona-docs/screenshots/en/activity-light.webp)
+![Activity dashboard with traffic charts and status cards](https://doona.daeuniverse.org/screenshots/en/activity-light.webp)
 
 ## Features
 
@@ -26,11 +26,11 @@ doona is a static web UI for monitoring proxy traffic and managing nodes, groups
 - Inspect connections, flow records and DNS queries.
 - Read backend logs and events.
 
-![Activity card width and height controls](https://zakkaus.github.io/doona-docs/screenshots/en/dashboard-settings.webp)
+![Activity card width and height controls](https://doona.daeuniverse.org/screenshots/en/dashboard-settings.webp)
 
 Adjust card sizes on the Activity dashboard.
 
-![The Flows map showing the traffic path through a selected rule or node](https://zakkaus.github.io/doona-docs/screenshots/en/routing.webp)
+![The Flows map showing the traffic path through a selected rule or node](https://doona.daeuniverse.org/screenshots/en/routing.webp)
 
 The Flows map; selecting a rule or node shows the traffic path through it.
 
@@ -40,7 +40,7 @@ The Flows map; selecting a rule or node shows the traffic path through it.
 - Test filtered nodes and sort by latency.
 - Refresh subscriptions and inspect probe results.
 
-![Node actions menu and probe results](https://zakkaus.github.io/doona-docs/screenshots/en/node-actions.webp)
+![Node actions menu and probe results](https://doona.daeuniverse.org/screenshots/en/node-actions.webp)
 
 Inspect a node’s probe results and add it to a group.
 
@@ -50,11 +50,11 @@ Inspect a node’s probe results and add it to a group.
 - Edit the rule list and apply routing templates.
 - Trace routing decisions with a process name and firewall mark.
 
-![Policy group editor](https://zakkaus.github.io/doona-docs/screenshots/en/group-editor.webp)
+![Policy group editor](https://doona.daeuniverse.org/screenshots/en/group-editor.webp)
 
 Edit a group’s filters and policy.
 
-![Rule list in advanced view](https://zakkaus.github.io/doona-docs/screenshots/en/rules-advanced.webp)
+![Rule list in advanced view](https://doona.daeuniverse.org/screenshots/en/rules-advanced.webp)
 
 Inspect the rule list in advanced view.
 
@@ -64,7 +64,7 @@ Inspect the rule list in advanced view.
 - Change global settings through a form.
 - Inspect revisions and export configuration.
 
-![Configuration editor with validation errors](https://zakkaus.github.io/doona-docs/screenshots/en/config-diagnostics.webp)
+![Configuration editor with validation errors](https://doona.daeuniverse.org/screenshots/en/config-diagnostics.webp)
 
 Locate validation errors in the source editor.
 
@@ -74,15 +74,15 @@ Locate validation errors in the source editor.
 - Use English, Simplified Chinese or Traditional Chinese.
 - Use page tabs, lists and menus on phones.
 
-![Palette comparison sheet](https://zakkaus.github.io/doona-docs/screenshots/palettes.webp)
+![Palette comparison sheet](https://doona.daeuniverse.org/screenshots/palettes.webp)
 
 Compare the available palettes.
 
-![Phone layouts with connections and appearance menus](https://zakkaus.github.io/doona-docs/screenshots/en/phone.webp)
+![Phone layouts with connections and appearance menus](https://doona.daeuniverse.org/screenshots/en/phone.webp)
 
 Browse connections and change appearance on a phone.
 
-Available features depend on the backend’s capabilities and configuration; see the [feature requirements](https://zakkaus.github.io/doona-docs/en/feature-requirements.html).
+Available features depend on the backend’s capabilities and configuration; see the [feature requirements](https://doona.daeuniverse.org/en/feature-requirements.html).
 
 ## Two editions
 
@@ -96,9 +96,9 @@ doona lite is a preview in testing in 0.1.0-rc.2; its pages and behaviour may ch
 | Intended use       | full interface for everyday management                    | smaller configuration editor                       |
 | Status             | release candidate                                         | preview in testing                                 |
 
-See the [edition comparison](https://zakkaus.github.io/doona-docs/en/editions.html) for features, backend requirements and switching editions.
+See the [edition comparison](https://doona.daeuniverse.org/en/editions.html) for features, backend requirements and switching editions.
 
-![The doona lite Nodes page](https://zakkaus.github.io/doona-docs/images/lite-nodes-light.webp)
+![The doona lite Nodes page](https://doona.daeuniverse.org/images/lite-nodes-light.webp)
 
 ## Try the demo
 
@@ -112,9 +112,9 @@ To see error states, use [`?scenario=faults`](https://demo.daeuniverse.org/?scen
 
 ## Install
 
-Start with a honk build that provides the native API; the [installation guide](https://zakkaus.github.io/doona-docs/en/install.html#install) lists compatible builds and setup steps. Then download `doona-<version>.tar.gz` from the [releases page](https://github.com/Zakkaus/doona/releases).
+Start with a honk build that provides the native API; the [installation guide](https://doona.daeuniverse.org/en/install.html#install) lists compatible builds and setup steps. Then download `doona-<version>.tar.gz` from the [releases page](https://github.com/Zakkaus/doona/releases).
 Extract it into the directory that honk's `native_api` block names in `ui`; honk serves doona at `/ui/`.
-The same release provides `doona-lite-<version>.tar.gz`; extract it to its own directory, `/usr/share/doona-lite`, and use `ui` to select the edition as described in the [lite guide](https://zakkaus.github.io/doona-docs/en/lite.html).
+The same release provides `doona-lite-<version>.tar.gz`; extract it to its own directory, `/usr/share/doona-lite`, and use `ui` to select the edition as described in the [lite guide](https://doona.daeuniverse.org/en/lite.html).
 Editing settings and configuration requires write permission on the backend. See [package details](docs/install.md) for archive contents.
 
 ## Backend protocols
@@ -137,13 +137,13 @@ It adds a preview of doona lite, a smaller configuration editor shipped in its o
 - [Fonts](docs/fonts.md)
 - [Country flags](docs/country-flags.md)
 - [Changelog](CHANGELOG.md)
-- [Documentation site](https://zakkaus.github.io/doona-docs/en/)
+- [Documentation site](https://doona.daeuniverse.org/en/)
 
 ## Development
 
-The build, test and packaging commands, the source layout and the contract pin are on the [development page](https://zakkaus.github.io/doona-docs/en/development.html). See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+The build, test and packaging commands, the source layout and the contract pin are on the [development page](https://doona.daeuniverse.org/en/development.html). See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
-For lite’s separate dependency install and build commands, see [Development](https://zakkaus.github.io/doona-docs/en/development.html#doona-lite).
+For lite’s separate dependency install and build commands, see [Development](https://doona.daeuniverse.org/en/development.html#doona-lite).
 
 ## Support
 

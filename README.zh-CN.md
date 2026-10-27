@@ -6,7 +6,7 @@
 
 **[daeuniverse](https://github.com/daeuniverse) 引擎的静态 Web 界面：在浏览器中管理节点、组、规则与配置。**
 
-**[在线演示](https://demo.daeuniverse.org/)** / **[Lite 演示（预览版）](https://demo.daeuniverse.org/lite/)** / **[文档](https://zakkaus.github.io/doona-docs/zh-CN/)**
+**[在线演示](https://demo.daeuniverse.org/)** / **[Lite 演示（预览版）](https://demo.daeuniverse.org/lite/)** / **[文档](https://doona.daeuniverse.org/zh-CN/)**
 
 [English](README.md) / 简体中文 / [繁體中文](README.zh-TW.md)
 
@@ -16,7 +16,7 @@
 
 doona 是用于监控代理流量、管理节点、组、规则与配置的静态 Web 界面。使用时需要正在运行且已启用原生 API 的 [honk](https://github.com/daeuniverse/honk) 后端；目前不支持 dae。
 
-![显示流量图表与状态卡片的活动页](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/activity-light.webp)
+![显示流量图表与状态卡片的活动页](https://doona.daeuniverse.org/screenshots/zh-CN/activity-light.webp)
 
 ## 功能
 
@@ -26,11 +26,11 @@ doona 是用于监控代理流量、管理节点、组、规则与配置的静�
 - 查看连接、分流记录与 DNS 查询。
 - 查看后端日志与事件。
 
-![活动页卡片的宽度与高度设置](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/dashboard-settings.webp)
+![活动页卡片的宽度与高度设置](https://doona.daeuniverse.org/screenshots/zh-CN/dashboard-settings.webp)
 
 在活动页调整卡片尺寸。
 
-![分流页地图显示经过所选规则或节点的流量路径](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/routing.webp)
+![分流页地图显示经过所选规则或节点的流量路径](https://doona.daeuniverse.org/screenshots/zh-CN/routing.webp)
 
 分流页地图；选择规则或节点可查看经过它的流量路径。
 
@@ -40,7 +40,7 @@ doona 是用于监控代理流量、管理节点、组、规则与配置的静�
 - 测试筛选后的节点，并按延迟排序。
 - 刷新订阅并查看探测结果。
 
-![节点操作菜单与探测结果](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/node-actions.webp)
+![节点操作菜单与探测结果](https://doona.daeuniverse.org/screenshots/zh-CN/node-actions.webp)
 
 查看节点的探测结果，并将节点加入组。
 
@@ -50,11 +50,11 @@ doona 是用于监控代理流量、管理节点、组、规则与配置的静�
 - 编辑规则列表并应用路由模板。
 - 填写进程名称与防火墙标记，追踪路由决策。
 
-![策略组编辑器](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/group-editor.webp)
+![策略组编辑器](https://doona.daeuniverse.org/screenshots/zh-CN/group-editor.webp)
 
 编辑组的筛选条件与策略。
 
-![高级视图中的规则列表](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/rules-advanced.webp)
+![高级视图中的规则列表](https://doona.daeuniverse.org/screenshots/zh-CN/rules-advanced.webp)
 
 在高级视图中查看规则列表。
 
@@ -64,7 +64,7 @@ doona 是用于监控代理流量、管理节点、组、规则与配置的静�
 - 通过表单修改全局设置。
 - 查看修订并导出配置。
 
-![显示校验错误的配置文件编辑器](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/config-diagnostics.webp)
+![显示校验错误的配置文件编辑器](https://doona.daeuniverse.org/screenshots/zh-CN/config-diagnostics.webp)
 
 在配置文件编辑器中定位校验错误。
 
@@ -74,15 +74,15 @@ doona 是用于监控代理流量、管理节点、组、规则与配置的静�
 - 使用英语、简体中文或繁体中文。
 - 在手机上使用页面标签、列表与菜单。
 
-![可用配色对比图](https://zakkaus.github.io/doona-docs/screenshots/palettes.webp)
+![可用配色对比图](https://doona.daeuniverse.org/screenshots/palettes.webp)
 
 比较可用的配色。
 
-![手机上的连接列表与外观菜单](https://zakkaus.github.io/doona-docs/screenshots/zh-CN/phone.webp)
+![手机上的连接列表与外观菜单](https://doona.daeuniverse.org/screenshots/zh-CN/phone.webp)
 
 在手机上浏览连接并调整外观。
 
-可用功能取决于后端的能力与配置，详见[功能要求](https://zakkaus.github.io/doona-docs/zh-CN/feature-requirements.html)。
+可用功能取决于后端的能力与配置，详见[功能要求](https://doona.daeuniverse.org/zh-CN/feature-requirements.html)。
 
 ## 两个版本
 
@@ -96,9 +96,9 @@ doona 是用于监控代理流量、管理节点、组、规则与配置的静�
 | 用途     | 用于日常管理的完整界面               | 体积更小的配置编辑器     |
 | 状态     | 候选版本                             | 仍在测试的预览版         |
 
-功能、后端要求及版本切换方式见[版本比较](https://zakkaus.github.io/doona-docs/zh-CN/editions.html)。
+功能、后端要求及版本切换方式见[版本比较](https://doona.daeuniverse.org/zh-CN/editions.html)。
 
-![doona lite 节点页面](https://zakkaus.github.io/doona-docs/images/lite-nodes-light.webp)
+![doona lite 节点页面](https://doona.daeuniverse.org/images/lite-nodes-light.webp)
 
 ## 体验演示版
 
@@ -112,9 +112,9 @@ doona 是用于监控代理流量、管理节点、组、规则与配置的静�
 
 ## 安装
 
-先按[安装指南](https://zakkaus.github.io/doona-docs/zh-CN/install.html#install)选择并配置支持原生 API 的 honk 版本，再从[发布页](https://github.com/Zakkaus/doona/releases)下载 `doona-<version>.tar.gz`。
+先按[安装指南](https://doona.daeuniverse.org/zh-CN/install.html#install)选择并配置支持原生 API 的 honk 版本，再从[发布页](https://github.com/Zakkaus/doona/releases)下载 `doona-<version>.tar.gz`。
 解压到 honk `native_api` 配置块中 `ui` 指定的目录，honk 即在 `/ui/` 提供 doona。
-同一次发布还提供 `doona-lite-<version>.tar.gz`；将其解压到独立目录 `/usr/share/doona-lite`，通过 `ui` 选择版本，具体步骤见 [lite 指南](https://zakkaus.github.io/doona-docs/zh-CN/lite.html)。
+同一次发布还提供 `doona-lite-<version>.tar.gz`；将其解压到独立目录 `/usr/share/doona-lite`，通过 `ui` 选择版本，具体步骤见 [lite 指南](https://doona.daeuniverse.org/zh-CN/lite.html)。
 修改设置与配置需要后端授予写入权限。各压缩包的内容见[安装说明](docs/install.zh-CN.md)。
 
 ## 后端协议
@@ -137,13 +137,13 @@ WebSocket、gRPC 与 XHTTP 是流传输方式，与代理协议不同。在支�
 - [字体](docs/fonts.md)
 - [国旗](docs/country-flags.md)
 - [更新日志](CHANGELOG.md)
-- [文档站](https://zakkaus.github.io/doona-docs/zh-CN/)
+- [文档站](https://doona.daeuniverse.org/zh-CN/)
 
 ## 开发
 
-构建、测试与打包命令、源码布局与契约的固定提交，见[开发](https://zakkaus.github.io/doona-docs/zh-CN/development.html)一页；提交 pull request 前先读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+构建、测试与打包命令、源码布局与契约的固定提交，见[开发](https://doona.daeuniverse.org/zh-CN/development.html)一页；提交 pull request 前先读 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-lite 的独立依赖安装与构建命令见[开发](https://zakkaus.github.io/doona-docs/zh-CN/development.html#doona-lite)一页。
+lite 的独立依赖安装与构建命令见[开发](https://doona.daeuniverse.org/zh-CN/development.html#doona-lite)一页。
 
 ## 支持
 

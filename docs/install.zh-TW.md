@@ -31,7 +31,7 @@ HTML 可以開啟，但 JavaScript 或 CSS 請求回傳 403 時，在瀏覽器�
 
 建立管理員另有限制：honk 檢查實際連線來源是否為本機、私有網路或鏈路本地位址。Host 和 Origin 允許清單不會改變這項限制。
 
-[文件](https://zakkaus.github.io/doona-docs/zh-TW/)涵蓋系統需求、honk 與 doona 的安裝、範例組態、首次登入、逐項檢查功能與疑難排解。
+[文件](https://doona.daeuniverse.org/zh-TW/)涵蓋系統需求、honk 與 doona 的安裝、範例組態、首次登入、逐項檢查功能與疑難排解。
 
 ## 發布檔案
 
@@ -97,7 +97,7 @@ Precompressed 意為預先壓縮。瀏覽器接受壓縮內容時，honk 或 Web
 | 無後綴                | 預設配置器 mimalloc                      |
 | `-stock`              | 使用系統配置器代替 mimalloc              |
 
-[安裝 honk](https://zakkaus.github.io/doona-docs/zh-TW/install.html#install) 說明如何依閘道器選擇、驗證與安裝建置。
+[安裝 honk](https://doona.daeuniverse.org/zh-TW/install.html#install) 說明如何依閘道器選擇、驗證與安裝建置。
 
 ### 校驗和與原始碼
 
