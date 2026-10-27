@@ -73,7 +73,7 @@ it.each(['unavailable', 'loading', 'error', 'disabled', 'read-only', 'redacted',
   if (state === 'read-only') config.data!.sources[0].writable = false;
   if (state === 'redacted') complete = false;
   if (state === 'pending') complete = undefined;
-  if (state === 'credentials') config.data!.sources[0].content += '\nexperimental { native_api { token: secret } }';
+  if (state === 'credentials') config.data!.sources[0].content += '\nexperimental { native_api { secret: masked } }';
   field('mptcp').change('true');
   const m = read();
   expect(m.available).toBe(state !== 'unavailable');

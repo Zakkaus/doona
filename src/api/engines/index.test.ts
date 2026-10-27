@@ -14,7 +14,7 @@ const patched = (patch: {[K in keyof Resources]?: Partial<Resources[K]>}): Capab
 });
 const honk = engineOf(version);
 const other = engineOf({...version, engine: {...version.engine, name: 'other'}});
-const listener = "experimental {\n  native_api { listen: '127.0.0.1:9090' }\n}";
+const listener = "experimental {\n  native_api { listen: '127.0.0.1:9090'\n    secret: '<redacted>' }\n}";
 
 describe('engineOf', () => {
   it('knows honk by its engine name and nothing else', () => {
@@ -31,20 +31,34 @@ describe('honk', () => {
     const off = patched({traffic_history: {available: false}, memory_history: {available: false}, logs: {available: false}, dns_log: {available: false}});
     const reasons = (['traffic_history', 'memory_history', 'logs', 'dns_log'] as const).map(id => honk.reason(id, off));
     expect(reasons).toEqual(
-      ['record_traffic', 'record_memory', 'record_logs', 'record_dns_log'].map(key => ({code: 'recorder-off', settings: [{key, value: 'true'}]}))
+      ['record_traffic', 'record_memory', 'record_logs', 'record_dns_log'].map(key => ({
+        code: 'recorder-off',
+        settings: [{key: `experimental.native_api.${key}`, value: 'true'}]
+      }))
     );
   });
 
-  it('records flows on demand unless record_flows withdrew max_flows', () => {
-    expect(honk.reason('flows', patched({flows: {recording: 'off'}}))).toEqual({code: 'recorded-on-demand'});
+  it('tells flows recorded on demand from the Off mode and from record_flows forbidding them', () => {
+    const forbidden = {code: 'recorder-off', settings: [{key: 'experimental.native_api.record_flows', value: 'true'}]};
+    expect(honk.reason('flows', patched({flows: {recording: 'auto'}}))).toEqual({code: 'recorded-on-demand'});
+    // max_flows is offered while record_flows allows recording, so `off` is the mode.
+    expect(honk.reason('flows', patched({flows: {recording: 'off'}}))).toEqual({code: 'mode-off'});
+    const allowedOff = {flows: {allowed: true, active: false, mode: 'off' as const}};
     const disallowed = patched({flows: {recording: 'off'}, runtime_settings: {fields: ['record_flows', 'log.level']}});
-    expect(honk.reason('flows', disallowed)).toEqual({code: 'recorder-off', settings: [{key: 'record_flows', value: 'true'}]});
+    expect(honk.reason('flows', disallowed, allowedOff)).toEqual({code: 'mode-off'});
+    expect(honk.reason('flows', disallowed)).toEqual(forbidden);
+    expect(honk.reason('flows', patched({flows: {recording: 'off'}}), {flows: {allowed: false, active: false, mode: 'auto'}})).toEqual(forbidden);
     expect(honk.reason('flows', patched({flows: {available: false}}))).toEqual({code: 'build-lacks'});
+    // A build that does not report the policy is not told it is Off, even when it offers max_flows.
+    expect(honk.reason('flows', patched({flows: {recording: undefined}}))).toBeUndefined();
   });
 
   it('explains the configuration, the main file, services and geodata', () => {
     expect(honk.reason('config', patched({config: {available: false}}))).toEqual({code: 'config-unloaded'});
-    expect(honk.reason('config', patched({config: {writable: false}}))).toEqual({code: 'writes-off', settings: [{key: 'config_write', value: 'true'}]});
+    expect(honk.reason('config', patched({config: {writable: false}}))).toEqual({
+      code: 'writes-off',
+      settings: [{key: 'experimental.native_api.config_write', value: 'true'}]
+    });
     expect(honk.reason('manage', capabilities)).toEqual({code: 'main-file-read-only'});
     expect(honk.reason('probes', capabilities)).toEqual({code: 'starting-or-stopping'});
     expect(honk.reason('subscriptions', capabilities)).toEqual({code: 'starting-or-stopping'});
@@ -52,9 +66,10 @@ describe('honk', () => {
     expect(honk.reason('geodata', patched({geodata: {configurable_sources: true}}))).toBeUndefined();
     const noDb = honk.reason('geodata', patched({geodata: {configurable_sources: undefined}}));
     expect(noDb?.code).toBe('no-download-urls');
-    expect(noDb && 'settings' in noDb && noDb.settings.map(setting => setting.key)).toEqual(['geosite_download_url', 'geoip_download_url']);
-    expect(honk.settingName('geoip_download_url')).toBe('experimental.native_api.geoip_download_url');
-    expect(other.settingName('geoip_download_url')).toBe('geoip_download_url');
+    // The standard assets.geodata keys, not the legacy experimental.native_api ones.
+    expect(noDb && 'settings' in noDb && noDb.settings.map(setting => setting.key)).toEqual(['assets.geodata.geosite', 'assets.geodata.geoip']);
+    expect(noDb && 'settings' in noDb && honk.snippet(noDb.settings)).toMatch(/^assets \{\n {2}geodata \{\n {4}geosite: '.+'\n {4}geoip: '.+'\n {2}\}\n\}$/);
+    expect(noDb && 'settings' in noDb && honk.snippet(noDb.settings)).not.toContain('native_api');
     for (const subject of ['events', 'rules', 'config_validate', 'close'] satisfies EngineSubject[])
       expect(honk.reason(subject, capabilities)).toEqual({code: 'build-lacks'});
   });
@@ -73,21 +88,24 @@ describe('honk', () => {
     for (const subject of ['logs', 'probes', 'geodata'] satisfies EngineSubject[]) expect(honk.reason(subject, older)).toEqual({code: 'build-lacks'});
     // A build that does not report the write switch is not told to turn it on.
     expect(honk.reason('config', older)).toBeUndefined();
-    // Without its field list, flows that are off are recorded on demand rather than turned off.
-    expect(honk.reason('flows', older)).toEqual({code: 'recorded-on-demand'});
+    // Without its field list, flows that are off are not put down to the Off mode or to record_flows.
+    expect(honk.reason('flows', older)).toBeUndefined();
   });
 
-  it('holds credentials only in a source that defines an API listener', () => {
+  it("holds credentials only where an experimental listener holds a secret or a nested block, as honk's parser says", () => {
     expect(honk.holdsCredentials({content: listener})).toBe(true);
-    expect(honk.holdsCredentials({content: "clash_api { secret: '<redacted>' }"})).toBe(true);
+    expect(honk.holdsCredentials({content: "experimental { clash_api { tls { cert: '/etc/honk/api.pem' } } }"})).toBe(true);
+    expect(honk.holdsCredentials({content: "experimental {\n  native_api { listen: '127.0.0.1:9090' }\n}"})).toBe(false);
+    expect(honk.holdsCredentials({content: "clash_api { secret: '<redacted>' }"})).toBe(false);
+    expect(honk.holdsCredentials({content: "experimental { native_api { listen: x } }\nglobal { secret: '<redacted>' }"})).toBe(false);
     expect(honk.holdsCredentials({content: '# native_api is off\nglobal { log_level: info }'})).toBe(false);
   });
 
-  it('nests the settings in the native_api section', () => {
+  it('nests each setting in its section', () => {
     expect(
       honk.snippet([
-        {key: 'record_logs', value: 'true'},
-        {key: 'record_dns_log', value: 'true'}
+        {key: 'experimental.native_api.record_logs', value: 'true'},
+        {key: 'experimental.native_api.record_dns_log', value: 'true'}
       ])
     ).toBe('experimental {\n  native_api {\n    record_logs: true\n    record_dns_log: true\n  }\n}');
   });
