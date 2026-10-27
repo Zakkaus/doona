@@ -4,151 +4,151 @@
 
 # doona
 
-**Static web UI for the [daeuniverse](https://github.com/daeuniverse) engines: manage nodes, groups, rules and configuration in a browser.**
+**[daeuniverse](https://github.com/daeuniverse) 引擎的靜態 Web 介面：在瀏覽器中管理節點、群組、規則與組態。**
 
-**[Live demo](https://demo.daeuniverse.org/)** / **[Lite demo (preview)](https://demo.daeuniverse.org/lite/)** / **[Documentation](https://doona.daeuniverse.org/en/)**
+**[線上示範](https://demo.daeuniverse.org/)** / **[Lite 示範（預覽版）](https://demo.daeuniverse.org/lite/)** / **[文件](https://doona.daeuniverse.org/zh-TW/)**
 
-English / [简体中文](README.zh-CN.md) / [繁體中文](README.zh-TW.md)
+繁體中文 / [简体中文](README.zh-CN.md) / [English](README.en.md)
 
-[Features](#features) / [Two editions](#two-editions) / [Try the demo](#try-the-demo) / [Install](#install) / [Backend protocols](#backend-protocols) / [Documentation](#documentation)
+[功能](#功能) / [兩個版本](#兩個版本) / [體驗示範版](#體驗示範版) / [安裝](#安裝) / [後端協定](#後端協定) / [文件](#文件)
 
 </div>
 
-doona is a static web UI for monitoring proxy traffic and managing nodes, groups, rules and configuration. It requires a running [honk](https://github.com/daeuniverse/honk) backend with the native API enabled; dae is not supported yet.
+doona 是用於監控代理流量、管理節點、群組、規則與組態的靜態 Web 介面。使用時需要正在運作且已啟用原生 API 的 [honk](https://github.com/daeuniverse/honk) 後端；目前不支援 dae。
 
-![Activity dashboard with traffic charts and status cards](https://doona.daeuniverse.org/screenshots/en/activity-light.webp)
+![顯示流量圖表與狀態卡片的活動頁](https://doona.daeuniverse.org/screenshots/zh-TW/activity-light.webp)
 
-## Features
+## 功能
 
-### Monitor
+### 監控
 
-- Edit the Activity dashboard’s cards and their sizes.
-- Inspect connections, flow records and DNS queries.
-- Read backend logs and events.
+- 編輯活動頁的卡片及其尺寸。
+- 檢視連線、分流記錄與 DNS 查詢。
+- 檢視後端日誌與事件。
 
-![Activity card width and height controls](https://doona.daeuniverse.org/screenshots/en/dashboard-settings.webp)
+![活動頁卡片的寬度與高度設定](https://doona.daeuniverse.org/screenshots/zh-TW/dashboard-settings.webp)
 
-Adjust card sizes on the Activity dashboard.
+在活動頁調整卡片尺寸。
 
-![The Flows map showing the traffic path through a selected rule or node](https://doona.daeuniverse.org/screenshots/en/routing.webp)
+![分流頁地圖顯示經過所選規則或節點的流量路徑](https://doona.daeuniverse.org/screenshots/zh-TW/routing.webp)
 
-The Flows map; selecting a rule or node shows the traffic path through it.
+分流頁地圖；選取規則或節點可檢視經過它的流量路徑。
 
-### Nodes and subscriptions
+### 節點與訂閱
 
-- Paste several node links at once.
-- Test filtered nodes and sort by latency.
-- Refresh subscriptions and inspect probe results.
+- 一次貼上多個節點連結。
+- 測試篩選後的節點，並依延遲排序。
+- 更新訂閱並檢視探測結果。
 
-![Node actions menu and probe results](https://doona.daeuniverse.org/screenshots/en/node-actions.webp)
+![節點操作選單與探測結果](https://doona.daeuniverse.org/screenshots/zh-TW/node-actions.webp)
 
-Inspect a node’s probe results and add it to a group.
+檢視節點的探測結果，並將節點加入群組。
 
-### Groups and routing
+### 群組與路由
 
-- Edit groups, membership filters and selection policies.
-- Edit the rule list and apply routing templates.
-- Trace routing decisions with a process name and firewall mark.
+- 編輯群組、成員篩選條件與選擇策略。
+- 編輯規則清單並套用路由範本。
+- 填寫行程名稱與防火牆標記，追蹤路由決策。
 
-![Policy group editor](https://doona.daeuniverse.org/screenshots/en/group-editor.webp)
+![策略群組編輯器](https://doona.daeuniverse.org/screenshots/zh-TW/group-editor.webp)
 
-Edit a group’s filters and policy.
+編輯群組的篩選條件與策略。
 
-![Rule list in advanced view](https://doona.daeuniverse.org/screenshots/en/rules-advanced.webp)
+![進階檢視中的規則清單](https://doona.daeuniverse.org/screenshots/zh-TW/rules-advanced.webp)
 
-Inspect the rule list in advanced view.
+在進階檢視中檢視規則清單。
 
-### Configuration
+### 組態
 
-- Edit source files with validation diagnostics.
-- Change global settings through a form.
-- Inspect revisions and export configuration.
+- 編輯設定檔，並透過診斷結果定位驗證錯誤。
+- 透過表單修改全域設定。
+- 檢視修訂並匯出組態。
 
-![Configuration editor with validation errors](https://doona.daeuniverse.org/screenshots/en/config-diagnostics.webp)
+![顯示驗證錯誤的設定檔編輯器](https://doona.daeuniverse.org/screenshots/zh-TW/config-diagnostics.webp)
 
-Locate validation errors in the source editor.
+在設定檔編輯器中定位驗證錯誤。
 
-### Appearance and phones
+### 外觀與手機
 
-- Choose palettes and light or dark themes.
-- Use English, Simplified Chinese or Traditional Chinese.
-- Use page tabs, lists and menus on phones.
+- 選擇配色及淺色或深色主題。
+- 使用英語、簡體中文或繁體中文。
+- 在手機上使用頁面分頁、清單與選單。
 
-![Palette comparison sheet](https://doona.daeuniverse.org/screenshots/palettes.webp)
+![可用配色比較圖](https://doona.daeuniverse.org/screenshots/palettes.webp)
 
-Compare the available palettes.
+比較可用的配色。
 
-![Phone layouts with connections and appearance menus](https://doona.daeuniverse.org/screenshots/en/phone.webp)
+![手機上的連線清單與外觀選單](https://doona.daeuniverse.org/screenshots/zh-TW/phone.webp)
 
-Browse connections and change appearance on a phone.
+在手機上瀏覽連線並調整外觀。
 
-Available features depend on the backend’s capabilities and configuration; see the [feature requirements](https://doona.daeuniverse.org/en/feature-requirements.html).
+可用功能取決於後端的能力與組態，詳見[功能要求](https://doona.daeuniverse.org/zh-TW/feature-requirements.html)。
 
-## Two editions
+## 兩個版本
 
-doona lite is a preview in testing in 0.1.0-rc.2; its pages and behaviour may change. Both editions connect to the same honk with the same administrator credentials.
+在 0.1.0-rc.2 中，doona lite 是仍在測試的預覽版，頁面與行為可能繼續變動。兩者連線同一個 honk，使用相同的管理員憑證。
 
-| Area               | Standard edition                                          | doona lite (preview)                               |
-| ------------------ | --------------------------------------------------------- | -------------------------------------------------- |
-| Traffic monitoring | Activity, connections, flows, DNS, logs and events        | no monitoring pages                                |
-| Configuration      | source editor, diagnostics, global settings and revisions | forms for nodes, subscriptions and global settings |
-| Groups and rules   | editors, templates and route trace                        | group, routing and DNS editors                     |
-| Intended use       | full interface for everyday management                    | smaller configuration editor                       |
-| Status             | release candidate                                         | preview in testing                                 |
+| 項目       | 標準版                             | doona lite（預覽版）     |
+| ---------- | ---------------------------------- | ------------------------ |
+| 流量監控   | 活動、連線、分流、DNS、日誌與事件  | 不含監控頁面             |
+| 組態       | 設定檔編輯器、診斷、全域設定與修訂 | 節點、訂閱與全域設定表單 |
+| 群組與規則 | 編輯器、範本與路由追蹤             | 群組、路由與 DNS 編輯器  |
+| 用途       | 用於日常管理的完整介面             | 體積更小的設定檔編輯器   |
+| 狀態       | 候選版本                           | 仍在測試的預覽版         |
 
-See the [edition comparison](https://doona.daeuniverse.org/en/editions.html) for features, backend requirements and switching editions.
+功能、後端要求及版本切換方式見[版本比較](https://doona.daeuniverse.org/zh-TW/editions.html)。
 
-![The doona lite Nodes page](https://doona.daeuniverse.org/images/lite-nodes-light.webp)
+![doona lite 節點頁面](https://doona.daeuniverse.org/images/lite-nodes-light.webp)
 
-## Try the demo
+## 體驗示範版
 
-Try the UI with sample data; no backend is needed.
+使用範例資料體驗介面，無需後端。
 
-[Standard edition](https://demo.daeuniverse.org/)
+[標準版](https://demo.daeuniverse.org/)
 
-[doona lite (preview)](https://demo.daeuniverse.org/lite/)
+[doona lite（預覽版）](https://demo.daeuniverse.org/lite/)
 
-To see error states, use [`?scenario=faults`](https://demo.daeuniverse.org/?scenario=faults); `?scenario=` returns to the healthy demo.
+以 [`?scenario=faults`](https://demo.daeuniverse.org/?scenario=faults) 開啟可檢視錯誤狀態，以 `?scenario=` 開啟則恢復正常的示範版。
 
-## Install
+## 安裝
 
-Start with a honk build that provides the native API; the [installation guide](https://doona.daeuniverse.org/en/install.html#install) lists compatible builds and setup steps. Then download `doona-<version>.tar.gz` from the [releases page](https://github.com/Zakkaus/doona/releases).
-Extract it into the directory that honk's `native_api` block names in `ui`; honk serves doona at `/ui/`.
-The same release provides `doona-lite-<version>.tar.gz`; extract it to its own directory, `/usr/share/doona-lite`, and use `ui` to select the edition as described in the [lite guide](https://doona.daeuniverse.org/en/lite.html).
-Editing settings and configuration requires write permission on the backend. See [package details](docs/install.md) for archive contents.
+先按[安裝指南](https://doona.daeuniverse.org/zh-TW/install.html#install)選擇並設定支援原生 API 的 honk 版本，再從[發布頁](https://github.com/Zakkaus/doona/releases)下載 `doona-<version>.tar.gz`。
+解壓縮到 honk `native_api` 組態區塊中 `ui` 指定的目錄，honk 即在 `/ui/` 提供 doona。
+同一次發布還提供 `doona-lite-<version>.tar.gz`；將其解壓縮到獨立目錄 `/usr/share/doona-lite`，透過 `ui` 選擇版本，具體步驟見 [lite 指南](https://doona.daeuniverse.org/zh-TW/lite.html)。
+修改設定與組態需要後端授予寫入權限。各壓縮包的內容見[安裝說明](docs/install.zh-TW.md)。
 
-## Backend protocols
+## 後端協定
 
-honk handles proxying, so protocol support depends on the backend version and build. Its proxy protocols include SOCKS5, Shadowsocks/2022, Trojan, VMess, VLESS, AnyTLS, Hysteria2, TUIC and Juicity; see the [honk node reference](https://github.com/daeuniverse/honk/blob/main/doc/en/reference/nodes.md#protocols) for supported options and limits.
+honk 負責代理流量，協定支援取決於後端版本與建置。其代理協定包括 SOCKS5、Shadowsocks/2022、Trojan、VMess、VLESS、AnyTLS、Hysteria2、TUIC 與 Juicity；支援的選項與限制見 [honk 節點參考](https://github.com/daeuniverse/honk/blob/main/doc/zh/reference/nodes.md#协议)。
 
-WebSocket, gRPC and XHTTP are stream transports, separate from proxy protocols. On honk versions with XHTTP support, Trojan/VMess/VLESS use the [H2 XHTTP profile](https://github.com/daeuniverse/honk/blob/main/doc/en/reference/nodes.md#xhttp-over-h2), with no H1/H3 fallback; the reference lists supported combinations and limitations.
+WebSocket、gRPC 與 XHTTP 是串流傳輸方式，與代理協定不同。在支援 XHTTP 的 honk 版本中，Trojan／VMess／VLESS 使用 [H2 XHTTP 相容組態](https://github.com/daeuniverse/honk/blob/main/doc/zh/reference/nodes.md#h2-上的-xhttp)，不會回退到 H1/H3；參考文件列出支援的組合與限制。
 
-## Latest release
+## 最新版本
 
-[0.1.0-rc.2](CHANGELOG.md) has 41 entries: 4 additions, 9 changes, 23 fixes and 5 internal updates.
+[0.1.0-rc.2](CHANGELOG.md) 共 41 項更新：新增 4 項、變更 9 項、修正 23 項、內部調整 5 項。
 
-It adds a preview of doona lite, a smaller configuration editor shipped in its own archive. The Nodes page takes several node links at once and tests the filtered list, sorted by latency, and the route trace accepts a firewall mark. A first run opens a connection form in Settings, and up to four recently left pages reopen as they were. Suspending the service, clearing logs, switching to Direct or Global mode and leaving an unapplied rule template or group draft now ask for confirmation.
+本版新增 doona lite 預覽版，這是一個更精簡的設定檔編輯器，以獨立壓縮檔發布。節點頁可一次貼上多個節點連結，並測試篩選後的節點清單、依延遲排序；路由追蹤可填寫防火牆標記。首次執行時開啟設定頁的連線表單，最近離開的至多四個頁面返回時保持原樣。暫停服務、清空日誌、切換至直連或全域模式，以及離開尚未套用的規則範本或群組草稿時，皆須確認。
 
-## Documentation
+## 文件
 
-- [Installation and packages](docs/install.md): [简体中文](docs/install.zh-CN.md) / [繁體中文](docs/install.zh-TW.md)
-- [Pages, page tour and phone layout](docs/pages.md): [简体中文](docs/pages.zh-CN.md) / [繁體中文](docs/pages.zh-TW.md)
-- [Themes and palettes](docs/themes.md): [简体中文](docs/themes.zh-CN.md) / [繁體中文](docs/themes.zh-TW.md)
-- [Fonts](docs/fonts.md)
-- [Country flags](docs/country-flags.md)
-- [Changelog](CHANGELOG.md)
-- [Documentation site](https://doona.daeuniverse.org/en/)
+- [安裝與套件](docs/install.zh-TW.md)：[English](docs/install.md) / [简体中文](docs/install.zh-CN.md)
+- [頁面、頁面導覽與手機版面](docs/pages.zh-TW.md)：[English](docs/pages.md) / [简体中文](docs/pages.zh-CN.md)
+- [主題與配色](docs/themes.zh-TW.md)：[English](docs/themes.md) / [简体中文](docs/themes.zh-CN.md)
+- [字型](docs/fonts.md)
+- [國旗](docs/country-flags.md)
+- [更新記錄](CHANGELOG.md)
+- [文件站](https://doona.daeuniverse.org/zh-TW/)
 
-## Development
+## 開發
 
-The build, test and packaging commands, the source layout and the contract pin are on the [development page](https://doona.daeuniverse.org/en/development.html). See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+建置、測試與打包指令、原始碼配置與契約的固定提交，見[開發](https://doona.daeuniverse.org/zh-TW/development.html)一頁；送出 pull request 前先讀 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-For lite’s separate dependency install and build commands, see [Development](https://doona.daeuniverse.org/en/development.html#doona-lite).
+lite 的獨立相依套件安裝與建置指令見[開發](https://doona.daeuniverse.org/zh-TW/development.html#doona-lite)一頁。
 
-## Support
+## 支援
 
-Report bugs and ask questions in the [issues](https://github.com/Zakkaus/doona/issues). Report backend issues to the connected engine's project: [honk](https://github.com/daeuniverse/honk) or [dae](https://github.com/daeuniverse/dae). See [SECURITY.md](.github/SECURITY.md) for reporting a vulnerability.
+問題與提問請到 [issues](https://github.com/Zakkaus/doona/issues)。後端問題請提交到所連接引擎的專案：[honk](https://github.com/daeuniverse/honk) 或 [dae](https://github.com/daeuniverse/dae)。通報安全漏洞的方式見 [SECURITY.md](.github/SECURITY.md)。
 
-## License and credits
+## 授權與致謝
 
-[GPL-3.0-only](LICENSE). [Noto Sans TC and SC](docs/fonts.md), bundled from Fontsource npm packages, are copyright Adobe and licensed under the [Open Font License](LICENSES/OFL-1.1.txt); [NOTICE](NOTICE) credits the Adobe Spectrum icons (Apache-2.0).
+[GPL-3.0-only](LICENSE)。[Noto Sans TC 與 SC](docs/fonts.md) 由 Fontsource npm 套件提供，版權歸 Adobe 所有，採用 [Open Font License](LICENSES/OFL-1.1.txt)。[NOTICE](NOTICE) 註明 Adobe Spectrum 圖示（Apache-2.0）。

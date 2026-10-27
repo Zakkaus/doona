@@ -17,7 +17,7 @@ For installation, use the documentation site's [system requirements](https://doo
 | `doona-fonts-<version>.tar.gz`         | Optional `fonts/` directory with Noto Sans TC and SC subsets, `OFL.txt` and `README`              |
 | `doona-precompressed-<version>.tar.gz` | Optional `.br` and `.gz` copies of the standard edition's text assets, at matching relative paths |
 
-Both program archives have `index.html` at the archive root. Each includes `LICENSE`, `LICENSES/`, `NOTICE`, `README.md` and `THIRD-PARTY-NOTICES.txt`. [tools/notices.mjs](../tools/notices.mjs) collects licence texts for bundled dependencies. The program archives do not include `CHANGELOG.md`.
+Both program archives have `index.html` at the archive root. Each includes `LICENSE`, `LICENSES/`, `NOTICE`, `README.md`, `README.en.md` and `THIRD-PARTY-NOTICES.txt`. [tools/notices.mjs](../tools/notices.mjs) collects licence texts for bundled dependencies. The program archives do not include `CHANGELOG.md`.
 
 The precompressed archive contains copies of selected text assets at least 1 KiB in size. Packaging uses `brotli -q 11` and `gzip -9 -n` and keeps a copy only when it is smaller than the original. Fonts are packaged separately; see [Fonts](fonts.md).
 

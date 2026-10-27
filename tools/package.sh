@@ -70,7 +70,7 @@ sort -z "$stage/assets" > "$stage/sorted-assets"
     rm -f "$sibling"
 ' sh "$stage/precompressed" "$stage/sibling" < "$stage/sorted-assets")
 add_notices() {
-    cp LICENSE NOTICE README.md "$1/"
+    cp LICENSE NOTICE README.md README.en.md "$1/"
     # Adds LICENSES/ and THIRD-PARTY-NOTICES.txt, and fails if NOTICE cites a licence file left out.
     node tools/notices.mjs "$1" "$2/.vite/bundled-packages.json"
 }

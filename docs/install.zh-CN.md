@@ -17,7 +17,7 @@ doona 以静态网页文件发布。当前版本为 v0.1.0-rc.2；doona lite 是
 | `doona-fonts-<version>.tar.gz`         | 可选的 `fonts/` 目录，包含 Noto Sans TC 与 SC 子集、`OFL.txt` 和 `README` |
 | `doona-precompressed-<version>.tar.gz` | 标准版文本资源的可选 `.br` 与 `.gz` 副本，保留原资源的相对路径            |
 
-两个程序压缩包都将 `index.html` 放在根目录，并包含 `LICENSE`、`LICENSES/`、`NOTICE`、`README.md` 与 `THIRD-PARTY-NOTICES.txt`。[tools/notices.mjs](../tools/notices.mjs) 收集打包依赖的许可证文本。程序压缩包不包含 `CHANGELOG.md`。
+两个程序压缩包都将 `index.html` 放在根目录，并包含 `LICENSE`、`LICENSES/`、`NOTICE`、`README.md`、`README.en.md` 与 `THIRD-PARTY-NOTICES.txt`。[tools/notices.mjs](../tools/notices.mjs) 收集打包依赖的许可证文本。程序压缩包不包含 `CHANGELOG.md`。
 
 预压缩包包含指定类型中至少 1 KiB 的文本资源副本。打包使用 `brotli -q 11` 与 `gzip -9 -n`，仅保留比原文件小的副本。字体单独打包，详见[字体](fonts.md)。
 

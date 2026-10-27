@@ -8,7 +8,7 @@
 
 **[在线演示](https://demo.daeuniverse.org/)** / **[Lite 演示（预览版）](https://demo.daeuniverse.org/lite/)** / **[文档](https://doona.daeuniverse.org/zh-CN/)**
 
-[English](README.md) / 简体中文 / [繁體中文](README.zh-TW.md)
+[繁體中文](README.md) / 简体中文 / [English](README.en.md)
 
 [功能](#功能) / [两个版本](#两个版本) / [体验演示版](#体验演示版) / [安装](#安装) / [后端协议](#后端协议) / [文档](#文档)
 

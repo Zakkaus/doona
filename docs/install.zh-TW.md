@@ -17,7 +17,7 @@ doona 以靜態網頁檔案發布。目前版本為 v0.1.0-rc.2；doona lite 是
 | `doona-fonts-<version>.tar.gz`         | 選用的 `fonts/` 目錄，包含 Noto Sans TC 與 SC 子集、`OFL.txt` 和 `README` |
 | `doona-precompressed-<version>.tar.gz` | 標準版文字資源的選用 `.br` 與 `.gz` 副本，保留原資源的相對路徑            |
 
-兩個程式封存檔都將 `index.html` 放在根目錄，並包含 `LICENSE`、`LICENSES/`、`NOTICE`、`README.md` 與 `THIRD-PARTY-NOTICES.txt`。[tools/notices.mjs](../tools/notices.mjs) 收集打包依賴的授權條款。程式封存檔不包含 `CHANGELOG.md`。
+兩個程式封存檔都將 `index.html` 放在根目錄，並包含 `LICENSE`、`LICENSES/`、`NOTICE`、`README.md`、`README.en.md` 與 `THIRD-PARTY-NOTICES.txt`。[tools/notices.mjs](../tools/notices.mjs) 收集打包依賴的授權條款。程式封存檔不包含 `CHANGELOG.md`。
 
 預壓縮封存檔包含指定類型中至少 1 KiB 的文字資源副本。打包使用 `brotli -q 11` 與 `gzip -9 -n`，僅保留比原檔案小的副本。字型單獨打包，詳見[字型](fonts.md)。
 
