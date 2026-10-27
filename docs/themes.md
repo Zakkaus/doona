@@ -2,29 +2,35 @@
 
 English / [简体中文](themes.zh-CN.md) / [繁體中文](themes.zh-TW.md)
 
-## Palettes
+The standard edition defines 15 palettes, each pairing light and dark colors. For choosing a palette, wallpaper or transparency setting, see [appearance settings](https://doona.daeuniverse.org/en/config-and-settings.html#appearance).
 
-Fifteen palettes support light and dark modes. Rosé Pine has two flavours, Catppuccin three and Glass four; the other six are Nord, Kary Pro Colors, Ant Design, Arco Design, Semi Design and China. China's modes are Day shift and Night shift.
+See the [theme gallery](https://doona.daeuniverse.org/en/features.html#theme-gallery) for every palette in light and dark.
 
-The Glass palettes are materials over a wallpaper. Liquid Glass follows Apple's Liquid Glass and, in Chrome and Edge, bends the page at the edges of the floating panel, menus and toasts. Glass uses blur and fill without refraction; Firefox and Safari also use this rendering for Liquid Glass. Frosted draws every surface under one even blur, so the shapes behind stay softly recognisable. Tinted follows Microsoft's Mica and draws nearly opaque surfaces without blur. With Reduce Transparency or Increase Contrast on, every Glass palette draws solid surfaces with clear edges.
+## Source map
 
-In the China palette, a healthy or running state reads Improving and an unavailable or degraded one Severe test. Use the palette picker in the top bar, or the sign-in page's Palette menu.
+| Source                                                      | Responsibility                                                                                   |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| [src/shell/palettes.ts](../src/shell/palettes.ts)           | Palette IDs, menu order, label keys, optional wording overrides and the default `rose-pine/moon` |
+| [src/shell/preferences.ts](../src/shell/preferences.ts)     | Stored palette validation and `system`, `light` or `dark` color scheme                           |
+| [src/shell/useAppearance.ts](../src/shell/useAppearance.ts) | Apply `data-family`, `data-flavour` and `data-scheme` to the document root                       |
+| [src/ui/styles/palettes/](../src/ui/styles/palettes/)       | One CSS file per palette family, with light and dark tokens                                      |
+| [src/ui/styles/palettes.css](../src/ui/styles/palettes.css) | Imports for non-Glass palette families                                                           |
+| [src/shell/glass.ts](../src/shell/glass.ts)                 | Load Glass styles and wallpaper when needed                                                      |
+| [src/ui/charts/palette.ts](../src/ui/charts/palette.ts)     | Read CSS tokens for charts and observe palette changes                                           |
 
-Settings has General and Appearance tabs. Open Appearance settings at the end of the Palette menu to choose a palette or a custom wallpaper. With a Glass palette, the wallpaper also appears behind the sign-in card.
+## Palette contract
 
-<img src="https://doona.daeuniverse.org/screenshots/palettes.webp" alt="Every palette in light and dark" width="100%">
+A palette ID has the form `family/flavour`. A single-flavour family repeats the name, as in `nord/nord`. CSS selectors use those two values and `data-scheme` to select tokens. Components consume the shared `--rp-*` tokens.
 
-## Theme gallery
+Each palette supplies surface, text, accent, chart, highlight and shadow tokens. The complete token table and contrast rules are in [Add a palette](../CONTRIBUTING.md#add-a-palette). [tools/palettes.test.mjs](../tools/palettes.test.mjs) checks family files, imports and required tokens.
 
-The activity page in eight palettes. Select a palette and mode from the top bar.
+Glass tokens load through [src/ui/styles/glass.css](../src/ui/styles/glass.css), alongside the material styles. Preserve this separate loading path when changing a Glass palette.
 
-| Theme gallery | Light                                                                                         | Dark                                                                                        |
-| ------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Rosé Pine     | ![Rosé Pine Light](https://doona.daeuniverse.org/screenshots/en/theme-rose-pine-light.webp)   | ![Rosé Pine Dark](https://doona.daeuniverse.org/screenshots/en/theme-rose-pine-dark.webp)   |
-| Catppuccin    | ![Catppuccin Light](https://doona.daeuniverse.org/screenshots/en/theme-catppuccin-light.webp) | ![Catppuccin Dark](https://doona.daeuniverse.org/screenshots/en/theme-catppuccin-dark.webp) |
-| Nord          | ![Nord Light](https://doona.daeuniverse.org/screenshots/en/theme-nord-light.webp)             | ![Nord Dark](https://doona.daeuniverse.org/screenshots/en/theme-nord-dark.webp)             |
-| Liquid Glass  | ![Liquid Glass Light](https://doona.daeuniverse.org/screenshots/en/theme-glass-light.webp)    | ![Liquid Glass Dark](https://doona.daeuniverse.org/screenshots/en/theme-glass-dark.webp)    |
-| Glass         | ![Glass Light](https://doona.daeuniverse.org/screenshots/en/theme-glass-clear-light.webp)     | ![Glass Dark](https://doona.daeuniverse.org/screenshots/en/theme-glass-clear-dark.webp)     |
-| Frosted       | ![Frosted Light](https://doona.daeuniverse.org/screenshots/en/theme-glass-frosted-light.webp) | ![Frosted Dark](https://doona.daeuniverse.org/screenshots/en/theme-glass-frosted-dark.webp) |
-| Tinted        | ![Tinted Light](https://doona.daeuniverse.org/screenshots/en/theme-glass-tinted-light.webp)   | ![Tinted Dark](https://doona.daeuniverse.org/screenshots/en/theme-glass-tinted-dark.webp)   |
-| China         | ![China Day shift](https://doona.daeuniverse.org/screenshots/en/theme-qiangguo-light.webp)    | ![China Night shift](https://doona.daeuniverse.org/screenshots/en/theme-qiangguo-dark.webp) |
+In the Qiangguo palette, a running state reads Improving; unavailable and degraded states read Severe test. These wording overrides are defined in `src/shell/palettes.ts` and the locale catalogues.
+
+## Add or update a palette
+
+1. Update `src/shell/palettes.ts` and the family stylesheet. Import a new non-Glass family from `src/ui/styles/palettes.css`.
+2. Add label keys to [src/i18n/locales/](../src/i18n/locales/). An optional `words` map in the registry redirects existing translation keys to palette-specific ones.
+3. Keep family images beside the stylesheet under `src/ui/styles/palettes/<family>/`. Record their sources and licences in [NOTICE](../NOTICE) and [REUSE.toml](../REUSE.toml).
+4. Update the palette map in [e2e/contrast.spec.ts](../e2e/contrast.spec.ts). Run the palette and contrast checks required by [CONTRIBUTING.md](../CONTRIBUTING.md#add-a-palette), and inspect both schemes. The contrast spec excludes translucent Glass surfaces from its numeric checks.

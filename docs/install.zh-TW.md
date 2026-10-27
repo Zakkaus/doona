@@ -2,110 +2,57 @@
 
 [English](install.md) / [简体中文](install.zh-CN.md) / 繁體中文
 
-## 狀態
+doona 以靜態網頁檔案發布。目前版本為 v0.1.0-rc.2；doona lite 是測試中的預覽版。
 
-doona 對接 honk `feat/native-api` 分支實作的原生 API；這套 API 尚未發行。契約的固定提交記錄在 [SOURCE.md](../contract/api-standardize/SOURCE.md)。後端缺少較新的資源鍵時，doona 會把這些鍵視為不可用。未設定後端時，內建模擬後端提供示範資料；README 與這些說明頁面的截圖全部來自模擬資料。
+安裝請參閱文件站的[系統需求](https://doona.daeuniverse.org/zh-TW/requirements.html)、[安裝指南](https://doona.daeuniverse.org/zh-TW/install.html)與 [doona lite 指南](https://doona.daeuniverse.org/zh-TW/lite.html)。這些頁面說明後端設定、各發行版的安裝步驟與首次登入。本頁說明本倉庫建置的檔案。目前 honk 下載檔名與附件狀態見[配套 honk 建置](#配套-honk-建置)。
 
-## 安裝
+## 發布封存檔
 
-doona 需要 honk 的原生 API，目前只有 [Glassyiris/honk `feat/native-api`](https://github.com/Glassyiris/honk/tree/feat/native-api) 分支的 `debug` 版本提供。從[發布頁](https://github.com/Zakkaus/doona/releases)的同一標籤下載程式封存檔與 `SHA256SUMS`。
+[tools/package.sh](../tools/package.sh) 在 `release/` 下產生以下封存檔。`<version>` 是去掉標籤開頭 `v` 的版本號。
 
-將 `doona-<version>.tar.gz` 解壓縮到 honk `native_api` 組態區塊中 `ui` 指定的目錄，honk 即在 `/ui/` 提供 doona。選用封存檔也解壓縮到同一目錄。
+| 封存檔                                 | 內容                                                                      |
+| -------------------------------------- | ------------------------------------------------------------------------- |
+| `doona-<version>.tar.gz`               | `dist/` 中的標準版，排除 `fonts/` 與 `.vite/`，加入授權與聲明檔案         |
+| `doona-lite-<version>.tar.gz`          | `apps/lite/dist/` 中的 lite 版，加入授權與聲明檔案；使用系統字型          |
+| `doona-fonts-<version>.tar.gz`         | 選用的 `fonts/` 目錄，包含 Noto Sans TC 與 SC 子集、`OFL.txt` 和 `README` |
+| `doona-precompressed-<version>.tar.gz` | 標準版文字資源的選用 `.br` 與 `.gz` 副本，保留原資源的相對路徑            |
 
-### 透過網域名稱存取
+兩個程式封存檔都將 `index.html` 放在根目錄，並包含 `LICENSE`、`LICENSES/`、`NOTICE`、`README.md` 與 `THIRD-PARTY-NOTICES.txt`。[tools/notices.mjs](../tools/notices.mjs) 收集打包依賴的授權條款。程式封存檔不包含 `CHANGELOG.md`。
 
-透過 `http://owrt.lan:9527/ui/` 存取時，將以下兩個值加入現有 `experimental` → `native_api` 組態區塊的允許清單。這是組態片段，不可用它取代完整組態；保留清單中的其他值，以及現有的 `listen`、`secret`、`password_auth` 和 `ui` 設定。
+預壓縮封存檔包含指定類型中至少 1 KiB 的文字資源副本。打包使用 `brotli -q 11` 與 `gzip -9 -n`，僅保留比原檔案小的副本。字型單獨打包，詳見[字型](fonts.md)。
 
-```dae
-experimental {
-    native_api {
-        allowed_hosts: 'owrt.lan:9527'
-        allow_origins: 'http://owrt.lan:9527'
-    }
-}
-```
+## 配套 honk 建置
 
-`allowed_hosts` 允許請求的 `Host`，值為網域名稱和連接埠，不含協定或路徑；它不會自動允許 `Origin`。`allow_origins` 允許 HTTP 來源，值包含協定、網域名稱和連接埠，不含 `/ui/`、其他路徑或末尾的斜線。填寫多個值時，每個值分別加上引號，以逗號分隔；不要使用 JSON 方括號，也不要把整個清單放在同一對引號內。
+獨立介面先發布，匹配的 honk 建置與對應原始碼隨後附加。附件是否已就緒，請查看[發布說明與附件](https://github.com/Zakkaus/doona/releases/tag/v0.1.0-rc.2)。
 
-HTML 可以開啟，但 JavaScript 或 CSS 請求回傳 403 時，在瀏覽器的網路面板查看這些請求。核對 `Host`、`Origin` 及其連接埠是否符合上述設定。修改後須重新啟動 honk，僅重新載入組態不足以生效。然後重新載入頁面，檢查原先失敗的請求是否成功。
+完整建置的檔名為 `honk-core-debug-<target>[-stock]-full.tar.gz`。舊版本省略 `-full`，因此按舊安裝範例操作時，應使用目前附件名稱。八種建置涵蓋 x86_64 與 aarch64、musl 與 GNU，並分別使用 mimalloc 或系統記憶體配置器（`-stock`）。不確定時選擇 musl。附件就緒後，這些建置內嵌匹配的 doona 版本，透過 `ui: embedded` 提供介面。
 
-建立管理員另有限制：honk 檢查實際連線來源是否為本機、私有網路或鏈路本地位址。Host 和 Origin 允許清單不會改變這項限制。
+[tools/fetch-honk.mjs](../tools/fetch-honk.mjs) 核對內嵌介面的版本、原始碼修訂與程式 SHA-256，確保與已發布的 doona 版本一致。`HONK-SOURCE.txt` 記錄 honk 的發布版本與提交、內嵌 doona 的版本與修訂、程式 SHA-256 及對應原始碼。原始碼封存檔為 `honk-source-<commit>.tar.gz` 與 `doona-source-<version>.tar.gz`。
 
-[文件](https://doona.daeuniverse.org/zh-TW/)涵蓋系統需求、honk 與 doona 的安裝、範例組態、首次登入、逐項檢查功能與疑難排解。
+## 套件布局
 
-## 發布檔案
+| 套件或建置配方                                         | 介面目錄               |
+| ------------------------------------------------------ | ---------------------- |
+| Debian `doona-web`                                     | `/usr/share/doona-web` |
+| RPM、Arch 與 OpenWrt 的 `doona`；Alpine 與 Gentoo 配方 | `/usr/share/doona`     |
+| Nix 配方                                               | `$out/share/doona`     |
+| 手動解壓的封存檔                                       | 解壓時選擇的目錄       |
 
-先發布獨立 UI 檔案，再附加內嵌同版本 UI 的 honk 建置及對應原始碼。大多數使用者只需兩個：適用於自己系統的程式檔案與 `SHA256SUMS`。下列為 v0.1.0-rc.2 的檔名，其他版本依相同的[命名方式](../install/README.md#version-spellings)。
+Debian 附加套件名為 `doona-web-fonts` 與 `doona-web-precompressed`，其他發行版的套件使用 `doona-fonts` 與 `doona-precompressed`。字型放在介面目錄的 `fonts/` 下，預壓縮檔案與原資源並列。Alpine 與 OpenWrt 的 apk 套件分別建置，並使用各自的簽章流程。
 
-### 程式
+套件檔名與中繼資料採用不同的預發布版本寫法。詳見打包參考中的[版本寫法](../install/README.md#version-spellings)與 [apk 簽章及安裝](../install/README.md#installing-the-apk-packages)。
 
-手動安裝或透過系統的套件管理員安裝，選擇其中一個。
+Alpine 還提供 `doona-doc-<version>-r0.alpine.apk`，其中包含 `NOTICE` 檔案。
 
-| 檔案                               | 內容                                           | 適用系統或方式                  |
-| ---------------------------------- | ---------------------------------------------- | ------------------------------- |
-| `doona-0.1.0-rc.2.tar.gz`          | 建置好的 UI 與授權條款，不含安裝程式           | 手動安裝，由任一 Web 伺服器提供 |
-| `doona-web_0.1.0-rc.2-1_all.deb`   | Debian 套件                                    | Debian 或 Ubuntu                |
-| `doona-0.1.0-rc.2-1.noarch.rpm`    | RPM 套件                                       | Fedora 或 openSUSE              |
-| `doona-0.1.0rc2-1-any.pkg.tar.zst` | pacman 套件                                    | Arch Linux                      |
-| `doona_0.1.0-rc.2-1_all.ipk`       | opkg 套件                                      | OpenWrt 24.10 及更早版本        |
-| `doona-0.1.0_rc2-r1.apk`           | apk-tools 3 套件                               | OpenWrt 25.12                   |
-| `doona-0.1.0-rc.2-r0.alpine.apk`   | Alpine 套件                                    | Alpine Linux                    |
-| `doona-lite-0.1.0-rc.2.tar.gz`     | doona lite，更精簡的設定檔編輯器，不含安裝程式 | 手動安裝 doona lite             |
+## 建置與打包原始碼
 
-Debian 與 Ubuntu 內建一個無關的 `doona` 套件，因此 deb 名稱為 `doona-web`，安裝至 `/usr/share/doona-web`；請將 honk 的 `ui` 設為該路徑。其他套件格式保留 `doona` 名稱，安裝至 `/usr/share/doona`。Alpine 與 OpenWrt 的 apk 檔案不能混用。
+| 原始碼                                                                                                                         | 職責                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| [tools/package.sh](../tools/package.sh)                                                                                        | 暫存兩個版本的檔案，拆分選用封存檔，產生這些封存檔的 `SHA256SUMS` |
+| [.github/workflows/release.yml](../.github/workflows/release.yml)                                                              | 建置發行版套件，彙整發布檔案，重新產生 `SHA256SUMS`               |
+| [install/nfpm/](../install/nfpm/)                                                                                              | Debian、RPM、Arch 與 ipk 套件定義                                 |
+| [install/alpine/APKBUILD](../install/alpine/APKBUILD)                                                                          | Alpine 套件與子套件                                               |
+| [install/openwrt/doona/Makefile](../install/openwrt/doona/Makefile)                                                            | OpenWrt 套件與附加套件                                            |
+| [install/gentoo/net-proxy/doona/](../install/gentoo/net-proxy/doona/) 與 [install/nix/package.nix](../install/nix/package.nix) | Gentoo 與 Nix 配方                                                |
 
-### 選用附加套件
-
-每個附加套件都提供與程式相同的格式，名稱包含 `fonts` 或 `precompressed`，例如 `doona-fonts-0.1.0-rc.2.tar.gz`、`doona-web-fonts_0.1.0-rc.2-1_all.deb`、`doona-fonts_0.1.0-rc.2-1_all.ipk` 等。請安裝與程式相同格式、相同版本的附加套件。
-
-| 名稱部分        | 新增的內容                                                                    | 何時安裝                                                   |
-| --------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `fonts`         | Noto Sans TC 與 SC，約 8 MB                                                   | 要使用內建中文字型而非系統字型時。詳見[字型說明](fonts.md) |
-| `precompressed` | 文字資源的 `.br` 與 `.gz` 壓縮副本，約 1.6 MB                                 | 伺服器與桌面系統；路由器上選用                             |
-| `doc`（Alpine） | `doona-doc-0.1.0-rc.2-r0.alpine.apk`：NOTICE 檔案，依 Alpine 套件慣例單獨拆分 | 很少需要                                                   |
-
-Precompressed 意為預先壓縮。瀏覽器接受壓縮內容時，honk 或 Web 伺服器傳送 `.br` 或 `.gz` 副本，無須在每次請求時重新壓縮，因此伺服器不必花 CPU 壓縮，在較慢的網路上頁面載入更快。壓縮副本針對至少 1 KiB 的文字資源，以 `brotli -q 11` 與 `gzip -9 -n` 產生，僅保留小於原始檔案的副本。手動安裝時，將封存檔解壓縮到存放 doona 檔案的目錄。
-
-### apk 簽章金鑰
-
-| 檔案                   | 內容                         | 使用方式                               |
-| ---------------------- | ---------------------------- | -------------------------------------- |
-| `doona-alpine.rsa.pub` | 用於驗證 Alpine 套件的公鑰   | Alpine：複製到 `/etc/apk/keys/`        |
-| `doona-openwrt.pem`    | 用於驗證 OpenWrt 索引的公鑰  | OpenWrt 25.12：複製到 `/etc/apk/keys/` |
-| `doona-openwrt.adb`    | OpenWrt apk 套件的已簽章索引 | OpenWrt 25.12：由 `apk add -X` 讀取    |
-
-每次發布都使用新的金鑰簽章。見 [apk 安裝說明](../install/README.md#installing-the-apk-packages)。
-
-### honk
-
-先發布獨立 UI，使 honk 能內嵌該版本。內嵌同版本 UI 的 honk debug 預發布版本建置並驗證完成後，將其八個原樣建置、`HONK-SOURCE.txt` 和兩份對應原始碼封存檔附加到同一 doona 發布版本。附件狀態見發布說明。
-
-附帶的 honk 建置內嵌與發布版本相同的 doona；`ui: embedded` 提供該版本。若要使用獨立封存檔或套件，請將 `native_api` 中的 `ui` 設為安裝目錄並重新啟動 honk：大多數套件為 `/usr/share/doona`，Debian 為 `/usr/share/doona-web`，手動安裝則為封存檔解壓縮後的目錄。`HONK-SOURCE.txt` 記錄 honk 發布版本與提交、內嵌 doona 的版本、修訂與程式 SHA-256，以及兩份原始碼。
-
-| 檔案                                           | 內容                                                     |
-| ---------------------------------------------- | -------------------------------------------------------- |
-| `honk-core-debug-<target>[-stock]-full.tar.gz` | 每個目標一個 honk full 建置，共八個；舊版本不帶 `-full`  |
-| `HONK-SOURCE.txt`                              | honk 與內嵌 doona 的來源紀錄，以及建置和原始碼的 SHA-256 |
-| `honk-source-<commit>.tar.gz`                  | 記錄的 honk 提交所對應的原始碼                           |
-| `doona-source-0.1.0-rc.2.tar.gz`               | 記錄的 doona 修訂所對應的內嵌 UI 原始碼                  |
-
-| 檔名部分              | 選擇依據                                 |
-| --------------------- | ---------------------------------------- |
-| `x86_64` 或 `aarch64` | 閘道器的 CPU，與 `uname -m` 輸出一致     |
-| `unknown-linux-musl`  | 閘道器用靜態二進位檔案；不確定時選此格式 |
-| `unknown-linux-gnu`   | 基於 glibc 的發行版                      |
-| 無後綴                | 預設配置器 mimalloc                      |
-| `-stock`              | 使用系統配置器代替 mimalloc              |
-
-[安裝 honk](https://doona.daeuniverse.org/zh-TW/install.html#install) 說明如何依閘道器選擇、驗證與安裝建置。
-
-### 校驗和與原始碼
-
-| 檔案                                    | 內容                                                                                               |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `SHA256SUMS`                            | 除自身以外的每個發布檔案的 SHA-256；使用 `sha256sum -c --ignore-missing SHA256SUMS` 檢查下載的檔案 |
-| Source code (zip), Source code (tar.gz) | doona 在發布標籤處的原始碼，由 GitHub 新增                                                         |
-
-## 打包維護
-
-套件版本、打包設定、簽章、本機建置與安裝指令見 [install/README.md](../install/README.md)。
+打包前必須先建置兩個版本，即使只需要標準版封存檔。依賴安裝與建置命令見[開發指南](https://doona.daeuniverse.org/zh-TW/development.html)，套件維護見 [install/README.md](../install/README.md)。

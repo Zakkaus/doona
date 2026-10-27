@@ -2,104 +2,75 @@
 
 English / [简体中文](pages.zh-CN.md) / [繁體中文](pages.zh-TW.md)
 
-## Pages
+The standard edition groups its pages into four navigation hubs. For page operations and phone navigation, start with the [interface tour](https://doona.daeuniverse.org/en/tour.html). The [monitoring guide](https://doona.daeuniverse.org/en/observe.html), [routing guide](https://doona.daeuniverse.org/en/routing.html) and [configuration guide](https://doona.daeuniverse.org/en/config-and-settings.html) describe the available controls.
 
-<img src="https://doona.daeuniverse.org/screenshots/en/policies-light.webp" alt="The policies page" width="100%">
+## Source map
 
-| Page          | Shows                                                                                                                                                                                    |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Activity      | Outbound mode, traffic, memory and process CPU, active connections, node latency, outbound usage, top clients, notifications                                                             |
-| System status | Engine and eBPF state, process CPU, traffic counters, runtime degradations, backend capabilities and features that are off; status JSON                                                  |
-| Connections   | Live connections with source, destination, matched rule, chain and its source, traffic and transfer rates; edit a writable matched rule's outbound; fold groups, close one or all        |
-| Routing log   | The routing map and flow records                                                                                                                                                         |
-| DNS           | Queries with answers, cache, resolution log and statistics; per-row rule creation from cache and log entries; query upstream selection; cache entry deletion and flushing when supported |
-| Policies      | Groups, members and health; selection, pinning, probing, editing, health-check URLs, tolerance and idle timeout when changeable                                                          |
-| Rules         | Routing and DNS request and response rules, editable in their source when writable; template settings in the simple view; rule hits and trace simulation                                 |
-| Nodes         | Subscriptions and their refresh interval, inline nodes, add and remove, probe, results by kind and join a group                                                                          |
-| Configuration | Create source files and edit them in place, diagnostics, validation, current config version and source export                                                                            |
-| Events, Logs  | The backend event stream; the log stream with filters, pause and export                                                                                                                  |
-| Settings      | Backends, runtime settings, geodata sources and status, reset to defaults and SHA-256 verification when supported, language, appearance, palette and notification placement              |
+| Source                                                                | Responsibility                                                                                 |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [src/shell/routes.ts](../src/shell/routes.ts)                         | Route identifiers, the default route, hub membership and `PageProps`                           |
+| [src/shell/registry.ts](../src/shell/registry.ts)                     | Page loaders, navigation labels, icons, shortcuts, loading skeletons and resource requirements |
+| [src/features/](../src/features/)                                     | Feature pages and their state hooks                                                            |
+| [src/shell/widgets/Dashboard.tsx](../src/shell/widgets/Dashboard.tsx) | Activity page                                                                                  |
+| [src/shell/SideNav.tsx](../src/shell/SideNav.tsx)                     | Navigation rendering                                                                           |
+| [src/shell/search/](../src/shell/search/)                             | Global search                                                                                  |
+| [src/i18n/locales/](../src/i18n/locales/)                             | Translated labels referenced by the registry                                                   |
 
-A page is marked unavailable only when every resource it needs is unavailable. The DNS rules tab appears when the backend lists DNS rules; editing needs a writable source. Connections, Routing log and Rules request flows while open, without setting Flow recording to Always.
+## Navigation hubs
 
-`Ctrl K` searches pages, connections, nodes, groups, rules and sources from anywhere. Which resources each page needs, and where doona keeps its own settings, are on the [features page](https://doona.daeuniverse.org/en/features.html#pages). Help buttons beside unclear states and terms explain them.
+The hub labels below match the English catalogue. Route and hub IDs remain the same in every language. [routes.ts](../src/shell/routes.ts) defines their order.
 
-Sign-in is a page of its own: one card centred on the theme background, with Language, Palette and Theme controls in the upper-right corner. The demo fills in the user name `demo` and the password `demo`.
+| Label    | Hub ID     | Route IDs                                       |
+| -------- | ---------- | ----------------------------------------------- |
+| Activity | `activity` | `activity`, `overview`                          |
+| Monitor  | `traffic`  | `connections`, `flows`, `dns`, `logs`, `events` |
+| Routing  | `routing`  | `policies`, `nodes`, `rules`                    |
+| Settings | `settings` | `config`, `settings`                            |
 
-<img src="https://doona.daeuniverse.org/screenshots/en/rules-light.webp" alt="The rules page" width="100%">
+## Operation notes
 
-## Page tour
+These notes supplement the linked user guides with controls and limits that still need to be documented there.
 
-### Group membership
+### Sign-in and node details
 
-On Policies, use the pencil button on a group card to edit its policy and included regions, subscriptions and nodes. The dialog shows the matching nodes and supports undo before saving. New group opens the same editor. Group links on Nodes return to the group card. In a node's Node actions menu, Add to group lists groups from writable main and include files; choosing one opens its editor with the node staged for confirmation. Nodes and subscriptions declared in include files cannot be removed from this page; the disabled action explains why.
+The demo pre-fills the username `demo` and password `demo`.
+
+Group links in node details open the corresponding group card on Policies. When the backend reports multiple probe kinds, open a node row to see the latest TCP, HTTP, UDP or DNS results, each with its latency or failure reason. For per-node flag controls, see [Change a node's flag](country-flags.md#change-a-nodes-flag).
 
 ### XHTTP node options
 
-When Paste node link or Edit… holds a vless or trojan XHTTP link, XHTTP options shows its mode, path, host, headers, padding, POST pacing and separate download peer as fields. The link remains what is saved. Fields change their corresponding query parameters or extra JSON members; unchanged query parameter strings survive, but changing extra reserializes that object, normalizing its whitespace and using JavaScript's number precision. Header names are trimmed, and duplicate names (case-insensitive) must be corrected before saving. Before an edited link is written, honk reads it alone; a link honk would skip is refused with a translated diagnostic and any backend detail instead of the node disappearing after reload. The 8192-character limit applies only to adding a node; longer links can be edited in existing declarations or entered in the configuration editor.
+When Paste node link or Edit… contains a supported VLESS or Trojan XHTTP link, XHTTP options exposes mode, path, host, headers, padding, POST pacing and a separate download peer. The saved value remains the link. The fields update the corresponding query parameters or `extra` JSON members; links that cannot be represented by these fields remain editable as raw text.
 
-Unfinished header rows are protected as unsaved changes; replacing the raw link replaces those rows. Link checking and saving share one transaction, so group and routing-mode edits wait even if the node dialog closes.
+Unchanged query parameter strings survive. Editing `extra` reserializes the object, normalizes whitespace and uses JavaScript number precision. Header names are trimmed; duplicate names are case-insensitive and must be corrected before saving. Unfinished header rows count as unsaved changes, and replacing the raw link replaces those rows.
 
-### Traffic and connections
+For a changed link, when syntax validation is available, doona asks honk to parse the link alone before writing it. A rejected link shows a translated diagnostic and any backend detail. The 8,192-character limit applies only to adding a node; longer existing declarations can be edited here or in Configuration.
 
-The Traffic tab of Connections plots each connection's upload against its download, coloured by outbound; select a point to open that connection. The Connections tab groups live connections by device or by outbound, filters them by protocol and outbound, and exports them as CSV.
+Link validation and saving share one transaction, so group and routing-mode edits wait even if the node dialog closes. The field mapping is in [xhttp.ts](../src/dae/xhttp.ts), and the save flow is in [useNodesPage.ts](../src/features/nodes/useNodesPage.ts).
 
-<img src="https://doona.daeuniverse.org/screenshots/en/connections-traffic.webp" alt="The Traffic tab of the connections page" width="100%">
+### Monitoring charts and lists
 
-<img src="https://doona.daeuniverse.org/screenshots/en/connections-list.webp" alt="Live connections grouped by device" width="100%">
+- On the connections page, Traffic plots each connection's upload against its download, coloured by outbound. List groups live connections by device or outbound, filters by protocol and outbound, and lets you expand or collapse the groups.
+- In DNS, Statistics shows median and P95 resolution time, cache hit rate and failure rate. The charts place each upstream's lookups on a latency scale and count how queries ended.
+- Above the log list, a heatmap counts records per level over time. Select a level's row header to set the minimum level shown in the list. Select a log row to read its full text below the table.
+- The routing map follows traffic from rules or devices through outbounds to nodes. Point at or select a rule, outbound or node to highlight its paths.
 
-### DNS
+### Widgets and phone layout
 
-The Statistics tab shows the median and P95 resolution time, the cache hit rate and the failure rate. The charts below place each upstream's lookups on a latency scale and count how the queries ended. Each cache and resolution log row has an add-rule icon for its domain. It opens a DNS request rule when DNS rules are available, or a routing rule otherwise; saving requires a writable configuration source. The default condition matches the exact domain; select a suffix condition to include subdomains.
+In Edit widgets, compatible rate and count widgets offer Sparkline and Key-value list. Reveal an edge-hidden panel by hovering over, focusing or tapping its speed summary.
 
-Query offers Automatic, which follows `dns.routing`, or a named upstream from `dns.upstream` when the configuration is readable. Cache filters entries by full name, suffix, keyword or regex, by record type, or both, even when the backend does not support deletion. When the backend supports deletion, you can delete matching entries after confirmation.
+Below 600 px, tables retain every column and scroll sideways. Wider layouts drop columns that do not fit in priority order. Toolbars wrap.
 
-Keywords match text anywhere in the name: `cdn` matches `cdn.example.com`. The suffix `cdn` matches only `cdn` or names ending in `.cdn`. A record type further narrows the results. Clear filters resets the matching criteria and removes any domain filter from the page URL.
+### Install as an app
 
-<img src="https://doona.daeuniverse.org/screenshots/en/dns.webp" alt="The Statistics tab of the DNS page" width="100%">
+For the browser to offer PWA installation, serve doona over HTTPS or from `localhost` or `127.0.0.1`; see [installation requirements](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable#https_localhost_or_loopback_are_required). Chrome and Edge offer Install as an app in Settings > About when installation is available.
 
-### Log activity
+On iPhone and iPad Safari, tap Share, then Add to Home Screen. On macOS Sonoma or later, choose File > Add to Dock in Safari. doona shows this macOS hint only in Safari 26 or later, as defined in [install.ts](../src/shell/install.ts).
 
-Above the log list, a heatmap counts records per level over time. A level's row header sets the minimum level the list shows.
+## Changing a page
 
-<img src="https://doona.daeuniverse.org/screenshots/en/logs.webp" alt="The log activity heatmap" width="100%">
+1. For a new page, add its route to `routePaths`, assign it to a hub and add a definition in `registry.ts`. The registry is typed as a record of every `RoutePath`.
+2. Keep navigation text in the locale catalogues. Set the page loader, skeleton and required resources in the registry.
+3. Use `navAvailable` for the navigation availability rule. A page with resource requirements is available when at least one required resource is not explicitly unavailable. Configuration also checks export, import and revision capabilities.
+4. Update the corresponding user guide when behavior changes. Keep user procedures on the documentation site and source references here. Remove an operation note only after the guide covers it and this page links to that coverage.
 
-### Routing map
-
-The routing map on Routing log follows traffic from rules, or from devices, through outbounds to nodes. Point at or select a rule, outbound or node to highlight the paths through it. On Rules > Trace simulation, the advanced fields accept an optional DSCP integer from 0 to 63 to evaluate `dscp(...)` rules.
-
-<img src="https://doona.daeuniverse.org/screenshots/en/routing.webp" alt="Selecting a rule and then a node on the routing map" width="100%">
-
-### Node latency
-
-The Latency tab of Nodes plots each node's latest latency, and its moving average and the average of the last 10 measurements when the backend reports them. A switch groups the nodes by policy group or by protocol; unavailable nodes appear under their group. Open a node row in the Nodes tab to see the latest TCP, HTTP, UDP and DNS probe results the backend reports, each with its latency or failure reason.
-
-<img src="https://doona.daeuniverse.org/screenshots/en/latency.webp" alt="The Latency tab of the nodes page" width="100%">
-
-### Configuration and settings
-
-Configuration shows the version of the configuration in effect. Modules shows one summary per configuration section and links to the page that manages it. Global settings edits the engine's persistent settings when supported; Config files edits the selected writable source and exports its displayed content, which may contain credentials. A write that changes settings requiring a restart is refused without writing; the notice lists the settings and provides a restart command and an install-guide link.
-
-With honk, Store subscriptions (`global.store_subscribe`) stores successfully fetched and accepted subscription bodies in the `subscription_body` table of `<data_dir>/state/honk.db`, normally `/var/lib/honk/state/honk.db`. Changing this setting requires restarting honk; a subscription with `cache: false` skips storage and recovery. Separate `.sub` files belong to legacy storage; see the [pinned honk reference](https://github.com/Glassyiris/honk/blob/a949f1f1ff7e8e8852e76e02b60870e6bb1fd440/doc/en/reference/subscription.md#fetch-persistence-and-recovery) for startup migration.
-
-![Config files with the source editor](https://doona.daeuniverse.org/screenshots/en/config-source-light.webp)
-
-![Global settings form](https://doona.daeuniverse.org/screenshots/en/config-global-light.webp)
-
-Settings has General and Appearance tabs. General holds backend, runtime, geodata and probe settings; Appearance holds the palette, wallpaper and display preferences.
-
-Settings > Geodata lists the geodata files and shows status and update controls when supported. Reset to defaults asks for confirmation, then removes all geodata overrides and values taken from the configuration file so the built-in sources and defaults apply again. Reload, DNS cache, subscription and connection actions remain on their respective pages, not in Settings. Failure toasts and notices for unknown operation results offer Copy error; Settings > About copies the last 20 errors kept in memory, excluding secrets and request bodies.
-
-### Widgets
-
-The floating widget panel's menu opens Edit widgets, where compatible rate and count widgets can use Sparkline or Key-value list. An unpinned, undocked panel offers Hide at edge; hovering, focusing or tapping its speed summary reveals it. An unpinned floating panel collapses when the page changes.
-
-## On a phone
-
-Below 1024 pixels wide, the side navigation becomes a bottom bar with four hubs: Activity, Traffic, Routing and Settings. A hub opens on the page last viewed in it during the session, and its pages sit in a row above the content. Language, theme and palette move into the top bar's overflow menu, a submenu each. Choose the wordmark in Settings > Appearance.
-
-Below 600 pixels wide, tables keep every column and scroll sideways; on wider screens they drop the columns that do not fit, in a set order. Toolbars wrap onto more rows. On Events and Logs, press a row to read its full text below the table. On System status, DNS and Logs, the first page action stays a button and the rest move into a menu.
-
-Over HTTPS or on localhost, doona installs as an app. In Chrome and Edge, the About card in Settings offers Install as an app. Safari has no install prompt, so the card shows the steps instead. On iPhone and iPad, tap Share, then Add to Home Screen. In Safari 26 on macOS, choose File > Add to Dock.
-
-<img src="https://doona.daeuniverse.org/screenshots/en/phone.webp" alt="doona on phones: the connections table, the overflow menu and its palette submenu" width="100%">
+[registry.test.ts](../src/shell/registry.test.ts) and [navGroups.test.ts](../src/shell/navGroups.test.ts) cover the registry and persistence of collapsed navigation groups. For repository checks, see [CONTRIBUTING.md](../CONTRIBUTING.md). This source map covers the standard edition; the lite app has separate source under [apps/lite/](../apps/lite/).

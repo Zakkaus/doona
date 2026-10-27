@@ -1,94 +1,69 @@
 # Country flags
 
-doona uses the self-hosted Twemoji Country Flags font for every flag in UI text,
-including node, group and source names, menus and tooltips. The font comes first
-in the body and monospace stacks. Its Unicode range contains regional indicators,
-the black flag and subdivision tags; all other characters retain the language's
-font stack and the operating system's emoji. Flags use the same artwork on
-Windows, macOS, iOS and Android, rather than detecting each operating system.
+The standard edition uses a bundled Twemoji font to render flag characters and a separate lookup to add display prefixes to node names. For the global display setting, see [appearance settings](https://doona.daeuniverse.org/en/config-and-settings.html#appearance). Per-node controls are described below.
 
-| Approach               | Appearance and coverage                                                                                    | Loading and text                                                                                                                                                                     | Decision                                         |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
-| Flags-only colour font | Flat Twemoji artwork scales with 12–16 px text and stays on the baseline; all inherited text surfaces work | One 78,292-byte WOFF2, requested when flag text occurs; unchanged emoji remains selectable and accessible                                                                            | Chosen                                           |
-| flag-icons SVG         | Crisp flat 4:3 artwork with an explicit icon size                                                          | Individual SVGs can load on demand, but every displayed text fragment needs replacement, including tooltips and chart labels; hidden emoji text must preserve copy and accessibility | Evaluated in the side-by-side screenshot fixture |
+## Font asset and licence
 
-The font is a Vite asset, so its hashed URL works with subpath hosting. The existing
-service worker precaches it for an unvisited flagged name encountered offline.
-This adds 78,292 bytes to offline installation; ordinary rendering remains lazy.
-No CDN, platform sniffing or emoji-replacement script runs in the browser.
+[src/ui/assets/TwemojiCountryFlags.woff2](../src/ui/assets/TwemojiCountryFlags.woff2) is vendored from `country-flag-emoji-polyfill` 0.1.10. The repository ships that font file rather than rebuilding the upstream font.
 
-## Optional prefixes
-
-Settings > Appearance offers Show country flags, default on. The shell passes
-the shared lookup into the kit's `CountryFlagsContext`. `NodeName` owns display
-prefixes and truncation, including the table, policy tiles and pickers, Activity,
-global search, latency charts and their tips, connection rows and routing-tree nodes. Picker items declare
-`nodeName`; IDs, `textValue`, filters, sort keys and configuration writes keep the
-real name. Group and source names retain their original text.
-
-`src/dae/regions.ts` owns the region aliases used by both flags and the
-Policies region filter. Latin aliases require Unicode letter boundaries; Chinese
-names may occur beside other Chinese text. Codes that are common English words
-(`IN`, `IT`, `MY`, `NO`, `ID`) require uppercase. The first location wins, then the
-longest alias at that position. Hong Kong, Macau and Taiwan have separate entries.
-An existing regional-indicator pair or subdivision flag suppresses decoration.
-Both region and flag lookups cache positive and negative results, each retaining
-at most 2,048 names and evicting the oldest entry when full.
-
-Change flag… in a node's row action menu opens a searchable flag picker. The
-node row opens its details panel, with the same labelled Flag field beside its
-properties. The picker uses common region names, with other names supplied by
-`Intl.DisplayNames` in the current language. Hong Kong, Taiwan, Japan, Singapore,
-the United States and South Korea appear first, followed by the detector's other
-regions, then the remaining regions in locale order. Search matches common and
-official names, English names, ISO codes and the detector's aliases.
-Automatic shows the detected region. No flag suppresses the added prefix.
-Original flags embedded in a name remain part of that name and cannot be hidden
-or replaced by a display override. Their Flag field is disabled and explains
-this limit.
-
-The `doona-flag-overrides` browser preference holds at most 512 node entries,
-keyed by node name. Automatic removes an entry. Older group entries are ignored.
-Overrides take precedence over the memoized detector and update every shared
-renderer immediately. The master switch hides all added node prefixes.
-
-Added flags are empty, `aria-hidden` spans with CSS-generated content and
-`user-select: none`. The DOM text, selections, clipboard, accessible names and
-overflow tooltips retain the real name. Every view explicitly declares which
-labels are node names; status badges do not control flag decoration. A shared
-`--rp-space-1` kit spacing token separates the added flag from its name. Light themes apply a
-subtle edge to the decoration, so white artwork remains visible.
-
-## Source and licence
-
-The font is vendored unchanged from `country-flag-emoji-polyfill@0.1.10`:
-
-- Source: <https://github.com/talkjs/country-flag-emoji-polyfill>
-- Source revision: `85df0fab7eaff625cc5b48014e105a9356969de1`
-- Archive: <https://registry.npmjs.org/country-flag-emoji-polyfill/-/country-flag-emoji-polyfill-0.1.10.tgz>
-- Font SHA-256: `9f04f14429bb6a9f415c7a4dd902a918d7e81a4f7526c415496fdb063954e3b8`
+- Upstream package: [talkjs/country-flag-emoji-polyfill](https://github.com/talkjs/country-flag-emoji-polyfill).
+- Font build source: [mozilla/twemoji-colr](https://github.com/mozilla/twemoji-colr).
 - Artwork: Twitter and other Twemoji contributors, CC BY 4.0.
-- Font build: Mozilla Foundation, Apache-2.0.
+- Font build code: Mozilla Foundation, Apache-2.0.
+- File SHA-256: `9f04f14429bb6a9f415c7a4dd902a918d7e81a4f7526c415496fdb063954e3b8`.
 
-`NOTICE`, `REUSE.toml` and `tools/notices.mjs` retain the attribution and stage the
-licence texts in the program archive. The comparison uses flag-icons 7.5.0 by
-Panayiotis Lipiridis, MIT, from <https://github.com/lipis/flag-icons>; those SVGs
-are evaluation assets only and do not ship.
+[NOTICE](../NOTICE) records the sources and licence terms. [REUSE.toml](../REUSE.toml) records the font asset as CC-BY-4.0. [tools/notices.mjs](../tools/notices.mjs) stages the program's licence texts and checks the licence-file references in `NOTICE`.
 
-## Verification
+[src/ui/flags.css](../src/ui/flags.css) declares the font for regional indicators, the black flag and subdivision tags. [src/ui/styles/foundations.css](../src/ui/styles/foundations.css) puts it first in the body and monospace font stacks. Other characters use the remaining fonts in those stacks.
 
-`e2e/flag-font.spec.ts` checks an actual custom-font glyph in Chromium.
-`e2e/flags.spec.ts` proves
-that decoration leaves copied names, accessible names, overflow tooltips,
-searches and configuration writes unchanged. It also covers Routing log flow records and
-node-name chart tooltips, flag editing, browser persistence and kit control sizes.
-`src/features/shared/countryFlags.test.ts` covers override resolution, both scripts, English,
-letter boundaries, ambiguous codes, existing flags and bounded cache behavior.
+Vite emits the font under `assets/` with a content hash. The WOFF2 file is 78,292 bytes. It is included in the service worker's shell precache for offline use and in the program archive, independently of the optional Noto archive. Outside precaching, the browser requests it when flag text occurs.
 
-For the optional screenshot matrix, set `DOONA_FLAGS_SHOTS=after` (or `before` in
-the baseline checkout) and `DOONA_FLAGS_SHOTS_DIR` to an output directory. From
-the repository root with dependencies installed, run
-`pnpm e2e e2e/flags-shots.spec.ts --project=chromium`; it builds the app before
-starting the preview servers. It captures Nodes, a policy
-picker including Macau, and Settings Appearance with both preference values, in English desktop light/dark and Chinese
-phone light. The baseline has no preference, so its on/off images are identical.
+## Node-name prefixes
+
+| Source                                                                        | Responsibility                                                             |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [src/dae/regions.ts](../src/dae/regions.ts)                                   | Region aliases shared by name detection and policy-group region filters    |
+| [src/features/shared/geo.ts](../src/features/shared/geo.ts)                   | Match a region in a name                                                   |
+| [src/dae/flags.ts](../src/dae/flags.ts)                                       | Supported flag choices, localized picker names and embedded-flag detection |
+| [src/features/shared/countryFlags.ts](../src/features/shared/countryFlags.ts) | Resolve an added flag from the preference, override and detected region    |
+| [src/ui/NodeName.tsx](../src/ui/NodeName.tsx)                                 | Render the prefix separately from the node name                            |
+| [src/shell/preferences.ts](../src/shell/preferences.ts)                       | Read and update browser preferences and overrides                          |
+
+The detector chooses the first location in the name, then the longest alias at that location. Latin aliases require Unicode letter and combining-mark boundaries. The ambiguous ISO codes `IN`, `IT`, `MY`, `NO` and `ID` match only in uppercase. Chinese aliases may occur beside other Chinese text. Hong Kong, Macau and Taiwan have separate entries. Region and flag lookups cache both positive and negative results and evict the oldest entry when full.
+
+Overrides are stored in `doona-flag-overrides`, with at most 512 entries keyed as `node:<name>`. An override selects a region or `none`; choosing automatic detection removes the entry. The `doona-country-flags` preference disables added prefixes. A flag already embedded in a name suppresses any added prefix and remains part of the original name.
+
+`NodeName` renders an added flag as an empty `aria-hidden` span whose content comes from CSS. Keep the real name in IDs, search text, sort keys, configuration writes and tooltips. Group and source names do not receive these added node prefixes. Picker items declare `nodeName`; status badges do not determine flag decoration. Added prefixes use `user-select: none`, spacing from `--rp-space-1`, and a subtle edge in light themes.
+
+## Change a node's flag
+
+Show country flags in Settings > Appearance is on by default. Choose Change flag… in a node's row action menu, or open its details and use Flag. Both open the same searchable region choices.
+
+The picker uses common region names and localized `Intl.DisplayNames` fallbacks. Hong Kong, Taiwan, Japan, Singapore, the United States and South Korea appear first, followed by the other regions supported by name detection, then remaining regions in locale order. Search matches common and official names, English names, ISO codes and detection aliases.
+
+Automatic shows the detected region; No flag hides the added prefix. A flag embedded in the node name cannot be hidden or replaced by the picker, and its Flag field is disabled with an explanation. Changes are saved in this browser and update shared node-name renderers immediately. Older group override entries are ignored.
+
+## Change the font or region lookup
+
+1. To update the font, replace the vendored WOFF2 and update its version, hash, sources and licence records here, in `NOTICE` and in `REUSE.toml`. Keep the Unicode range in `src/ui/flags.css` consistent with the replacement asset.
+2. To add a detection alias, edit `src/dae/regions.ts`. To add a selectable flag, check `flagRegions` in `src/dae/flags.ts`. These lists serve different purposes; an alias does not add artwork to the font.
+3. Use `NodeName` for new node-name displays. Keep display decoration separate from the stored name and preserve the original text for copying and accessibility.
+4. Check the relevant tests below. Adding a region requires reviewing detection boundaries, picker labels and ordering as well as rendering.
+
+## Verification sources
+
+| Test                                                                                    | Coverage                                                                                     |
+| --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| [src/features/shared/countryFlags.test.ts](../src/features/shared/countryFlags.test.ts) | Aliases, boundaries, ambiguous codes, embedded flags, override resolution and cache behavior |
+| [src/dae/flags.test.ts](../src/dae/flags.test.ts)                                       | Picker labels, search terms and ordering                                                     |
+| [e2e/flag-font.spec.ts](../e2e/flag-font.spec.ts)                                       | Actual flag-font glyph use in Chromium and the precached asset                               |
+| [e2e/flags.spec.ts](../e2e/flags.spec.ts)                                               | Display preferences, editing, copied names, accessible names and shared node renderers       |
+| [e2e/flags-shots.spec.ts](../e2e/flags-shots.spec.ts)                                   | Optional desktop and phone screenshot fixtures                                               |
+
+For test setup, see [CONTRIBUTING.md](../CONTRIBUTING.md). With dependencies installed, run the screenshot matrix from the repository root. Set `DOONA_FLAGS_SHOTS` to `after`, or `before` in a baseline checkout, and set `DOONA_FLAGS_SHOTS_DIR` to an existing output directory:
+
+```sh
+DOONA_FLAGS_SHOTS=after DOONA_FLAGS_SHOTS_DIR=/absolute/output/directory pnpm e2e e2e/flags-shots.spec.ts --project=chromium
+```
+
+The matrix captures Nodes, a policy picker including Macau, and Settings Appearance with flags on and off, in English desktop light/dark and Simplified Chinese phone light. Without both environment variables, the matrix is skipped.
