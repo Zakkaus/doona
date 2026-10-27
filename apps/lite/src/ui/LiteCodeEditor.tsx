@@ -34,7 +34,7 @@ const theme = EditorView.theme({
     border: 'var(--border-width) solid var(--lite-editor-border)',
     borderRadius: 'var(--radius-element)'
   },
-  '&.cm-focused': {outline: 'var(--focus-outline-width) solid var(--color-accent)'},
+  '&.cm-focused:has(:focus-visible)': {outline: 'var(--focus-outline-width) solid var(--focus-outline-color)'},
   '.cm-scroller': {fontFamily: 'var(--font-family-code)', overflow: 'auto', minHeight: '30dvh'},
   '.cm-content': {padding: 'var(--spacing-3)', caretColor: 'var(--color-text-primary)'},
   '.cm-cursor, .cm-dropCursor': {borderLeftColor: 'var(--lite-editor-cursor)'},

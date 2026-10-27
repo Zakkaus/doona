@@ -6,7 +6,7 @@ Changes must satisfy these rules and the browser checks in the same milestone.
 
 ## 1. Page frames and spacing
 
-- Shell: `shell-side-nav` AppShell with `contentPadding={0}` and its native mobile drawer.
+- Shell: `shell-side-nav` AppShell with `variant="section"`, `contentPadding={0}` and its native mobile drawer. Sidebar and content share the surface background, separated by the native 1 px divider token.
 - Page scrolling belongs only to the page LayoutContent (`lite-page-content`) with
   `scrollbar-gutter: stable`. The AppShell main wrapper clips overflow; it must not
   create another scrolling ancestor. Dialogs keep their separate LayoutContent.
@@ -14,14 +14,14 @@ Changes must satisfy these rules and the browser checks in the same milestone.
 - Page headers compensate for the actual LayoutContent scrollbar gutter. Header controls, list toolbars and content collections share one right edge. Nodes tables reset inherited container bleed inside `lite-table-inset`.
 - `pageRhythm` uses Astryx `table-inbox` inset 4 and control gap 3, plus `settings` section gap 4. The description-to-toolbar gap is token 6 (24 px), with no bottom header padding; toolbar-to-collection and section gaps use token 4 (16 px). The title-to-description gap is token 1 (4 px). Routing and DNS section headings sit above their content.
 - Page title is Heading level 1. Outside-card sections are level 2; card titles level 3; subsections level 4. Descriptions use Text `type="supporting" color="secondary"`.
-- Titles use 24 px / 600, sections 18 px / 600, and supporting text 13 px. Figtree falls back to system Chinese fonts, with SC first for zh-CN. Chinese headings and buttons increase their weight one step.
+- Titles use 24 px / 600, sections 18 px / 600, and supporting text 13 px. Figtree falls back to system Chinese fonts, with SC first for zh-CN. Headings stay at weight 600 in every locale; Chinese buttons retain their increased weight.
 - Related controls use gap 2; forms and section bodies use gap 4. Astryx numeric spacing props are scale keys, not pixels. Custom styles use `--spacing-*`, `--radius-*`, `--color-*` and focus tokens.
 - Documented geometry exceptions: template width/height props, Table `pixel()` and proportional minimums, media/container breakpoints, and `ui/metrics.stylex.ts`. SVG coordinates and theme definitions are not spacing. Motion distances are defined only in motion tokens.
 
 ## 2. Components and actions
 
-- Primary and destructive buttons are pills. Other controls share the 8 px element radius; existing borders use the emphasized border token. Ghost and icon-only buttons stay borderless. Segmented controls use size md everywhere: the 36 px frame matches the size md action button and the selected segment sits inset on the track; size tokens stay unchanged.
-- Selected rows and navigation items use neutral fills, with the duck-yellow accent on a 2 px inline-start indicator or selection icon. Keyboard focus uses the same accent. Primary buttons are near-black with white text in light mode and yellow with black text in dark mode. Dark surfaces rise from sidebar to content to card to overlay; the light body stays warm off-white.
+- Primary and destructive buttons share the other controls' 8 px element radius, never pills. Existing borders use the emphasized border token. Ghost and icon-only buttons stay borderless. Segmented controls use size md everywhere: the 36 px frame matches the size md action button and the selected segment sits inset on the track; size tokens stay unchanged.
+- Selected routing cards, group rows and segmented thumbs use a 1 px emphasized neutral border and a subtle neutral tint, without an extra ring or selection bar. Selected navigation items use neutral fills and icons. Duck yellow is reserved for keyboard focus rings; decorative artwork and search highlights are neutral, and warnings use orange. Primary buttons use a dark neutral fill with light text in light mode, and a light neutral fill with dark text in dark mode. Destructive actions keep their red tone. Sidebar and content share white in light mode and the same dark surface in dark mode; cards and overlays retain their own surface tokens.
 - Same job, same component: TextInput for search, Selector for a scalar choice, Tokenizer/Token for removable values, CheckboxInput for text mode, MoreMenu `variant="ghost" size="sm"` for row actions.
 - A list toolbar is `CollectionToolbar`: optional search/filter at the start; text-mode toggle and Add together at the end, `gap={pageRhythm.controls}` with whole-control wrapping. Every control uses size md; labels stay on one line. Sort triggers show only the value and retain an accessible Sort label. Search and the first collection row share their start inset. Add is the primary action of that list until a page draft exists; Review changes then becomes the page's only primary.
 - Nodes use the table-filter toolbar anatomy: search, protocol Selector, result count and Clear all. CollectionToolbar shows the selected count, clear action and delete action while manual nodes are selected; deletion stays behind confirmation and reference checks.
