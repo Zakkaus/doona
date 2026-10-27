@@ -308,6 +308,31 @@ test.describe('with the base profile', () => {
     await expect(page).toHaveURL(/#\/overview$/);
     await expect(page.getByRole('heading', {name: 'System status', exact: true})).toBeVisible();
   });
+
+  test('on a phone a popover opened just above the bottom bar stays between the top bar and the bottom bar', async ({page}) => {
+    await page.setViewportSize({width: 390, height: 844});
+    await page.goto('/#/overview');
+    const button = page.locator('.rp-limit').nth(1).getByRole('button', {name: 'How to turn on'});
+    await button.scrollIntoViewIfNeeded();
+    // Bring the trigger down to the bottom bar, where the popover has no room below it.
+    await button.evaluate(el => window.scrollBy(0, el.getBoundingClientRect().bottom - document.querySelector('.rp-hubbar')!.getBoundingClientRect().top + 4));
+    await button.click();
+    const popover = page.locator('.rp-popover', {has: page.getByRole('dialog', {name: 'How to turn on'})});
+    await expect(popover).toBeVisible();
+    const edges = () =>
+      popover.evaluate(el => ({
+        top: el.getBoundingClientRect().top,
+        bottom: el.getBoundingClientRect().bottom,
+        bar: document.querySelector('.rp-top')!.getBoundingClientRect().bottom,
+        nav: document.querySelector('.rp-hubbar')!.getBoundingClientRect().top
+      }));
+    await expect
+      .poll(async () => {
+        const box = await edges();
+        return box.bottom <= box.nav && box.top >= box.bar;
+      })
+      .toBe(true);
+  });
 });
 
 test.describe(() => {

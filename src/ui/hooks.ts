@@ -206,6 +206,12 @@ export const phoneQuery = below(breakpoints.phone);
 export const smallQuery = below(breakpoints.sm);
 // The sidebar shows from this width, and with it the docking.
 export const sidebarQuery = `(min-width: ${breakpoints.lg}px)`;
+// Without the sidebar the top bar and the bottom navigation cover the viewport's edges, so a popover's boundary is the
+// band between them (index.html, sized from --rp-topbar and --rp-dock): React Aria flips and shrinks it inside.
+export function usePopoverBoundary() {
+  const sidebar = useMediaQuery(sidebarQuery);
+  return sidebar ? undefined : (globalThis.document?.querySelector('.rp-popover-band') ?? undefined);
+}
 
 // Reset linked drafts during render so navigation cannot paint the previous value.
 export function useLinked<T>(linked: T, apply: (value: T) => void) {

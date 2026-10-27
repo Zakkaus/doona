@@ -6,6 +6,7 @@ import {ItemText} from './ItemText';
 import ChevronDown from './icons/ChevronDown';
 import type {CheckboxChoice} from './CheckboxSet';
 import {useControlSize, type ControlSize} from './controlSize';
+import {usePopoverBoundary} from './hooks';
 
 export function SearchMultiSelect({
   label,
@@ -35,6 +36,7 @@ export function SearchMultiSelect({
   const summaryId = useId();
   const helpId = useId();
   const controlSize = useControlSize(size);
+  const boundary = usePopoverBoundary();
   return (
     <div className="rp-field">
       <span id={heading} className="lbl">
@@ -51,7 +53,7 @@ export function SearchMultiSelect({
           <span id={summaryId}>{summary}</span>
           <ChevronDown />
         </Button>
-        <Popover className="rp-popover rp-search-popover rp-list-popover" placement="bottom start">
+        <Popover className="rp-popover rp-search-popover rp-list-popover" placement="bottom start" boundaryElement={boundary}>
           <Dialog
             aria-label={label}
             render={props => (

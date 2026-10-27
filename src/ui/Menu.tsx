@@ -19,7 +19,7 @@ import ChevronDown from './icons/ChevronDown';
 import {Tip, TextTooltip} from './Tooltip';
 import {buttonClass, useActionReason} from './Button';
 import {Check} from './Check';
-import {smallQuery, useMediaQuery} from './hooks';
+import {smallQuery, useMediaQuery, usePopoverBoundary} from './hooks';
 import {LazySearchList, preloadSearchList} from './LazySearchList';
 import {longList} from './longList';
 import {useT, type Translator} from '../i18n';
@@ -78,6 +78,7 @@ export function MenuButton({
   ) : null;
   const reason = useActionReason(isDisabled);
   const [tipOpen, setTipOpen] = useState(false);
+  const boundary = usePopoverBoundary();
   const controlSize = useControlSize(size);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const trigger = (
@@ -118,7 +119,7 @@ export function MenuButton({
           <Tip triggerRef={triggerRef}>{reason?.text ?? label}</Tip>
         </TooltipTrigger>
       )}
-      <Popover className="rp-popover rp-list-popover" placement={placement}>
+      <Popover className="rp-popover rp-list-popover" placement={placement} boundaryElement={boundary}>
         {content}
       </Popover>
     </MenuTrigger>

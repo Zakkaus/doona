@@ -3,6 +3,7 @@ import ChevronDown from './icons/ChevronDown';
 import {Check} from './Check';
 import {ItemLabel, ItemText, type Item} from './ItemText';
 import {cx} from './cx';
+import {usePopoverBoundary} from './hooks';
 import {useControlSize, type ControlSize} from './controlSize';
 import {Necessity, useFormProps, type FormFieldProps} from './Form';
 
@@ -34,6 +35,7 @@ export function LabeledSelect({
 }) {
   const layout = bare ? undefined : side ? 'side' : 'field';
   const controlSize = useControlSize(size);
+  const boundary = usePopoverBoundary();
   const form = useFormProps<FormFieldProps>({isDisabled});
   // With a layout the label is visible and a real Label, so pressing it opens the picker; without one it only names it.
   return (
@@ -63,7 +65,7 @@ export function LabeledSelect({
           {description}
         </Text>
       )}
-      <Popover className="rp-popover" placement="bottom start">
+      <Popover className="rp-popover" placement="bottom start" boundaryElement={boundary}>
         <ListBox items={items}>
           {i => (
             <ListBoxItem id={i.id} className="rp-item" textValue={i.label}>
