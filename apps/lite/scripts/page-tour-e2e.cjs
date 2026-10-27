@@ -63,7 +63,8 @@ async function go(p, route) {
     const requests = [];
     p.on('pageerror', e => errors.push(e.message));
     p.on('console', message => {
-      if (message.type() === 'error') errors.push(message.text());
+      // The static preview answers the same-origin honk probe with 404.
+      if (message.type() === 'error' && !new URL(message.location().url).pathname.endsWith('/api')) errors.push(message.text());
     });
     p.on('request', r => requests.push(r.url()));
     const shot = async name => {
