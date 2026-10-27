@@ -41,15 +41,16 @@ Standalone UI files are published first; matching honk builds and corresponding 
 
 Choose one, for a manual install or for your system's package manager.
 
-| File                               | What it is                              | Choose for                              |
-| ---------------------------------- | --------------------------------------- | --------------------------------------- |
-| `doona-0.1.0-rc.1.tar.gz`          | The built UI and licences, no installer | Manual installation with any web server |
-| `doona-web_0.1.0-rc.1-1_all.deb`   | Debian package                          | Debian or Ubuntu                        |
-| `doona-0.1.0-rc.1-1.noarch.rpm`    | RPM package                             | Fedora or openSUSE                      |
-| `doona-0.1.0rc1-1-any.pkg.tar.zst` | pacman package                          | Arch Linux                              |
-| `doona_0.1.0-rc.1-1_all.ipk`       | opkg package                            | OpenWrt 24.10 and earlier               |
-| `doona-0.1.0_rc1-r1.apk`           | apk-tools 3 package                     | OpenWrt 25.12                           |
-| `doona-0.1.0-rc.1-r0.alpine.apk`   | Alpine package                          | Alpine Linux                            |
+| File                               | What it is                                                 | Choose for                              |
+| ---------------------------------- | ---------------------------------------------------------- | --------------------------------------- |
+| `doona-0.1.0-rc.1.tar.gz`          | The built UI and licences, no installer                    | Manual installation with any web server |
+| `doona-web_0.1.0-rc.1-1_all.deb`   | Debian package                                             | Debian or Ubuntu                        |
+| `doona-0.1.0-rc.1-1.noarch.rpm`    | RPM package                                                | Fedora or openSUSE                      |
+| `doona-0.1.0rc1-1-any.pkg.tar.zst` | pacman package                                             | Arch Linux                              |
+| `doona_0.1.0-rc.1-1_all.ipk`       | opkg package                                               | OpenWrt 24.10 and earlier               |
+| `doona-0.1.0_rc1-r1.apk`           | apk-tools 3 package                                        | OpenWrt 25.12                           |
+| `doona-0.1.0-rc.1-r0.alpine.apk`   | Alpine package                                             | Alpine Linux                            |
+| `doona-lite-0.1.0-rc.1.tar.gz`     | doona lite, the smaller configuration editor, no installer | Manual installation of doona lite       |
 
 Debian and Ubuntu ship an unrelated `doona` package, so their deb is named `doona-web` and installs into `/usr/share/doona-web`; set honk's `ui` to that path. The other package formats keep the name `doona` and install into `/usr/share/doona`. Alpine and OpenWrt apk files are not interchangeable.
 
