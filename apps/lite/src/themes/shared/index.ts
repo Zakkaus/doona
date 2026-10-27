@@ -25,7 +25,8 @@ declare module '@astryxdesign/core/Card' {
 export const panelScale = {base: 15, ratio: 1.2} as const;
 
 // CJK uses the platform fonts; only Figtree is shipped.
-export const cjkFallbacks = '"PingFang TC", "Microsoft JhengHei"';
+export const cjkFallbacks =
+  '"PingFang TC", "PingFang SC", "Noto Sans CJK TC", "Noto Sans CJK SC", "Source Han Sans TC", "Microsoft JhengHei", "Microsoft YaHei"';
 
 /** Fallback stack for UI text, as the official themes use it, plus Chinese. */
 export const sansFallbacks = `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, ${cjkFallbacks}, Arial, sans-serif`;

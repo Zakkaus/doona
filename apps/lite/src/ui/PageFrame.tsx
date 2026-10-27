@@ -5,7 +5,7 @@ import {RefreshProgress} from '../ui';
 import {usePageMotion} from './usePageMotion';
 
 // Astryx table-inbox: inset 4, controls 3; settings: section bodies and sections 4.
-export const pageRhythm = {inset: 4, headerToToolbar: 4, toolbarToCollection: 4, section: 4, controls: 3} as const;
+export const pageRhythm = {inset: 4, headerToToolbar: 6, toolbarToCollection: 4, section: 4, controls: 3} as const;
 
 export function PageFrame({
   title,
@@ -35,7 +35,7 @@ export function PageFrame({
       padding={0}
       header={
         <LayoutHeader ref={motion.header} padding={0} data-page-header>
-          <VStack padding={pageRhythm.inset} gap={1}>
+          <VStack padding={pageRhythm.inset} paddingBlockEnd={0} gap={1}>
             <HStack gap={pageRhythm.controls} vAlign="center" wrap="wrap">
               <StackItem size="fill">
                 <Heading level={1} tabIndex={-1}>

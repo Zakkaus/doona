@@ -133,6 +133,7 @@ export function Routing({connection, setBusy}: {connection: Connection; setBusy:
   const stageRules = (next: string) => setRules(stageAuthoredRules(rules ?? originalRules, next));
   const editorMode = (
     <SegmentedControl
+      size="lg"
       isDisabled={!ready}
       label={t.editorMode}
       value={textMode ? 'text' : 'visual'}

@@ -342,6 +342,7 @@ async function subscriptionActionInset(p) {
             const row = frame.querySelector(first);
             return {
               headerGap: box(frame.querySelector('h2')?.parentElement ?? toolbar).top - box(header).bottom,
+              headerGapToken: parseFloat(getComputedStyle(frame).getPropertyValue('--spacing-6')),
               headingToolbarGap: heading ? box(toolbar).top - box(heading).bottom : null,
               collectionGap: box(collection).top - box(toolbar).bottom,
               searchX: search ? box(search).x : null,
@@ -349,7 +350,7 @@ async function subscriptionActionInset(p) {
               overflow: document.documentElement.scrollWidth - innerWidth
             };
           }, first[route]);
-          expect(measurement.headerGap).toBeCloseTo(16, 0);
+          expect(measurement.headerGap).toBeCloseTo(measurement.headerGapToken, 0);
           if (measurement.headingToolbarGap !== null) expect(measurement.headingToolbarGap).toBeCloseTo(16, 0);
           expect(measurement.collectionGap).toBeCloseTo(16, 0);
           if (measurement.searchX !== null) expect(Math.abs(measurement.searchX - measurement.rowX)).toBeLessThanOrEqual(1);

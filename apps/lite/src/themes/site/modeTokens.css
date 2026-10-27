@@ -40,5 +40,26 @@
       --table-sticky-shadow-start: 0 !important;
       --table-sticky-shadow-end: 0 !important;
     }
+
+    :scope:lang(zh-CN) {
+      --font-family-body:
+        Figtree, 'PingFang SC', 'PingFang TC', 'Noto Sans CJK SC', 'Noto Sans CJK TC', 'Source Han Sans TC', 'Microsoft YaHei', 'Microsoft JhengHei', sans-serif;
+      --font-family-heading: var(--font-family-body);
+    }
+
+    :scope:lang(zh) {
+      --text-heading-1-weight: var(--font-weight-bold);
+      --text-heading-2-weight: var(--font-weight-bold);
+      --text-heading-3-weight: var(--font-weight-bold);
+      --text-heading-4-weight: var(--font-weight-bold);
+      --text-heading-5-weight: var(--font-weight-bold);
+      --text-heading-6-weight: var(--font-weight-bold);
+    }
+
+    :is(.astryx-heading, .astryx-button, .astryx-segmented-control-item):lang(zh) {
+      --font-weight-normal: 500;
+      --font-weight-medium: 600;
+      --font-weight-semibold: 700;
+    }
   }
 }

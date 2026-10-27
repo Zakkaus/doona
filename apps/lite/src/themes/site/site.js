@@ -30,16 +30,16 @@ export const siteTheme = {
     "--font-size-3xl": "1.9375rem",
     "--font-size-4xl": "2.3125rem",
     "--font-size-5xl": "2.8125rem",
-    "--text-heading-1-size": "var(--font-size-2xl)",
+    "--text-heading-1-size": "1.5rem",
     "--text-heading-1-weight": "var(--font-weight-semibold)",
-    "--text-heading-1-leading": "1.3846",
-    "--text-heading-2-size": "var(--font-size-xl)",
+    "--text-heading-1-leading": "1.3333",
+    "--text-heading-2-size": "1.125rem",
     "--text-heading-2-weight": "var(--font-weight-semibold)",
-    "--text-heading-2-leading": "1.4545",
-    "--text-heading-3-size": "var(--font-size-lg)",
+    "--text-heading-2-leading": "1.5556",
+    "--text-heading-3-size": "0.9375rem",
     "--text-heading-3-weight": "var(--font-weight-semibold)",
-    "--text-heading-3-leading": "1.5556",
-    "--text-heading-4-size": "var(--font-size-base)",
+    "--text-heading-3-leading": "1.6",
+    "--text-heading-4-size": "0.78125rem",
     "--text-heading-4-weight": "var(--font-weight-semibold)",
     "--text-heading-4-leading": "1.6",
     "--text-heading-5-size": "var(--font-size-sm)",
@@ -72,19 +72,22 @@ export const siteTheme = {
     "--text-display-3-size": "var(--font-size-3xl)",
     "--text-display-3-weight": "var(--font-weight-semibold)",
     "--text-display-3-leading": "1.4194",
-    "--font-family-body": "Figtree, \"Figtree Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, \"PingFang TC\", \"Microsoft JhengHei\", Arial, sans-serif",
-    "--font-family-heading": "Figtree, \"Figtree Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, \"PingFang TC\", \"Microsoft JhengHei\", Arial, sans-serif",
+    "--font-family-body": "Figtree, \"PingFang TC\", \"PingFang SC\", \"Noto Sans CJK TC\", \"Noto Sans CJK SC\", \"Source Han Sans TC\", \"Microsoft JhengHei\", \"Microsoft YaHei\", sans-serif",
+    "--font-family-heading": "Figtree, \"PingFang TC\", \"PingFang SC\", \"Noto Sans CJK TC\", \"Noto Sans CJK SC\", \"Source Han Sans TC\", \"Microsoft JhengHei\", \"Microsoft YaHei\", sans-serif",
     "--font-family-code": "ui-monospace, \"SF Mono\", Monaco, Consolas, monospace",
-    "--color-accent": "light-dark(#15110C, #DFE2E5)",
+    "--color-accent": "light-dark(#8A7800, #FFDD00)",
     "--color-text-accent": "light-dark(#15110C, #DFE2E5)",
-    "--color-icon-accent": "light-dark(#15110C, #DFE2E5)",
+    "--color-icon-accent": "var(--color-accent)",
     "--color-accent-muted": "light-dark(rgba(21, 17, 12, 0.08), rgba(223, 226, 229, 0.14))",
-    "--color-on-accent": "light-dark(#FFFFFF, #15110C)",
+    "--color-on-accent": "var(--color-on-light)",
     "--color-background-body": "light-dark(#F8F4ED, #111112)",
+    "--color-background-surface": "light-dark(#FFFFFF, #1B1B1E)",
+    "--color-background-card": "light-dark(#FFFFFF, #27272B)",
+    "--color-background-popover": "light-dark(#FFFFFF, #333338)",
     "--color-text-primary": "light-dark(#15110C, #DFE2E5)",
     "--color-icon-primary": "light-dark(#15110C, #DFE2E5)",
-    "--radius-inner": "8px",
-    "--radius-element": "12px",
+    "--radius-inner": "var(--radius-element)",
+    "--radius-element": "8px",
     "--radius-container": "16px",
     "--radius-page": "32px",
     "--spacing-0": "0px",
@@ -105,6 +108,8 @@ export const siteTheme = {
     "--size-element-sm": "32px",
     "--size-element-md": "36px",
     "--size-element-lg": "40px",
+    "--lite-primary-background": "light-dark(#15110C, var(--color-accent))",
+    "--lite-primary-text": "light-dark(var(--color-on-dark), var(--color-on-light))",
     "--color-brand": "light-dark(#225BFF, #3D87FF)",
     "--astryx-marketing-feature-card-bg": "light-dark(#E6F0FF, #1A2333)"
   },
@@ -227,6 +232,14 @@ export const siteTheme = {
         ":active": {
           "transform": "scale(.98)"
         },
+        "borderRadius": "var(--radius-element)"
+      },
+      "variant:primary": {
+        "borderRadius": "var(--radius-full)",
+        "backgroundColor": "var(--lite-primary-background)",
+        "color": "var(--lite-primary-text)"
+      },
+      "variant:destructive": {
         "borderRadius": "var(--radius-full)"
       }
     },
@@ -290,7 +303,8 @@ export const siteTheme = {
     "dialog": {
       "base": {
         "scrollbarColor": "var(--color-border-emphasized) transparent",
-        "scrollbarWidth": "thin"
+        "scrollbarWidth": "thin",
+        "backgroundColor": "var(--color-background-popover)"
       }
     },
     "card": {
@@ -307,6 +321,66 @@ export const siteTheme = {
       "base": {
         "backgroundColor": "var(--color-accent)",
         "color": "var(--color-on-accent)"
+      }
+    },
+    "side-nav-item": {
+      "selected": {
+        "position": "relative",
+        "::after": {
+          "content": "\"\"",
+          "position": "absolute",
+          "insetBlock": "var(--spacing-2)",
+          "insetInlineStart": "var(--spacing-0)",
+          "width": "var(--spacing-0-5)",
+          "backgroundColor": "var(--color-accent)",
+          "pointerEvents": "none"
+        }
+      }
+    },
+    "item": {
+      "base": {
+        ":is([aria-current=\"true\"], [aria-selected=\"true\"])::after": {
+          "content": "\"\"",
+          "position": "absolute",
+          "insetBlock": "var(--spacing-2)",
+          "insetInlineStart": "var(--spacing-0)",
+          "width": "var(--spacing-0-5)",
+          "backgroundColor": "var(--color-accent)",
+          "pointerEvents": "none"
+        }
+      }
+    },
+    "radio-list-item": {
+      "base": {
+        ":is([aria-current=\"true\"])": {
+          "backgroundColor": "var(--color-accent-muted)"
+        }
+      }
+    },
+    "bottom-sheet": {
+      "base": {
+        "--color-background-surface": "var(--color-background-popover)"
+      }
+    },
+    "segmented-control": {
+      "base": {
+        "borderWidth": "var(--border-width)",
+        "borderStyle": "solid",
+        "borderColor": "var(--color-border-emphasized)",
+        "padding": "calc(var(--spacing-0-5) - var(--border-width))"
+      },
+      "size:lg": {
+        "padding": "var(--spacing-0)",
+        "borderWidth": "var(--spacing-0)",
+        "outlineWidth": "var(--border-width)",
+        "outlineStyle": "solid",
+        "outlineColor": "var(--color-border-emphasized)",
+        "outlineOffset": "calc(-1 * var(--border-width))"
+      }
+    },
+    "segmented-control-item": {
+      "base": {
+        "borderRadius": "var(--radius-element)"
       }
     },
     "top-nav-item": {
@@ -547,11 +621,11 @@ export const siteTheme = {
       },
       "body": {
         "family": "Figtree",
-        "fallbacks": "\"Figtree Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, \"PingFang TC\", \"Microsoft JhengHei\", Arial, sans-serif"
+        "fallbacks": "\"PingFang TC\", \"PingFang SC\", \"Noto Sans CJK TC\", \"Noto Sans CJK SC\", \"Source Han Sans TC\", \"Microsoft JhengHei\", \"Microsoft YaHei\", sans-serif"
       },
       "heading": {
         "family": "Figtree",
-        "fallbacks": "\"Figtree Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, \"PingFang TC\", \"Microsoft JhengHei\", Arial, sans-serif"
+        "fallbacks": "\"PingFang TC\", \"PingFang SC\", \"Noto Sans CJK TC\", \"Noto Sans CJK SC\", \"Source Han Sans TC\", \"Microsoft JhengHei\", \"Microsoft YaHei\", sans-serif"
       },
       "code": {
         "family": "ui-monospace",
