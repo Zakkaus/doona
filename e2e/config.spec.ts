@@ -480,8 +480,8 @@ test('incomplete sources cannot be transformed by rule edits', async ({page}) =>
     if (request.method() !== 'GET') mutations++;
   });
   await page.goto('/#/config?tab=source');
-  await expect(page.locator('.rp-toolbar').nth(1).locator('.rp-badge')).toHaveText(['Redacted']);
-  await expect(page.locator('.rp-card').first()).toContainText('This file contains redacted listener secrets and cannot be edited here. Edit it on the host.');
+  await expect(page.locator('.rp-toolbar').nth(1).locator('.rp-badge')).toHaveText(['Incomplete']);
+  await expect(page.locator('.rp-card').first()).toContainText('The text shown is incomplete, or its SHA-256 differs from the value the backend reports');
   await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
   await expect(page.getByRole('button', {name: 'Validate', exact: true})).toBeDisabled();
   await page.goto('/#/rules?tab=list&view=advanced');

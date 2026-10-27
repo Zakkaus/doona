@@ -127,7 +127,7 @@ export function backendLimits(
   for (const id of Object.keys(resourceLabels) as Resource[]) {
     const resource = resources[id];
     if (id === 'config' || (id === 'config_validate' && validateUnloaded)) continue;
-    // Flows stay available with recording off; auto records on demand, which reads the same.
+    // Flows stay available with recording off or on demand; both join the flows group, which tells them apart.
     const flowsOff = id === 'flows' && resource.available && (resources.flows.recording === 'off' || resources.flows.recording === 'auto');
     const forbidden = (id === 'flows' || id === 'logs' || id === 'dns_log') && recording?.[id]?.allowed === false;
     if (forbidden || flowsOff || !resource.available) {
@@ -173,13 +173,16 @@ export function backendLimits(
           named: n > 1 ? [] : [items[0].id],
           help: helpFor(reasons())
         };
-      case 'flowsIdle':
+      case 'flowsIdle': {
+        // Auto records on demand and the Off mode never records; a backend that says neither leaves it at off.
+        const code = reason('flows')?.code;
         return {
-          headline: t(reason('flows')?.code === 'recorded-on-demand' ? 'ov.lim.h.flowsIdle' : 'ov.lim.h.flowsOff'),
+          headline: t(code === 'recorded-on-demand' ? 'ov.lim.h.flowsIdle' : code === 'mode-off' ? 'ov.lim.h.flowsModeOff' : 'ov.lim.h.flowsOff'),
           named: ['flows'],
           // Without the record_flows switch Settings has nothing to turn on.
           link: flowsSwitch ? {href: href('settings', {card: 'runtime'}), text: t('settings.runtime')} : undefined
         };
+      }
       case 'notProvided': {
         const lacks = reasons().some(r => r?.code === 'build-lacks');
         return {

@@ -146,7 +146,7 @@ export function geodataFromConfig(
   if (reason?.code !== 'no-download-urls') return null;
   const keys = formatList(
     lang,
-    reason.settings.map(setting => engine.settingName(setting.key))
+    reason.settings.map(setting => setting.key)
   );
   return {
     text: t('settings.geodataFromConfig', {keys}),

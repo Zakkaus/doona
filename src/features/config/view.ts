@@ -168,7 +168,7 @@ export function sourceView(source: ConfigSource, locale: string, t: Translator):
 }
 type SourceView = {id: string; label: string; kind: string; facts: string; loaded: string};
 
-export type ReadOnlyReason = 'generated' | 'subscription' | 'disabled' | 'secret' | 'refused' | 'redacted';
+export type ReadOnlyReason = 'generated' | 'subscription' | 'disabled' | 'secret' | 'refused' | 'incomplete';
 // The badge and the line under the text saying what the file is and what can be done with it. A help popover beside
 // the badge is kept only for what the line has no room for: how to turn configuration writes on.
 const readOnlyText: Record<ReadOnlyReason, {label: Key; note: Key; help?: Key}> = {
@@ -177,9 +177,10 @@ const readOnlyText: Record<ReadOnlyReason, {label: Key; note: Key; help?: Key}> 
   disabled: {label: 'config.readOnly', note: 'config.readOnlyNote', help: 'config.readOnlyHelp'},
   secret: {label: 'config.secretSource', note: 'config.secretNote'},
   refused: {label: 'config.readOnly', note: 'config.refusedNote'},
-  redacted: {label: 'config.redactedSource', note: 'config.redactedNote'}
+  incomplete: {label: 'config.incompleteSource', note: 'config.incompleteNote'}
 };
-// Prefer the backend reason; older backends fall back to source kind and credential detection.
+// Prefer the backend reason; older backends fall back to source kind and credential detection. Text that does not match
+// its digest is reported as incomplete: honk refuses any source whose content it masks, so a writable mismatch is never redaction.
 export function readOnlyBadge(
   source: Pick<ConfigSource, 'kind' | 'writable' | 'content' | 'read_only_reason'>,
   configWritable: boolean,
@@ -202,7 +203,7 @@ export function readOnlyBadge(
             ? 'secret'
             : 'refused'
           : complete === false
-            ? 'redacted'
+            ? 'incomplete'
             : null;
   if (!reason) return null;
   const text = readOnlyText[reason];

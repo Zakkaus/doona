@@ -409,7 +409,7 @@ test('without configurable sources the Geodata card keeps its files, config note
   await expect(geodata.getByRole('grid', {name: t('settings.geodata'), exact: true}).getByRole('row')).toHaveCount(3);
   await expect(geodata.getByRole('button', {name: t('settings.geodataSource')})).toHaveCount(0);
   await expect(geodata.getByRole('button', {name: t('settings.geodataReset')})).toHaveCount(0);
-  await expect(geodata).toContainText('experimental.native_api.geosite_download_url');
+  await expect(geodata).toContainText('assets.geodata.geosite');
   await expect(geodata.getByRole('link', {name: t('ov.lim.docsStateDb')})).toBeVisible();
   await expect(geodata.getByRole('link', {name: t('nav.config'), exact: true})).toHaveAttribute('href', /config/);
   const update = geodata.getByRole('button', {name: t('settings.geodataUpdateNow'), exact: true});

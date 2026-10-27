@@ -45,15 +45,18 @@ describe('backendLimits', () => {
     expect(group(elsewhere, 'notProvided')).toMatchObject({headline: 'The backend does not provide 4 features', link: undefined});
   });
 
-  it('points flows that are idle at the runtime switch unless record_flows is false', () => {
-    const idle = group(limits(patched({flows: {recording: 'off'}})), 'flowsIdle');
+  it('tells flows recorded on demand from the Off mode, both pointed at the runtime switch', () => {
+    const idle = group(limits(patched({flows: {recording: 'auto'}})), 'flowsIdle');
     expect(idle).toEqual({
       cause: 'flowsIdle',
       headline: t('ov.lim.h.flowsIdle'),
       link: {href: '#/settings?card=runtime', text: t('settings.runtime')},
       items: [{id: 'flows', label: t('flow.records')}]
     });
-    expect(group(limits(patched({flows: {recording: 'auto'}})), 'flowsIdle')).toEqual(idle);
+    // The Off mode never records, so it is not described as recording on demand.
+    expect(group(limits(patched({flows: {recording: 'off'}})), 'flowsIdle')).toEqual({...idle, headline: t('ov.lim.h.flowsModeOff')});
+    const offMode = {flows: {allowed: true, active: false, mode: 'off' as const}};
+    expect(group(backendLimits(patched({flows: {recording: 'off'}}), version, t, 'en', offMode), 'flowsIdle')?.headline).toBe(t('ov.lim.h.flowsModeOff'));
     expect(group(limits(patched({flows: {recording: 'off'}}), other), 'flowsIdle')?.headline).toBe(t('ov.lim.h.flowsOff'));
     // honk offers flows.max_flows only while record_flows allows recording, so its absence means the key is false.
     const disallowed = limits(patched({flows: {recording: 'off'}, runtime_settings: {fields: ['record_flows', 'log.level']}}));
@@ -63,13 +66,12 @@ describe('backendLimits', () => {
   });
 
   it('files flows that are off without a runtime switch as idle, with no Settings link', () => {
-    for (const runtime_settings of [{available: false}, {fields: ['flows.max_flows' as const, 'log.level' as const]}]) {
-      expect(group(limits(patched({flows: {recording: 'off'}, runtime_settings})), 'flowsIdle')).toEqual({
-        cause: 'flowsIdle',
-        headline: t('ov.lim.h.flowsIdle'),
-        items: [{id: 'flows', label: t('flow.records')}]
-      });
-    }
+    const off = (runtime_settings: Partial<Resources['runtime_settings']>) =>
+      group(limits(patched({flows: {recording: 'off'}, runtime_settings})), 'flowsIdle');
+    const items = [{id: 'flows', label: t('flow.records')}];
+    // Without a field list honk does not say whether the mode or the configuration turned recording off.
+    expect(off({available: false})).toEqual({cause: 'flowsIdle', headline: t('ov.lim.h.flowsOff'), items});
+    expect(off({fields: ['flows.max_flows', 'log.level']})).toEqual({cause: 'flowsIdle', headline: t('ov.lim.h.flowsModeOff'), items});
   });
 
   it('lists the rule list, validation and closing connections when the backend turns them off', () => {
@@ -133,12 +135,7 @@ describe('backendLimits', () => {
     expect(geodata({assets: []})).toMatchObject({headline: t('ov.lim.h.geodataUpdate'), help: why('ov.lim.geoNoAssets')});
     const noDb = geodata({configurable_sources: undefined});
     expect(noDb?.help).toMatchObject({label: t('ov.lim.howTo'), text: t('ov.lim.geoNoStateDb'), link: {href: docsHref('en', 'state-db')}});
-    expect(
-      noDb?.help?.snippet
-        ?.split('\n')
-        .slice(2, 4)
-        .map(line => line.trim().split(':')[0])
-    ).toEqual(['geosite_download_url', 'geoip_download_url']);
+    expect(noDb?.help?.snippet?.split('\n').map(line => line.trim().split(':')[0])).toEqual(['assets {', 'geodata {', 'geosite', 'geoip', '}', '}']);
     expect(geodata({configurable_sources: true})?.help).toEqual(why('ov.lim.geoNoUrl', {href: '#/settings?card=geodata', text: t('settings.geodata')}));
     expect(geodata({configurable_sources: undefined}, other)).toEqual({
       cause: 'geodataUpdate',

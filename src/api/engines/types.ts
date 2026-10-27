@@ -7,7 +7,8 @@ import type {Capabilities, ConfigSource, RuntimeSettings} from '../model';
 // for refreshing them (providers `can_refresh`), `close` for closing connections (connections `can_close`).
 export type EngineSubject = keyof Capabilities['resources'] | 'manage' | 'subscriptions' | 'close';
 
-// A setting in the engine's configuration text, with its value as the text writes it, e.g. `record_logs: true`.
+// A setting in the engine's configuration text by its full dotted name, by which it can be found there, with its value
+// as the text writes it, e.g. `experimental.native_api.record_logs` and `true`.
 export type EngineSetting = {key: string; value: string};
 
 // Why a subject is off, as far as the engine can tell. A reason with settings names the ones that lift it.
@@ -16,6 +17,8 @@ export type EngineReason =
   | {code: 'recorder-off'; settings: EngineSetting[]}
   // Flows are recorded only while a client views them.
   | {code: 'recorded-on-demand'}
+  // A recorder the configuration allows, whose mode in the runtime settings is off.
+  | {code: 'mode-off'}
   // A service that runs only while the engine is up, while it is starting or stopping.
   | {code: 'starting-or-stopping'}
   // Routing and DNS loaded different geodata files of one kind.
@@ -43,8 +46,6 @@ export type Engine = {
   holdsCredentials(source: Pick<ConfigSource, 'content'>): boolean;
   // The settings as a snippet of the engine's configuration text.
   snippet(settings: EngineSetting[]): string;
-  // A setting's full name in the configuration text, by which it can be found there.
-  settingName(key: string): string;
   // The top-level sections whose text the engine redacts when it returns a source, each with the name the page shows.
   redactedSections(blocks: TextBlock[]): Array<{block: TextBlock; name: string}>;
   // Whether the configuration text is dae's, which doona reads and writes; a page that infers settings from the text
