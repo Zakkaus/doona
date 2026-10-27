@@ -46,7 +46,8 @@ async function tableTextFits(p) {
     const errors = [];
     p.on('pageerror', e => errors.push(e.message));
     p.on('console', message => {
-      if (message.type() === 'error') errors.push(message.text());
+      // The static preview answers the same-origin honk probe with 404.
+      if (message.type() === 'error' && !new URL(message.location().url).pathname.endsWith('/api')) errors.push(message.text());
     });
     await p.goto(base + '/?slow=200');
     await p.getByRole('button', {name: 'Try the demo', exact: true}).click();
