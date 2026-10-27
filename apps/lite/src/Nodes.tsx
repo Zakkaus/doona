@@ -202,7 +202,14 @@ export function Nodes({connection, setBusy}: {connection: Connection; setBusy: (
   const columns: TableColumn<Row>[] = [
     {
       key: 'name',
-      header: t.name,
+      header: compact ? (
+        <HStack gap={2} hAlign="between">
+          <Text>{t.name}</Text>
+          <Text>{t.latency}</Text>
+        </HStack>
+      ) : (
+        t.name
+      ),
       width: proportional(2, {minWidth: compact ? 0 : 180}),
       renderCell: item => (
         <VStack gap={1}>
@@ -211,7 +218,7 @@ export function Nodes({connection, setBusy}: {connection: Connection; setBusy: (
           </Text>
           {compact && (
             <HStack gap={2} vAlign="center">
-              <Text type="supporting" color="secondary" textWrap="wrap" style={{flexGrow: 1, minWidth: 0}}>
+              <Text type="supporting" color="secondary" maxLines={1} style={{flexGrow: 1, minWidth: 0}}>
                 {item.protocol ?? t.unknown} / {manual(item) ? t.manualLabel : (item.subscription_tag ?? t.unknown)}
               </Text>
               <NodeLatency node={item} probes={probes} compact />
@@ -247,6 +254,7 @@ export function Nodes({connection, setBusy}: {connection: Connection; setBusy: (
             variant="ghost"
             size="sm"
             alignment="end"
+            placement="above"
             isDisabled={task.busy !== null}
             items={[
               {label: t.addNodeToGroup, isDisabled: groupDisabled, onClick: () => setGroupNode(item)},
@@ -623,6 +631,7 @@ function NodeTable({
   added: string[];
 }) {
   const t = useMessages();
+  const narrow = useMediaQuery(MEDIA.orchestrate);
   const root = useRef<HTMLDivElement>(null);
   const revealed = useRef(false);
   const [collapsedGroups, setCollapsedGroups] = useState(new Set<string>());
@@ -649,7 +658,7 @@ function NodeTable({
       const members = rows.filter(node => groupKey(node) === key);
       const isManual = key === 'manual';
       return (
-        <VStack gap={1}>
+        <VStack gap={1} xstyle={styles.groupHeading}>
           <Text weight="medium" textWrap="wrap">
             {t.nodeSectionCount
               .replace('{name}', isManual ? t.manuallyAdded : (members[0]?.subscription_tag ?? t.unknown))
@@ -664,7 +673,7 @@ function NodeTable({
       );
     }
   });
-  const sticky = usePinnedColumns<Row>(['__selection', 'name']);
+  const sticky = usePinnedColumns<Row>(narrow ? ['__selection'] : ['__selection', 'name'], ['actions']);
   const {selectionConfig} = useTableSelectionState<Row>({
     data: pageRows as Row[],
     idKey: 'id',
@@ -714,7 +723,7 @@ function NodeTable({
     return () => cancelAnimationFrame(frame);
   }, [added, pageRows]);
   return (
-    <VStack ref={root} gap={4}>
+    <VStack ref={root} gap={4} style={{containerType: 'inline-size'}}>
       <RowEntrance>
         <Table
           data-collection
@@ -733,6 +742,11 @@ function NodeTable({
 }
 
 const styles = stylex.create({
+  groupHeading: {
+    minWidth: 0,
+    // Leave room for the grouped-row chevron and its cell padding and gaps.
+    maxWidth: 'calc(100cqi - var(--spacing-4) - var(--spacing-5))'
+  },
   // A subscription's node opens nothing, so it takes no hover highlight.
   static: {backgroundColor: null}
 });

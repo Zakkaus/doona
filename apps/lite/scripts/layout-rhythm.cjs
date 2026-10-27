@@ -200,6 +200,92 @@ async function groupWidths(browser) {
       await p.close();
     }
 }
+async function nodeLayout(p, compact, latencyLabel) {
+  const table = p.locator('table:visible');
+  const scroller = p.locator('.astryx-table-scroll-wrapper:visible');
+  await expect(table.locator('[data-node-id]').first()).toBeVisible();
+  const help = table.locator('td[colspan] .astryx-text').last();
+  const description = await help.evaluate(element => {
+    const viewport = element.closest('.astryx-table-scroll-wrapper').getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const rects = [...range.getClientRects()];
+    return {
+      count: rects.length,
+      fits: rects.every(rect => Math.floor(rect.left) >= Math.floor(viewport.left) && Math.ceil(rect.right) <= Math.ceil(viewport.right))
+    };
+  });
+  expect(description.count, 'Subscription help has rendered text').toBeGreaterThan(0);
+  expect(description.fits, 'Subscription help fits the visible table width').toBe(true);
+  if (compact) {
+    await expect(table.getByRole('columnheader').filter({hasText: latencyLabel})).toHaveCount(1);
+    const details = await table.locator('[data-node-id]').evaluateAll(names =>
+      names.map(name => {
+        const detail = name.nextElementSibling.querySelector('.astryx-text');
+        const style = getComputedStyle(detail);
+        return {
+          text: detail.textContent,
+          height: detail.getBoundingClientRect().height,
+          lineHeight: parseFloat(style.lineHeight),
+          whiteSpace: style.whiteSpace,
+          overflow: style.textOverflow
+        };
+      })
+    );
+    expect(details.some(detail => detail.text.includes('shadowsocks / harbor'))).toBe(true);
+    for (const detail of details) {
+      expect(detail.whiteSpace, detail.text).toBe('nowrap');
+      expect(detail.overflow, detail.text).toBe('ellipsis');
+      expect(Math.round(detail.height), detail.text).toBeLessThanOrEqual(Math.round(detail.lineHeight));
+    }
+    return;
+  }
+  expect(await scroller.evaluate(e => e.scrollWidth > e.clientWidth)).toBe(true);
+  const end = table.locator('thead th').last();
+  await expect(end).toHaveCSS('position', 'sticky');
+  const cue = await end.evaluate(e => {
+    const shadow = getComputedStyle(e, '::after');
+    return shadow.content !== 'none' && Number(shadow.opacity) > 0 && shadow.backgroundImage !== 'none';
+  });
+  expect(cue, 'Unseen columns have a visible end shadow before scrolling').toBe(true);
+  // Each data column must fit between the pinned selection and actions.
+  const headers = table.locator('thead th');
+  for (let index = 1; index < (await headers.count()) - 1; index++) {
+    await headers.nth(index).evaluate(e => {
+      const scroller = e.closest('.astryx-table-scroll-wrapper');
+      scroller.scrollLeft +=
+        e.getBoundingClientRect().left - scroller.getBoundingClientRect().left - e.parentElement.firstElementChild.getBoundingClientRect().width;
+    });
+    await settle(p);
+    const visible = await headers.nth(index).evaluate(e => {
+      const rect = e.getBoundingClientRect();
+      const first = e.parentElement.firstElementChild.getBoundingClientRect();
+      const last = e.parentElement.lastElementChild.getBoundingClientRect();
+      return Math.floor(rect.left) >= Math.floor(first.right) && Math.ceil(rect.right) <= Math.ceil(last.left);
+    });
+    expect(visible, `Column ${index} is reachable between pinned columns`).toBe(true);
+  }
+}
+
+async function nodeMenu(p) {
+  const pager = p.locator('.astryx-pagination:visible');
+  await pager.scrollIntoViewIfNeeded();
+  const trigger = p.locator('tbody tr:has([data-node-id])').last().locator('button[aria-haspopup="menu"]');
+  await trigger.click();
+  const menu = p.getByRole('menu');
+  await expect(menu).toBeVisible();
+  await settle(p);
+  const a = await menu.boundingBox(),
+    b = await pager.boundingBox();
+  const viewport = p.viewportSize();
+  expect(a.x).toBeGreaterThanOrEqual(0);
+  expect(a.y).toBeGreaterThanOrEqual(0);
+  expect(Math.ceil(a.x + a.width)).toBeLessThanOrEqual(viewport.width);
+  expect(Math.ceil(a.y + a.height)).toBeLessThanOrEqual(viewport.height);
+  expect(a.y + a.height <= b.y || a.y >= b.y + b.height || a.x + a.width <= b.x || a.x >= b.x + b.width, 'Row menu leaves pagination uncovered').toBe(true);
+  await p.keyboard.press('Escape');
+  await expect(trigger).toBeFocused();
+}
 (async () => {
   const browser = await chromium.launch();
   try {
@@ -339,6 +425,37 @@ async function groupWidths(browser) {
         await p.close();
       }
     await groupWidths(browser);
+    for (const viewport of [
+      {width: 768, height: 900},
+      {width: 844, height: 390},
+      {width: 390, height: 844}
+    ])
+      for (const locale of ['en', 'zh-CN', 'zh-TW']) {
+        const theme = viewport.width === 844 ? 'light' : 'dark';
+        const p = await browser.newPage({viewport, locale, reducedMotion: 'reduce', colorScheme: theme});
+        await p.addInitScript(
+          ({locale, theme}) => {
+            localStorage.setItem('doona-lite.locale', locale);
+            localStorage.setItem('doona-lite.theme', theme);
+          },
+          {locale, theme}
+        );
+        await p.goto(base);
+        await p.getByRole('button', {name: /Try the demo|试用演示|試用示範/, exact: true}).click();
+        await p.locator('[data-group-row]').first().waitFor();
+        await p.evaluate(() => (location.hash = 'nodes'));
+        await p.locator('[data-node-id]').first().waitFor();
+        await settle(p);
+        await nodeLayout(p, viewport.width === 390, {en: 'Latency', 'zh-CN': '延迟', 'zh-TW': '延遲'}[locale]);
+        if (viewport.width === 390) {
+          await p.locator('tbody input[type="checkbox"]').first().check();
+          await nodeLayout(p, true, {en: 'Latency', 'zh-CN': '延迟', 'zh-TW': '延遲'}[locale]);
+        }
+        await nodeMenu(p);
+        await screenshot(p, `nodes-layout-${viewport.width}-${locale}-${theme}`);
+        console.log(`PASS node columns, subscription help, compact labels and menu: ${viewport.width} ${locale}`);
+        await p.close();
+      }
   } finally {
     await browser.close();
   }
