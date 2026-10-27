@@ -33,6 +33,7 @@ import {useCompleteness} from '../../store/config';
 import {useBackgroundValidation} from './useBackgroundValidation';
 import {offered} from '../../api/capabilities';
 import {engineOf} from '../../api/engines';
+import {limitHint} from '../shared/limitHint';
 import type {NewSourceProps} from './useNewSource';
 export type ConfigEditor = {
   busy: 'save' | 'validate' | null;
@@ -65,7 +66,8 @@ const noChoices: ReadonlyMap<string, DiagnosticsChoice> = new Map();
 
 export function useConfigPage({go, query}: PageProps) {
   const t = useT();
-  const locale = LOCALE[useLang()];
+  const lang = useLang();
+  const locale = LOCALE[lang];
   const capabilities = useCapabilities();
   const resources = capabilities.data?.resources;
   const config = useConfig(offered(resources, 'config', {whileLoading: true}));
@@ -92,7 +94,8 @@ export function useConfigPage({go, query}: PageProps) {
   const version = useVersion().data;
   const engine = useMemo(() => engineOf(version), [version]);
   const tabs = configTabs(!!engine.globalSettings, capabilities.data);
-  const readOnly = source ? readOnlyBadge(source, configWritable, isComplete(source), engine, t) : null;
+  const hint = capabilities.data && limitHint('config', capabilities.data, version, t, lang);
+  const readOnly = source ? readOnlyBadge(source, configWritable, isComplete(source), engine, t, hint) : null;
   const canWrite = !!source && !readOnly;
   // Each source keeps the person's last open or collapse of its diagnostics, and the card reports the errors it shows
   // for the tab, a draft's included; away from the card the tab counts the accepted configuration's.

@@ -106,15 +106,16 @@ export function featureLink(t: LabelFn, lang: Lang, id: LimitId, code?: EngineRe
 
 // The hint for a feature that is off, with the same text as its group here; undefined when the engine gives no reason
 // the overview explains.
-export function limitHint(
+export const limitHint = (
   id: LimitId,
   capabilities: Capabilities,
   version: Pick<Version, 'engine'> | undefined,
   t: LabelFn,
   lang: Lang,
   recording?: RuntimeSettings['recording']
-): LimitHint | undefined {
-  const reason = engineOf(version).reason(id, capabilities, recording);
+): LimitHint | undefined => reasonHint(id, engineOf(version).reason(id, capabilities, recording), t, lang);
+// The same hint from the reason the engine already gave for the feature.
+export function reasonHint(id: LimitId, reason: EngineReason | undefined, t: LabelFn, lang: Lang): LimitHint | undefined {
   if (!reason || !reasonHelp[reason.code]) return undefined;
   const keys = 'settings' in reason ? reason.settings.map(setting => setting.key) : [];
   return {text: reasonText(t, reason), setting: keys.length > 0 ? formatList(lang, keys) : undefined, link: featureLink(t, lang, id, reason.code)};

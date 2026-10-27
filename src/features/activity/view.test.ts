@@ -1,6 +1,8 @@
 import {expect, it} from 'vitest';
 import {eventKey} from '../../api/eventKey';
-import {connections, nodeFixtures, runtime, runtimeOutbounds} from '../../../mock/fixtures';
+import {capabilities, connections, nodeFixtures, runtime, runtimeOutbounds, version} from '../../../mock/fixtures';
+import {engineOf} from '../../api/engines';
+import {limitHint, reasonHint} from '../shared/limitHint';
 import type {ApiEvent, Connection, ConnectionList, GroupSummary} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {pickMenuKey} from '../../ui/ui';
@@ -157,6 +159,21 @@ it('stages global targets without changing the current mode and detects an uncha
   const targetless = modeView({mode: 'rule'}, {mode: 'global', target: ''}, [], true, true, t);
   expect(targetless).toMatchObject({dirty: true, incomplete: true});
   expect(staged.incomplete).toBe(false);
+});
+
+it('explains a read-only mode with the overview text when configuration writes are off', () => {
+  const off = {...capabilities, resources: {...capabilities.resources, config: {...capabilities.resources.config, writable: false}}};
+  const hint = limitHint('mode', off, version, t, 'en');
+  // The same reason and text as the configuration's own, with the mode's requirements link.
+  expect(hint).toMatchObject({text: limitHint('config', off, version, t, 'en')?.text, setting: 'experimental.native_api.config_write'});
+  expect(hint?.link.text).toBe(t('ov.lim.docsFor', {feature: t('ov.lim.mode')}));
+  // The card carries the engine's reason, and the popover words it with the same hint.
+  const reason = engineOf(version).reason('mode', off);
+  expect(reasonHint('mode', reason, t, 'en')).toEqual(hint);
+  expect(modeView({mode: 'rule'}, null, [], false, true, t, true, reason)).toMatchObject({readOnly: true, reason});
+  // Writes on: the engine gives no reason, and a writable mode carries none.
+  expect(limitHint('mode', capabilities, version, t, 'en')).toBeUndefined();
+  expect(modeView({mode: 'rule'}, null, [], true, true, t, true, reason).reason).toBeUndefined();
 });
 
 const at = {instance_id: 'i', observed_at: '2026-01-01T00:00:00Z'};

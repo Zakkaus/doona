@@ -11,6 +11,7 @@ import {blockFields, scanConfig, type TextBlock, type TextToken} from '../../dae
 import {href as routeHref} from '../../shell/route';
 import type {EditorMark} from '../../ui/code/CodeEditor';
 import type {Help, KvItem} from '../../ui/ui';
+import type {LimitHint} from '../shared/limitHint';
 
 const sectionKinds = ['global', 'subscription', 'node', 'group', 'dns', 'routing'] as const;
 type SectionKind = (typeof sectionKinds)[number];
@@ -181,17 +182,29 @@ const readOnlyText: Record<ReadOnlyReason, {label: Key; note: Key; help?: Key}> 
 };
 // Prefer the backend reason; older backends fall back to source kind and credential detection. Text that does not match
 // its digest is reported as incomplete: honk refuses any source whose content it masks, so a writable mismatch is never redaction.
+// The hint, when the engine gives one, explains writes that are off with the overview's text, setting and docs link,
+// whether the backend reports writes as disabled or the badge infers it.
 export function readOnlyBadge(
   source: Pick<ConfigSource, 'kind' | 'writable' | 'content' | 'read_only_reason'>,
   configWritable: boolean,
   complete: boolean | undefined,
   engine: Pick<Engine, 'holdsCredentials'>,
-  t: Translator
+  t: Translator,
+  hint?: LimitHint
 ): {reason: ReadOnlyReason; label: string; note: string; help?: Help} | null {
+  const helpFor = (reason: ReadOnlyReason, label: string): Help | undefined => {
+    if (reason === 'disabled' && hint) return {title: label, text: hint.setting ? [hint.text, hint.setting] : hint.text, link: hint.link};
+    const help = readOnlyText[reason].help;
+    return help && {title: label, text: t(help)};
+  };
   const reported = !source.writable && refusalMessage({reason: source.read_only_reason}, t);
   if (reported) {
-    const secret = source.read_only_reason === 'listener_secret_source' || source.read_only_reason === 'listener_secret_in_content';
-    return {reason: secret ? 'secret' : 'refused', label: t(secret ? 'config.secretSource' : 'config.readOnly'), note: reported};
+    const cause = source.read_only_reason;
+    const reason =
+      cause === 'listener_secret_source' || cause === 'listener_secret_in_content' ? 'secret' : cause === 'writes_disabled' ? 'disabled' : 'refused';
+    const label = t(readOnlyText[reason].label);
+    const help = helpFor(reason, label);
+    return {reason, label, note: reported, ...(help && {help})};
   }
   const reason: ReadOnlyReason | null =
     source.kind === 'generated' || source.kind === 'subscription'
@@ -208,7 +221,8 @@ export function readOnlyBadge(
   if (!reason) return null;
   const text = readOnlyText[reason];
   const label = t(text.label);
-  return {reason, label, note: t(text.note), ...(text.help && {help: {title: label, text: t(text.help)}})};
+  const help = helpFor(reason, label);
+  return {reason, label, note: t(text.note), ...(help && {help})};
 }
 export type DiagnosticRow = {
   id: string;

@@ -44,11 +44,11 @@
     "startupLogin": 213700,
     "startupActivity": 326000,
     "startupCss": 30700,
-    "locale": 24000,
+    "locale": 24800,
     "fontCss": 36000,
     "route": 72800,
     "routePart": 16000,
-    "routeConfig": 195000,
+    "routeConfig": 196000,
     "mock": 38000
   },
   "dependencies": {
