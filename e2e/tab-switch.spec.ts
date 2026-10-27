@@ -100,8 +100,11 @@ test('a tab bar keeps the width of its tabs', async ({page}) => {
 
 // A resize observer made when the tabs appear is notified after the bar's own, in the same rendering step, so it sees
 // the frame the page paints. The marker must already be placed there, not a render later.
+// It starts from Activity, which has no tabs, once the shell shows it: `/#/` with no backend saved opens Settings,
+// whose tabs the observer would catch instead whenever they rendered after the check.
 test('a tab bar shows its marker in the frame it first appears', async ({page}) => {
-  await page.goto('/#/');
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-nav[href="#/activity"]')).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('.rp-tabbar')).toHaveCount(0);
   const placed = page.evaluate(
     () =>
