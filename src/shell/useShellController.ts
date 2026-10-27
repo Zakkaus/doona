@@ -29,8 +29,9 @@ export function useShellController(initial: Lang) {
     d.dir = pageDirection(LOCALE[lang], mirrored);
     d.toggleAttribute('data-mirror', mirrored);
   }, [lang, mirrored]);
-  // `data-scrolled` on the root while the page is off its top, for a palette whose pinned top bar changes once content
-  // runs under it. The listener only reads the offset and toggles the attribute, which is a no-op when it holds.
+  // `data-scrolled` on the root while the page is off its top, for the palettes whose pinned top bar changes once content
+  // runs under it (Glass and Clear's scroll edge, Qiangguo's top bar). The listener only reads the offset and toggles the
+  // attribute, which is a no-op when it holds.
   useEffect(() => {
     const mark = () => document.documentElement.toggleAttribute('data-scrolled', scrollY > 0);
     mark();
