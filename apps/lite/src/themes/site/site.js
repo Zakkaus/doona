@@ -75,12 +75,15 @@ export const siteTheme = {
     "--font-family-body": "Figtree, \"PingFang TC\", \"PingFang SC\", \"Noto Sans CJK TC\", \"Noto Sans CJK SC\", \"Source Han Sans TC\", \"Microsoft JhengHei\", \"Microsoft YaHei\", sans-serif",
     "--font-family-heading": "Figtree, \"PingFang TC\", \"PingFang SC\", \"Noto Sans CJK TC\", \"Noto Sans CJK SC\", \"Source Han Sans TC\", \"Microsoft JhengHei\", \"Microsoft YaHei\", sans-serif",
     "--font-family-code": "ui-monospace, \"SF Mono\", Monaco, Consolas, monospace",
-    "--color-accent": "light-dark(#8A7800, #FFDD00)",
+    "--color-accent": "light-dark(#15110C, #DFE2E5)",
+    "--focus-outline-color": "light-dark(#8A7800, #FFDD00)",
     "--color-text-accent": "light-dark(#15110C, #DFE2E5)",
-    "--color-icon-accent": "var(--color-accent)",
-    "--color-accent-muted": "light-dark(rgba(21, 17, 12, 0.08), rgba(223, 226, 229, 0.14))",
-    "--color-on-accent": "var(--color-on-light)",
-    "--color-background-body": "light-dark(#F8F4ED, #111112)",
+    "--color-icon-accent": "light-dark(#15110C, #DFE2E5)",
+    "--color-accent-muted": "light-dark(rgba(21, 17, 12, 0.05), rgba(223, 226, 229, 0.08))",
+    "--color-on-accent": "light-dark(var(--color-on-dark), var(--color-on-light))",
+    "--color-warning": "var(--color-icon-orange)",
+    "--color-warning-muted": "var(--color-background-orange)",
+    "--color-background-body": "var(--color-background-surface)",
     "--color-background-surface": "light-dark(#FFFFFF, #1B1B1E)",
     "--color-background-card": "light-dark(#FFFFFF, #27272B)",
     "--color-background-popover": "light-dark(#FFFFFF, #333338)",
@@ -108,7 +111,7 @@ export const siteTheme = {
     "--size-element-sm": "32px",
     "--size-element-md": "36px",
     "--size-element-lg": "40px",
-    "--lite-primary-background": "light-dark(#15110C, var(--color-accent))",
+    "--lite-primary-background": "light-dark(#292929, #DFE2E5)",
     "--lite-primary-text": "light-dark(var(--color-on-dark), var(--color-on-light))",
     "--color-brand": "light-dark(#225BFF, #3D87FF)",
     "--astryx-marketing-feature-card-bg": "light-dark(#E6F0FF, #1A2333)"
@@ -235,12 +238,12 @@ export const siteTheme = {
         "borderRadius": "var(--radius-element)"
       },
       "variant:primary": {
-        "borderRadius": "var(--radius-full)",
+        "borderRadius": "var(--radius-element)",
         "backgroundColor": "var(--lite-primary-background)",
         "color": "var(--lite-primary-text)"
       },
       "variant:destructive": {
-        "borderRadius": "var(--radius-full)"
+        "borderRadius": "var(--radius-element)"
       }
     },
     "text-input": {
@@ -325,28 +328,30 @@ export const siteTheme = {
     },
     "side-nav-item": {
       "selected": {
-        "position": "relative",
-        "::after": {
-          "content": "\"\"",
-          "position": "absolute",
-          "insetBlock": "var(--spacing-2)",
-          "insetInlineStart": "var(--spacing-0)",
-          "width": "var(--spacing-0-5)",
-          "backgroundColor": "var(--color-accent)",
-          "pointerEvents": "none"
-        }
+        "backgroundColor": "var(--color-accent-muted)"
       }
     },
     "item": {
       "base": {
+        ":is([aria-current=\"true\"], [aria-selected=\"true\"])": {
+          "backgroundColor": "var(--color-accent-muted)"
+        },
         ":is([aria-current=\"true\"], [aria-selected=\"true\"])::after": {
           "content": "\"\"",
           "position": "absolute",
-          "insetBlock": "var(--spacing-2)",
-          "insetInlineStart": "var(--spacing-0)",
-          "width": "var(--spacing-0-5)",
-          "backgroundColor": "var(--color-accent)",
+          "inset": "0",
+          "border": "var(--border-width) solid var(--color-border-emphasized)",
+          "borderRadius": "inherit",
           "pointerEvents": "none"
+        }
+      }
+    },
+    "selectable-card": {
+      "base": {
+        ":is([data-selected=\"true\"])": {
+          "borderColor": "var(--color-border-emphasized)",
+          "backgroundColor": "var(--color-accent-muted)",
+          "boxShadow": "none"
         }
       }
     },
@@ -373,6 +378,18 @@ export const siteTheme = {
     "segmented-control-item": {
       "base": {
         "borderRadius": "var(--radius-element)"
+      },
+      "selected": {
+        "backgroundColor": "var(--color-accent-muted)",
+        "boxShadow": "none",
+        "::after": {
+          "content": "\"\"",
+          "position": "absolute",
+          "inset": "0",
+          "border": "var(--border-width) solid var(--color-border-emphasized)",
+          "borderRadius": "inherit",
+          "pointerEvents": "none"
+        }
       }
     },
     "top-nav-item": {

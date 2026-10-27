@@ -62,12 +62,13 @@ async function contrast(locator, foreground, background) {
       const fieldBackground = await field.evaluate(element => getComputedStyle(element).backgroundColor);
       expect(await contrast(field, 'borderTopColor', fieldBackground), `${mode}: input boundary`).toBeGreaterThanOrEqual(3);
       await page.keyboard.press('Escape');
-      expect(await page.evaluate(() => [...new Set(window.themeFrames)]), `${mode}: first paint and navigation`).toEqual(['rgb(17, 17, 18)']);
+      const darkBackground = await page.locator('html').evaluate(element => getComputedStyle(element).backgroundColor);
+      expect(await page.evaluate(() => [...new Set(window.themeFrames)]), `${mode}: first paint and navigation`).toEqual([darkBackground]);
       if (mode === 'system') {
         await page.emulateMedia({colorScheme: 'light'});
-        await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(248, 244, 237)');
+        await expect(page.locator('html')).not.toHaveCSS('background-color', darkBackground);
         await page.emulateMedia({colorScheme: 'dark'});
-        await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(17, 17, 18)');
+        await expect(page.locator('html')).toHaveCSS('background-color', darkBackground);
       }
       await page.close();
       console.log(`PASS ${mode}: cursor, search, input contrast, first paint, route switches and system preference`);

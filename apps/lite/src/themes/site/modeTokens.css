@@ -14,8 +14,8 @@
       --lite-editor-border: light-dark(var(--color-border), var(--color-border-emphasized));
       --lite-editor-match: light-dark(#99ff7780, var(--color-background-green));
       --lite-editor-bracket: light-dark(#328c8252, var(--color-background-blue));
-      --lite-editor-search-match: light-dark(#ffff0054, var(--color-background-yellow));
-      --lite-editor-search-selected: light-dark(#ff6a0054, var(--color-background-orange));
+      --lite-editor-search-match: var(--color-accent-muted);
+      --lite-editor-search-selected: var(--color-background-muted);
       --lite-editor-panel: light-dark(#f5f5f5, var(--color-background-surface));
       --lite-editor-panel-text: light-dark(#000, var(--color-text-primary));
       --lite-editor-panel-border: light-dark(#ddd, var(--color-border-emphasized));
@@ -27,10 +27,10 @@
       --lite-editor-button-pressed-end: light-dark(#d0d3d6, var(--color-background-muted));
       --lite-editor-button-border: light-dark(#888, var(--color-border-emphasized));
 
-      /* Brand artwork and the public demo badge retain fixed colours. */
+      /* Monochrome brand artwork and the public demo badge retain fixed colours. */
       --lite-brand-outline: #0b0a09;
       --lite-brand-body: #fff;
-      --lite-brand-yellow: #fd0;
+      --lite-brand-detail: #a1a1a1;
       --lite-demo-background: rgb(0 0 0 / 72%);
       --lite-demo-foreground: #fff;
     }
@@ -47,16 +47,7 @@
       --font-family-heading: var(--font-family-body);
     }
 
-    :scope:lang(zh) {
-      --text-heading-1-weight: var(--font-weight-bold);
-      --text-heading-2-weight: var(--font-weight-bold);
-      --text-heading-3-weight: var(--font-weight-bold);
-      --text-heading-4-weight: var(--font-weight-bold);
-      --text-heading-5-weight: var(--font-weight-bold);
-      --text-heading-6-weight: var(--font-weight-bold);
-    }
-
-    :is(.astryx-heading, .astryx-button, .astryx-segmented-control-item):lang(zh) {
+    :is(.astryx-button, .astryx-segmented-control-item):lang(zh) {
       --font-weight-normal: 500;
       --font-weight-medium: 600;
       --font-weight-semibold: 700;

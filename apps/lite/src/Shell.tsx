@@ -166,6 +166,7 @@ function ShellContent({
   return (
     <AppShell
       className="lite-shell"
+      variant="section"
       contentPadding={0}
       sideNav={
         <SideNav

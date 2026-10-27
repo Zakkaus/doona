@@ -151,7 +151,7 @@ async function fixture(browser, locale = 'zh-CN', width = 1440, theme = 'light')
     throw new Error(`Unexpected backend request: ${request.method()} ${pathname}`);
   });
   await p.goto(base.replace(/\/$/, '') + '/#routing');
-  await p.locator('h1').waitFor();
+  await p.locator('.lite-shell').waitFor();
   await p.evaluate(() => {
     location.hash = 'routing';
   });
@@ -274,7 +274,7 @@ async function download(p, action) {
     state.resolveModes = ['none'];
     state.dns = true;
     await p.reload();
-    await p.locator('h1').waitFor();
+    await p.locator('.lite-shell').waitFor();
     await p.evaluate(() => {
       location.hash = 'routing';
     });
@@ -285,7 +285,7 @@ async function download(p, action) {
     await p.keyboard.press('Escape');
     state.traceAvailable = false;
     await p.reload();
-    await p.locator('h1').waitFor();
+    await p.locator('.lite-shell').waitFor();
     await p.evaluate(() => {
       location.hash = 'routing';
     });
