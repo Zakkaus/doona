@@ -22,9 +22,9 @@ function assignRef<E>(ref: Ref<E> | undefined, node: E | null) {
   else if (ref != null) (ref as {current: E | null}).current = node;
 }
 
-export function usePinnedColumns<T extends Record<string, unknown>>(startKeys: string[]): TablePlugin<T> {
+export function usePinnedColumns<T extends Record<string, unknown>>(startKeys: string[], endKeys: string[] = []): TablePlugin<T> {
   const [isScrolling, setScrolling] = useState(false);
-  const sticky = useTableStickyColumns<T>({startKeys: isScrolling ? startKeys : []});
+  const sticky = useTableStickyColumns<T>({startKeys: isScrolling ? startKeys : [], endKeys: isScrolling ? endKeys : []});
   const detach = useRef<(() => void) | null>(null);
   const watch = useCallback((scroller: HTMLDivElement | null) => {
     detach.current?.();
