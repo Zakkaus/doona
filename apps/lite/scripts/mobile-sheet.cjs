@@ -2,6 +2,7 @@ const {chromium, expect} = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 const shots = process.env.LITE_SHOTS_DIR;
 if (shots) fs.mkdirSync(shots, {recursive: true});
 
@@ -28,8 +29,7 @@ async function demo(browser, width, theme) {
     localStorage.setItem('doona-lite.theme', theme);
   }, theme);
   await page.goto(base);
-  await page.getByRole('button', {name: /演示/}).click();
-  await page.locator('[data-group-row="auto"] button').waitFor();
+  await waitForDemo(page);
   return page;
 }
 

@@ -1,5 +1,6 @@
 const base = require('./preview.cjs');
 const {chromium, expect} = require('@playwright/test');
+const {waitForDemo} = require('./demo.cjs');
 (async () => {
   const b = await chromium.launch();
   const p = await b.newPage({locale: 'en-US', viewport: {width: 1280, height: 1000}});
@@ -25,8 +26,7 @@ const {chromium, expect} = require('@playwright/test');
     window.addEventListener('lite-draft-offset', event => window.draftOffsets.push(event.detail));
   });
   await p.goto(base);
-  await p.getByRole('button', {name: 'Try the demo'}).click();
-  await p.locator('[data-group-row]').first().waitFor();
+  await waitForDemo(p);
   for (const [route, rows] of [
     ['routing', '[data-rule-index]'],
     ['nodes', 'tbody tr'],

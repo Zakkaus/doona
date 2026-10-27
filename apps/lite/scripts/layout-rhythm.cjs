@@ -2,6 +2,7 @@ const {chromium, expect} = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 const shots = process.env.LITE_RHYTHM_SHOTS;
 const records = [];
 const routes = ['groups', 'subscriptions', 'nodes', 'routing', 'dns'];
@@ -140,7 +141,7 @@ async function groupWidths(browser) {
         localStorage.setItem('doona-lite.theme', 'dark');
       }, locale);
       await p.goto(base);
-      await p.getByRole('button', {name: locale === 'en' ? 'Try the demo' : '試用示範', exact: true}).click();
+      await waitForDemo(p);
       await p.locator('[data-group-row]').first().waitFor();
       await settle(p);
       const rows = await p.locator('[data-group-row]:visible').evaluateAll(rows =>
@@ -320,8 +321,7 @@ async function subscriptionActionInset(p) {
           {locale}
         );
         await p.goto(base);
-        await p.getByRole('button', {name: locale === 'en' ? 'Try the demo' : '试用演示', exact: true}).click();
-        await p.locator('[data-group-row]').first().waitFor();
+        await waitForDemo(p);
         const rhythm = [];
         for (const route of routes) {
           await p.evaluate(route => (location.hash = route), route);
@@ -462,7 +462,7 @@ async function subscriptionActionInset(p) {
           {locale, theme}
         );
         await p.goto(base);
-        await p.getByRole('button', {name: /Try the demo|试用演示|試用示範/, exact: true}).click();
+        await waitForDemo(p);
         await p.locator('[data-group-row]').first().waitFor();
         await p.evaluate(() => (location.hash = 'nodes'));
         await p.locator('[data-node-id]').first().waitFor();
@@ -483,7 +483,7 @@ async function subscriptionActionInset(p) {
       localStorage.setItem('doona-lite.theme', 'dark');
     });
     await p.goto(base);
-    await p.getByRole('button', {name: '試用示範', exact: true}).click();
+    await waitForDemo(p);
     await p.locator('[data-group-row]').first().waitFor();
     await p.evaluate(() => (location.hash = 'subscriptions'));
     await p.locator('[data-provider-id]:visible').first().waitFor();

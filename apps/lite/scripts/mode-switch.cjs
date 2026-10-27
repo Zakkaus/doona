@@ -2,6 +2,7 @@ const {chromium, expect} = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 const records = [];
 async function settle(page) {
   await page.evaluate(async () => {
@@ -50,8 +51,7 @@ function equalBoxes(before, after) {
         window.modeShiftObserver.observe({type: 'layout-shift', buffered: true});
       });
       await page.goto(base);
-      await page.getByRole('button', {name: '试用演示', exact: true}).click();
-      await page.locator('[data-group-row]').first().waitFor();
+      await waitForDemo(page);
       for (const route of ['routing', 'dns']) {
         await page.evaluate(route => (location.hash = route), route);
         await page

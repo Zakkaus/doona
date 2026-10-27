@@ -1,5 +1,6 @@
 const {chromium, expect} = require('@playwright/test');
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 const routes = ['groups', 'subscriptions', 'nodes', 'routing', 'dns'];
 (async () => {
   const browser = await chromium.launch();
@@ -21,7 +22,7 @@ const routes = ['groups', 'subscriptions', 'nodes', 'routing', 'dns'];
       window.pageNodes = {};
     });
     await p.goto(base);
-    await p.getByRole('button', {name: 'Try the demo', exact: true}).click();
+    await waitForDemo(p);
     await p.locator('[data-group-inspector]').waitFor();
     for (const route of routes) {
       await p.evaluate(route => {
@@ -77,7 +78,7 @@ const routes = ['groups', 'subscriptions', 'nodes', 'routing', 'dns'];
     await p.close();
     const phone = await browser.newPage({locale: 'en-US', viewport: {width: 390, height: 900}});
     await phone.goto(base);
-    await phone.getByRole('button', {name: 'Try the demo', exact: true}).click();
+    await waitForDemo(phone);
     await phone.locator('[data-group-row] button').first().click();
     await phone.locator('dialog[open]').waitFor();
     await phone.keyboard.press('Escape');

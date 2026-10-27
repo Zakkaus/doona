@@ -1,5 +1,6 @@
 const base = require('./preview.cjs');
 const {chromium, expect} = require('@playwright/test');
+const {waitForDemo} = require('./demo.cjs');
 async function settle(p) {
   await p.evaluate(async () => {
     await Promise.all(
@@ -15,8 +16,7 @@ async function settle(p) {
   const c = await b.newContext({locale: 'en-US', viewport: {width: 1280, height: 1000}});
   const p = await c.newPage();
   await p.goto(base + '/?slow=600');
-  await p.getByRole('button', {name: 'Try the demo'}).click();
-  await p.locator('[data-group-row]').first().waitFor();
+  await waitForDemo(p);
   for (const route of ['nodes', 'subscriptions', 'groups', 'routing', 'dns']) {
     await p.evaluate(route => (location.hash = route), route);
     await p.waitForFunction(

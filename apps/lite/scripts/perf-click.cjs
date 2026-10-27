@@ -2,6 +2,7 @@ const {chromium} = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 const rate = 4;
 (async () => {
   const browser = await chromium.launch({args: ['--disable-features=OverlayScrollbar']});
@@ -85,11 +86,15 @@ const rate = 4;
         .or(p.getByRole('button', {name, exact: true}))
         .first();
     const dialog = 'dialog[open]';
-    await measure('cold load', () => p.goto(base), 'button', true);
-    await p
-      .getByRole('button', {name: /demo|演示|示範/i})
-      .first()
-      .click();
+    await measure(
+      'cold load',
+      async () => {
+        await p.goto(base);
+        await waitForDemo(p);
+      },
+      '[data-group-row]',
+      true
+    );
     await p.locator('[data-member-row]').nth(9).waitFor();
     await p.waitForTimeout(2000);
     const member = p.locator('[data-member-row]').nth(9);

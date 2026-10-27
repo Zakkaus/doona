@@ -2,6 +2,7 @@ const {chromium, expect} = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 // Screenshots are written only when LITE_SHOTS names a directory.
 const shots = process.env.LITE_SHOTS;
 if (shots) fs.mkdirSync(shots, {recursive: true});
@@ -74,8 +75,7 @@ async function go(p, route) {
       if (shots) await p.screenshot({path: path.join(shots, `${name}-${width}-${theme}.png`), fullPage: true});
     };
     await p.goto(base);
-    await p.getByRole('button', {name: 'Try the demo', exact: true}).click();
-    await p.locator('[data-group-row]').first().waitFor();
+    await waitForDemo(p);
     await go(p, 'nodes');
     await expect(p.locator('[data-group-inspector]:visible')).toHaveCount(0);
     await p.locator('table:visible').waitFor();

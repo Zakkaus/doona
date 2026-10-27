@@ -139,8 +139,11 @@ async function fixture(
   const l = labels[locale];
   const address = page.locator('input[autocomplete="url"]');
   const discover = async () => {
+    await expect(address).toBeVisible();
+    await expect(page.getByRole('button', {name: /^(Try the demo|试用演示|試用示範)$/})).toHaveCount(0);
     await address.fill(target);
     await page.getByRole('button', {name: l.next, exact: true}).click();
+    await expect(page.getByRole('button', {name: /^(Try the demo|试用演示|試用示範)$/})).toHaveCount(0);
   };
   const checkStorage = async () => {
     await expect(page.getByRole('heading', {level: 1})).not.toHaveText(l.login);
@@ -185,6 +188,7 @@ async function run() {
       await expect(page.getByRole('status')).toHaveText('正在載入…');
       await expect(address).toHaveCount(0);
       await expect(page.locator('form')).toHaveCount(0);
+      await expect(page.getByRole('button', {name: /^(Try the demo|试用演示|試用示範)$/})).toHaveCount(0);
       releaseProbe();
       if (kind !== 'anonymous') {
         await expect(page.getByRole('button', {name: '使用其他後端', exact: true})).toBeVisible();
@@ -193,6 +197,7 @@ async function run() {
         await expect(page.getByLabel(l.username, {exact: true})).toHaveCount(kind === 'token' ? 0 : 1);
         await expect(page.getByLabel(l.token, {exact: true})).toHaveCount(kind === 'token' ? 1 : 0);
         await expect(page.getByLabel(l.confirm, {exact: true})).toHaveCount(kind === 'setup' ? 1 : 0);
+        await expect(page.getByRole('button', {name: '試用示範', exact: true})).toHaveCount(0);
         if (kind === 'token') await page.getByLabel(l.token, {exact: true}).fill('pasted-token');
         else {
           await page.getByLabel(l.username, {exact: true}).fill('admin');
@@ -214,6 +219,7 @@ async function run() {
     await expect(alternate.address).toHaveValue('');
     await expect(alternate.page.getByLabel(alternate.l.username, {exact: true})).toHaveCount(0);
     await expect(alternate.page.getByRole('button', {name: alternate.l.next, exact: true})).toBeVisible();
+    await expect(alternate.page.getByRole('button', {name: 'Try the demo', exact: true})).toHaveCount(0);
     await expect(alternate.page.getByText(/honk native API root, for example/)).toBeVisible();
     await alternate.page.close();
     console.log('PASS hosted anonymous access, auth steps, no form flash, alternate backend');

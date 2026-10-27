@@ -1,6 +1,7 @@
 const {chromium, expect} = require('@playwright/test');
 const base = require('./preview.cjs');
 const fs = require('node:fs');
+const {waitForDemo} = require('./demo.cjs');
 async function inspect(p) {
   return p.evaluate(() => {
     const owners = start => {
@@ -53,8 +54,7 @@ async function stable(p, act) {
   ]) {
     const p = await b.newPage({locale: 'en-US', viewport: {width, height}});
     await p.goto(base);
-    await p.getByRole('button', {name: 'Try the demo', exact: true}).click();
-    await p.locator('[data-group-row]').first().waitFor();
+    await waitForDemo(p);
     await p.locator('[data-page-body]:visible').waitFor();
     for (const route of ['nodes', 'subscriptions', 'groups', 'routing', 'dns']) {
       await p.evaluate(r => (location.hash = r), route);
@@ -87,8 +87,7 @@ async function stable(p, act) {
   }
   const p = await b.newPage({locale: 'en-US', viewport: {width: 1280, height: 1000}, reducedMotion: 'reduce'});
   await p.goto(base);
-  await p.getByRole('button', {name: 'Try the demo', exact: true}).click();
-  await p.locator('[data-group-row]').first().waitFor();
+  await waitForDemo(p);
   await p.evaluate(() => (location.hash = 'nodes'));
   await p.getByRole('button', {name: 'Add node', exact: true}).click();
   await p.getByRole('tab', {name: 'Enter manually', exact: true}).click();
@@ -121,7 +120,7 @@ async function stable(p, act) {
   for (const colorScheme of ['light', 'dark']) {
     const p = await b.newPage({locale: 'zh-TW', viewport: {width: 844, height: 390}, reducedMotion: 'reduce', colorScheme});
     await p.goto(base);
-    await p.getByRole('button', {name: '試用示範', exact: true}).click();
+    await waitForDemo(p);
     await p.locator('[data-group-row]').first().waitFor();
     for (const [route, title] of [
       ['dns', '新增 DNS 伺服器'],

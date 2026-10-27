@@ -1,5 +1,6 @@
 const {chromium} = require('@playwright/test');
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 const rate = 4;
 const routes = [
   ['subscriptions', '订阅'],
@@ -28,8 +29,8 @@ const rows = {groups: '[data-group-row]', subscriptions: '[data-provider-id]', n
         buffered: true
       });
     });
-    async function measure(label, action) {
-      const start = await p.evaluate(() => performance.now());
+    async function measure(label, action, fromNavigation = false) {
+      const start = fromNavigation ? 0 : await p.evaluate(() => performance.now());
       await action();
       await p.waitForTimeout(2000);
       const tasks = await p.evaluate(start => window.__perf.tasks.filter(e => e.start >= start).map(e => e.duration), start);
@@ -37,14 +38,15 @@ const rows = {groups: '[data-group-row]', subscriptions: '[data-provider-id]', n
       results.push({switch: label, longTasks: tasks.map(n => +n.toFixed(1)), maxMs: +max.toFixed(1)});
       if (max > 50) overBudget.push(`${label}: ${max.toFixed(1)} ms > 50 ms`);
     }
-    await p.goto(base);
-    await measure('demo → 策略组', async () => {
-      await p
-        .getByRole('button', {name: /demo|演示|示範/i})
-        .first()
-        .click();
-      await p.locator('[data-group-row]:visible').first().waitFor();
-    });
+    // Navigation starts the demo, so include boot tasks rather than timing an already loaded page.
+    await measure(
+      'demo → 策略组',
+      async () => {
+        await p.goto(base);
+        await waitForDemo(p);
+      },
+      true
+    );
     for (const visit of [1, 2]) {
       for (const [route, name] of routes) {
         await measure(`${name} (${visit})`, async () => {
@@ -66,13 +68,9 @@ const rows = {groups: '[data-group-row]', subscriptions: '[data-provider-id]', n
           buffered: true
         });
       });
-      await slow.goto(`${base}?slow=1200`);
-      await slow
-        .getByRole('button', {name: /demo|演示|示範/i})
-        .first()
-        .click();
+      await slow.goto(`${base}?slow=1200`, {waitUntil: 'domcontentloaded'});
       if (route !== 'groups') {
-        await slow.locator('[data-group-row]:visible').first().waitFor();
+        await waitForDemo(slow);
         await slow.evaluate(route => {
           location.hash = route;
         }, route);
@@ -80,7 +78,8 @@ const rows = {groups: '[data-group-row]', subscriptions: '[data-provider-id]', n
       const skeleton = slow.locator(`[data-loading-shape="${route}"]:visible`).first();
       await skeleton.waitFor();
       const start = await slow.evaluate(() => performance.now());
-      await slow.locator(`${rows[route]}:visible`).first().waitFor();
+      if (route === 'groups') await waitForDemo(slow);
+      else await slow.locator(`${rows[route]}:visible`).first().waitFor();
       await skeleton.waitFor({state: 'hidden'});
       await slow.waitForTimeout(500);
       const cls = await slow.evaluate(start => window.__shifts.filter(e => e.start >= start).reduce((sum, e) => sum + e.value, 0), start);

@@ -1,5 +1,6 @@
 const {chromium, expect} = require('@playwright/test');
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 async function go(p, route) {
   await expect(p.getByRole('link', {name: route === 'dns' ? 'DNS' : route[0].toUpperCase() + route.slice(1), exact: true, includeHidden: true})).toBeEnabled({
     timeout: 20000
@@ -50,8 +51,7 @@ async function tableTextFits(p) {
       if (message.type() === 'error' && !new URL(message.location().url).pathname.endsWith('/api')) errors.push(message.text());
     });
     await p.goto(base + '/?slow=200');
-    await p.getByRole('button', {name: 'Try the demo', exact: true}).click();
-    await p.locator('[data-group-row]').first().waitFor();
+    await waitForDemo(p);
     await go(p, 'nodes');
     await expect(p.getByRole('button', {name: 'Add node', exact: true})).toBeEnabled();
     const actions = await p.locator('tbody:visible tr:has([data-node-id])').evaluateAll(rows =>
@@ -208,8 +208,7 @@ async function tableTextFits(p) {
       if (width < 768) await p.keyboard.press('Escape');
     };
     await p.goto(base);
-    await p.getByRole('button', {name: 'Try the demo', exact: true}).click();
-    await p.locator('[data-group-row]').first().waitFor();
+    await waitForDemo(p);
     await p.getByRole('radio', {name: 'Edit group', exact: true}).click();
     await p.locator('[data-group-row="hk"] button').click();
     await p.getByRole('button', {name: 'Actions: hk', exact: true}).click();

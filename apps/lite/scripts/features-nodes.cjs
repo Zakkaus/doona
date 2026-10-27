@@ -2,6 +2,7 @@ const {chromium, expect} = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
 const base = require('./preview.cjs');
+const {waitForDemo} = require('./demo.cjs');
 const shots = process.env.LITE_FEATURE_SHOTS;
 const tokens = ['group(', 'name(', 'subtag(', 'dip', 'dport', 'l4proto', 'pname', 'qname', 'fallback', 'must_', '(must)', '->'];
 async function settled(p) {
@@ -47,8 +48,7 @@ async function apply(p, d) {
     p.on('pageerror', error => errors.push(error.message));
     await p.addInitScript(() => localStorage.setItem('doona-lite.locale', 'zh-CN'));
     await p.goto(base);
-    await p.getByRole('button', {name: /演示/}).first().click();
-    await p.locator('[data-group-row]').first().waitFor();
+    await waitForDemo(p);
     await p.getByRole('link', {name: '节点', exact: true}).click();
     await p.locator('[data-node-id]').first().waitFor();
     const search = p.getByRole('textbox', {name: '搜索节点', exact: true});
@@ -200,7 +200,7 @@ async function apply(p, d) {
     tw.setDefaultTimeout(12000);
     await tw.addInitScript(() => localStorage.setItem('doona-lite.locale', 'zh-TW'));
     await tw.goto(base);
-    await tw.getByRole('button', {name: /示範/}).first().click();
+    await waitForDemo(tw);
     await tw.getByRole('link', {name: '節點', exact: true}).click();
     await expect(tw.getByRole('button', {name: '測試延遲', exact: true})).toBeVisible();
     await tw.locator('tbody button[aria-haspopup="menu"]').first().click();
