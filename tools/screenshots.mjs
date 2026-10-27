@@ -539,6 +539,16 @@ const captures = [
     }
   ],
   [
+    'group-editor',
+    async (browser, lang, t) => {
+      const page = await openPage(browser, lang, '#/policies', '.rp-node', desktop);
+      await page.getByRole('region', {name: 'proxy', exact: true}).getByRole('button', {name: t['policy.edit'], exact: true}).click();
+      await page.getByRole('dialog', {name: t['policy.editTitle'].replace('{name}', 'proxy'), exact: true}).waitFor();
+      await page.mouse.move(0, 0);
+      return [page];
+    }
+  ],
+  [
     'settings-appearance',
     async (browser, lang) => {
       const page = await openPage(browser, lang, '#/settings?tab=appearance', '[data-setting="palette"]', desktop);
