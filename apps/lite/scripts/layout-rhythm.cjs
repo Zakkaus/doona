@@ -243,11 +243,18 @@ async function nodeLayout(p, compact, latencyLabel) {
   expect(await scroller.evaluate(e => e.scrollWidth > e.clientWidth)).toBe(true);
   const end = table.locator('thead th').last();
   await expect(end).toHaveCSS('position', 'sticky');
-  const cue = await end.evaluate(e => {
-    const shadow = getComputedStyle(e, '::after');
-    return shadow.content !== 'none' && Number(shadow.opacity) > 0 && shadow.backgroundImage !== 'none';
-  });
-  expect(cue, 'Unseen columns have a visible end shadow before scrolling').toBe(true);
+  await scroller.evaluate(e => (e.scrollLeft = (e.scrollWidth - e.clientWidth) / 2));
+  await settle(p);
+  expect(await scroller.evaluate(e => e.scrollLeft)).toBeGreaterThan(0);
+  const pinned = await table.locator('th, td').evaluateAll(cells =>
+    cells
+      .filter(cell => getComputedStyle(cell).position === 'sticky')
+      .map(cell => ({
+        edge: getComputedStyle(cell).insetInlineStart === 'auto' ? 'end' : 'start',
+        opacity: getComputedStyle(cell, '::after').opacity
+      }))
+  );
+  for (const cell of pinned) expect(cell.opacity, `${cell.edge}-pinned cell has no edge strip while scrolling`).toBe('0');
   // Each data column must fit between the pinned selection and actions.
   const headers = table.locator('thead th');
   for (let index = 1; index < (await headers.count()) - 1; index++) {

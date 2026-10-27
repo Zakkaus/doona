@@ -34,5 +34,11 @@
       --lite-demo-background: rgb(0 0 0 / 72%);
       --lite-demo-foreground: #fff;
     }
+
+    /* Override the plugin's inline scroll state without changing pinned cells. */
+    .astryx-table-scroll-wrapper {
+      --table-sticky-shadow-start: 0 !important;
+      --table-sticky-shadow-end: 0 !important;
+    }
   }
 }
