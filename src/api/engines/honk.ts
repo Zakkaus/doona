@@ -1,5 +1,6 @@
 import {honkGlobal} from './honkSettings';
 import {blockFields, scanConfig} from '../../dae/text';
+import {configManagement} from './honkConfig';
 import type {Capabilities, RuntimeSettings} from '../model';
 import type {Engine, EngineReason, EngineSetting, EngineSubject} from './types';
 
@@ -16,6 +17,18 @@ const recorders: Partial<Record<EngineSubject, string>> = {
 const nativeApi = (key: string) => `experimental.native_api.${key}`;
 const recorderOff = (key: string): EngineReason => ({code: 'recorder-off', settings: [{key: nativeApi(key), value: 'true'}]});
 const lacks: EngineReason = {code: 'build-lacks'};
+// honk native_api: the database store takes its first import only with the API on, writes on and a credential.
+const storeFlag: EngineReason = {
+  code: 'start-flag',
+  flag: '--store db',
+  settings: [
+    {key: nativeApi('enabled'), value: 'true'},
+    {key: nativeApi('config_write'), value: 'true'}
+  ],
+  credentials: ['password_auth: true', 'secret']
+};
+// honk config.rs running: the loaded sources and the engine's command channel.
+const unlessRunning = (resources: Capabilities['resources']): EngineReason => ({code: resources.config.available ? 'starting-or-stopping' : 'config-unloaded'});
 
 // The download URLs of the docs' example configuration (docs/en/configuration.md).
 const geositeUrl = 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/release/geosite.dat';
@@ -66,6 +79,43 @@ function reason(subject: EngineSubject, capabilities: Capabilities, recording?: 
       if (fields?.includes('flows.max_flows')) return {code: 'mode-off'};
       return fields ? recorderOff('record_flows') : undefined;
     }
+    // Creating sources, the forms, the rule and group editors and activating a revision all write the configuration
+    // (honk types.rs: create and config_patch are `editable`; config.rs can_activate).
+    case 'create':
+    case 'global_settings':
+    case 'mode':
+    case 'rule_edit':
+    case 'group_edit':
+    case 'restore':
+      return reason('config', capabilities);
+    // honk config.rs: export needs the loaded sources; import and revisions need the database store, which honk opens
+    // with `--store db` and which alone reports revisions; import also writes.
+    case 'export':
+      return {code: 'config-unloaded'};
+    case 'import':
+    case 'revisions':
+      if (!resources.config.available) return {code: 'config-unloaded'};
+      if (!configManagement(capabilities).revisions) return storeFlag;
+      return subject === 'import' ? reason('config', capabilities) : undefined;
+    // honk geodata.rs: download URLs and the schedule are settings only while the state database is open.
+    case 'geodata_settings':
+      return {code: 'state-db-closed', writeSwitch: nativeApi('config_write')};
+    // honk types.rs: validation and reload follow `running`; suspend and resume are always off, and a trace resolves
+    // no domain live (routing.rs). No setting turns those on.
+    case 'config_validate':
+    case 'reload':
+      return unlessRunning(resources);
+    case 'suspend':
+    case 'resume':
+    case 'trace_live':
+      return {code: 'no-switch'};
+    // honk always offers these, so it has no reason to give.
+    case 'validate_full':
+    case 'selection':
+    case 'dns_cache_read':
+    case 'dns_cache_delete':
+    case 'dns_cache_flush':
+      return undefined;
     default: {
       const recorder = recorders[subject];
       return recorder ? recorderOff(recorder) : lacks;

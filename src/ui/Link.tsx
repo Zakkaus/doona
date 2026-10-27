@@ -41,3 +41,14 @@ export function Link({
     />
   );
 }
+
+// A link that help text ends with; one that leaves the app is marked so.
+export type TextLinkTarget = {href: string; text: string; external?: boolean};
+export function TextLink({link}: {link: TextLinkTarget}) {
+  return (
+    <Link appearance="link" external={link.external} href={link.href}>
+      {link.text}
+      {link.external && <span aria-hidden="true">↗</span>}
+    </Link>
+  );
+}

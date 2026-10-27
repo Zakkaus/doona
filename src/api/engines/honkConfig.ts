@@ -1,6 +1,15 @@
 import type {Capabilities, EffectiveConfig, ConfigRevisionList, OperationAccepted} from '../model';
 
-export type ConfigManagement = {export: boolean; import: boolean; revisions: boolean; replaceRequired: boolean; canActivate: boolean; maxRevisions?: number};
+// `off` names the features the engine reports unavailable; one a build does not report is neither on nor off.
+export type ConfigManagement = {
+  export: boolean;
+  import: boolean;
+  revisions: boolean;
+  replaceRequired: boolean;
+  canActivate: boolean;
+  maxRevisions?: number;
+  off: {export: boolean; import: boolean; revisions: boolean};
+};
 type Extension = {
   config_export?: {available?: boolean};
   config_import?: {available?: boolean; replace_required?: boolean};
@@ -17,7 +26,12 @@ export function configManagement(capabilities: Capabilities | undefined): Config
     revisions: ext?.config_revisions?.available === true,
     replaceRequired: ext?.config_import?.replace_required === true,
     canActivate: ext?.config_revisions?.available === true && ext.config_revisions.can_activate === true,
-    maxRevisions: ext?.config_revisions?.max_revisions
+    maxRevisions: ext?.config_revisions?.max_revisions,
+    off: {
+      export: ext?.config_export?.available === false,
+      import: ext?.config_import?.available === false,
+      revisions: ext?.config_revisions?.available === false
+    }
   };
 }
 export function configStore(config: EffectiveConfig | undefined) {

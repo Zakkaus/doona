@@ -22,7 +22,13 @@ it.each([
   ['incomplete', {'x-honk': {config_import: {}, config_revisions: {can_activate: true}}}, [false, false, false, false, false, undefined]]
 ])('projects %s capabilities', (_name, resources, expected) => {
   const capabilities = normalizeCapabilities({resources} as unknown as ReportedCapabilities);
-  expect(Object.values(configManagement(capabilities))).toEqual(expected);
+  const {off: _off, ...management} = configManagement(capabilities);
+  expect(Object.values(management)).toEqual(expected);
+});
+it('reports a feature off only when the extension says so', () => {
+  const off = (resources: object) => configManagement(normalizeCapabilities({resources} as unknown as ReportedCapabilities)).off;
+  expect(off({})).toEqual({export: false, import: false, revisions: false});
+  expect(off({'x-honk': {config_export: {available: false}, config_revisions: {available: true}}})).toEqual({export: true, import: false, revisions: false});
 });
 
 it.each([true, false])('exposes only the neutral recording state (recorded=%s)', recorded => {

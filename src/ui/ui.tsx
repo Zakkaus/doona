@@ -18,7 +18,7 @@ export {
 export {exportName, downloadFile, csvLine} from './files';
 export {ActionHelp, Button, PrimaryActions, buttonClass, type ButtonStyle} from './Button';
 export {TextTooltip} from './Tooltip';
-export {Link} from './Link';
+export {Link, TextLink, type TextLinkTarget} from './Link';
 export {TextField, StaticField, Switch} from './Fields';
 export {Form} from './Form';
 export {NumberField, numberFromText, textFromNumber} from './NumberField';
