@@ -7,7 +7,8 @@ import {classifyChanges, detectChanges} from './ci-changes.mjs';
 
 it.each([
   'README.md',
-  'README.zh-TW.md',
+  'README.en.md',
+  'README.zh-CN.md',
   'README.foo.md',
   'CONTRIBUTING.md',
   'CHANGELOG.md',

@@ -26,6 +26,11 @@ IUSE="+fonts"
 src_install() {
 	dodoc NOTICE README.md
 	dodoc -r LICENSES
+	# Archives after 0.1.0-rc.2 also carry the English README.
+	if [[ -f README.en.md ]]; then
+		dodoc README.en.md
+		rm README.en.md || die
+	fi
 	# Archives up to 0.1.0-beta.14 also carry the changelog.
 	if [[ -f CHANGELOG.md ]]; then
 		dodoc CHANGELOG.md

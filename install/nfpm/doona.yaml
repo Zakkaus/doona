@@ -76,6 +76,10 @@ contents:
     dst: /usr/share/doc/doona/README.md
     type: doc
     packager: rpm
+  - src: build/stage/doona/usr/share/doc/doona/README.en.md
+    dst: /usr/share/doc/doona/README.en.md
+    type: doc
+    packager: rpm
   - src: build/stage/doona/usr/share/doc/doona/CHANGELOG.md
     dst: /usr/share/doc/doona/CHANGELOG.md
     type: doc
