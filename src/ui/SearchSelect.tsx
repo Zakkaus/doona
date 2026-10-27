@@ -3,6 +3,7 @@ import {Button as RButton, Header, Label, ListBox, ListBoxItem, ListBoxSection, 
 import ChevronDown from './icons/ChevronDown';
 import {Check} from './Check';
 import {cx} from './cx';
+import {usePopoverBoundary} from './hooks';
 import {ItemLabel, ItemText, type Item} from './ItemText';
 import {SearchList} from './SearchList';
 import {useControlSize, type ControlSize} from './controlSize';
@@ -53,6 +54,7 @@ export function SearchSelect({
   const fieldRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const controlSize = useControlSize(size);
+  const boundary = usePopoverBoundary();
   const shown = sections.flatMap(section => section.items).find(item => item.id === value);
   return (
     <Select
@@ -77,7 +79,7 @@ export function SearchSelect({
         </Text>
       )}
       {/* Include the label in the anchor so a flipped list clears both label and trigger. */}
-      <Popover className="rp-popover rp-search-popover" placement="bottom start" triggerRef={side ? buttonRef : fieldRef}>
+      <Popover className="rp-popover rp-search-popover" placement="bottom start" triggerRef={side ? buttonRef : fieldRef} boundaryElement={boundary}>
         <SearchList label={searchLabel}>
           <ListBox className="rp-menu-scroll rp-overlay-scroll">
             {sections.map(section =>

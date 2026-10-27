@@ -466,9 +466,21 @@
 :root {
   --rp-dock: 0px;
 }
+/* Where popovers may sit without the sidebar (usePopoverBoundary): the viewport between the top bar and the bottom bar. */
+.rp-popover-band {
+  position: absolute;
+  inset: var(--rp-topbar) 0 var(--rp-dock);
+  visibility: hidden;
+}
 @media (max-width: 1023.98px) {
   :root {
     --rp-dock: calc(64px + env(safe-area-inset-bottom));
+  }
+}
+/* The top bar scrolls away on a landscape phone (.rp-top above), so the band starts at the top. */
+@media (max-width: 1023.98px) and (max-height: 500px) {
+  .rp-popover-band {
+    top: 0;
   }
 }
 .rp-hubbar {
