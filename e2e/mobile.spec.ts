@@ -95,6 +95,8 @@ test('another page opens at its top, while a change within the page keeps the sc
 test('Back and Forward return a page to where it was left, while a link still opens at the top', async ({page}) => {
   test.skip(isLive, 'The page must be taller than the viewport, which the demo’s connections make it');
   await page.goto('/#/activity');
+  // A page still loading changes its height, which can pull the reading position back to the top before it is left.
+  await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => (scrollTo(0, 400), scrollY))).toBe(400);
   await bar(page).getByRole('link', {name: 'Monitor'}).click();
   await expect(page).toHaveURL(/#\/connections$/);
