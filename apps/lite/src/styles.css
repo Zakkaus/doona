@@ -65,6 +65,11 @@
   .lite-page-content {
     scrollbar-gutter: stable;
   }
+  /* Layout's block content slot must let its scroller shrink with the dialog. */
+  .astryx-dialog :has(> .astryx-layout-content) {
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 @layer product {

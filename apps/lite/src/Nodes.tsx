@@ -557,24 +557,22 @@ export function Nodes({connection, setBusy}: {connection: Connection; setBusy: (
               width="100%"
               isDisabled={task.busy !== null}
               hasSpellCheck={false}
-              aria-describedby="node-paste-status"
             />
-            <RowEntrance>
-              <VStack as="ul" gap={2} aria-live="polite">
-                {preview?.map((row, i) => (
-                  <VStack as="li" key={i}>
-                    <Text textWrap="wrap" style={row.valid ? undefined : {color: 'var(--color-error)'}}>
-                      {row.valid
-                        ? t.recognizedLink.replace('{protocol}', linkInfo(row.link).protocol.toUpperCase()).replace('{address}', linkInfo(row.link).address)
-                        : t.invalidLinkDetail.replace('{n}', String(lineNumbers[i])).replace('{error}', t.parseFailed)}
-                    </Text>
-                  </VStack>
-                ))}
-              </VStack>
-            </RowEntrance>
-            <Text id="node-paste-status" type="supporting" color="secondary" aria-live="polite">
-              {pasteBlocker}
-            </Text>
+            {!!preview?.length && (
+              <RowEntrance>
+                <VStack as="ul" gap={2} aria-live="polite">
+                  {preview.map((row, i) => (
+                    <VStack as="li" key={i}>
+                      <Text textWrap="wrap" style={row.valid ? undefined : {color: 'var(--color-error)'}}>
+                        {row.valid
+                          ? t.recognizedLink.replace('{protocol}', linkInfo(row.link).protocol.toUpperCase()).replace('{address}', linkInfo(row.link).address)
+                          : t.invalidLinkDetail.replace('{n}', String(lineNumbers[i])).replace('{error}', t.parseFailed)}
+                      </Text>
+                    </VStack>
+                  ))}
+                </VStack>
+              </RowEntrance>
+            )}
           </VStack>
         )}
         {(dialog === 'edit' || dialog === 'add') && (
