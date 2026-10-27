@@ -52,7 +52,7 @@ export function DialogActions({
   return (
     <VStack gap={2} hAlign="end">
       {reason ? (
-        <Text id={reasonId} type="supporting" color="secondary">
+        <Text id={reasonId} type="supporting" color="secondary" role="status" aria-live="polite">
           {reason}
         </Text>
       ) : null}

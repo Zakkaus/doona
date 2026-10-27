@@ -117,6 +117,66 @@ async function stable(p, act) {
   await expect(tolerance).toHaveValue('');
   await expect(p.getByRole('button', {name: 'Review and apply', exact: true})).toBeEnabled();
   console.log('PASS optional numeric settings clear to backend default without a clear button');
+  await p.close();
+  for (const colorScheme of ['light', 'dark']) {
+    const p = await b.newPage({locale: 'zh-TW', viewport: {width: 844, height: 390}, reducedMotion: 'reduce', colorScheme});
+    await p.goto(base);
+    await p.getByRole('button', {name: '試用示範', exact: true}).click();
+    await p.locator('[data-group-row]').first().waitFor();
+    for (const [route, title] of [
+      ['dns', '新增 DNS 伺服器'],
+      ['subscriptions', '新增訂閱'],
+      ['groups', '建立群組'],
+      ['nodes', '刪除節點？']
+    ]) {
+      await p.evaluate(route => (location.hash = route), route);
+      if (route === 'nodes') {
+        await p.locator('tbody tr:has([data-node-id])').first().locator('button[aria-haspopup="menu"]').click();
+        await p.getByRole('menuitem', {name: '刪除', exact: true}).click();
+      } else await p.getByRole('button', {name: title, exact: true}).click();
+      const dialog = p.getByRole('dialog', {name: title, exact: true});
+      await expect(dialog).toBeVisible();
+      const content = dialog.locator('.astryx-layout-content');
+      await expect(content).toBeVisible();
+      if (route === 'dns' || route === 'subscriptions') expect(await content.evaluate(e => e.scrollHeight > e.clientHeight)).toBe(true);
+      const fields =
+        route === 'nodes'
+          ? content.locator('.astryx-text')
+          : route === 'groups'
+            ? content.getByRole('textbox', {name: '名稱', exact: true}).or(content.getByRole('combobox', {name: '策略', exact: true}))
+            : content.locator('input:visible, textarea:visible, [role="combobox"]:visible');
+      if (route === 'groups' || route === 'nodes') await expect(fields, `${title}: body fields or confirmation text`).toHaveCount(2);
+      else await expect(fields, `${title}: body fields`).not.toHaveCount(0);
+      for (const field of await fields.all()) {
+        await expect(field).toBeVisible();
+        await field.scrollIntoViewIfNeeded();
+        expect(
+          await field.evaluate(e => {
+            const bounds = e.getBoundingClientRect();
+            const body = e.closest('.astryx-layout-content').getBoundingClientRect();
+            const footer = e.closest('dialog').querySelector('.astryx-layout-footer').getBoundingClientRect();
+            return bounds.top >= body.top && bounds.bottom <= body.bottom && body.bottom <= footer.top;
+          })
+        ).toBe(true);
+      }
+      if (route === 'dns' || route === 'subscriptions') expect(await content.evaluate(e => e.scrollTop)).toBeGreaterThan(0);
+      expect(
+        await dialog.evaluate(e => {
+          const header = e.querySelector('.astryx-layout-header').getBoundingClientRect();
+          const body = e.querySelector('.astryx-layout-content').getBoundingClientRect();
+          const footer = e.querySelector('.astryx-layout-footer').getBoundingClientRect();
+          return header.top >= 0 && header.bottom <= body.top && body.height > 0 && body.bottom <= footer.top && footer.bottom <= innerHeight;
+        })
+      ).toBe(true);
+      const buttons = dialog.locator('.astryx-layout-footer').getByRole('button');
+      await expect(buttons).toHaveCount(2);
+      for (const button of await buttons.all()) await expect(button).toBeInViewport({ratio: 1});
+      await p.keyboard.press('Escape');
+      await expect(dialog).not.toBeVisible();
+    }
+    console.log('PASS landscape dialog fields scroll above the footer', colorScheme);
+    await p.close();
+  }
   await b.close();
   if (process.env.LITE_SCROLL_OUTPUT) fs.writeFileSync(process.env.LITE_SCROLL_OUTPUT, JSON.stringify(records, null, 2));
 })().catch(error => {

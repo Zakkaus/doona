@@ -1,6 +1,7 @@
 const {chromium, expect} = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
+const {createHash} = require('node:crypto');
 const base = require('./preview.cjs');
 // Screenshots are written only when LITE_SHOTS names a directory.
 const output = process.env.LITE_SHOTS;
@@ -34,7 +35,12 @@ const link = 'vless://b831381d-6324-4d53-ad4f-8cda48b30811@jp.example.org:443?se
     await expect(p.getByRole('tab', {name: '粘贴链接', exact: true})).toHaveAttribute('aria-selected', 'true');
     const dialog = p.getByRole('dialog', {name: '添加节点', exact: true});
     await expect(dialog.getByRole('button', {name: '添加', exact: true})).toBeDisabled();
-    await expect(dialog).toContainText('请粘贴至少一个分享链接');
+    await expect(dialog.getByText('请粘贴至少一个分享链接', {exact: true}).filter({visible: true})).toHaveCount(1);
+    const status = dialog.locator('.astryx-layout-footer .astryx-text[role="status"]');
+    await expect(status).toHaveText('请粘贴至少一个分享链接');
+    expect((await dialog.getByRole('button', {name: '添加', exact: true}).getAttribute('aria-describedby')).split(/\s+/)).toContain(
+      await status.getAttribute('id')
+    );
     const input = dialog.getByRole('textbox', {name: '分享链接', exact: true});
     await input.fill(link);
     await expect(dialog).toContainText('已识别：VLESS，jp.example.org:443');
@@ -143,6 +149,57 @@ const link = 'vless://b831381d-6324-4d53-ad4f-8cda48b30811@jp.example.org:443?se
     expect(await tw.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await tw.close();
     console.log('PASS zh-TW, keyboard row editing and static added rows with reduced motion');
+
+    const failed = await browser.newPage({locale: 'zh-CN', reducedMotion: 'reduce'});
+    const content = 'node {\n}\n';
+    let validations = 0;
+    await failed.addInitScript(() => {
+      localStorage.setItem('doona-lite.connection', JSON.stringify({address: 'http://nodes.test', token: 'test'}));
+    });
+    await failed.route('http://nodes.test/**', async route => {
+      const request = route.request();
+      const pathname = new URL(request.url()).pathname;
+      const json = (body, status = 200) => route.fulfill({status, contentType: 'application/json', body: JSON.stringify(body)});
+      if (request.method() === 'OPTIONS') return json({});
+      if (pathname === '/api/v1/capabilities')
+        return json({
+          profiles: ['base'],
+          limits: {},
+          resources: {
+            nodes: {available: true},
+            config: {available: true, writable: true},
+            config_validate: {available: true, modes: ['syntax', 'full']},
+            operations: {available: true},
+            runtime: {available: false},
+            providers: {available: false}
+          }
+        });
+      if (pathname === '/api/v1/nodes') return json({nodes: [], next_cursor: null});
+      if (pathname === '/api/v1/config')
+        return json({sources: [{id: 'main', kind: 'main', writable: true, content, content_sha256: createHash('sha256').update(content).digest('hex')}]});
+      if (pathname === '/api/v1/config/validate') {
+        expect(request.postDataJSON().mode).toBe('syntax');
+        validations++;
+        return json({code: 'invalid_request', message: 'Validation failed'}, 422);
+      }
+      throw new Error(`Unexpected backend request: ${request.method()} ${pathname}`);
+    });
+    await failed.goto(base.replace(/\/$/, '') + '/#nodes');
+    await failed.getByRole('link', {name: '节点', exact: true}).click();
+    await failed.getByRole('button', {name: '添加节点', exact: true}).click();
+    const failedDialog = failed.getByRole('dialog', {name: '添加节点', exact: true});
+    await failedDialog.getByRole('textbox', {name: '分享链接', exact: true}).fill(link);
+    const failureStatus = failedDialog.locator('.astryx-layout-footer .astryx-text[role="status"]');
+    await expect(failureStatus).toHaveText('后端拒绝了配置更改，未写入任何内容。');
+    await expect(failureStatus).toBeVisible();
+    await expect(failureStatus).toHaveAttribute('aria-live', 'polite');
+    expect(validations).toBe(1);
+    await expect(failedDialog.locator('#node-paste-panel ul')).toHaveCount(0);
+    const add = failedDialog.getByRole('button', {name: '添加', exact: true});
+    await expect(add).toBeDisabled();
+    expect((await add.getAttribute('aria-describedby')).split(/\s+/)).toContain(await failureStatus.getAttribute('id'));
+    await failed.close();
+    console.log('PASS validation request failure is announced in the footer and describes the disabled action');
   } finally {
     await browser.close();
   }
