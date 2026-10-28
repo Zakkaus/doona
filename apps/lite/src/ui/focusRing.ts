@@ -10,13 +10,14 @@
  */
 import * as stylex from '@stylexjs/stylex';
 import {focusVars} from '@astryxdesign/core/theme/tokens.stylex';
-// Exported but undocumented: the helper Astryx's own components use.
-import {focusOutlineStyles} from '@astryxdesign/core/utils/focusOutline.stylex';
-
-/** Ring on the element itself when it has keyboard focus. */
-export const focusRing = focusOutlineStyles.focusVisible;
 
 const styles = stylex.create({
+  outer: {
+    outlineWidth: {default: '0', ':focus-visible': focusVars['--focus-outline-width']},
+    outlineStyle: {default: 'none', ':focus-visible': focusVars['--focus-outline-style']},
+    outlineColor: {default: null, ':focus-visible': focusVars['--focus-outline-color']},
+    outlineOffset: {default: '0', ':focus-visible': focusVars['--focus-outline-offset']}
+  },
   inset: {
     outlineWidth: {default: null, ':focus-visible': focusVars['--focus-outline-width']},
     outlineStyle: {default: null, ':focus-visible': focusVars['--focus-outline-style']},
@@ -24,6 +25,9 @@ const styles = stylex.create({
     outlineOffset: {default: null, ':focus-visible': `calc(-1 * ${focusVars['--focus-outline-width']})`}
   }
 });
+
+/** Ring on the element itself when it has keyboard focus. */
+export const focusRing = styles.outer;
 
 /** The same ring drawn inside the element, for rows in a clipping scroller. */
 export const focusRingInset = styles.inset;
