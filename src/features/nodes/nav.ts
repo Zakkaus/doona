@@ -3,7 +3,7 @@ import {offered} from '../../api/capabilities';
 import type {Key} from '../../i18n';
 import type {SearchTarget} from '../../shell/routes';
 
-export type NodeTab = 'list' | 'latency';
+type NodeTab = 'list' | 'latency';
 // Latency is measured per node, so a backend that lists providers but no nodes gets the list alone, without tabs.
 export function nodesTabs(resources: Capabilities['resources'] | undefined): Array<{id: NodeTab; titleKey: Key}> {
   if (!offered(resources, 'nodes', {whileLoading: true})) return [];

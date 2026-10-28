@@ -1,7 +1,7 @@
 import {instanceId, maxInstances} from './layout';
 import {dashboardItems, type DashboardLayout, type Profile} from './dashboardLayout';
 // The editor's operations, loaded with the editor.
-export type Placement = {section: Profile; target?: string; after?: boolean};
+type Placement = {section: Profile; target?: string; after?: boolean};
 // One transaction for every move: the card leaves its section and lands before or after the target, or at the end.
 export function placeWidget(layout: DashboardLayout, id: string, place: Placement): DashboardLayout {
   const item = dashboardItems(layout).find(old => instanceId(old) === id);

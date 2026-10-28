@@ -21,7 +21,7 @@ export const LOCALE = Object.fromEntries(languages.map(language => [language.id,
 export const FONT = Object.fromEntries(
   languages.map(language => [language.id, [...language.faces.map(face => `'${face}'`), 'system-ui', 'sans-serif'].join(', ')])
 ) as Record<Lang, string>;
-export {pageDirection, textDirection, type Dir} from './direction';
+export {pageDirection} from './direction';
 
 export const LangContext = createContext<Lang>(DEFAULT_LANG);
 export function useLang() {

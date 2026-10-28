@@ -34,7 +34,7 @@ function connection(
   flows.push(flow);
   return {...seed, ...flowFields(flow.input, flow.trace.steps)};
 }
-export const demoDomains = [
+const demoDomains = [
   'www.netflix.com',
   'rr1---sn-ab5l6n7z.googlevideo.com',
   'www.google.com',

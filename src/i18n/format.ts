@@ -183,7 +183,7 @@ export function localMinute(iso: string | null, locale: string): string {
   return dateTimeFormat(locale, 'minute').format(t);
 }
 // Each unit is a catalogue message around the formatted number, so a language writes its own symbol and spacing.
-export type UnitKey = Extract<Key, `unit.${string}`>;
+type UnitKey = Extract<Key, `unit.${string}`>;
 const byteUnits = ['unit.byte', 'unit.kilobyte', 'unit.megabyte', 'unit.gigabyte', 'unit.terabyte', 'unit.petabyte', 'unit.exabyte'] as const;
 const byteRateUnits = [
   'unit.bytePerSecond',

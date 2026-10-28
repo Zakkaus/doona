@@ -7,7 +7,7 @@ import {compareNames, formatLatency} from '../../i18n/format';
 export type LatencyBy = 'group' | 'protocol';
 export type LatencyRow = {id: string; name: string; latest: number; moving: number | null; avg10: number | null};
 export type LatencyMissing = {id: string; name: string; state: 'unavailable' | 'unmeasured'};
-export type LatencyGroup = {id: string; label: string | null; rows: LatencyRow[]; missing: LatencyMissing[]};
+type LatencyGroup = {id: string; label: string | null; rows: LatencyRow[]; missing: LatencyMissing[]};
 
 export function latencySummary(view: LatencyGroup[]): {measured: LatencyRow[]; missing: LatencyMissing[]; down: number} {
   const measured = [...new Map(view.flatMap(group => group.rows).map(row => [row.id, row])).values()].sort((a, b) => a.latest - b.latest);

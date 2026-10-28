@@ -95,7 +95,7 @@ export function refusalOutcome(
 }
 
 // Advertised byte limits for one kind of write, from discovery; either may be missing on an older backend.
-export type WriteLimits = {content?: number; body?: number};
+type WriteLimits = {content?: number; body?: number};
 const utf8 = (text: string) => new TextEncoder().encode(text).length;
 const tooLarge = (limit: number) => clientError(413, 'request_too_large', `Configuration exceeds the ${limit}-byte limit`, 'config.tooLarge', {limit});
 

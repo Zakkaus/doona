@@ -15,7 +15,7 @@ import type {LimitHint} from '../shared/limitHint';
 
 const sectionKinds = ['global', 'subscription', 'node', 'group', 'dns', 'routing'] as const;
 type SectionKind = (typeof sectionKinds)[number];
-export type ModuleSection = {
+type ModuleSection = {
   id: string;
   kind: string;
   source: ConfigSource | null;
@@ -169,7 +169,7 @@ export function sourceView(source: ConfigSource, locale: string, t: Translator):
 }
 type SourceView = {id: string; label: string; kind: string; facts: string; loaded: string};
 
-export type ReadOnlyReason = 'generated' | 'subscription' | 'disabled' | 'secret' | 'refused' | 'incomplete';
+type ReadOnlyReason = 'generated' | 'subscription' | 'disabled' | 'secret' | 'refused' | 'incomplete';
 // The badge and the line under the text saying what the file is and what can be done with it. A help popover beside
 // the badge is kept only for what the line has no room for: how to turn configuration writes on.
 const readOnlyText: Record<ReadOnlyReason, {label: Key; note: Key; help?: Key}> = {

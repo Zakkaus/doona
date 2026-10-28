@@ -20,7 +20,7 @@ import {SearchSelect} from '../../../ui/SearchSelect';
 import type {GroupDialogView} from './useGroupDialog';
 import {policyChoices} from '../../shared/policyText';
 import {FilterSummary} from './FilterSummary';
-export type PolicyDetails = {
+type PolicyDetails = {
   fields: KvItem[];
   heading: string | null;
   reason: string | null;

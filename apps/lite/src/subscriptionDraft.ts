@@ -6,7 +6,7 @@ import {LiteError, refreshProvider, type Connection} from './api';
 import {appendEntry, removeEntry} from './config';
 import type {Notice} from './state';
 
-export type SubscriptionEdit = {kind: 'add' | 'edit' | 'delete'; name: string; url: string; interval?: number | null};
+type SubscriptionEdit = {kind: 'add' | 'edit' | 'delete'; name: string; url: string; interval?: number | null};
 type Draft = {content: string; stage: (content: string, key: string, summary: string) => void};
 
 // Every subscription change joins the page draft; only the draft's review step writes.

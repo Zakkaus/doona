@@ -4,7 +4,7 @@ import {createApi} from '../../api/client';
 import {ApiError} from '../../api/error';
 import {probeFailure} from './view';
 
-export type ProbeOutcome = {version: string; password: boolean} | {failure: {key: Key; params?: Params}; requestId: string | null};
+type ProbeOutcome = {version: string; password: boolean} | {failure: {key: Key; params?: Params}; requestId: string | null};
 
 // Reads the backend's discovery: its API version and sign-in mode, or why they could not be read. Null when the
 // test was cancelled rather than timed out.

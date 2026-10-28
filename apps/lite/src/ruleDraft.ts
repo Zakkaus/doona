@@ -77,8 +77,8 @@ export type DraftRule = {
   conditions: Condition[] | null;
   anchor: RuleAnchor;
 };
-export type RuleDocument = {text: string; kind: RuleListKind; block: TextBlock | null; rows: DraftRule[]; ambiguous: boolean};
-export const listPath = (kind: RuleListKind) => (kind === 'routing' ? ['routing'] : ['dns', 'routing', kind]);
+type RuleDocument = {text: string; kind: RuleListKind; block: TextBlock | null; rows: DraftRule[]; ambiguous: boolean};
+const listPath = (kind: RuleListKind) => (kind === 'routing' ? ['routing'] : ['dns', 'routing', kind]);
 export function findBlocks(text: string, path: string[]): TextBlock[] {
   let blocks = scanConfig(text).blocks;
   for (const [index, name] of path.entries()) {

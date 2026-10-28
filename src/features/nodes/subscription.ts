@@ -13,7 +13,7 @@ export function intervalText(seconds: number, locale: string, t: Translator) {
 
 // A draft interval is '' while untouched, a preset's seconds, or a typed whole number and its unit ("90m", "2h"), as
 // the controls hold it until it is saved.
-export type IntervalUnit = 'm' | 'h';
+type IntervalUnit = 'm' | 'h';
 function typedInterval(text: string): {count: string; unit: IntervalUnit} | null {
   const unit = text.at(-1);
   return unit === 'm' || unit === 'h' ? {count: text.slice(0, -1), unit} : null;

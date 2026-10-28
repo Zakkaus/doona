@@ -8,7 +8,6 @@ import {DEMO_API, normalizeApi} from '../../../src/api/profiles';
 import {ApiError, LocalError} from '../../../src/api/error';
 import {sha256} from '../../../src/api/hash';
 import {activationError, etag, finished, readBackUnconfirmed, settle} from './operations';
-import {writeMode, type OutboundMode} from '../../../src/dae/outboundMode';
 import type {MessageKey} from './i18n';
 import {validateContent} from './config';
 import {clearConnection, writeConnection} from './connectionStore';
@@ -152,10 +151,6 @@ function withinLimit(content: string, body: unknown, contentLimit?: number, body
   if ((contentLimit !== undefined && bytes(content) > contentLimit) || (bodyLimit !== undefined && bytes(JSON.stringify(body)) > bodyLimit)) {
     throw new LiteError('tooLarge');
   }
-}
-
-export async function applyMode(connection: Connection, source: ConfigSource, mode: OutboundMode): Promise<ConfigSource> {
-  return applyContent(connection, source, writeMode(source.content, mode));
 }
 
 export async function applyContent(connection: Connection, source: ConfigSource, content: string): Promise<ConfigSource> {

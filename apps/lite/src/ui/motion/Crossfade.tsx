@@ -18,7 +18,7 @@ import {EASE, MOTION, isRtl} from './tokens';
 import {cancelOnReducedMotion, prefersReducedMotion} from './useReducedMotion';
 import {MOTION_GROUP} from './pageStagger';
 
-export type SwapDirection = 'forward' | 'back' | 'none';
+type SwapDirection = 'forward' | 'back' | 'none';
 
 export function Crossfade({
   swapKey,

@@ -31,7 +31,7 @@ export const pickMenuKey = (on: (k: string) => void) => (k: 'all' | Set<Key>) =>
   const v = [...k][0];
   if (v != null) on(String(v));
 };
-export function MenuChoice({item, children, onAction}: {item: Item; children?: ReactNode; onAction?: () => void}) {
+function MenuChoice({item, children, onAction}: {item: Item; children?: ReactNode; onAction?: () => void}) {
   return (
     <MenuItem id={item.id} className="rp-item" textValue={item.label} onAction={onAction}>
       <Check />
@@ -138,7 +138,7 @@ export type ChoiceSection = {
 };
 // A row that opens its own menu of choices, showing the current one, after S2's ActionMenu with submenus.
 // `searchLabel` names the filter field of a list long enough to get one, by what the submenu lists.
-export type ChoiceSubmenu = {
+type ChoiceSubmenu = {
   label: string;
   icon?: ReactNode;
   sections: ChoiceSection[];

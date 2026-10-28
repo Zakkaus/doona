@@ -21,7 +21,7 @@ export const settingsCardList = (resources: Capabilities['resources'] | undefine
 // The page's tabs: Appearance holds its own card, General every other one. A `?card=` link opens its card's tab, so
 // search and links land on a card whichever tab was open; otherwise `?tab=` picks one.
 export const settingsTabs = ['general', 'appearance'] as const;
-export type SettingsTab = (typeof settingsTabs)[number];
+type SettingsTab = (typeof settingsTabs)[number];
 export const cardTab = (id: SettingsCardId): SettingsTab => (id === 'appearance' ? 'appearance' : 'general');
 export function settingsTab(query: string): SettingsTab {
   const card = settingsCards.find(card => card.id === new URLSearchParams(query).get('card'));
@@ -71,7 +71,7 @@ type SettingsFieldId =
   | 'geodataAutoUpdate'
   | 'geodataUpdate'
   | 'geodataReset';
-export type SettingsField = {id: SettingsFieldId; card: SettingsCardId; labelKey: Key; aliases?: readonly string[]; sources?: true};
+type SettingsField = {id: SettingsFieldId; card: SettingsCardId; labelKey: Key; aliases?: readonly string[]; sources?: true};
 export const settingsFields: ReadonlyArray<SettingsField> = [
   {id: 'profile', card: 'backend', labelKey: 'settings.profile'},
   {id: 'addProfile', card: 'backend', labelKey: 'settings.addProfile'},

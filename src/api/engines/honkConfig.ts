@@ -1,7 +1,7 @@
 import type {Capabilities, EffectiveConfig, ConfigRevisionList, OperationAccepted} from '../model';
 
 // `off` names the features the engine reports unavailable; one a build does not report is neither on nor off.
-export type ConfigManagement = {
+type ConfigManagement = {
   export: boolean;
   import: boolean;
   revisions: boolean;

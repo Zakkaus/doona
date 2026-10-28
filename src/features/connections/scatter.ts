@@ -1,7 +1,7 @@
 import type {Connection} from '../../api/model';
 import {compareNames} from '../../i18n/format';
 
-export type TrafficPoint = {id: string; up: number; down: number; name: string};
+type TrafficPoint = {id: string; up: number; down: number; name: string};
 type TrafficSeries = {outbound: string | null; points: TrafficPoint[]};
 
 // Upload against download per connection, one series per outbound in name order so colours stay put between

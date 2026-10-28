@@ -45,7 +45,7 @@ export function parseBody(body) {
 // GPL-3.0 section 6: the release carries the corresponding source beside the binaries rather than only pointing at it.
 export const sourceArchive = commit => `honk-source-${commit}.tar.gz`;
 
-export function sourceNote({repo, release, source, doona, files}) {
+function sourceNote({repo, release, source, doona, files}) {
   const tree = `https://github.com/${repo}/tree/${source.commit}`;
   return [
     'honk-core builds bundled with this doona release',

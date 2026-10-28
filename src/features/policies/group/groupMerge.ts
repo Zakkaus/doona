@@ -4,7 +4,7 @@ import {routeValue} from '../../shared/groupText';
 
 // The fields a save writes, as the dialog holds them: `default` and `final` unquoted, `interrupt` as written.
 export type GroupFields = {filters: string[]; policy: string | null; default: string | null; final: string | null; interrupt: string | null};
-export type GroupMerge = {kind: 'gone'} | {kind: 'conflict'} | {kind: 'merge'; keep: Partial<GroupEntryUpdate>};
+type GroupMerge = {kind: 'gone'} | {kind: 'conflict'} | {kind: 'merge'; keep: Partial<GroupEntryUpdate>};
 
 // A retry after a refusal writes only the fields changed since the dialog opened (`opened`) and keeps the rest as read again (`current`),
 // so another client's edits stay. There is nothing to merge into when the entry is gone or declared twice (`current` undefined), and a

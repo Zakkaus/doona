@@ -81,7 +81,7 @@ export const newGroupPolicies: Array<{id: string; label: Key; description: Key}>
 // Built-in outbounds, as nodes, groups and rules name them; a rule may add `(must)`, which keeps DNS traffic from
 // being hijacked for that rule.
 export const builtinOutboundNames = ['direct', 'block'] as const;
-export type BuiltinOutbound = (typeof builtinOutboundNames)[number];
+type BuiltinOutbound = (typeof builtinOutboundNames)[number];
 export const builtinOutbounds = [...builtinOutboundNames, ...builtinOutboundNames.map(name => `${name}(must)`)];
 // A bare name only: where `(must)` can appear, in rule text, the callers strip or list it themselves.
 export const isBuiltinOutbound = (name: string | null | undefined): name is BuiltinOutbound =>
