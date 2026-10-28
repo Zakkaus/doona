@@ -105,13 +105,13 @@ it('retries a failed stage after its reader recovers', async () => {
       ? Promise.resolve({})
       : offline
         ? Promise.reject(new Error('offline'))
-        : Promise.resolve({'ui.activity': 'Activity'});
+        : Promise.resolve({'ui.activity': 'Activity'} as Partial<Catalogue>);
   try {
     await i18n.loadLanguage('en', read);
     await expect(i18n.loadStage('activity')).rejects.toThrow('offline');
     offline = false;
     await i18n.loadStage('activity');
-    expect(i18n.translate('en', 'ui.activity')).toBe('Activity');
+    expect(i18n.translate('en', 'ui.activity' as Key)).toBe('Activity');
   } finally {
     vi.unstubAllGlobals();
   }
@@ -124,7 +124,7 @@ it('waits for the requested stage but not a later stage already in flight', asyn
   const activity = new Promise<void>(resolve => (releaseActivity = resolve));
   const rest = new Promise<void>(resolve => (releaseRest = resolve));
   const read = (_lang: string, stage: string): Promise<Partial<Catalogue>> =>
-    stage === 'core' ? Promise.resolve({}) : (stage === 'activity' ? activity : rest).then(() => ({'ui.activity': 'Activity'}));
+    stage === 'core' ? Promise.resolve({}) : (stage === 'activity' ? activity : rest).then(() => ({'ui.activity': 'Activity'}) as Partial<Catalogue>);
   await i18n.loadLanguage('en', read);
   let restReady = false;
   const later = i18n.loadStage('rest').then(() => {
@@ -139,7 +139,7 @@ it('waits for the requested stage but not a later stage already in flight', asyn
     expect(activityReady).toBe(false);
     releaseActivity();
     await earlier;
-    expect(i18n.translate('en', 'ui.activity')).toBe('Activity');
+    expect(i18n.translate('en', 'ui.activity' as Key)).toBe('Activity');
     expect(restReady).toBe(false);
   } finally {
     releaseActivity();

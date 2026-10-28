@@ -116,6 +116,15 @@ const localeChunk = (lang?: string) =>
 test.describe('language loading', () => {
   // Chunks fetched by the service worker would bypass page.route.
   test.use({serviceWorkers: 'block'});
+  test('renders translated navigation when optional font loads never settle', async ({page}) => {
+    await page.addInitScript(() => {
+      document.fonts.load = () => new Promise(() => {});
+    });
+    await page.goto('/#/activity');
+    await expect(page.locator('.rp-nav[href="#/activity"]')).toContainText(translate('en', 'nav.activity'), {timeout: 10000});
+    await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
+  });
+
   test('fetches only the saved language, and only the parts Activity shows', async ({page}) => {
     // The idle warm-up fetches the other pages' part once the browser is idle; held back, only rendering fetches remain.
     await page.addInitScript(() => (window.requestIdleCallback = () => 0));

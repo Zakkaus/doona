@@ -49,9 +49,10 @@ const partLoaders = () =>
     activity: import.meta.glob<Partial<Catalogue>>('./locales/*.json', {query: {part: 'activity'}, import: 'default'}),
     rest: import.meta.glob<Partial<Catalogue>>('./locales/*.json', {query: {part: 'rest'}, import: 'default'})
   });
-// Each part is its own chunk, loaded on first use; translate reads only what has loaded. Its glyphs are ready before
-// the part is published, including later pages and language switches, so optional subsets cannot mix with fallbacks.
+// Each part is its own chunk, loaded on first use; translate reads only what has loaded. Give its optional glyphs
+// a short head start, then publish even if the font host stalls so the page can render with the system fallback.
 type Reader = (lang: Lang, stage: Stage) => Promise<Partial<Catalogue>>;
+const FONT_WAIT_MS = 3000;
 function readCatalogue(lang: Lang, stage: Stage): Promise<Partial<Catalogue>> {
   const part = partLoaders()[stage][`./locales/${lang}.json`]();
   const {fonts, faces} = languages.find(language => language.id === lang)!;
@@ -59,7 +60,13 @@ function readCatalogue(lang: Lang, stage: Stage): Promise<Partial<Catalogue>> {
     const text = Object.values(messages)
       .flatMap(message => (typeof message === 'string' ? message : Object.values(message)))
       .join('');
-    return loadFaces(fonts, faces[0], text).then(() => messages);
+    let timer: ReturnType<typeof setTimeout>;
+    const deadline = new Promise<void>(resolve => {
+      timer = setTimeout(resolve, FONT_WAIT_MS);
+    });
+    return Promise.race([loadFaces(fonts, faces[0], text), deadline])
+      .then(() => messages)
+      .finally(() => clearTimeout(timer));
   });
 }
 const catalogues = new Map<Lang, Partial<Catalogue>>();

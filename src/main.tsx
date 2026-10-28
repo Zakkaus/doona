@@ -22,7 +22,7 @@ if (document.documentElement.dataset.family === 'glass')
     if (isChunkLoadError(error)) reloadForStaleChunk();
   });
 // The font archive check starts now, so it overlaps the catalogue fetch the language load waits on.
-void loadFaces(null, 'Noto Sans TC', 'doona');
+void loadFaces(null);
 // The saved language, or the default when its catalogue cannot be fetched; rejects only when neither loads.
 function startLanguage(): Promise<Lang> {
   const saved = readLang();
