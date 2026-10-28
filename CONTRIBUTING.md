@@ -344,6 +344,22 @@ Upload the staged additions or replacements to the existing release, then refres
 For tag `v0.1.0-rc.3`, release assets keep the upstream version without `v`. See the
 [package version table](install/README.md#version-spellings) for every archive, binary package and source recipe.
 
+#### Release body
+
+Write the release body in English, in this order:
+
+1. Open with a sentence naming the version and release stage. State whether it is a pre-release.
+2. `## Highlights`: write 3–5 bullets describing user-visible changes.
+3. `## Changes`: copy the release's generated CHANGELOG section into one `<details>` block per category.
+   Put the category and entry count in each `<summary>`, such as `Fixed (35)`; keep the entries and PR references unchanged.
+   Generate the section as described in [Changelog fragments](#changelog-fragments).
+4. `## Pairing with honk`: name the honk release and the doona version it embeds, then explain how to use this doona release now.
+   Link the installation guide through [User documentation](#user-documentation); follow [Release versions](#release-versions) for matching honk attachments.
+5. `## Downloads`: list the files and their contents in a table, using the [package version table](install/README.md#version-spellings).
+   Tell readers to download `SHA256SUMS` beside their selected assets and run `sha256sum -c --ignore-missing SHA256SUMS` there.
+   Link the release's separate Alpine and OpenWrt signing keys; use [apk installation](install/README.md#installing-the-apk-packages) for their formats and use.
+6. End with one link line: full changelog comparison, English and Traditional Chinese documentation, standard demo and lite demo.
+
 ## Update the contract
 
 Start with `contract/api-standardize/SOURCE.md`. Update the vendored contract and the SHA-256 that SOURCE.md pins for it, run `pnpm gen:api`, then run `tools/check-gen.sh`, which checks both. Do not edit generated API types directly.
