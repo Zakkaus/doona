@@ -12,15 +12,15 @@ import {addRuleReason, addRuleTip, removalView, ruleDraftView, type ReasonKeys, 
 import {useDraftGuard} from '../../shell/draft';
 
 // A rule of either list as the editor needs it: GET /rules and GET /dns/rules entries share these fields.
-export type EditedRule = {rule_id: string; kind: 'rule' | 'fallback'; expression: string; source: RuleSource | null};
+type EditedRule = {rule_id: string; kind: 'rule' | 'fallback'; expression: string; source: RuleSource | null};
 // An edit starts from the located source condition and the listed target.
-export type Opened<R> = {kind: 'add'; preset?: RuleSeed} | {kind: 'remove'; rule: R} | {kind: 'edit'; rule: R; outbound: string; must: boolean};
+type Opened<R> = {kind: 'add'; preset?: RuleSeed} | {kind: 'remove'; rule: R} | {kind: 'edit'; rule: R; outbound: string; must: boolean};
 type Dialog<R> = Opened<R> & {
   generation: string;
   sources: ConfigSource[];
   rules: R[];
 };
-export type RuleForm = {condition: string; outbound: string; must: boolean; before: string};
+type RuleForm = {condition: string; outbound: string; must: boolean; before: string};
 export type RuleEditorModel = {
   canWrite: boolean;
   busy: boolean;
@@ -46,7 +46,7 @@ export type RuleEditorModel = {
   // Why the switch back to Select was refused, shown under the expression.
   expressionHint: string | null;
 };
-export type RuleEditorOptions<R extends EditedRule> = {
+type RuleEditorOptions<R extends EditedRule> = {
   canWrite: boolean;
   // The listed rules and the configuration they were read with; an edit needs both from one generation.
   list: {rules: R[]; generation_id: string} | undefined;

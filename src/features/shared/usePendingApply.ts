@@ -9,7 +9,7 @@ import {byFile, failureToast, insertRules, partialFailure, ruleFailure} from './
 import {ruleWritten} from './ruleNotice';
 
 // How many rules reached their files, and the failure that stopped the rest, if any.
-export type ApplyOutcome = {written: number; failure: PendingFailure | null};
+type ApplyOutcome = {written: number; failure: PendingFailure | null};
 type FileOutcome = {written: boolean; failure: PendingFailure | null};
 
 const reread = () => void refetchAll();

@@ -2,7 +2,7 @@ import {configManagement, engineOf, type EngineAction, type EngineReason} from '
 import type {Capabilities, RuntimeSettings, Version} from '../../api/model';
 
 // The resources the overview's feature list shows, in its order.
-export const limitResources = [
+const limitResources = [
   'connections',
   'flows',
   'routing_trace',
@@ -28,7 +28,7 @@ const unlisted = ['dns_rules', 'reload', 'suspend', 'resume'] as const;
 export type LimitId = Resource | (typeof unlisted)[number] | EngineAction;
 
 // Why features are off, in the order the overview lists them.
-export const limitCauses = [
+const limitCauses = [
   'configNotLoaded',
   'configReadOnly',
   'mainReadOnly',
@@ -42,7 +42,7 @@ export const limitCauses = [
   'notProvided'
 ] as const;
 export type LimitCause = (typeof limitCauses)[number];
-export type LimitClass = {cause: LimitCause; ids: LimitId[]};
+type LimitClass = {cause: LimitCause; ids: LimitId[]};
 
 // The group a resource that is off joins by the engine's reason; one the engine gives no such reason for is not
 // provided, or, for flows that are off, idle.

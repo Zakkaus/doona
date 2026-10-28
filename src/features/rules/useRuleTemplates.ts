@@ -38,7 +38,6 @@ import {
 // If-Match names, so a change on disk since is refused rather than overwritten. `withDns` is the same write with the
 // DNS split appended, offered while the configuration has no `dns` block.
 type Pending = {
-  options: TemplateOptions;
   optionImpact: string[];
   choice: TemplateChoice;
   source: ConfigSource;
@@ -159,7 +158,6 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
       setAddDns(true);
       setInvalid(null);
       setDialog({
-        options,
         optionImpact: templateOptionKeys
           .filter(key => view.current && options[key] !== view[key])
           .map(key => t(templateOptionText[key][options[key] ? 'on' : 'off'])),
@@ -176,7 +174,6 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
       });
     },
     dialog: dialog && {
-      options: dialog.options,
       optionImpact: dialog.optionImpact,
       choice: dialog.choice,
       source: dialog.source,
