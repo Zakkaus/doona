@@ -1,6 +1,6 @@
 # Doona lite UI rules
 
-Astryx 0.6.8 templates own the frames. These rules apply them to the lite console.
+Astryx 0.6.8 templates own the frames; use component props, theme component overrides and documented tokens, not internal-class CSS. These rules apply them to the lite console.
 Keep the site theme, Figtree and BrandMark.
 Changes must satisfy these rules and the browser checks in the same milestone.
 
@@ -31,7 +31,7 @@ Changes must satisfy these rules and the browser checks in the same milestone.
 - Use List/Item for routing and DNS rules, DNS servers and subscription nodes; use RadioList for selecting a group member. Rules show a title, supporting conditions, a trailing target Token, a leading grip and a trailing MoreMenu. Only Nodes uses Table to compare columns. Reset collection edge compensation in `lite-table-inset`.
 - Condition Tokens use supporting text size and token 1 block padding. Their labels wrap, including the inner button of an editable Token; toolbar labels stay on one line.
 - Initial loading retains the real title, description and disabled actions inside the final Layout frame. ReadState supplies Skeleton rows or cards with token spacing. Refresh keeps current rows, uses RefreshProgress below the header and sets the action pending. A refresh failure retains data and adds an inline Banner with retry. Never show empty before loading finishes.
-- Loading toolbars render their final controls from the first chunk frame. Skeleton counts use the last known collection size for that backend connection, or three when unknown; rows follow pagination limits. Section labels and descriptions stay real text, preserving their wrapped height on phones. The first item, toolbar and header keep their layout boxes from 150 ms through ready and refresh.
+- Loading toolbars render their final controls from the first chunk frame. Use Astryx Skeleton with product className/style for loading silhouettes, retaining measured text/control boxes and `data-placeholder` for RowEntrance's motion guard. Skeleton counts use the last known collection size for that backend connection, or three when unknown; rows follow pagination limits. Section labels and descriptions stay real text, preserving their wrapped height on phones. The first item, toolbar and header keep their layout boxes from 150 ms through ready and refresh.
 - Below 768, Nodes use the table-collapsible compact-cell pattern: name, then protocol/source as supporting text, plus the action column. Subscription node lists show the name and supporting protocol in each row. Names and protocols wrap without clipping. The fixed action column aligns right; placeholders occupy the same control-width slot as MoreMenu.
 - Rule conditions use supporting Tokens; the target trails separately. Align row content to the start so every drag handle has the same top inset regardless of a title.
 
@@ -52,7 +52,7 @@ Changes must satisfy these rules and the browser checks in the same milestone.
 - Browser checks that assert the final member row (for example End-key focus) wait for the rendered row count to match the inspector's full result count after clearing search; the first visible row does not mean progressive appending is complete.
 - Subscriptions use Item inside Collapsible with a start chevron. Name and node-count Badge form the primary line; host and update time support it; StatusLabel trails. Controlled open IDs persist with guarded localStorage. Expanded nodes use a compact List with paging and search above 20 nodes; there is no nested vertical scroll.
 - Prefetch node forms on mount, hover and focus, and resolve the component before opening. Asynchronous group editors reserve their final dialog height. Dialog stability checks compare layout dimensions at 50 and 600 ms, separately from Astryx's native scale animation.
-- Non-library interactive controls use focusRing; never remove focus outlines. Opening a page focuses its h1; changes inside a page retain focus.
+- Non-library interactive controls use focusRing's public `--focus-outline-*` tokens, with a negative width offset for inset rings; never remove focus outlines. Opening a page focuses its h1; changes inside a page retain focus.
 
 ## 5. Status and copy
 
