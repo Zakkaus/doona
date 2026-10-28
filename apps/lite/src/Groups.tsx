@@ -16,6 +16,7 @@ import {List, ListItem} from '@astryxdesign/core/List';
 import {ResizeHandle, useResizable} from '@astryxdesign/core/Resizable';
 import {SegmentedControl, SegmentedControlItem} from '@astryxdesign/core/SegmentedControl';
 import {StatusDot} from '@astryxdesign/core/StatusDot';
+import {LoadingText} from './ui/LoadingText';
 import {Text} from '@astryxdesign/core/Text';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import {useToast} from '@astryxdesign/core/Toast';
@@ -425,16 +426,20 @@ export function Groups({connection, setBusy}: {connection: Connection; setBusy: 
                             xstyle={styles.row}
                             label={<RowPlaceholder />}
                             description={<RowPlaceholder supporting />}
-                            startContent={<StatusDot variant="neutral" label={t.loading} />}
+                            startContent={
+                              <StatusDot
+                                variant="neutral"
+                                label={t.loading}
+                                style={{background: 'var(--color-background-muted)', color: 'var(--color-text-secondary)'}}
+                              />
+                            }
                             endContent={
                               <HStack gap={3} vAlign="center" style={{width: 'auto'}}>
-                                <Text type="supporting" color="secondary" data-placeholder-text>
+                                <LoadingText type="supporting" color="secondary" loading>
                                   {policyLabel(summary.policy.native || summary.policy.kind, t)}
-                                </Text>
+                                </LoadingText>
                                 {mode === 'switch' && (
-                                  <Text type="supporting" color="secondary" hasTabularNumbers xstyle={styles.latency} data-placeholder-text>
-                                    —
-                                  </Text>
+                                  <LoadingText type="supporting" color="secondary" hasTabularNumbers xstyle={styles.latency} loading children="—" />
                                 )}
                               </HStack>
                             }
@@ -514,7 +519,14 @@ export function Groups({connection, setBusy}: {connection: Connection; setBusy: 
           {sheetMounted || sheetOpen ? (
             <VStack gap={0}>
               <HStack hAlign="end" paddingInline={3} paddingBlockStart={2} data-sheet-close>
-                <IconButton label={t.close} variant="ghost" size="sm" icon={<Icon icon={Close} size="sm" />} style={{position: 'relative', zIndex: 2}} onClick={() => setSheetOpen(false)} />
+                <IconButton
+                  label={t.close}
+                  variant="ghost"
+                  size="sm"
+                  icon={<Icon icon={Close} size="sm" />}
+                  style={{position: 'relative', zIndex: 2}}
+                  onClick={() => setSheetOpen(false)}
+                />
               </HStack>
               {body}
             </VStack>

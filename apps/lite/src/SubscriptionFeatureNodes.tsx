@@ -4,8 +4,8 @@ import {Button} from '@astryxdesign/core/Button';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
 import {List, ListItem} from '@astryxdesign/core/List';
 import {VStack} from '@astryxdesign/core/Stack';
-import {Text} from '@astryxdesign/core/Text';
 import {TextInput} from '@astryxdesign/core/TextInput';
+import {LoadingText, loadingControl} from './ui/LoadingText';
 import {useCallback, useState} from 'react';
 import type {Connection} from './api';
 import {readNodes} from './config';
@@ -23,6 +23,7 @@ export function SubscriptionFeatureNodes({
   provider,
   version,
   count,
+  loading = false,
   edit,
   addToGroup
 }: {
@@ -30,6 +31,7 @@ export function SubscriptionFeatureNodes({
   provider: string;
   version?: string;
   count: number;
+  loading?: boolean;
   edit?: () => void;
   addToGroup?: (node: Node) => void;
 }) {
@@ -74,22 +76,15 @@ export function SubscriptionFeatureNodes({
                 key={node.id}
                 endContent={
                   <RowMenu
+                    {...loadingControl(loading, 'icon')}
                     label={`${t.actions}: ${node.name || node.id}`}
                     variant="ghost"
                     size="sm"
                     items={[{label: t.addNodeToGroup, isDisabled: !addToGroup, onClick: () => addToGroup?.(node)}]}
                   />
                 }
-                label={
-                  <Text weight="medium" textWrap="wrap">
-                    {node.name || node.id}
-                  </Text>
-                }
-                description={
-                  <Text type="supporting" color="secondary">
-                    {node.protocol}
-                  </Text>
-                }
+                label={<LoadingText weight="medium" textWrap="wrap" loading={loading} children={node.name || node.id} />}
+                description={<LoadingText type="supporting" color="secondary" loading={loading} children={node.protocol} />}
               />
             ))}
           </List>

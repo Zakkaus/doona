@@ -6,6 +6,8 @@ import {Link} from '@astryxdesign/core/Link';
 import {List, ListItem} from '@astryxdesign/core/List';
 import {RowMenu as MoreMenu} from './ui/RowMenu';
 import {Selector} from '@astryxdesign/core/Selector';
+import {Skeleton} from '@astryxdesign/core/Skeleton';
+import {LoadingText, loadingControl} from './ui/LoadingText';
 import {Text} from '@astryxdesign/core/Text';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import {useToast} from '@astryxdesign/core/Toast';
@@ -141,7 +143,7 @@ export function DnsUpstreams({
                     data-skeleton-row
                     label={<RowPlaceholder />}
                     description={<RowPlaceholder supporting />}
-                    endContent={<MoreMenu label={t.actions} size="sm" variant="ghost" isDisabled items={[]} />}
+                    endContent={<Skeleton className="lite-loading-shape lite-loading-icon" />}
                   />
                 ))}
               {progressive.map(field => (
@@ -150,17 +152,22 @@ export function DnsUpstreams({
                   data-upstream={field.name}
                   tabIndex={-1}
                   label={
-                    <Link color="primary" weight="medium" isDisabled={disabled} onClick={() => (validUrl(unquote(field.value)) ? open(field) : editText())}>
-                      {field.name}
-                    </Link>
+                    <Link
+                      {...loadingControl(loading, 'children', field.name)}
+                      color="primary"
+                      weight="medium"
+                      isDisabled={disabled}
+                      onClick={() => (validUrl(unquote(field.value)) ? open(field) : editText())}
+                    />
                   }
                   description={
-                    <Text type="supporting" color="secondary" textWrap="wrap" style={{overflowWrap: 'anywhere'}}>
+                    <LoadingText loading={loading} type="supporting" color="secondary" textWrap="wrap" style={{overflowWrap: 'anywhere'}}>
                       {unquote(field.value)}
-                    </Text>
+                    </LoadingText>
                   }
                   endContent={
                     <MoreMenu
+                      {...loadingControl(loading, 'icon')}
                       label={t.actionFor.replace('{name}', field.name)}
                       size="sm"
                       variant="ghost"

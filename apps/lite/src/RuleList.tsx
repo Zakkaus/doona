@@ -10,6 +10,8 @@ import {Link} from '@astryxdesign/core/Link';
 import {List, ListItem} from '@astryxdesign/core/List';
 import {RowMenu as MoreMenu} from './ui/RowMenu';
 import {Selector} from '@astryxdesign/core/Selector';
+import {Skeleton} from '@astryxdesign/core/Skeleton';
+import {LoadingText, loadingControl} from './ui/LoadingText';
 import {Heading, Text} from '@astryxdesign/core/Text';
 import {useToast} from '@astryxdesign/core/Toast';
 import {Token} from '@astryxdesign/core/Token';
@@ -186,13 +188,13 @@ export function RuleList({
                       label={<RowPlaceholder />}
                       description={
                         <HStack gap={1} wrap="wrap" vAlign="center">
-                          <Token className="rule-chip" label={t.loading} />
+                          <Token {...loadingControl(true, 'endContent', undefined, 'rule-chip')} label={t.loading} />
                         </HStack>
                       }
                       endContent={
                         <HStack gap={2} vAlign="start" style={{width: 'auto'}}>
-                          <Token className="rule-chip lite-rule-target" label={t.direct} />
-                          <MoreMenu label={t.actions} variant="ghost" size="sm" isDisabled items={[]} />
+                          <Token {...loadingControl(true, 'endContent', undefined, 'rule-chip lite-rule-target')} label={t.direct} />
+                          <Skeleton className="lite-loading-shape lite-loading-icon" />
                         </HStack>
                       }
                     />
@@ -202,6 +204,7 @@ export function RuleList({
                     key={index}
                     {...drag.target(String(index), disabled || !!search)}
                     data-rule-index={index}
+                    data-skeleton-row={loading ? '' : undefined}
                     tabIndex={-1}
                     className="lite-rule-row"
                     startContent={drag.handle(String(index), t.dragItem.replace('{name}', title(row)), disabled || !!search)}
@@ -209,39 +212,36 @@ export function RuleList({
                       <VStack gap={1}>
                         {row.note && row.note !== row.conditions?.map(condition => phraseText(describeCondition(condition), t)).join(t.condAnd) && (
                           <Link
+                            {...loadingControl(loading, 'children', row.note)}
                             color="primary"
                             weight="medium"
                             isDisabled={disabled}
                             onClick={event => openRow(row, event.currentTarget)}
                             style={{textAlign: 'start', overflowWrap: 'anywhere'}}
-                          >
-                            {row.note}
-                          </Link>
+                          />
                         )}
                         <HStack gap={1} wrap="wrap" vAlign="center" data-rule-conditions>
                           {row.conditions?.map((condition, i) => (
                             <Token
-                              className="rule-chip"
+                              {...loadingControl(loading, 'endContent', undefined, 'rule-chip')}
                               key={i}
                               label={phraseText(describeCondition(condition), t)}
                               onClick={disabled ? undefined : event => openRow(row, event.currentTarget)}
                             />
                           ))}
-                          {!row.conditions && (
-                            <Link isDisabled={disabled} onClick={editText}>
-                              {t.customRule}
-                            </Link>
-                          )}
-                          <Text color="secondary" aria-hidden>
-                            →
-                          </Text>
-                          <Token className="rule-chip lite-rule-target" label={phraseText(describeTarget(row.target), t)} />
+                          {!row.conditions && <Link {...loadingControl(loading, 'children', t.customRule)} isDisabled={disabled} onClick={editText} />}
+                          <LoadingText color="secondary" aria-hidden loading={loading} children="→" />
+                          <Token
+                            {...loadingControl(loading, 'endContent', undefined, 'rule-chip lite-rule-target')}
+                            label={phraseText(describeTarget(row.target), t)}
+                          />
                         </HStack>
                       </VStack>
                     }
                     endContent={
                       <HStack gap={2} vAlign="start" style={{width: 'auto'}}>
                         <MoreMenu
+                          {...loadingControl(loading, 'icon')}
                           label={t.actionFor.replace('{name}', description(row))}
                           variant="ghost"
                           size="sm"

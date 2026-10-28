@@ -17,6 +17,8 @@ import {useExpectedCount} from './ui/useExpectedCount';
 
 import {Button} from '@astryxdesign/core/Button';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
+import {Skeleton} from '@astryxdesign/core/Skeleton';
+import {LoadingText, loadingControl} from './ui/LoadingText';
 import {RowMenu as MoreMenu} from './ui/RowMenu';
 import {HStack, VStack} from '@astryxdesign/core/Stack';
 import {pixel, proportional, Table, type TableColumn} from '@astryxdesign/core/Table';
@@ -204,8 +206,8 @@ export function Nodes({connection, setBusy}: {connection: Connection; setBusy: (
       key: 'name',
       header: compact ? (
         <HStack gap={2} hAlign="between">
-          <Text>{t.name}</Text>
-          <Text>{t.latency}</Text>
+          <LoadingText loading={!ready} className="lite-loading-header" children={t.name} />
+          <LoadingText loading={!ready} className="lite-loading-header" children={t.latency} />
         </HStack>
       ) : (
         t.name
@@ -213,35 +215,40 @@ export function Nodes({connection, setBusy}: {connection: Connection; setBusy: (
       width: proportional(2, {minWidth: compact ? 0 : 180}),
       renderCell: item => (
         <VStack gap={1}>
-          <Text weight="medium" textWrap="wrap" tabIndex={-1} data-node-id={item.id}>
-            {item.name || item.id}
-          </Text>
+          <LoadingText loading={!ready} weight="medium" textWrap="wrap" tabIndex={-1} data-node-id={item.id} children={item.name || item.id} />
           {compact && (
             <HStack gap={2} vAlign="center">
-              <Text type="supporting" color="secondary" maxLines={1} style={{flexGrow: 1, minWidth: 0}}>
+              <LoadingText loading={!ready} type="supporting" color="secondary" maxLines={1} style={{flexGrow: 1, minWidth: 0}}>
                 {item.protocol ?? t.unknown} / {manual(item) ? t.manualLabel : (item.subscription_tag ?? t.unknown)}
-              </Text>
-              <NodeLatency node={item} probes={probes} compact />
+              </LoadingText>
+              <NodeLatency node={item} probes={probes} compact loading={!ready} />
             </HStack>
           )}
         </VStack>
       )
     },
-    {key: 'protocol', header: t.protocol, width: pixel(120), renderCell: item => <Text>{item.protocol ?? t.unknown}</Text>},
+    {
+      key: 'protocol',
+      header: t.protocol,
+      width: pixel(120),
+      renderCell: item => <LoadingText loading={!ready} children={item.protocol ?? t.unknown} />
+    },
     {
       key: 'address',
       header: t.address,
       width: proportional(2, {minWidth: 180}),
       renderCell: item =>
-        manual(item) ? <Text textWrap="wrap">{linkInfo(entries.find(entry => entry.name === item.name)?.link ?? '').address || t.unknown}</Text> : null
+        manual(item) ? (
+          <LoadingText loading={!ready} textWrap="wrap" children={linkInfo(entries.find(entry => entry.name === item.name)?.link ?? '').address || t.unknown} />
+        ) : null
     },
     {
       key: 'origin',
       header: t.origin,
       width: proportional(1, {minWidth: 150}),
-      renderCell: item => <Text textWrap="wrap">{manual(item) ? t.manualLabel : (item.subscription_tag ?? t.unknown)}</Text>
+      renderCell: item => <LoadingText loading={!ready} textWrap="wrap" children={manual(item) ? t.manualLabel : (item.subscription_tag ?? t.unknown)} />
     },
-    {key: 'latency', header: t.latency, width: pixel(152), align: 'end', renderCell: item => <NodeLatency node={item} probes={probes} />},
+    {key: 'latency', header: t.latency, width: pixel(152), align: 'end', renderCell: item => <NodeLatency node={item} probes={probes} loading={!ready} />},
     {
       key: 'actions',
       header: '',
@@ -250,6 +257,7 @@ export function Nodes({connection, setBusy}: {connection: Connection; setBusy: (
       renderCell: item => (
         <HStack hAlign="end" vAlign="center">
           <MoreMenu
+            {...loadingControl(!ready, 'icon')}
             label={`${t.actions}: ${item.name || item.id}`}
             variant="ghost"
             size="sm"
@@ -275,6 +283,7 @@ export function Nodes({connection, setBusy}: {connection: Connection; setBusy: (
     <NodeTable
       key={added.join('\n')}
       rows={filtered}
+      loading={!ready}
       columns={compact ? columns.filter(column => ['name', 'actions'].includes(column.key)) : columns}
       manual={manual}
       find={find}
@@ -423,7 +432,7 @@ export function Nodes({connection, setBusy}: {connection: Connection; setBusy: (
                     renderCell: () =>
                       column.key === 'actions' ? (
                         <HStack hAlign="end" vAlign="center">
-                          <MoreMenu label={t.actions} variant="ghost" size="sm" isDisabled items={[]} />
+                          <Skeleton className="lite-loading-shape lite-loading-icon" />
                         </HStack>
                       ) : (
                         <RowPlaceholder lines={column.key === 'name' && compact ? 2 : 1} width={column.key === 'protocol' ? '8ch' : undefined} />
@@ -609,6 +618,7 @@ export function Nodes({connection, setBusy}: {connection: Connection; setBusy: (
 
 function NodeTable({
   rows,
+  loading,
   columns,
   manual,
   find,
@@ -619,6 +629,7 @@ function NodeTable({
   added
 }: {
   rows: Node[];
+  loading: boolean;
   columns: TableColumn<Row>[];
   manual: (node: Node) => boolean | undefined;
   find: (node: Node) => NodeEntry | undefined;
@@ -657,16 +668,12 @@ function NodeTable({
       const isManual = key === 'manual';
       return (
         <VStack gap={1} xstyle={styles.groupHeading}>
-          <Text weight="medium" textWrap="wrap">
+          <LoadingText weight="medium" textWrap="wrap" loading={loading}>
             {t.nodeSectionCount
               .replace('{name}', isManual ? t.manuallyAdded : (members[0]?.subscription_tag ?? t.unknown))
               .replace('{n}', String(members.length))}
-          </Text>
-          {!isManual && (
-            <Text type="supporting" color="secondary" textWrap="wrap">
-              {t.subscriptionNodesHelp}
-            </Text>
-          )}
+          </LoadingText>
+          {!isManual && <LoadingText type="supporting" color="secondary" textWrap="wrap" loading={loading} children={t.subscriptionNodesHelp} />}
         </VStack>
       );
     }
