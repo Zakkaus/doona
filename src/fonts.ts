@@ -15,8 +15,15 @@ const fontsInstalled = () =>
 // keeps the system font.
 let common: Promise<unknown> | undefined;
 const commonFaces = () => (common ??= import('./fonts.css').then(() => globalThis.document?.fonts?.load("1em 'Noto Sans TC'", 'doona')));
-// The faces every language uses, then the ideograph faces of the named src/fonts-<name>.css; resolves once both are
-// declared or left out. A stylesheet that fails to load leaves the text to the system font.
-export function loadFaces(fonts: string | null): Promise<unknown> {
-  return fontsInstalled().then(ok => (ok ? Promise.all([commonFaces(), fonts && import(`./fonts-${fonts}.css`)]).catch(() => undefined) : undefined));
+// Await the current catalogue part's glyphs before it renders. With optional faces, merely awaiting the stylesheet
+// lets late subsets stay on a system fallback beside earlier Noto subsets, even after document.fonts.ready.
+// One load covers every weight: each face is variable across 100–900. Missing archives or failed fonts stay optional.
+export function loadFaces(fonts: string | null, face: string, text: string): Promise<unknown> {
+  return fontsInstalled().then(ok =>
+    ok
+      ? Promise.all([commonFaces(), fonts && import(`./fonts-${fonts}.css`)])
+          .then(() => globalThis.document?.fonts?.load(`1em '${face}'`, text))
+          .catch(() => undefined)
+      : undefined
+  );
 }
