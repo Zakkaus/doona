@@ -21,7 +21,6 @@ import {connectionRanking} from '../shared/ranking';
 import {engineStatus} from '../shared/engineStatus';
 import {href} from '../../shell/route';
 
-export {modeView, modeReasons} from '../shared/modeView';
 export type NoticeRow = {id: string; tone: 'err' | 'warn' | 'info'; kindText: string; summaryText: string; action?: {label: string; href: string}};
 // What the backend still lacks before it routes through a proxy, listed ahead of the event notices until it is added.
 export function setupNotices({noNodeSources, noRouting}: {noNodeSources: boolean; noRouting: boolean}, t: LabelFn): NoticeRow[] {
@@ -39,8 +38,6 @@ export function setupNotices({noNodeSources, noRouting}: {noNodeSources: boolean
       : [])
   ];
 }
-
-export {interestingNotice} from '../../api/selectors';
 
 // The home card holds this many rows; the rest is one click away on the events page.
 const NOTICE_ROWS = 8;

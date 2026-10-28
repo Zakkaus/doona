@@ -3,23 +3,12 @@ import {eventKey} from '../../api/eventKey';
 import {capabilities, connections, nodeFixtures, runtime, runtimeOutbounds, version} from '../../../mock/fixtures';
 import {engineOf} from '../../api/engines';
 import {limitHint, reasonHint} from '../shared/limitHint';
+import {interestingNotice} from '../../api/selectors';
+import {modeReasons, modeView} from '../shared/modeView';
 import type {ApiEvent, Connection, ConnectionList, GroupSummary} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {pickMenuKey} from '../../ui/ui';
-import {
-  activityOutbounds,
-  activityRanking,
-  activityView,
-  interestingNotice,
-  modeReasons,
-  modeView,
-  activityGroupView,
-  nodeView,
-  noticeRows,
-  outboundColor,
-  setupNotices,
-  trafficState
-} from './view';
+import {activityOutbounds, activityRanking, activityView, activityGroupView, nodeView, noticeRows, outboundColor, setupNotices, trafficState} from './view';
 const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 const colors = {cat: ['blue', 'green'], love: 'red'};
 
