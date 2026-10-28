@@ -49,8 +49,6 @@ function tipStore() {
 }
 type TipStore = ReturnType<typeof tipStore>;
 
-// Shared chart tips: unbounded pointer tips are hidden from assistive technology; bounded tips also announce
-// keyboard selections.
 // The box the tip must stay inside, relative to the sparkline: the padding box of the nearest ancestor that clips,
 // which in a tile is its card, or else the viewport.
 export function tipBounds(own: HTMLElement) {
@@ -75,6 +73,9 @@ export function useChartTip<E extends HTMLElement = HTMLDivElement>() {
   return {ref, tip, show, showAt: tip.set, hide};
 }
 
+// A hover tip for the charts drawn without a chart library, in the same look as the activity charts' tooltips: it
+// follows the pointer inside its chart and shows the hovered item in words. The chart's own accessible names carry
+// the same facts, so the pointer tip is for the eye only; bounded tips also announce keyboard selections.
 export function ChartTip({tip: store}: {tip: TipStore}) {
   const tip = useSyncExternalStore(store.subscribe, store.get);
   if (!tip) return null;
