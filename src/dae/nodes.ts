@@ -65,10 +65,11 @@ function nameReferences(text: string, name: string) {
 export const nodeReferenced = (text: string, name: string) => nameReferences(text, name).length > 0;
 
 export function writeNodeEntry(text: string, original: NodeEntry, next: {name: string; link: string}): string {
-  const entries = readNodeEntries(text).filter(entry => entry.name === original.name);
+  const all = readNodeEntries(text);
+  const entries = all.filter(entry => entry.name === original.name);
   if (entries.length !== 1 || entries[0].link !== original.link) throw new LocalError('nodes.editNodeMissing');
   if (!next.name || !isQuotable(next.name) || !isNodeLink(next.link) || !isQuotable(next.link)) throw new LocalError('config.unquotable');
-  if (next.name !== original.name && readNodeEntries(text).some(entry => entry.name === next.name)) throw new LocalError('nodes.nameTaken');
+  if (next.name !== original.name && all.some(entry => entry.name === next.name)) throw new LocalError('nodes.nameTaken');
   const entry = entries[0];
   const changes = [];
   if (next.name !== original.name) changes.push({from: entry.from, to: entry.nameTo, text: quote(next.name)});

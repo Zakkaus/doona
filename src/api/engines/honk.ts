@@ -128,10 +128,13 @@ function reason(subject: EngineSubject, capabilities: Capabilities, recording?: 
 const listenerBlocks = new Set(['native_api', 'clash_api']);
 function holdsListenerSecret(text: string): boolean {
   const {blocks, tokens} = scanConfig(text);
-  return blocks
-    .filter(block => block.name === 'experimental')
-    .flatMap(block => block.children.filter(child => listenerBlocks.has(child.name)))
-    .some(block => block.children.length > 0 || blockFields(text, block, tokens).some(field => field.name === 'secret'));
+  return blocks.some(
+    block =>
+      block.name === 'experimental' &&
+      block.children.some(
+        child => listenerBlocks.has(child.name) && (child.children.length > 0 || blockFields(text, child, tokens).some(field => field.name === 'secret'))
+      )
+  );
 }
 // Writes dotted setting names as nested sections; consecutive settings in one section share it.
 function nest(settings: Array<{path: string[]; value: string}>, indent: string): string[] {
