@@ -41,9 +41,6 @@ export function SchemeToggle({dark, label, toggle}: {dark: boolean; label: strin
   );
 }
 
-// Glass's stylesheet loads when a palette menu's button is first pointed at or focused, which a Glass palette waits for.
-const preloadPalettes = () => preloadGlass();
-
 // The palette sections, as the menus list them: one plain line each. Only a note the palette needs stays, at the end
 // of its row; the variant names live in Settings.
 export function usePaletteChoices({ap, paletteSections}: PaletteMenuProps) {
@@ -65,7 +62,7 @@ export function PaletteMenu({more, ...props}: PaletteMenuProps & {more?: ChoiceA
   // The icon turns in when the palette changes, like the scheme icon; not on first paint.
   const [first] = useState(palette);
   return (
-    <ChoiceMenu quiet chevron={false} label={t('ui.palette')} sections={palettes} actions={more && [more]} onIntent={preloadPalettes}>
+    <ChoiceMenu quiet chevron={false} label={t('ui.palette')} sections={palettes} actions={more && [more]} onIntent={preloadGlass}>
       <Color key={palette} className={palette !== first ? 'rp-icon-in' : undefined} />
     </ChoiceMenu>
   );

@@ -4,8 +4,8 @@ import {useSyncExternalStore} from 'react';
 // with its veil settings, and nothing reaches localStorage or the backend. The record is read once at startup and
 // handed to the stylesheet as --rp-wall-image, --rp-veil-alpha and data-wallpaper on the root; glass.css draws it. When
 // storage fails, the wallpaper lasts for this session only and the snapshot says so.
-export type Wallpaper = {image: Blob; veil: boolean; dim: number};
-export type WallpaperState = {wallpaper: Wallpaper | null; url: string | null; stored: boolean};
+type Wallpaper = {image: Blob; veil: boolean; dim: number};
+type WallpaperState = {wallpaper: Wallpaper | null; url: string | null; stored: boolean};
 
 // The veil's strength runs up to 60%. At 60% label and secondary text keep 4.5:1 on every Glass surface over a pure
 // white or a pure black image (e2e/wallpaper.spec.ts measures it), so that is also the default.
