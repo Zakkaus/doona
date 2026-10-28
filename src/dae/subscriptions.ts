@@ -297,8 +297,7 @@ export function readSubscriptionEntries(text: string): SubscriptionText[] {
 
 // A User-Agent in parentheses is written bare when honk reads it back unchanged, and quoted otherwise.
 const bareAgent = (value: string) => /^[^\s()#'"{}]([^()#'"{}]*[^\s()#'"{}])?$/.test(value);
-const writeName = (name: string) => (isBareName(name) ? name : quote(name));
-const writeTag = (name: string, written?: string) => (/^['"]/.test(written ?? '') || !isBareName(name) ? quote(name) : name);
+const writeName = (name: string, written?: string) => (/^['"]/.test(written ?? '') || !isBareName(name) ? quote(name) : name);
 
 type Edit = {from: number; to: number; text: string};
 const applyEdits = (text: string, edits: Edit[]) =>
@@ -352,7 +351,7 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
   const block = entry.block;
   if (!block) {
     // A name derived from the link would follow a new link, so a changed one is written out.
-    const named = entry.naming === 'tag' && !changed.tag ? writtenTag! : writeTag(next.tag);
+    const named = entry.naming === 'tag' && !changed.tag ? writtenTag! : writeName(next.tag);
     const header = `${named}: ${quote(next.url)}`;
     if ((changed.interval && next.interval !== null) || (changed.cache && next.cache !== null) || (changed.route && next.route !== null)) {
       const indent = indentAt(text, entry.from);
@@ -370,7 +369,7 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
     if (entry.naming !== 'tag' && (changed.tag || changed.url)) {
       edits.push({from: entry.from, to: entry.urlAt.to, text: header});
     } else {
-      if (changed.tag) edits.push({...entry.tagAt!, text: writeTag(next.tag, writtenTag)});
+      if (changed.tag) edits.push({...entry.tagAt!, text: writeName(next.tag, writtenTag)});
       // A bare link would take the parentheses as part of it, so it is quoted once it gets an agent.
       if (changed.url || (entry.form === 'bare' && changed.ua)) edits.push({...entry.urlAt, text: quote(next.url)});
     }
@@ -388,7 +387,7 @@ export function writeSubscriptionEntry(text: string, tag: string, change: Subscr
     return writeSubscriptionEntry(applyEdits(text, [{from: block.open, to: block.to, text: `{\n${inner}${body}\n${indent}}`}]), tag, change);
   }
   const edits: Edit[] = [];
-  if (changed.tag) edits.push({...entry.tagAt!, text: writeTag(next.tag, writtenTag)});
+  if (changed.tag) edits.push({...entry.tagAt!, text: writeName(next.tag, writtenTag)});
   if (changed.url) edits.push({...entry.urlAt, text: quote(next.url)});
   const firstField = entry.fields[0];
   const inner = firstField ? indentAt(text, firstField.key.from) : indentAt(text, entry.from) + indentStep(text, entries, entry);
