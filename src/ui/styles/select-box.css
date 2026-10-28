@@ -14,8 +14,6 @@
 }
 .rp-select-box-head {
   grid-column: 1 / -1;
-}
-.rp-select-box-head {
   margin-top: var(--rp-space-1);
   font-weight: 700;
 }
