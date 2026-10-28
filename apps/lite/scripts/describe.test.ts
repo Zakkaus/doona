@@ -1,14 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {
-  describeCondition,
-  describeGroupFilter,
-  describeGroupFilters,
-  describeRule,
-  describeTarget,
-  phraseText,
-  policyKey,
-  regexLiterals
-} from '../src/describe';
+import {describeCondition, describeGroupFilter, describeGroupFilters, describeRule, describeTarget, phraseText, policyKey} from '../src/describe';
 import {catalogs} from '../src/i18n';
 import {regions} from '../../../src/dae/regions';
 import {rustRegexToJs} from '../../../src/dae/rustRegex';
@@ -117,7 +108,7 @@ describe('rule conditions and targets', () => {
 
 import {emptyGroups, groupChanges} from '../src/groupDraft';
 import {describeGroupChanges} from '../src/describe';
-import {readSubscriptionBinding, regionPatterns, subscriptionBinding} from '../src/groupBindings';
+import {readSubscriptionBinding, regionPatterns, regexLiterals, subscriptionBinding} from '../src/groupBindings';
 
 describe('groups review summary', () => {
   const base = 'group {\n  proxy {\n    filter: subtag(harbor)\n    policy: min_moving_avg\n  }\n}\n';

@@ -5,7 +5,6 @@ import {exactTokens, nestedIn} from '../../../src/dae/groups';
 import {unquote} from '../../../src/dae/text';
 import {EMPTY_GROUP_FILTER, readSubscriptionBinding, regexLiterals} from './groupBindings';
 import {regionLabel} from './regions';
-export {EMPTY_GROUP_FILTER, regexLiterals} from './groupBindings';
 import type {GroupChange} from './groupDraft';
 import type {MessageKey} from './i18n';
 import type {Messages} from './i18n/en';
@@ -15,7 +14,6 @@ export type PhraseParts = {parts: PhraseValue[]; join: 'and' | 'sep'};
 export type PhraseValue = string | Phrase | PhraseList | PhraseParts | {regions: string[]};
 export type Phrase = {key: MessageKey; values?: Record<string, PhraseValue>};
 export type DescribedCondition = {kind: string; value: string; negate: boolean};
-export type RuleListKind = 'routing' | 'request' | 'response';
 
 const phrase = (key: MessageKey, values?: Record<string, PhraseValue>): Phrase => ({key, values});
 const names = (items: string[]): PhraseList => ({items, join: 'sep'});

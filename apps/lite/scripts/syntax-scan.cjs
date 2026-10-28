@@ -6,7 +6,6 @@ const {chromium} = require('@playwright/test');
 const base = require('./preview.cjs');
 const {waitForDemo} = require('./demo.cjs');
 const tokens = ['group(', 'name(', 'subtag(', 'dip', 'dport', 'l4proto', 'pname', 'qname', 'fallback', 'must_', '(must)', '->'];
-const strict = /.*/;
 
 function scan(page, tokensToFind, root = 'body') {
   return page.evaluate(
@@ -165,10 +164,9 @@ function scan(page, tokensToFind, root = 'body') {
   let failed = false;
   for (const [area, hits] of results) {
     const unique = [...new Set(hits)];
-    const blocking = strict.test(area);
-    if (unique.length && blocking) failed = true;
-    console.log(`${unique.length ? (blocking ? 'FAIL' : 'LIST') : 'PASS'} ${area}: ${unique.length} hits`);
-    for (const hit of unique.slice(0, blocking ? 50 : 8)) console.log(`  ${hit}`);
+    if (unique.length) failed = true;
+    console.log(`${unique.length ? 'FAIL' : 'PASS'} ${area}: ${unique.length} hits`);
+    for (const hit of unique.slice(0, 50)) console.log(`  ${hit}`);
   }
   process.exit(failed ? 1 : 0);
 })().catch(error => {

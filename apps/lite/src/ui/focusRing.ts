@@ -6,7 +6,6 @@
  * out) on `:focus-visible`; these use the same tokens, so both look alike.
  *
  *   <time tabIndex={0} {...stylex.props(focusRing)}>…</time>
- *   xstyle={[focusRingWithin]} on a frame whose child takes focus
  *   xstyle={[focusRingInset]} where an outer ring would be clipped (table rows)
  */
 import * as stylex from '@stylexjs/stylex';
@@ -16,9 +15,6 @@ import {focusOutlineStyles} from '@astryxdesign/core/utils/focusOutline.stylex';
 
 /** Ring on the element itself when it has keyboard focus. */
 export const focusRing = focusOutlineStyles.focusVisible;
-
-/** Ring on a frame while a child has keyboard focus (a chart's SVG). */
-export const focusRingWithin = focusOutlineStyles.focusWithin;
 
 const styles = stylex.create({
   inset: {

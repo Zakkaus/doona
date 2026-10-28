@@ -3,17 +3,15 @@ import {EASE, MOTION, PAGE_ENTER_ID} from './tokens';
 import {cancelOnReducedMotion, prefersReducedMotion} from './useReducedMotion';
 
 export const MOTION_GROUP = {'data-motion-group': ''} as const;
-export const MOTION_SKIP = {'data-motion-skip': ''} as const;
 
 function units(container: Element, out: HTMLElement[]) {
   for (const child of Array.from(container.children)) {
     if (!(child instanceof HTMLElement)) continue;
-    if (child.hasAttribute('data-motion-skip')) continue;
     if (child.hasAttribute('data-motion-group') || getComputedStyle(child).display === 'contents') {
       units(child, out);
       continue;
     }
-    // Already entering through its own animation (useEntryAnimation).
+    // Already entering through its own animation.
     if (child.getAnimations().length > 0) continue;
     const box = child.getBoundingClientRect();
     if (box.width === 0 && box.height === 0) continue;

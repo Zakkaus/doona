@@ -24,34 +24,6 @@
   grid-column: 2;
   grid-row: 1;
 }
-.lite-disclosure-summary {
-  grid-column: 1 / -1;
-  grid-row: 2;
-}
-.lite-disclosure-metadata {
-  grid-column: 1 / -1;
-  grid-row: 2;
-}
-.lite-disclosure-has-metadata > .lite-disclosure > .astryx-collapsible-content,
-.lite-disclosure-has-metadata > .lite-disclosure-summary {
-  grid-row: 3;
-}
-[data-group-card] {
-  min-height: calc(var(--spacing-12) * 3 + var(--spacing-5));
-}
-.lite-disclosure-actions-below > .lite-disclosure > .astryx-collapsible-trigger {
-  grid-column: 1 / -1;
-}
-.lite-disclosure-actions-below > .lite-disclosure-actions {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  justify-content: flex-end;
-  padding-block-start: var(--spacing-2);
-}
-.lite-disclosure-actions-below > .lite-disclosure > .astryx-collapsible-content {
-  grid-row: 3;
-}
-
 .lite-subscription-row .lite-disclosure-actions {
   align-self: center;
 }
