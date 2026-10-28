@@ -1,4 +1,4 @@
-import {startTransition, useCallback, useEffect, useRef, useState} from 'react';
+import {startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {MessageKey} from './i18n';
 
 let revision = 0;
@@ -19,10 +19,8 @@ export function useRead<T>(load: (signal?: AbortSignal) => Promise<T>, key?: unk
     const controller = new AbortController();
     active.current = controller;
     readRevision.current = revision;
-    startTransition(() => {
-      setLoading(true);
-      setError(undefined);
-    });
+    setLoading(true);
+    setError(undefined);
     try {
       const result = await load(controller.signal);
       if (!controller.signal.aborted)
@@ -44,7 +42,8 @@ export function useRead<T>(load: (signal?: AbortSignal) => Promise<T>, key?: unk
     }
   }, [load]);
   const loadedWith = useRef<{load: typeof load; key: unknown} | null>(null);
-  useEffect(() => {
+  // Activity restores cached pages before passive effects; disable stale actions before paint.
+  useLayoutEffect(() => {
     if (loadedWith.current?.load !== load || loadedWith.current.key !== key || active.current?.signal.aborted || readRevision.current !== revision) {
       loadedWith.current = {load, key};
       void reload().catch(() => {});
