@@ -19,6 +19,7 @@ import {cx} from './cx';
 import {HelpRow, type Help} from './ContextualHelp';
 import {useControlSize, type ControlSize} from './controlSize';
 import {Necessity, useFormProps, type FormFieldProps} from './Form';
+import {Toolbar} from './Toolbar';
 
 // A switch in a labelled settings row has no text of its own, so it takes its name from `aria-label`.
 export function Switch({
@@ -195,10 +196,10 @@ export function TextField(fieldProps: TextFieldProps) {
     >
       {help ? <HelpRow help={help}>{name}</HelpRow> : name}
       {action ? (
-        <div className="rp-toolbar">
+        <Toolbar>
           {input}
           {action}
-        </div>
+        </Toolbar>
       ) : (
         input
       )}

@@ -9,6 +9,9 @@ it('gives focus back after copying through a text area', async () => {
   class Element {
     isConnected = true;
     focus = vi.fn();
+    closest() {
+      return null;
+    }
   }
   const button = new Element();
   const area = {value: '', style: {}, setAttribute: vi.fn(), select: vi.fn(), remove: vi.fn()};

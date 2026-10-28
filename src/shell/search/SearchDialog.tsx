@@ -1,6 +1,6 @@
 import {Autocomplete, ListBox, ListBoxItem, ListBoxSection, Header} from 'react-aria-components';
 import {useT} from '../../i18n';
-import {Button, ModalDialog, TextField, ErrorMessage, Loading, Empty} from '../../ui/ui';
+import {Button, ModalDialog, TextField, ErrorMessage, Loading, Empty, Toolbar} from '../../ui/ui';
 import {ItemText} from '../../ui/ItemText';
 import Close from '../../ui/icons/Close';
 import type {PageProps} from '../routes';
@@ -20,8 +20,7 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
     >
       {/* The field and the results form one combobox: arrow keys move through results while typing continues. */}
       <Autocomplete inputValue={q} onInputChange={setQ}>
-        <div
-          className="rp-toolbar"
+        <Toolbar
           onKeyDownCapture={event => {
             if (event.key === 'Escape') {
               event.preventDefault();
@@ -35,7 +34,7 @@ export function SearchDialog({onClose, go}: {onClose: () => void; go: PageProps[
           <Button quiet icon onPress={onClose} label={t('ui.close')}>
             <Close />
           </Button>
-        </div>
+        </Toolbar>
         {error && <ErrorMessage error={error} onRetry={retry} />}
         {partial && (
           <div className="rp-note" role="status">

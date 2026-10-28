@@ -8,7 +8,6 @@ import {
   MenuSection,
   MenuTrigger,
   Popover,
-  Separator,
   SubmenuTrigger,
   useLocale,
   TooltipTrigger,
@@ -25,6 +24,7 @@ import {longList} from './longList';
 import {useT, type Translator} from '../i18n';
 import {ItemText, type Item} from './ItemText';
 import {useControlSize, type ControlSize} from './controlSize';
+import {Divider} from './Divider';
 
 export const pickMenuKey = (on: (k: string) => void) => (k: 'all' | Set<Key>) => {
   if (k === 'all') return;
@@ -194,7 +194,7 @@ function SectionMenu({
           ))}
         </MenuSection>
       ))}
-      {actions.length > 0 && <Separator className="rp-hrule" />}
+      {actions.length > 0 && <Divider orientation="horizontal" />}
       {actions.map(action => (
         <ActionItem key={action.label} {...action} />
       ))}

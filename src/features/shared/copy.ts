@@ -16,7 +16,9 @@ export async function copyText(text: string): Promise<boolean> {
   area.setAttribute('readonly', '');
   area.style.position = 'fixed';
   area.style.opacity = '0';
-  document.body.append(area);
+  // A native modal makes the rest of the document inert, so its copy field must stay inside that dialog.
+  const container = active instanceof HTMLElement ? (active.closest('dialog[open]') ?? document.body) : document.body;
+  container.append(area);
   area.select();
   try {
     return document.execCommand('copy');
