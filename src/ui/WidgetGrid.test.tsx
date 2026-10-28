@@ -1,8 +1,10 @@
+import type {RefCallback} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {WidgetGrid, WidgetCell} from './WidgetGrid';
 import {WidgetGalleryTile} from './WidgetGalleryTile';
 import {FloatingPanel} from './FloatingPanel';
+import {DashboardTile} from './DashboardTile';
 import {anchorPanelOffset, clampPanelSize, defaultPanelWidth, edgePlacement, fitPanelOffset, minPanelSize, nearestEdge, resizePanel} from './panelSize';
 const panel = {label: 'honk', resizeLabel: 'Resize', moveLabel: 'Move', movedText: 'Moved', onResize: () => {}, onMove: () => {}, header: 'head'};
 it('renders widget size metadata', () => {
@@ -133,3 +135,43 @@ it.each([
   ['left over bottom', {left: 0, top: 600, width: 320, height: 300}, 'left'],
   ['bottom over top', {left: 560, top: 0, width: 320, height: 900}, 'bottom']
 ] as const)('a tie: %s', (_name, box, edge) => expect(nearestEdge(box, view)).toBe(edge));
+it.each(['object', 'callback', 'cleanup'] as const)('releases a dashboard tile’s %s ref and width observer', kind => {
+  const disconnect = vi.fn();
+  vi.stubGlobal(
+    'MutationObserver',
+    class {
+      observe() {}
+      disconnect = disconnect;
+    }
+  );
+  try {
+    let current: HTMLDivElement | null = null;
+    const object = {current};
+    const cleanup = vi.fn(() => {
+      current = null;
+    });
+    const targetRef =
+      kind === 'object'
+        ? object
+        : (node: HTMLDivElement | null) => {
+            current = node;
+            if (kind === 'cleanup') return cleanup;
+          };
+    let attach: RefCallback<HTMLDivElement> | undefined;
+    function Probe() {
+      const element = DashboardTile({tile: {id: 'cpu', module: 'cpu', size: 'small'}, visible: true, targetRef, children: null});
+      attach = element.props.ref;
+      return element;
+    }
+    renderToStaticMarkup(<Probe />);
+    const node = {hasAttribute: () => false} as unknown as HTMLDivElement;
+    const release = attach!(node);
+    expect(kind === 'object' ? object.current : current).toBe(node);
+    if (typeof release === 'function') release();
+    expect(kind === 'object' ? object.current : current).toBeNull();
+    expect(disconnect).toHaveBeenCalledOnce();
+    expect(cleanup).toHaveBeenCalledTimes(kind === 'cleanup' ? 1 : 0);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

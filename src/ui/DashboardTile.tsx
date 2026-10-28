@@ -1,4 +1,5 @@
-import {createContext, useCallback, useLayoutEffect, useRef, useState, type ReactNode, type Ref, type RefObject} from 'react';
+import {createContext, useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type Ref, type RefObject} from 'react';
+import {mergeRefs} from 'react-aria';
 import {packSection} from './packing';
 
 // A section packs as it mounts, before its first paint, and keeps packing until it unmounts.
@@ -28,7 +29,8 @@ export const sectionGrid = (tiles: readonly TileProps[]) => (tiles.some(tile => 
 // Auto card's renderer draws the statistics its footprint has room for, and only then.
 export const WideCell = createContext(false);
 // A ref for the cell, or for an element inside it (`cellOf`), and whether that cell is marked wide.
-function useWideMark(cellOf: (node: HTMLElement) => Element | null = node => node) {
+const ownCell = (node: HTMLElement) => node;
+function useWideMark(cellOf: (node: HTMLElement) => Element | null = ownCell) {
   const [wide, setWide] = useState(false);
   const ref = useCallback(
     (node: HTMLElement | null) => {
@@ -47,21 +49,7 @@ function useWideMark(cellOf: (node: HTMLElement) => Element | null = node => nod
 
 export function DashboardTile({tile, visible, targetRef, children}: {tile: TileProps; visible: boolean; targetRef: Ref<HTMLDivElement>; children: ReactNode}) {
   const [mark, wide] = useWideMark();
-  const ref = useCallback(
-    (node: HTMLDivElement | null) => {
-      const unmark = mark(node);
-      if (typeof targetRef !== 'function') {
-        if (targetRef) targetRef.current = node;
-        return unmark;
-      }
-      const release = targetRef(node);
-      return () => {
-        unmark?.();
-        if (typeof release === 'function') release();
-      };
-    },
-    [mark, targetRef]
-  );
+  const ref = useMemo(() => mergeRefs<HTMLDivElement>(mark, targetRef), [mark, targetRef]);
   return (
     <div ref={ref} className="rp-dashboard-cell" data-visible={visible} {...tileAttributes(tile)}>
       <WideCell value={wide}>{children}</WideCell>

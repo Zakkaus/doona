@@ -15,10 +15,13 @@ export type CanvasPlace = {target?: string; after?: boolean};
 // After a native drag ends, WebKit skips the pointerdown of the next press while its mousedown, pointerup and click
 // still arrive, so React Aria's press handlers ignore that press and the first button pressed after a drop does
 // nothing. Once per drag, a mousedown without a pointerdown before it gets the pointerdown WebKit left out.
+let cancelPressRepair: (() => void) | undefined;
 function repairNextPress() {
+  cancelPressRepair?.();
   const done = () => {
     document.removeEventListener('pointerdown', done, true);
     document.removeEventListener('mousedown', repair, true);
+    cancelPressRepair = undefined;
   };
   const repair = (event: MouseEvent) => {
     done();
@@ -35,6 +38,7 @@ function repairNextPress() {
       })
     );
   };
+  cancelPressRepair = done;
   document.addEventListener('pointerdown', done, true);
   document.addEventListener('mousedown', repair, true);
 }
