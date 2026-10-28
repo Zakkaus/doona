@@ -65,7 +65,7 @@ const regions = (['hk', 'jp', 'us', 'tw', 'sg', 'kr'] as const).map(id => region
 export const regionGroups = [...regions, region('cn', ...templateText.cn)];
 const service = (name: string, label: Key, nested: string[] = ['proxy', 'auto'], fallback?: string) => selectGroup(name, label, nested, fallback);
 
-// honk groups cannot contain direct; {group} names the file's first group.
+// {group} names the file's first group.
 export const templates: Record<RuleTemplate, {rules: string[]; fallback: string; groups: GroupSpec[]}> = {
   global: {rules: [...preset], fallback: '{group}', groups: []},
   bypass: {rules: [...preset, ...chinaVendors, ...china], fallback: '{group}', groups: []},
