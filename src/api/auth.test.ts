@@ -1,5 +1,5 @@
 import {afterEach, expect, it, vi} from 'vitest';
-import {closeSession, openSession} from './auth';
+import {closeSession, openSession, servesNativeApi} from './auth';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -48,4 +48,15 @@ it('gives up on a logout that gets no answer, with the write deadline', async ()
   const failure = expect(result).rejects.toMatchObject({status: 0, code: 'timeout', text: {key: 'ui.errTimeoutWrite', params: {seconds: 30}}});
   await vi.advanceTimersByTimeAsync(30000);
   await failure;
+});
+
+it.each([
+  {name: 'native capabilities', status: 200, call: () => servesNativeApi('https://router.test'), result: true},
+  {name: 'missing capabilities', status: 404, call: () => servesNativeApi('https://router.test'), result: false},
+  {name: 'ended session', status: 401, call: () => closeSession('https://router.test', 'secret'), result: undefined}
+])('releases an unread $name body without waiting for it to finish', async ({status, call, result}) => {
+  const cancel = vi.fn();
+  vi.stubGlobal('fetch', async () => new Response(new ReadableStream({cancel}), {status}));
+  expect(await call()).toBe(result);
+  expect(cancel).toHaveBeenCalledOnce();
 });
