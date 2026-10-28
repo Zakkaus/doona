@@ -27,7 +27,8 @@ test.describe(() => {
     await expectHiddenPagesIdle(page, requests, /\/flows(?:\/|$)/);
     await moreAction(page.locator('.rp-panel:visible'), 'View flow');
     await expect(page).toHaveURL(/#\/flows\?tab=records&id=flow-1$/);
-    await page.locator('.rp-panel:visible').getByRole('button', {name: 'Close', exact: true}).click();
+    // The URL changes before the kept connections page hides; do not capture its Close button.
+    await page.getByRole('tabpanel', {name: 'Records', exact: true}).getByRole('button', {name: 'Close', exact: true}).click();
     await expect(page).toHaveURL(/#\/flows\?tab=records$/);
     await expect(page.locator('.rp-panel:visible')).toHaveCount(0);
     await page.locator('.rp-nav[href="#/settings"]').click();
