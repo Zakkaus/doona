@@ -38,7 +38,8 @@ export function LinkTag({href, children}: {href: string; children: ReactNode}) {
 // overflow tag that counts the rest, `more(hidden)` wide.
 export function fitTags(widths: readonly number[], more: (hidden: number) => number, width: number, gap: number): number {
   const fits = (used: number) => used <= width + 0.01;
-  const ends = widths.reduce<number[]>((sums, tag) => [...sums, sums[sums.length - 1] + tag + gap], [0]);
+  const ends = [0];
+  for (const tag of widths) ends.push(ends[ends.length - 1] + tag + gap);
   if (fits(ends[widths.length] - gap)) return widths.length;
   let count = widths.length - 1;
   while (count > 0 && !fits(ends[count] + more(widths.length - count))) count--;
@@ -166,11 +167,14 @@ export function FitTags({
       nodes.current = new Set();
     };
   }, []);
-  const names = formatList(
-    lang,
-    items.map(item => item.label)
-  );
   const hidden = count === null ? 0 : items.length - count;
+  const names =
+    hidden > 0
+      ? formatList(
+          lang,
+          items.map(item => item.label)
+        )
+      : '';
   // While measuring, one overflow tag per digit count stands beside every tag.
   const probes = count === null && items.length ? Array.from({length: String(items.length).length}, (_, i) => 10 ** (i + 1) - 1) : [];
   return (

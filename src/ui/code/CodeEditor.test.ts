@@ -11,7 +11,7 @@ it('maps one-based UTF-8 columns to UTF-16 positions on non-ASCII lines', () => 
 });
 
 it('clamps diagnostic columns to the line and does not split a multibyte character', () => {
-  const state = EditorState.create({doc: 'éx'});
-  const marks = [0, 2, 3, 100].map(column => ({line: 1, column, level: 'error' as const, message: 'Invalid target'}));
-  expect(toDiagnostics(state, marks).map(mark => mark.from)).toEqual([0, 0, 1, 2]);
+  const state = EditorState.create({doc: 'é€𐐀x'});
+  const marks = [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 100].map(column => ({line: 1, column, level: 'error' as const, message: 'Invalid target'}));
+  expect(toDiagnostics(state, marks).map(mark => mark.from)).toEqual([0, 0, 1, 1, 1, 2, 2, 2, 2, 4, 5, 5]);
 });

@@ -7,13 +7,13 @@ export function toDiagnostics(state: EditorState, marks: EditorMark[]): Diagnost
     .map(mark => {
       const line = state.doc.line(mark.line);
       const column = Math.max(0, (mark.column ?? 1) - 1);
-      const bytes = new TextEncoder().encode(line.text);
       let offset = 0;
-      for (let byte = 0; byte < Math.min(column, bytes.length);) {
-        const width = bytes[byte] < 0x80 ? 1 : bytes[byte] < 0xe0 ? 2 : bytes[byte] < 0xf0 ? 3 : 4;
+      for (let byte = 0; offset < line.text.length && byte < column;) {
+        const code = line.text.codePointAt(offset)!;
+        const width = code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
         if (byte + width > column) break;
         byte += width;
-        offset += width === 4 ? 2 : 1;
+        offset += code > 0xffff ? 2 : 1;
       }
       const from = line.from + offset;
       return {from, to: line.to, severity: mark.level, message: mark.message};

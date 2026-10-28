@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef, useState, useSyncExternalStore, type PointerEvent} from 'react';
+import {useCallback, useEffect, useEffectEvent, useRef, useState, useSyncExternalStore, type PointerEvent} from 'react';
 import {pointerPosition} from './interaction';
 import {useContentSize} from '../hooks';
 import {NodeName} from '../NodeName';
@@ -49,9 +49,8 @@ function tipStore() {
 }
 type TipStore = ReturnType<typeof tipStore>;
 
-// A hover tip for the charts drawn without a chart library, in the same look as the activity charts' tooltips: it
-// follows the pointer inside its chart and shows the hovered item in words. The chart's own accessible names carry
-// the same facts, so the tip is for the eye only.
+// Shared chart tips: unbounded pointer tips are hidden from assistive technology; bounded tips also announce
+// keyboard selections.
 // The box the tip must stay inside, relative to the sparkline: the padding box of the nearest ancestor that clips,
 // which in a tile is its card, or else the viewport.
 export function tipBounds(own: HTMLElement) {
@@ -93,13 +92,13 @@ const exactSize = (value: number) => value;
 function BoundedTip({tip}: {tip: Tip}) {
   const [ref, size] = useContentSize<HTMLDivElement>(exactSize);
   const [dismissed, setDismissed] = useState<{x: number; y: number} | null>(null);
+  const keydown = useEffectEvent((event: KeyboardEvent) => {
+    if (event.key === 'Escape') setDismissed({x: tip.x, y: tip.y});
+  });
   useEffect(() => {
-    const keydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setDismissed({x: tip.x, y: tip.y});
-    };
     document.addEventListener('keydown', keydown);
     return () => document.removeEventListener('keydown', keydown);
-  }, [tip.x, tip.y]);
+  }, []);
   if (dismissed && (dismissed.x !== tip.x || dismissed.y !== tip.y)) setDismissed(null);
   const bounds = tip.bounds!;
   // Open after the point, or before it when that runs past the end; then keep the whole tip inside the bounds,
