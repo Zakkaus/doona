@@ -62,6 +62,7 @@ Entries live in [changes/](changes/) until release.
 - Release dashboard tile references on unmount and prevent drag listeners from accumulating across repeated keyboard drags. (#613)
 - Release unread response bodies after authentication probes and successful or already-ended session logout. (#613)
 - Release decoded wallpaper bitmaps when canvas creation or drawing fails. (#613)
+- Settings tabs in a narrow lite window no longer show a scrollbar; they use the Astryx tab row with overflow arrows. (#616)
 
 ### Internal
 
@@ -71,6 +72,7 @@ Entries live in [changes/](changes/) until release.
 - Remove obsolete UI, shell, store and feature exports, helpers, forwarding paths and state. (#613)
 - Share region-name matching and the clipboard helper between the standard and lite apps, and compose the existing toolbar and divider components. (#613)
 - Remove unused lite code, translation entries and unconsumed exports. (#613)
+- Lite styles Astryx components only through its theme slots, documented tokens and table plugin, and renders loading placeholders with its Skeleton. (#616)
 
 ## [0.1.0-rc.2] - 2026-10-27
 

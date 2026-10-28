@@ -125,7 +125,7 @@ WebSocket, gRPC and XHTTP are stream transports, separate from proxy protocols. 
 
 ## Latest release
 
-[0.1.0-rc.3](CHANGELOG.md) has 52 entries: 5 additions, 7 changes, 34 fixes and 6 internal updates.
+[0.1.0-rc.3](CHANGELOG.md) has 54 entries: 5 additions, 7 changes, 35 fixes and 7 internal updates.
 
 It adds a preview of doona lite, a smaller configuration editor shipped in its own archive. The Nodes page takes several node links at once and tests the filtered list, sorted by latency, and the route trace accepts a firewall mark. A first run opens a connection form in Settings, and up to four recently left pages reopen as they were. Suspending the service, clearing logs, switching to Direct or Global mode and leaving an unapplied rule template or group draft now ask for confirmation.
 
