@@ -187,6 +187,29 @@ it('keeps the baseline and the last rates over a window under a second', () => {
   ).toEqual({a: '3000', b: null});
 });
 
+it('does not repeat a short-window rate after its byte counter resets or becomes unknown', () => {
+  const measured = withRates(
+    snapshot(0, [
+      ['reset', '0'],
+      ['unknown', '0']
+    ]),
+    snapshot(2000, [
+      ['reset', '4000'],
+      ['unknown', '4000']
+    ])
+  );
+  const early = withRates(
+    measured.baseline,
+    snapshot(2400, [
+      ['reset', '1'],
+      ['unknown', null]
+    ])
+  );
+  expect(down(measured.list)).toEqual({reset: '2000', unknown: '2000'});
+  expect(down(early.list)).toEqual({reset: null, unknown: null});
+  expect(early.baseline).toBe(measured.baseline);
+});
+
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();

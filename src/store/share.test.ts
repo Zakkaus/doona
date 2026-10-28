@@ -38,3 +38,14 @@ it('compares only plain objects and arrays structurally', () => {
   expect(replaceEqualDeep(undefined, {a: 1})).toEqual({a: 1});
   expect(replaceEqualDeep({a: NaN}, {a: NaN})).toEqual({a: NaN});
 });
+
+it('preserves own prototype-named fields when a cached JSON object changes', () => {
+  const previous = JSON.parse('{"__proto__":{"state":1},"stable":{"value":1}}') as Record<string, unknown>;
+  const next = JSON.parse('{"__proto__":{"state":2},"stable":{"value":1}}') as Record<string, unknown>;
+  const shared = replaceEqualDeep(previous, next);
+  expect(JSON.stringify(shared)).toBe(JSON.stringify(next));
+  expect(Object.hasOwn(shared, '__proto__')).toBe(true);
+  expect(Object.getPrototypeOf(shared)).toBe(Object.prototype);
+  expect(shared.stable).toBe(previous.stable);
+  expect(replaceEqualDeep(shared, structuredClone(next))).toBe(shared);
+});
