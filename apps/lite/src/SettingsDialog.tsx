@@ -16,6 +16,7 @@ import {Link as TextLink} from '@astryxdesign/core/Link';
 import {useToast} from '@astryxdesign/core/Toast';
 import {Selector} from '@astryxdesign/core/Selector';
 import {SideNav, SideNavItem, SideNavSection} from '@astryxdesign/core/SideNav';
+import {Tab, TabList} from '@astryxdesign/core/TabList';
 import {Heading, Text} from '@astryxdesign/core/Text';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import * as stylex from '@stylexjs/stylex';
@@ -40,7 +41,6 @@ import {ThemeChoices} from './ui/ThemeChoices';
 
 const styles = stylex.create({
   sideNav: {flexShrink: 0},
-  navButton: {flexShrink: 0},
   sideNavSection: {paddingBlock: 'var(--spacing-2)'},
   closeAnchor: {position: 'sticky', insetBlockStart: 0, zIndex: 1, height: 0},
   closeBacking: {display: 'flex', backgroundColor: 'var(--color-background-surface)', borderRadius: 'var(--radius-element)'},
@@ -435,27 +435,34 @@ export function SettingsDialog({
               </VStack>
             ) : (
               <>
-                <RowEntrance>
-                  <HStack as="ul" aria-label={t.settingsSections} gap={1} wrap="nowrap" isScrollable paddingInline={3} paddingBlock={2}>
+                <VStack paddingInline={3} paddingBlock={2}>
+                  <TabList role="tablist" aria-label={t.settingsSections} value={active} onChange={value => select(value as Panel)} size="sm">
                     {panels.map(panel => (
-                      <VStack as="li" key={panel}>
-                        <Button
-                          key={panel}
-                          xstyle={styles.navButton}
-                          label={t[panel]}
-                          icon={<Icon icon={icon(panel)} size="sm" />}
-                          variant={active === panel ? 'secondary' : 'ghost'}
-                          size="sm"
-                          isDisabled={pending || !!candidate}
-                          onClick={() => select(panel)}
-                        />
-                      </VStack>
+                      <Tab
+                        key={panel}
+                        id={`${titleId}-${panel}`}
+                        value={panel}
+                        panelId={`${titleId}-panel`}
+                        label={t[panel]}
+                        icon={<Icon icon={icon(panel)} size="sm" />}
+                        aria-disabled={pending || !!candidate}
+                      />
                     ))}
-                  </HStack>
-                </RowEntrance>
+                  </TabList>
+                </VStack>
                 <Divider />
                 <StackItem size="fill">
-                  <VStack gap={4} padding={4} isScrollable height="100%" xstyle={styles.panel}>
+                  <VStack
+                    role="tabpanel"
+                    id={`${titleId}-panel`}
+                    aria-labelledby={`${titleId}-${active}`}
+                    tabIndex={0}
+                    gap={4}
+                    padding={4}
+                    isScrollable
+                    height="100%"
+                    xstyle={styles.panel}
+                  >
                     {heading}
                     <Crossfade swapKey={candidate ? 'review' : active} gap={4}>
                       {body}
