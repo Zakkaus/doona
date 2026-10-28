@@ -34,12 +34,16 @@ export async function prepareWallpaper(file: File): Promise<Blob> {
   } catch {
     throw new WallpaperError('decode');
   }
-  const {width, height} = fitSize(bitmap.width, bitmap.height);
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  canvas.getContext('2d')?.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
+  let canvas: HTMLCanvasElement;
+  try {
+    const {width, height} = fitSize(bitmap.width, bitmap.height);
+    canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d')?.drawImage(bitmap, 0, 0, width, height);
+  } finally {
+    bitmap.close();
+  }
   // A browser that cannot write WebP returns PNG instead; JPEG keeps such a file small.
   const webp = await encode(canvas, 'image/webp');
   const blob = webp?.type === 'image/webp' ? webp : await encode(canvas, 'image/jpeg');
