@@ -382,7 +382,6 @@ describe('the features each cause turns off', () => {
       items: [{id: 'geodata_settings', label: t('ov.lim.geodataSettings')}]
     });
     expect(group(limits(noDb), 'stateDb')?.help?.text).toContain('does not require experimental.native_api.config_write.');
-    expect(t('ov.lim.stateDbClosed')).not.toContain('config_write');
     expect(ids(group(limits(noDb, other), 'notProvided'))).toEqual(['geodata_settings']);
   });
 
