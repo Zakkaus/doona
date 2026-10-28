@@ -1,5 +1,7 @@
-import {describe, expect, it} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import {MAX_BYTES, MAX_EDGE, WallpaperError, checkFile, fitSize, prepareWallpaper} from './wallpaperImage';
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('wallpaper image', () => {
   it.each([
@@ -25,5 +27,22 @@ describe('wallpaper image', () => {
     await expect(prepareWallpaper(new File(['x'], 'a.txt', {type: 'text/plain'}))).rejects.toEqual(new WallpaperError('type'));
     const big = new File([new Uint8Array(MAX_BYTES + 1)], 'a.png', {type: 'image/png'});
     await expect(prepareWallpaper(big)).rejects.toMatchObject({problem: 'size'});
+  });
+
+  it('closes the decoded bitmap when drawing fails', async () => {
+    const close = vi.fn();
+    const error = new Error('Canvas allocation failed');
+    vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({width: 1, height: 1, close}));
+    vi.stubGlobal('document', {
+      createElement: () => ({
+        getContext: () => ({
+          drawImage: () => {
+            throw error;
+          }
+        })
+      })
+    });
+    await expect(prepareWallpaper(new File(['image'], 'a.png', {type: 'image/png'}))).rejects.toBe(error);
+    expect(close).toHaveBeenCalledOnce();
   });
 });
