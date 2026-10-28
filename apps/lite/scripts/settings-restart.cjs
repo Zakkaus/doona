@@ -132,6 +132,13 @@ const labels = {
         };
       });
       await copyRow.click();
+      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('log_level: debug');
+      await expect(copyRow).toBeFocused();
+      await expect(dialog.locator('textarea[readonly]')).toHaveCount(0);
+      await page.evaluate(() => {
+        document.execCommand = () => false;
+      });
+      await copyRow.click();
       await expect(page.locator('.astryx-toast').filter({hasText: l.failed})).toBeVisible();
       if (shots && locale === 'zh-CN') {
         fs.mkdirSync(shots, {recursive: true});
@@ -159,7 +166,7 @@ const labels = {
       expect(writes).toEqual([]);
       expect(errors).toEqual([]);
       await context.close();
-      console.log(`PASS restart settings: ${locale}, current/default clipboard, command, failure, docs, hidden paths, no writes`);
+      console.log(`PASS restart settings: ${locale}, current/default clipboard, command, rejected-API fallback, failure, docs, hidden paths, no writes`);
     }
   } finally {
     await browser.close();

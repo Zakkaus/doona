@@ -1,4 +1,4 @@
 Internal
 
-- Share region-name matching and clipboard fallbacks between the standard and lite apps, and compose the existing toolbar and divider components without changing their presentation.
-- Remove unused lite code, translation entries and unconsumed value/type export surfaces while retaining live implementations.
+- Share region-name matching and the clipboard helper between the standard and lite apps, and compose the existing toolbar and divider components.
+- Remove unused lite code, translation entries and unconsumed exports.

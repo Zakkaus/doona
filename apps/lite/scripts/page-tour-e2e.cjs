@@ -107,8 +107,35 @@ async function go(p, route) {
     ).toBeVisible();
     await expect(p.getByRole('textbox', {name: 'Share link', exact: true})).toHaveValue(/concurrency=-1/);
     await shot('share');
+    const shareLink = await p.getByRole('textbox', {name: 'Share link', exact: true}).inputValue();
+    const clipboard = await p.evaluateHandle(() => navigator.clipboard);
+    const writeClipboard = await p.evaluateHandle(() => navigator.clipboard.writeText.bind(navigator.clipboard));
+    await p.evaluate(() => {
+      navigator.clipboard.writeText = async () => {
+        throw new Error('denied');
+      };
+    });
     await p.getByRole('button', {name: 'Copy link', exact: true}).click();
     await expect(p.getByRole('button', {name: 'Copied', exact: true})).toBeVisible();
+    await expect.poll(() => clipboard.evaluate(value => value.readText())).toBe(shareLink);
+    await writeClipboard.evaluate(write => write(''));
+    await p.evaluate(() => Object.defineProperty(navigator, 'clipboard', {value: undefined, configurable: true}));
+    await p.getByRole('button', {name: 'Copied', exact: true}).click();
+    await expect(p.getByRole('button', {name: 'Copied', exact: true})).toBeVisible();
+    await expect.poll(() => clipboard.evaluate(value => value.readText())).toBe(shareLink);
+    await p.evaluate(() => {
+      document.execCommand = () => false;
+    });
+    await p.getByRole('button', {name: 'Copied', exact: true}).click();
+    await expect(p.getByRole('dialog').getByRole('status').filter({hasText: 'Could not copy. Select and copy the link above.'})).toBeVisible();
+    await expect(p.getByRole('button', {name: 'Copy link', exact: true})).toBeEnabled();
+    await p.evaluate(() => {
+      delete document.execCommand;
+      delete navigator.clipboard;
+    });
+    await clipboard.evaluate(value => delete value.writeText);
+    await writeClipboard.dispose();
+    await clipboard.dispose();
     await p.getByRole('group', {name: 'Dialog actions'}).getByRole('button', {name: 'Close', exact: true}).click();
     await closed(p);
     await go(p, 'subscriptions');
