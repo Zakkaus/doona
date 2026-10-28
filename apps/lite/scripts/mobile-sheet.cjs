@@ -88,14 +88,46 @@ async function demo(browser, width, theme) {
       console.log(`PASS 390 ${theme}: toast hit/position, full close hit area, normal click, focus return, Escape, touch grabber dismissal`);
       await page.close();
     }
-    for (const theme of ['light', 'dark']) {
-      const page = await demo(browser, 1440, theme);
+    for (const [width, theme] of [
+      [390, 'light'],
+      [390, 'dark'],
+      [1440, 'light'],
+      [1440, 'dark']
+    ]) {
+      const page = await demo(browser, width, theme);
+      if (width === 390) await page.getByRole('button', {name: '打开导航', exact: true}).click();
       const settings = page.getByRole('button', {name: '设置', exact: true});
       await settings.click();
       const dialog = page.locator('dialog[open]');
-      await dialog.getByRole('button', {name: '网络', exact: true}).click();
+      if (width === 390) {
+        const tabs = dialog.getByRole('tablist', {name: '设置分类'});
+        const general = tabs.getByRole('tab', {name: '常规', exact: true});
+        const network = tabs.getByRole('tab', {name: '网络', exact: true});
+        const language = tabs.getByRole('tab', {name: '语言', exact: true});
+        await expect(general).toHaveAttribute('aria-selected', 'true');
+        await general.focus();
+        await page.keyboard.press('End');
+        await expect(language).toBeFocused();
+        await expect(language).toBeInViewport({ratio: 1});
+        await page.keyboard.press('Enter');
+        await expect(dialog.getByRole('tabpanel', {name: '语言'})).toBeVisible();
+        await page.keyboard.press('Home');
+        await expect(general).toBeFocused();
+        await page.keyboard.press('ArrowRight');
+        await expect(network).toBeFocused();
+        await page.keyboard.press('Enter');
+        await expect(network).toHaveAttribute('aria-selected', 'true');
+        await expect(dialog.getByRole('tabpanel', {name: '网络'})).toBeVisible();
+      } else await dialog.getByRole('button', {name: '网络', exact: true}).click();
       await dialog.getByRole('textbox', {name: '并发拨号上限', exact: true}).fill('8');
       await dialog.getByRole('button', {name: '查看并应用', exact: true}).click();
+      if (width === 390) {
+        for (const tab of await dialog.getByRole('tab').all()) await expect(tab).toBeDisabled();
+        await dialog.getByRole('button', {name: '取消', exact: true}).click();
+        await expect(dialog.getByRole('tab', {name: '网络', exact: true})).toBeEnabled();
+        await expect(dialog.getByRole('textbox', {name: '并发拨号上限', exact: true})).toHaveValue('8');
+        await dialog.getByRole('button', {name: '查看并应用', exact: true}).click();
+      }
       await dialog.getByRole('button', {name: '应用', exact: true}).click();
       const inside = await toastHit(page);
       await expect(dialog).toBeVisible();
@@ -103,7 +135,8 @@ async function demo(browser, width, theme) {
       await expect(dialog).toHaveCount(0);
       const outside = await toastHit(page);
       for (const key of ['x', 'y', 'width', 'height']) expect(Math.abs(inside[key] - outside[key])).toBeLessThan(1);
-      expect(outside.x + outside.width).toBe(1440 - 16);
+      expect(outside.x + outside.width).toBe(width - 16);
+      if (width === 390) await page.getByRole('button', {name: '打开导航', exact: true}).click();
       await settings.click();
       await toastHit(page);
       await page.locator('.astryx-toast button').click();
@@ -111,7 +144,7 @@ async function demo(browser, width, theme) {
       await expect(dialog).toBeVisible();
       await page.keyboard.press('Escape');
       await expect(dialog).toHaveCount(0);
-      console.log(`PASS 1440 ${theme}: toast raised inside settings modal hit-tests, retains position and Escape`);
+      console.log(`PASS ${width} ${theme}: settings navigation, review gating, toast hit-tests/position and Escape`);
       await page.close();
     }
   } finally {
