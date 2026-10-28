@@ -167,7 +167,7 @@ for (const width of [390, 768])
     test.describe(`${width}px ${lang} editor toolbar`, () => {
       test.use({viewport: {width, height: 900}, storage: {'doona-lang': lang}});
 
-      test('the commit actions and the editing tools each occupy one row below the full-width note', async ({page}) => {
+      test('the editor keeps aligned actions below the full-width note, folding tools into the actions row', async ({page}) => {
         await page.goto('/#/config?tab=source');
         await expect(page.locator('.cm-content')).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
@@ -176,8 +176,8 @@ for (const width of [390, 768])
           card.evaluate(el => {
             const note = el.querySelector('.rp-source-note')!.getBoundingClientRect();
             const toolbar = (el.querySelector('.rp-editor-toolbar') ?? el.querySelector('.rp-toolbar'))!.getBoundingClientRect();
-            // The commit row and the tools row, each with its visible buttons; the tools fold into a menu on a phone.
-            const rows = [...el.querySelectorAll('.rp-editor-toolbar .rp-toolbar, .rp-editor-overflow')]
+            const collapsed = el.querySelector('.rp-editor-actions')!.hasAttribute('data-collapsed');
+            const rows = [...el.querySelectorAll('.rp-editor-toolbar > .rp-toolbar, .rp-editor-actions')]
               .map(row =>
                 [...row.querySelectorAll('button')]
                   .filter(button => button.checkVisibility({visibilityProperty: true}))
@@ -188,7 +188,7 @@ for (const width of [390, 768])
               )
               .filter(row => row.length > 0);
             const box = el.getBoundingClientRect();
-            return {note, toolbar, rows, left: toolbar.left - box.left, right: box.right - toolbar.right};
+            return {note, toolbar, rows, collapsed, left: toolbar.left - box.left, right: box.right - toolbar.right};
           });
         const note = card.locator('.rp-source-note');
         const lines = await note.evaluate(el => el.getBoundingClientRect().height / parseFloat(getComputedStyle(el.querySelector('.rp-label')!).lineHeight));
@@ -200,13 +200,12 @@ for (const width of [390, 768])
         for (const dirty of [false, true]) {
           if (dirty) await page.locator('.cm-content').fill((await page.locator('.cm-content').innerText()) + '\n# draft');
           const boxes = await geometry();
-          expect(boxes.rows.length).toBe(2);
+          expect(boxes.rows.length).toBe(boxes.collapsed ? 1 : 2);
           for (const controls of boxes.rows) {
             expect(Math.max(...controls.map(box => box.top)) - Math.min(...controls.map(box => box.top))).toBeLessThanOrEqual(1);
             expect(Math.max(...controls.map(box => box.height)) - Math.min(...controls.map(box => box.height))).toBeLessThanOrEqual(1);
           }
-          // The commit row sits above the tools, which stay next to the text.
-          expect(boxes.rows[0][0].bottom).toBeLessThanOrEqual(boxes.rows[1][0].top);
+          if (!boxes.collapsed) expect(boxes.rows[0][0].bottom).toBeLessThanOrEqual(boxes.rows[1][0].top);
           expect(boxes.note.bottom).toBeLessThanOrEqual(boxes.toolbar.top);
           expect(Math.abs(boxes.note.width - boxes.toolbar.width)).toBeLessThanOrEqual(1);
           expect(Math.abs(boxes.left - boxes.right)).toBeLessThanOrEqual(1);
@@ -214,6 +213,40 @@ for (const width of [390, 768])
         }
       });
     });
+
+test.describe('folded editor actions', () => {
+  test.use({viewport: {width: 390, height: 844}});
+
+  for (const incomplete of [false, true])
+    test(`the folded menu shares Validate's row${incomplete ? ' for an incomplete source' : ''}`, async ({page}) => {
+      const {api} = await mockBackend(page);
+      if (incomplete) {
+        const config = await api.config();
+        for (const source of config.sources) source.content = source.content.replace('direct', 'redacted');
+        await page.route('**/api/v1/config', route => route.fulfill({json: config}));
+      }
+      await page.goto('/#/config?tab=source');
+      await expect(page.locator('.cm-content')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const toolbar = page.locator('.rp-editor-toolbar');
+      const validate = toolbar.getByRole('button', {name: 'Validate', exact: true});
+      const more = toolbar.getByRole('button', {name: 'More actions', exact: true});
+      await expect(more).toBeVisible();
+      if (incomplete) await expect(validate).toBeDisabled();
+      else await expect(validate).toBeEnabled();
+      const [action, menu, row] = await Promise.all([box(validate), box(more), box(toolbar)]);
+      expect(Math.abs(action.y - menu.y)).toBeLessThanOrEqual(2);
+      expect(Math.abs(action.height - menu.height)).toBeLessThanOrEqual(1);
+      expect(Math.abs(menu.x + menu.width - row.x - row.width)).toBeLessThanOrEqual(1);
+      expect(row.height).toBeLessThanOrEqual(action.height + 2);
+      await expect(toolbar.locator('.rp-editor-actions')).toBeHidden();
+      if (!incomplete) {
+        await validate.focus();
+        await page.keyboard.press('Tab');
+        await expect(more).toBeFocused();
+      }
+    });
+});
 
 test.describe('phone editor keyboard', () => {
   test.use({viewport: {width: 390, height: 900}});

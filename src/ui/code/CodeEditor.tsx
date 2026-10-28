@@ -387,21 +387,39 @@ export function CodeEditor({
   const run = (command: Command) => {
     if (view.current) command(view.current);
   };
+  const foldedTools = collapsed && (
+    <div className="rp-editor-overflow" ref={overflow}>
+      <MoreMenu
+        actions={[
+          {id: 'find', label: t(readOnly ? 'cm.find' : 'cm.findReplace'), onAction: () => requestAnimationFrame(() => run(openSearchPanel))},
+          {id: 'line', label: t('cm.gotoLine'), onAction: () => requestAnimationFrame(() => run(gotoLine))},
+          ...(onChange
+            ? editCommands.map(command => ({
+                id: command.id,
+                label: t(command.label),
+                isDisabled: readOnly,
+                onAction: () => requestAnimationFrame(() => run(command.run))
+              }))
+            : [])
+        ]}
+      />
+    </div>
+  );
   return (
     <>
       {!compact && (
         <div className="rp-editor-head" ref={head}>
           <div className="rp-editor-toolbar">
-            {/* The caller's actions commit or check the source, as a form's do: Buttons in their own row. The editing
-                tools take the row above the text, as action buttons, and fold into a menu where they do not fit. */}
+            {/* Caller actions remain Buttons; folded editing tools trail them without taking another row. */}
             {actions.length > 0 && (
               <div className="rp-toolbar">
                 <PrimaryActions>
                   <ActionGroup actions={actions} overflowMode="wrap" />
                 </PrimaryActions>
+                {foldedTools}
               </div>
             )}
-            <div className="rp-editor-actions" data-collapsed={collapsed || undefined}>
+            <div className="rp-editor-actions" data-collapsed={collapsed || undefined} data-merged={(collapsed && actions.length > 0) || undefined}>
               <div className="rp-toolbar" ref={toolbar}>
                 <Button onPress={() => run(openSearchPanel)}>{t(readOnly ? 'cm.find' : 'cm.findReplace')}</Button>
                 <Button onPress={() => run(gotoLine)}>{t('cm.gotoLine')}</Button>
@@ -429,24 +447,7 @@ export function CodeEditor({
                   </MenuButton>
                 )}
               </div>
-              {collapsed && (
-                <div className="rp-editor-overflow" ref={overflow}>
-                  <MoreMenu
-                    actions={[
-                      {id: 'find', label: t(readOnly ? 'cm.find' : 'cm.findReplace'), onAction: () => requestAnimationFrame(() => run(openSearchPanel))},
-                      {id: 'line', label: t('cm.gotoLine'), onAction: () => requestAnimationFrame(() => run(gotoLine))},
-                      ...(onChange
-                        ? editCommands.map(command => ({
-                            id: command.id,
-                            label: t(command.label),
-                            isDisabled: readOnly,
-                            onAction: () => requestAnimationFrame(() => run(command.run))
-                          }))
-                        : [])
-                    ]}
-                  />
-                </div>
-              )}
+              {actions.length === 0 && foldedTools}
             </div>
           </div>
           {banner}
