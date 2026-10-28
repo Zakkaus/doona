@@ -82,6 +82,7 @@ export function createRuntime(capabilities: Capabilities, big: boolean, flowReco
     },
     runtime: async signal => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.runtime.available) throw new ApiError(404, 'capability_not_supported', 'Runtime is unavailable');
       const now = Date.now();
       if (runtime.lifecycle.started_at)
         runtime.lifecycle.uptime_seconds = String(Math.max(0, Math.floor((now - Date.parse(runtime.lifecycle.started_at)) / 1000)));

@@ -1,9 +1,11 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {resourceByOperation, validateBody} from '../tools/conformance.mjs';
 import {ApiError} from '../src/api/error';
-import type {Capabilities, OperationAccepted} from '../src/api/model';
+import type {Capabilities} from '../src/api/model';
 import {createMockApi, type MockApi, type MockOptions} from '.';
 import {capabilities, capabilitiesBase, capabilitiesM1} from './fixtures/capabilities';
+import {createFlow} from './flows';
+import {connections} from './fixtures/network';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -71,7 +73,14 @@ const calls: Call[] = [
   ['flushDnsCache', 200, api => api.flushDnsCache()],
   ['closeConnections', 200, api => api.closeConnections({all: true})],
   ['startReload', 202, api => api.startReload()],
-  ['getOperation', 200, async api => api.pollOperation((await api.startSuspend().catch(() => null)) ?? ({} as OperationAccepted))]
+  [
+    'getOperation',
+    200,
+    async api => {
+      const accepted = await api.startSuspend().catch(() => null);
+      return accepted ? api.pollOperation(accepted) : api.operation('missing');
+    }
+  ]
 ];
 
 describe.each(Object.keys(profiles))('the %s mock', name => {
@@ -135,4 +144,42 @@ it('ends a DNS log page early at a large answer and still offers the next page',
     if (!page.next_cursor) break;
   }
   expect(short.length).toBeGreaterThan(0);
+});
+
+const disabledCalls: Array<[keyof Capabilities['resources'], string, (api: MockApi) => Promise<unknown>]> = [
+  ['groups', 'available', api => api.selectGroup('proxy', {member_id: 'sg-01', network: 'both'})],
+  ['groups', 'selection', api => api.selectGroup('proxy', {member_id: 'sg-01', network: 'both'})],
+  ['groups', 'available', api => api.clearGroupOverride('auto', 'both')],
+  ['groups', 'selection', api => api.clearGroupOverride('auto', 'both')],
+  ['groups', 'available', api => api.patchGroup('proxy', [{op: 'replace', path: '/config/tolerance', value: 20}], '"40"')],
+  ['groups', 'config_patch', api => api.patchGroup('proxy', [{op: 'replace', path: '/config/tolerance', value: 20}], '"40"')],
+  ['dns_cache', 'available', api => api.deleteDnsEntry('c1')],
+  ['dns_cache', 'delete_entry', api => api.deleteDnsEntry('c1')],
+  ['dns_cache', 'available', api => api.flushDnsCache()],
+  ['dns_cache', 'flush', api => api.flushDnsCache()],
+  ['dns_cache', 'read', api => api.dnsCache()],
+  ['reload', 'available', api => api.startReload()],
+  ['suspend', 'available', api => api.startSuspend()],
+  ['resume', 'available', api => api.startResume()],
+  ['runtime', 'available', api => api.runtime()],
+  ['operations', 'available', api => api.operation('missing')]
+];
+it.each(disabledCalls)('refuses calls when %s.%s is disabled', async (resource, flag, call) => {
+  const limited = structuredClone(capabilities);
+  Object.assign(limited.resources[resource], {[flag]: false});
+  await expect(call(createMockApi({isolated: true, capabilities: limited}))).rejects.toMatchObject({status: 404, code: 'capability_not_supported'});
+});
+
+it.each(['not-an-ip', '999.0.0.1', ''])('refuses an invalid DNS log source filter %j', async src => {
+  await expect(createMockApi({isolated: true}).dnsLog({src})).rejects.toMatchObject({status: 400, code: 'invalid_request'});
+});
+
+it.each([
+  ['10.0.0.12', '203.0.113.20:443', '10.0.0.12', '203.0.113.20', null],
+  ['[2001:db8::1]:5000', '[2001:db8::2]:443', '2001:db8::1', '2001:db8::2', 5000]
+] as const)('keeps flow address evidence consistent for %s to %s', (src, dst, src_ip, dst_ip, src_port) => {
+  const flow = createFlow({...connections.tcp[0], src, dst}, 'tcp', connections.observed_at, connections.instance_id);
+  expect(flow.trace.steps.find(step => step.stage === 'route')?.data.input).toMatchObject({src_ip, src_port, dst_ip, dst_port: 443});
+  expect(flow.trace.steps.find(step => step.stage === 'dns')?.data).toMatchObject({addresses: [dst_ip], selected_ip: dst_ip});
+  expect(flow.trace.steps.find(step => step.stage === 'outbound')?.data).toMatchObject({dial_ip: dst_ip, target: 'api.telegram.org:443'});
 });

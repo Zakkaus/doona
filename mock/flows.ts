@@ -1,4 +1,5 @@
 import type {Connection, FlowDetail, FlowStep} from '../src/api/model';
+import {addressPort, sourceIp} from '../src/api/selectors';
 import {rules} from './rules';
 import {configRules} from './fixtures/configuration';
 import {generationId} from './fixtures/clock';
@@ -53,10 +54,9 @@ function ruleFor(domain: string): {id: string; expression: string} | null {
   return null;
 }
 
-// An observed "ip:port" endpoint, bracketed for IPv6, split into the routing input's address and port.
 function endpoint(value: string | null): [string | null, number | null] {
-  const at = value?.lastIndexOf(':') ?? -1;
-  return value && at > 0 ? [value.slice(0, at).replace(/^\[(.*)\]$/, '$1'), Number(value.slice(at + 1))] : [null, null];
+  const port = addressPort(value ?? undefined);
+  return [sourceIp(value ?? undefined) ?? null, port === undefined ? null : Number(port)];
 }
 
 export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', observedAt: string, instanceId: string): FlowDetail {
@@ -169,8 +169,8 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
           upstream: null,
           route_evaluation_ids: [],
           status: 'NOERROR',
-          addresses: [connection.dst!.split(':')[0]],
-          selected_ip: connection.dst!.split(':')[0],
+          addresses: dst_ip ? [dst_ip] : [],
+          selected_ip: dst_ip,
           error: null
         }
       });
@@ -222,9 +222,9 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
           ],
           leaf_node_id: leaf,
           leaf_node_name: leaf,
-          target: input.domain ? input.domain + ':' + connection.dst!.split(':').at(-1) : input.dst,
+          target: input.domain ? input.domain + ':' + dst_port : input.dst,
           target_kind: input.domain ? 'domain' : 'ip',
-          dial_ip: connection.dst!.split(':')[0],
+          dial_ip: dst_ip,
           server_addr: '198.51.100.1:443',
           resolution_location: input.domain ? 'local_dns' : 'original_ip',
           status: 'succeeded',

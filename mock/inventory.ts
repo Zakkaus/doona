@@ -115,6 +115,8 @@ export function createInventory(
     },
     selectGroup: async (groupId, request, signal) => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.groups.available || capabilities.resources.groups.selection === false)
+        throw new ApiError(404, 'capability_not_supported', 'Group selection is unavailable');
       const group = found(
         groups.find(g => g.id === groupId),
         'Group'
@@ -151,6 +153,8 @@ export function createInventory(
     // Back to the policy's own pick: the pin goes and the member the policy last ranked first comes back.
     clearGroupOverride: async (groupId, network, signal) => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.groups.available || capabilities.resources.groups.selection === false)
+        throw new ApiError(404, 'capability_not_supported', 'Group selection is unavailable');
       const group = found(
         groups.find(g => g.id === groupId),
         'Group'
@@ -173,6 +177,8 @@ export function createInventory(
     },
     patchGroup: async (groupId, ops, ifMatch, signal) => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.groups.available || capabilities.resources.groups.config_patch === false)
+        throw new ApiError(404, 'capability_not_supported', 'Group configuration updates are unavailable');
       const group = found(
         groups.find(g => g.id === groupId),
         'Group'
