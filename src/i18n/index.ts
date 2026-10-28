@@ -64,7 +64,7 @@ function readCatalogue(lang: Lang, stage: Stage): Promise<Partial<Catalogue>> {
 }
 const catalogues = new Map<Lang, Partial<Catalogue>>();
 const loaded = new Set<Lang>();
-const loading = new Map<Lang, Promise<void>>();
+const loading = new Map<Lang, {stage: number; promise: Promise<void>}>();
 const readers = new Map<Lang, Reader>();
 const partLoads = new Map<string, Promise<void>>();
 // The latest stage any code has asked for; a language loaded later loads every part up to it.
@@ -88,23 +88,24 @@ function loadPart(lang: Lang, stage: Stage, read: Reader): Promise<void> {
 // Node imports JSON only with the type attribute, which Vite 6 does not expand, so the e2e specs pass their own reader.
 // A partial language loads the reference catalogue too; translation resolves its missing keys from English.
 export function loadLanguage(lang: Lang, read: Reader = readCatalogue): Promise<void> {
-  let pending = loading.get(lang);
-  // A part that failed while the language was not shown loads again here.
-  if (!pending || stages.slice(0, reached + 1).some(stage => !partLoads.has(`${lang}/${stage}`))) {
+  const current = loading.get(lang);
+  // A new stage or a failed part needs a fresh wait, including parts already in flight.
+  if (!current || current.stage < reached || stages.slice(0, reached + 1).some(stage => !partLoads.has(`${lang}/${stage}`))) {
     readers.set(lang, read);
     const {complete} = languages.find(language => language.id === lang)!;
     const own = Promise.all(stages.slice(0, reached + 1).map(stage => loadPart(lang, stage, read)));
     const table = complete ? own : Promise.all([own, loadLanguage(REFERENCE_LANG, read)]);
-    pending = table.then(
+    const pending = table.then(
       () => void loaded.add(lang),
       (error: unknown) => {
         loading.delete(lang);
         throw error;
       }
     );
-    loading.set(lang, pending);
+    loading.set(lang, {stage: reached, promise: pending});
+    return pending;
   }
-  return pending;
+  return current.promise;
 }
 // The parts up to `stage` of every language this page loads, now and later. Only the shown language's parts, with
 // English for a partial language, can fail the stage; another language's failed part loads again with that language.
@@ -114,7 +115,7 @@ export function loadStage(stage: Stage): Promise<void> {
   const shown = loadedLang(readLang());
   const needed = languages.find(language => language.id === shown)!.complete ? [shown] : [shown, REFERENCE_LANG];
   const wanted = [...loading.keys()].map(lang => {
-    const parts = loadLanguage(lang, readers.get(lang)!);
+    const parts = Promise.all(stages.slice(0, index + 1).map(part => loadPart(lang, part, readers.get(lang)!)));
     return needed.includes(lang) ? parts : parts.catch(() => undefined);
   });
   return Promise.all(wanted).then(() => undefined);
