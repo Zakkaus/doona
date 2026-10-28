@@ -45,7 +45,7 @@ export function append<T extends Timed>(rings: Rings<T>, sample: T, fold: Fold<T
 }
 
 // The window's samples on one axis: minute buckets, then the session's polls, then the backend's ring, each
-// winning a shared instant over the one before. Long windows are thinned to at most `maxPoints` buckets.
+// winning a shared instant over the one before. Long windows are thinned to roughly `maxPoints` buckets.
 export function window<T extends Timed>(rings: Rings<T>, history: T[], windowSeconds: number, fold: Fold<T>, now = serverNow(), maxPoints = 360) {
   const since = now - windowSeconds * 1000;
   const byTime = new Map<number, T>();
