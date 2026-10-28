@@ -261,6 +261,14 @@ describe('settings, features and aliases', () => {
     }
   });
 
+  // Both directions matter: an unregistered mark is unsearchable, and an unmarked entry cannot focus its control.
+  it('matches the controls the Settings cards mark', () => {
+    const cards = import.meta.glob<string>('../../features/settings/*Settings.tsx', {query: '?raw', import: 'default', eager: true});
+    const marked = Object.values(cards).flatMap(source => [...source.matchAll(/data-setting="([^"]+)"/g)].map(match => match[1]));
+    // Numeric and recorder fields use their registry ids dynamically; log level is the runtime card's literal mark.
+    expect(marked.sort()).toEqual([...settingsFields.map(field => field.id), 'log.level'].sort());
+  });
+
   it.each([
     ['zh-TW', '配色', 'setting:palette'],
     ['en', '配色', 'setting:palette'],

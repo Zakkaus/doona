@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
 import {flagForName, resolvedFlag} from './countryFlags';
 
 describe('flags from the shared region detector', () => {
@@ -66,6 +66,38 @@ describe('flags from the shared region detector', () => {
   it.each(['🇺🇸 Japan', 'Japan 🇯🇵', '🏴\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F} UK'])('adds no decoration to an existing flag in %s', name =>
     expect(flagForName(name)).toBeNull()
   );
+
+  it.each([
+    ['JP memoized', '🇯🇵'],
+    ['unknown memoized', null],
+    ['🇯🇵 memoized', null]
+  ] as const)('reuses the name lookup for %s, including missing and embedded flags', (name, expected) => {
+    expect(flagForName(name)).toBe(expected);
+    const spy = vi.spyOn(RegExp.prototype, 'exec');
+    try {
+      const flag = flagForName(name);
+      const calls = spy.mock.calls.filter(([input]) => input === name).length;
+      expect(flag).toBe(expected);
+      expect(calls).toBe(0);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('evicts the oldest flag lookup when the cache reaches its limit', () => {
+    const name = 'JP oldest cache entry';
+    expect(flagForName(name)).toBe('🇯🇵');
+    for (let i = 0; i < 2048; i++) flagForName(`unknown cache entry ${i}`);
+    const spy = vi.spyOn(RegExp.prototype, 'exec');
+    try {
+      const flag = flagForName(name);
+      const calls = spy.mock.calls.filter(([input]) => input === name).length;
+      expect(flag).toBe('🇯🇵');
+      expect(calls).toBeGreaterThan(0);
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
 
 it.each([
@@ -76,4 +108,26 @@ it.each([
   ['Japan', {'node:Japan': 'TW'}, false, null]
 ] as const)('resolves %s with %j enabled=%s', (name, overrides, enabled, expected) => {
   expect(resolvedFlag(name, overrides, enabled)).toBe(expected);
+});
+
+it.each([
+  ['Japan resolved memoized', '🇯🇵', '🇹🇼'],
+  ['unknown resolved memoized', null, '🇹🇼'],
+  ['🇯🇵 resolved memoized', null, null]
+] as const)('reuses detection for %s while applying current overrides and enabled state', (name, automatic, manual) => {
+  expect(resolvedFlag(name, {}, true)).toBe(automatic);
+  const spy = vi.spyOn(RegExp.prototype, 'exec');
+  try {
+    const flags = [
+      resolvedFlag(name, {[`node:${name}`]: 'TW'}, true),
+      resolvedFlag(name, {[`node:${name}`]: 'none'}, true),
+      resolvedFlag(name, {}, true),
+      resolvedFlag(name, {[`node:${name}`]: 'TW'}, false)
+    ];
+    const calls = spy.mock.calls.filter(([input]) => input === name).length;
+    expect(flags).toEqual([manual, null, automatic, null]);
+    expect(calls).toBe(0);
+  } finally {
+    spy.mockRestore();
+  }
 });

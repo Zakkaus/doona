@@ -1,6 +1,7 @@
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {nodeFixtures} from '../../../mock/fixtures/inventory';
 import {regions} from '../../dae/regions';
+import {MAX_PAGE} from '../../store/cadence';
 import {regionOf} from './geo';
 
 // The one-regex-per-alias matcher that geo.ts replaced, kept as the reference the single pass must agree with.
@@ -55,6 +56,35 @@ it.each([
   ['xUnited States', null],
   ['United Statesman', null]
 ])('uses bounded aliases and location order for %s', (name, expected) => expect(regionOf(name)).toBe(expected));
+
+it('caches both recognized and unknown regions without repeating detection', () => {
+  const names = ['FRA region memo', 'unknown region memo'];
+  expect(names.map(regionOf)).toEqual(['DE', null]);
+  const spy = vi.spyOn(RegExp.prototype, 'exec');
+  try {
+    const detected = names.map(regionOf);
+    const calls = spy.mock.calls.filter(([input]) => names.includes(input)).length;
+    expect(detected).toEqual(['DE', null]);
+    expect(calls).toBe(0);
+  } finally {
+    spy.mockRestore();
+  }
+});
+
+it('evicts the oldest region lookup after two full pages of names', () => {
+  const name = 'FRA oldest region cache entry';
+  expect(regionOf(name)).toBe('DE');
+  for (let i = 0; i < 2 * MAX_PAGE; i++) regionOf(`unknown region cache entry ${i}`);
+  const spy = vi.spyOn(RegExp.prototype, 'exec');
+  try {
+    const region = regionOf(name);
+    const calls = spy.mock.calls.filter(([input]) => input === name).length;
+    expect(region).toBe('DE');
+    expect(calls).toBeGreaterThan(0);
+  } finally {
+    spy.mockRestore();
+  }
+});
 
 it('keeps aliases to letters, with Han aliases starting on a Han character', () => {
   // geo.ts relies on this: no position can start both a Han and a Latin alias, and no key needs regex escaping.
