@@ -54,7 +54,7 @@ export type PaletteSection = {title: string; plain?: boolean; items: Array<{id: 
 export type AppearanceMenu = ReturnType<typeof appearanceMenu>;
 export type ShellView = {
   groups: NavGroup[];
-  current: {id: string; path: string; title: string; hint: string | undefined; Page: ComponentType<PageProps>; skeleton: PageShape};
+  current: {id: string; title: string; hint: string | undefined; Page: ComponentType<PageProps>; skeleton: PageShape};
   content:
     {kind: 'login'; profileId: string; api: string; backend: string; rejected: boolean; missingApi: boolean} | {kind: 'loading' | 'unavailable' | 'page'};
   busy: boolean;
@@ -136,7 +136,6 @@ export function shellView(
     groups,
     current: {
       id: feature.id,
-      path: route,
       title: t(feature.nav?.titleKey ?? 'nav.activity'),
       hint: feature.nav?.hintKey ? t(feature.nav.hintKey) : undefined,
       Page: feature.Page,

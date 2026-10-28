@@ -2,7 +2,7 @@ import {useCallback, useState} from 'react';
 import {poll} from './cadence';
 import {getApi} from '../api/index';
 import type {Api} from '../api/api';
-import {operationDone, type Capabilities, type Operation, type Runtime, type RuntimeSettings, type RuntimeSettingsPatch} from '../api/model';
+import type {Capabilities, Operation, Runtime, RuntimeSettings, RuntimeSettingsPatch} from '../api/model';
 import {useResource} from './resource';
 import {activationError, finished, readBackUnconfirmed, settle, useAction} from './action';
 export function useVersion(enabled = true) {
@@ -59,15 +59,7 @@ const newest = <T extends {observed_at: string}>(written: T | null, polled: T | 
   written && (!polled || Date.parse(written.observed_at) >= Date.parse(polled.observed_at)) ? written : polled;
 export function useRuntimeSettings(enabled = true) {
   const api = getApi();
-  const resource = useResource(
-    {
-      key: ['runtimeSettings'],
-      fetch: signal => api.runtimeSettings(signal),
-      // Only a finished operation can have restored the settings; queued and running updates would refetch for nothing.
-      acceptEvent: event => event.event !== 'operation.updated' || operationDone(event.data.status)
-    },
-    {enabled}
-  );
+  const resource = useResource({key: ['runtimeSettings'], fetch: signal => api.runtimeSettings(signal)}, {enabled});
   const {refetch} = resource;
   const {busy, run} = useAction<'save'>({rethrow: true});
   const [saved, setSaved] = useState<{api: Api; value: RuntimeSettings} | null>(null);
