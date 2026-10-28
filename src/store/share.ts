@@ -17,8 +17,10 @@ export function replaceEqualDeep<T>(previous: unknown, next: T): T {
   const copy = (arrays ? [] : {}) as Record<string | number, unknown>;
   let same = arrays ? (previous as unknown[]).length === keys.length : Object.keys(before).length === keys.length;
   for (const key of keys) {
-    copy[key] = replaceEqualDeep(before[key], after[key]);
-    if (copy[key] !== before[key] || !(key in before)) same = false;
+    const value = replaceEqualDeep(before[key], after[key]);
+    if (key === '__proto__') Object.defineProperty(copy, key, {value, enumerable: true, configurable: true, writable: true});
+    else copy[key] = value;
+    if (!Object.is(value, before[key]) || !Object.hasOwn(before, key)) same = false;
   }
   return (same ? previous : copy) as T;
 }

@@ -110,7 +110,7 @@ export function loadStage(stage: Stage): Promise<void> {
   const shown = loadedLang(readLang());
   const needed = languages.find(language => language.id === shown)!.complete ? [shown] : [shown, REFERENCE_LANG];
   const wanted = [...loading.keys()].map(lang => {
-    const parts = Promise.all(stages.slice(1, index + 1).map(next => loadPart(lang, next, readers.get(lang)!)));
+    const parts = loadLanguage(lang, readers.get(lang)!);
     return needed.includes(lang) ? parts : parts.catch(() => undefined);
   });
   return Promise.all(wanted).then(() => undefined);

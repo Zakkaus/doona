@@ -53,11 +53,10 @@ export function withRates(prev: ConnectionList | undefined, next: ConnectionList
       const key = `${field}_bytes_per_second` as const;
       if (c[key] !== null) continue;
       let value: string | null = null;
-      if (old && short) value = old[key];
-      else if (old) {
+      if (old) {
         const from = parseU64(old[`${field}_bytes`]),
           to = parseU64(c[`${field}_bytes`]);
-        if (from !== null && to !== null && to >= from) value = String(((to - from) * 1000n) / BigInt(span));
+        if (from !== null && to !== null && to >= from) value = short ? old[key] : String(((to - from) * 1000n) / BigInt(span));
       }
       if (value !== null) out = {...out, [key]: value};
     }
