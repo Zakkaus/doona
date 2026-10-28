@@ -35,7 +35,9 @@ export function insertRules(sources: ConfigSource[], source: ConfigSource, rules
     const blocks = new Map<string, typeof inserts>();
     for (; i < inserts.length && inserts[i].anchor!.from === from; i++) {
       const key = inserts[i].anchor!.open ?? '';
-      blocks.set(key, [...(blocks.get(key) ?? []), inserts[i]]);
+      const group = blocks.get(key);
+      if (group) group.push(inserts[i]);
+      else blocks.set(key, [inserts[i]]);
     }
     out += text.slice(at, from);
     for (const [open, group] of blocks)
@@ -51,7 +53,11 @@ export function insertRules(sources: ConfigSource[], source: ConfigSource, rules
 // The held rules grouped by the file they go into, in the order the files were first used.
 export function byFile(rules: PendingRule[]): PendingRule[][] {
   const files = new Map<string, PendingRule[]>();
-  for (const rule of rules) files.set(rule.sourceId, [...(files.get(rule.sourceId) ?? []), rule]);
+  for (const rule of rules) {
+    const group = files.get(rule.sourceId);
+    if (group) group.push(rule);
+    else files.set(rule.sourceId, [rule]);
+  }
   return [...files.values()];
 }
 

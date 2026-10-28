@@ -1,8 +1,9 @@
-export type DiffLine = {kind: 'same' | 'add' | 'del'; text: string} | {kind: 'gap'; count: number};
+type DiffLine = {kind: 'same' | 'add' | 'del'; text: string} | {kind: 'gap'; count: number};
 
 // A line diff of two texts with `context` unchanged lines around each change; longer unchanged runs collapse to a gap
 // that counts them. Equal texts give no lines.
 export function lineDiff(before: string, after: string, context = 2): DiffLine[] {
+  if (before === after) return [];
   const a = before.split('\n');
   const b = after.split('\n');
   // Lines both texts share at the start and end need no table: only the stretch between them is compared.
@@ -12,7 +13,6 @@ export function lineDiff(before: string, after: string, context = 2): DiffLine[]
   while (end < a.length - start && end < b.length - start && a[a.length - 1 - end] === b[b.length - 1 - end]) end++;
   const same = (lines: string[]) => lines.map(text => ({kind: 'same' as const, text}));
   const all = [...same(a.slice(0, start)), ...middle(a.slice(start, a.length - end), b.slice(start, b.length - end)), ...same(a.slice(a.length - end))];
-  if (all.every(line => line.kind === 'same')) return [];
   const near = all.map((_, index) => all.slice(Math.max(0, index - context), index + context + 1).some(line => line.kind !== 'same'));
   const out: DiffLine[] = [];
   all.forEach((line, index) => {

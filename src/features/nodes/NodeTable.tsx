@@ -60,7 +60,7 @@ function ProbeMenu({
 }) {
   const t = useT();
   const disabled = useProbeDisabled(row);
-  const probeOptions = row.canProbeOptions && !disabled ? [{label: t('probe.options'), onAction: row.probeOptions}] : [];
+  const probeOptions = !disabled ? [{label: t('probe.options'), onAction: row.probeOptions}] : [];
   return hasOthers || probeOptions.length ? <ChoiceMenu {...props} submenus={() => submenus(probeOptions)} /> : null;
 }
 export function NodeTable({model: m}: {model: NodeTableView}) {

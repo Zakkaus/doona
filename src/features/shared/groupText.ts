@@ -50,7 +50,12 @@ export function outboundLinks(owners: ReadonlyMap<string, GroupOwner>): Map<stri
 // nesting or finals, which honk would resolve in a cycle and fail closed.
 export function finalExcluded(name: string, links: ReadonlyMap<string, string[]>): Set<string> {
   const back = new Map<string, string[]>();
-  for (const [from, targets] of links) for (const to of targets) back.set(to, [...(back.get(to) ?? []), from]);
+  for (const [from, targets] of links)
+    for (const to of targets) {
+      const parents = back.get(to);
+      if (parents) parents.push(from);
+      else back.set(to, [from]);
+    }
   const excluded = new Set([name]);
   const queue = [name];
   while (queue.length) {

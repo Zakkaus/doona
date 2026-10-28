@@ -22,8 +22,7 @@ import type {Key} from '../../i18n';
 import {isFragment, scanConfig, unquote} from '../../dae/text';
 import {localTime, formatLatency} from '../../i18n/format';
 import {outboundLabel, preferredHealth, simulatedAddress} from '../../api/selectors';
-import {parseConditions} from '../../dae/conditions';
-import {conditionKinds, dnsConditionKinds, type RuleConditionKind} from '../../dae/groups';
+import {conditionKinds, type RuleConditionKind} from '../../dae/groups';
 import {fileName} from '../../dae/sources';
 import {coverageView, type CoverageView} from '../shared/coverage';
 import {word} from '../../api/labels';
@@ -88,7 +87,6 @@ type DictionaryRow = {
   // Why a rule that is not removable cannot be removed here; null when it is, or for a fallback.
   removeReason: string | null;
   sourceQuery: string | null;
-  visual: boolean;
 };
 // `outbounds`: every target a rule can name. `outboundSections`: the same targets in sections, for a list long enough
 // to need the searchable picker; null for the short DNS action lists. `positionSections`: the positions for the
@@ -150,7 +148,6 @@ function listedRows<R extends Listed>(
   fields: (rule: R) => {outbound: string; must: boolean; hits: string; expression?: string; modeManaged?: boolean},
   t: Translator,
   lang: Lang,
-  kinds: readonly RuleConditionKind[],
   // The end position of a list whose fallback is not written, when it has one.
   end: {id: 'end'; label: string; desc?: string} | null = null
 ): Pick<DictionaryView, 'rows' | 'positions' | 'positionSections'> {
@@ -174,11 +171,6 @@ function listedRows<R extends Listed>(
     const linked = rule.source ? byId.get(rule.source.source_id) : undefined;
     const label = rule.source ? sourceLabel(rule.source, linked) : '';
     const editReason = unanchored(rule);
-    const at = linked ? anchor(linked, rule, scanned(linked)) : null;
-    const visual =
-      rule.kind === 'fallback'
-        ? !!at || !!end
-        : !!(at?.condition && linked && parseConditions(linked.content.slice(at.condition.from, at.condition.to), kinds));
     return {
       id: rule.rule_id,
       number: rule.kind === 'fallback' ? '—' : formatNumber(rule.index + 1, locale),
@@ -187,7 +179,6 @@ function listedRows<R extends Listed>(
       position: rule.source ? (label ? `${label}:${rule.source.line}` : t('rule.lineOnly', {n: rule.source.line})) : '—',
       removable: rule.kind === 'rule' && editReason === null,
       editReason,
-      visual,
       removeReason: rule.kind === 'rule' ? editReason : null,
       sourceQuery: linked && rule.source ? within('', {tab: 'source', source: linked.id, line: String(rule.source.line)}) : null
     };
@@ -223,9 +214,8 @@ export function dictionaryView(
   const hits = new Map<string, number>();
   // A flow's rule_id names a rule only within its own generation, so a flow from another one, or any flow while the
   // generation is unknown, counts for no rule.
-  const joined = generation === undefined ? [] : (flows?.flows ?? []).filter(flow => flow.rule_generation_id === generation);
-  for (const row of ruleDistribution(joined)) {
-    if (row.id !== null && current.get(row.id) === row.expression) hits.set(row.id, (hits.get(row.id) ?? 0) + row.count);
+  for (const {rule_id: id, rule_generation_id: recorded, rule_expression: expression} of flows?.flows ?? []) {
+    if (generation !== undefined && recorded === generation && id !== null && current.get(id) === expression) hits.set(id, (hits.get(id) ?? 0) + 1);
   }
   const sections = ruleOutbounds(groups, t);
   const managed = new Map(config.filter(source => source.kind === 'main').map(source => [source.id, new Set(modeRuleLines(source.content))]));
@@ -241,8 +231,7 @@ export function dictionaryView(
         hits: hits.has(rule.rule_id) ? formatNumber(hits.get(rule.rule_id)!, locale) : '—'
       }),
       t,
-      lang,
-      conditionKinds
+      lang
     ),
     caption: generation !== undefined ? t('rule.dictionaryCaption', {n: rules.length, generation}) : null,
     outbounds: sections.flatMap(section => section.items),
@@ -277,7 +266,6 @@ export function dnsDictionaryView(
       rule => ({expression: dnsCondition(rule), outbound: unquote(dnsRuleTarget(rule)), must: false, hits: '—'}),
       t,
       lang,
-      dnsConditionKinds[list],
       end && {id: 'end', ...dnsEndPosition(end.anchor, list, t)}
     ),
     caption: generation !== undefined ? t('rule.dictionaryCaption', {n: rules.length, generation}) : null,
