@@ -8,8 +8,8 @@ import {found, createPager, pageLimit} from './common';
 import {routingTrace} from './routing';
 import type {MockRecording} from './recording';
 
-// Refused ad lookups, upstream timeouts and server failures belong to the faults scenario: the demo's dns section
-// rejects nothing, and its upstreams answer. NXDOMAIN is an answer.
+// Healthy demo logs contain successful lookups; refused ad lookups, upstream timeouts and server failures are seeded
+// only in the faults scenario. These samples do not evaluate the DNS rules. NXDOMAIN is an answer.
 function buildDnsLog(flows: FlowDetail[], faults: boolean): DnsLogRecord[] {
   let seed = 941;
   const next = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
@@ -220,7 +220,8 @@ export function createNetwork(
     },
     dnsCache: async (query, signal) => {
       signal?.throwIfAborted();
-      if (!capabilities.resources.dns_cache.available) throw new ApiError(404, 'capability_not_supported', 'DNS cache unavailable');
+      if (!capabilities.resources.dns_cache.available || !capabilities.resources.dns_cache.read)
+        throw new ApiError(404, 'capability_not_supported', 'DNS cache unavailable');
       const name = query?.name ?? query?.domain;
       // Expired against the fixture clock, so the demo's entries do not lapse while the page stays open.
       const entries = dnsCache.entries.filter(
@@ -244,6 +245,7 @@ export function createNetwork(
         throw new ApiError(400, 'invalid_request', 'limit exceeds the advertised page size');
       const needle = query?.name?.toLowerCase();
       const src = query?.src === undefined ? undefined : ipLiteral(query.src);
+      if (query?.src !== undefined && !src) throw new ApiError(400, 'invalid_request', 'Expected a source IP literal');
       trimRecords();
       const ring = dnsLog;
       const records = ring.filter(
@@ -327,6 +329,8 @@ export function createNetwork(
     },
     deleteDnsEntry: async (entryId, signal) => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.dns_cache.available || !capabilities.resources.dns_cache.delete_entry)
+        throw new ApiError(404, 'capability_not_supported', 'Deleting DNS entries is unavailable');
       const index = dnsCache.entries.findIndex(entry => entry.entry_id === entryId);
       if (index < 0) return {deleted: 0};
       dnsCache.entries.splice(index, 1);
@@ -344,6 +348,8 @@ export function createNetwork(
     },
     flushDnsCache: async signal => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.dns_cache.available || !capabilities.resources.dns_cache.flush)
+        throw new ApiError(404, 'capability_not_supported', 'Flushing DNS cache is unavailable');
       const matched = dnsCache.entries.length;
       dnsCache.entries.length = 0;
       return {matched, deleted: matched};

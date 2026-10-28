@@ -1,5 +1,6 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {createMockApi} from './index';
+import {createPager} from './common';
 
 afterEach(() => vi.useRealTimers());
 it('continues the retained DNS snapshot after deleting its first entry', async () => {
@@ -94,4 +95,12 @@ it('expires every retained snapshot after 30 seconds as 410 snapshot_expired', a
   await vi.advanceTimersByTimeAsync(30000);
   for (const [resource, cursor] of walks)
     await expect(resource.list(api, {cursor, limit: resource.size})).rejects.toMatchObject({status: 410, code: 'snapshot_expired'});
+});
+
+it('counts UTF-8 bytes when a DNS log response ends before its row limit', () => {
+  const rows = ['1', '2', '3'].map(id => ({id, name: '東京'}));
+  const page = createPager('dnsLog', 51);
+  const first = page(rows);
+  expect(first.items).toEqual(rows.slice(0, 1));
+  expect(page(rows, {cursor: first.next_cursor!}).items).toEqual(rows.slice(1, 2));
 });

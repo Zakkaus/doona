@@ -407,6 +407,7 @@ export function createConfiguration(
     },
     startReload: async signal => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.reload.available) throw new ApiError(404, 'capability_not_supported', 'Reload is unavailable');
       await loadSources();
       return enqueue('reload', () => {
         const generation = advance();
@@ -415,6 +416,7 @@ export function createConfiguration(
     },
     startSuspend: async signal => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.suspend.available) throw new ApiError(404, 'capability_not_supported', 'Suspend is unavailable');
       return enqueue('suspend', () => {
         runtime.lifecycle.state = 'suspended';
         return {runtime_state: 'suspended'};
@@ -422,6 +424,7 @@ export function createConfiguration(
     },
     startResume: async signal => {
       signal?.throwIfAborted();
+      if (!capabilities.resources.resume.available) throw new ApiError(404, 'capability_not_supported', 'Resume is unavailable');
       return enqueue('resume', () => {
         runtime.lifecycle.state = 'running';
         return {runtime_state: 'running'};

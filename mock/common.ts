@@ -29,6 +29,7 @@ const invalid = () => new ApiError(400, 'invalid_request', 'Cursor does not matc
 // page size it was issued with; either changed, it is refused.
 export function createPager(resource: ResourceName, budget = Infinity) {
   const rules = cursorRules[resource] ?? {held: 32};
+  const encoder = budget === Infinity ? null : new TextEncoder();
   const snapshots = new Map<string, {items: unknown[]; key: string; expires: number}>();
   const page = <T>(items: T[], query: {cursor?: string; limit?: number} = {}) => {
     const {cursor, limit: asked, ...filters} = query;
@@ -51,7 +52,7 @@ export function createPager(resource: ResourceName, budget = Infinity) {
     }
     const page = snapshot.items.slice(start, start + limit);
     let size = 0;
-    const over = page.findIndex(item => (size += JSON.stringify(item).length) > budget);
+    const over = encoder ? page.findIndex(item => (size += encoder.encode(JSON.stringify(item)).length) > budget) : -1;
     const end = start + (over < 0 ? page.length : Math.max(1, over));
     if (cursor === undefined && end < items.length) {
       snapshot.items = structuredClone(items);

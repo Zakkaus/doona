@@ -154,6 +154,7 @@ export function createLifecycle(
   };
   const operation = async (id: string, signal?: AbortSignal): Promise<OperationState> => {
     signal?.throwIfAborted();
+    if (!operationsCapability.available) throw new ApiError(404, 'capability_not_supported', 'Operations are unavailable');
     pruneOperations();
     return structuredClone(found(operations.get(id), 'Operation'));
   };
