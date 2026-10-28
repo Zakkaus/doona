@@ -1,11 +1,11 @@
 import {useMemo} from 'react';
 import {getApi} from '../../api';
 import {offered} from '../../api/capabilities';
-import {noNodeSources} from '../../api/selectors';
+import {interestingNotice, noNodeSources} from '../../api/selectors';
 import {holdsRouting} from '../../dae/setup';
 import {refetchAll, reopenEvents, useCapabilities, useConfig, useNodes, useNoticeFeed, useProviders} from '../../store';
 import {useT} from '../../i18n';
-import {interestingNotice, noticeRows, setupNotices} from './view';
+import {noticeRows, setupNotices} from './view';
 
 export function useNotices() {
   const t = useT();
