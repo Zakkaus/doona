@@ -7,6 +7,8 @@ import {CollectionLoading, RowPlaceholder} from './ui/CollectionLoading';
 // Layout adapted from the Astryx table-collapsible template; see ASTRYX-TEMPLATES-LICENSE.
 
 import {Badge} from '@astryxdesign/core/Badge';
+import {Skeleton} from '@astryxdesign/core/Skeleton';
+import {LoadingText, loadingControl} from './ui/LoadingText';
 import {Collapsible} from '@astryxdesign/core/Collapsible';
 import {Grid} from '@astryxdesign/core/Grid';
 import {Icon} from '@astryxdesign/core/Icon';
@@ -20,7 +22,7 @@ import {CollectionToolbar} from './ui/CollectionToolbar';
 import {PageFrame, pageRhythm} from './ui/PageFrame';
 import {usePageCommand, useSearchTarget} from './ui/commands';
 import './ui/disclosure.css';
-import {Refresh, MoreHorizontal} from './ui/icons';
+import {Refresh} from './ui/icons';
 import {useDisclosureSet} from './ui/useDisclosureSet';
 import {useExpectedCount} from './ui/useExpectedCount';
 
@@ -86,6 +88,7 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
     setInterval('');
   };
   const ready = read.data !== undefined;
+  const loading = !ready && read.loading;
   const compact = useMediaQuery(MEDIA.phone);
   const expectedCount = useExpectedCount(connection.api, 'subscriptions', read.data?.filter(provider => provider.kind === 'subscription').length);
   const [share, setShare] = useState<{name: string; link: string} | null>(null);
@@ -142,6 +145,7 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
     requestAnimationFrame(() => {
       const item = document.querySelector<HTMLElement>(`[data-provider-id="${CSS.escape(target.id)}"]`);
       item?.scrollIntoView({block: 'center'});
+      // Astryx 0.6.8 exposes no Collapsible trigger ref or imperative focus API.
       item?.querySelector<HTMLButtonElement>('.astryx-collapsible-trigger')?.focus();
     });
   });
@@ -286,7 +290,7 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                               label={
                                 <HStack gap={2} wrap="wrap" vAlign="center">
                                   <RowPlaceholder width="12ch" />
-                                  <Badge label={noticeText(t.subscriptionNodeCount, {count: '0'})} />
+                                  <Badge {...loadingControl(true, 'label', noticeText(t.subscriptionNodeCount, {count: '0'}))} />
                                 </HStack>
                               }
                               description={
@@ -299,9 +303,9 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                           }
                         />
                         <HStack className="lite-disclosure-actions" gap={1} vAlign="center" hAlign="end" style={{minWidth: 0}}>
-                          <StatusLabel label={t.providerOk} variant="success" />
-                          {[Refresh, MoreHorizontal].map((icon, index) => (
-                            <IconButton key={index} label={t.loading} icon={<Icon icon={icon} size="sm" />} variant="ghost" size="sm" isDisabled />
+                          <StatusLabel label={t.providerOk} variant="success" loading />
+                          {[0, 1].map(index => (
+                            <Skeleton key={index} className="lite-loading-shape lite-loading-icon" />
                           ))}
                         </HStack>
                       </Grid>
@@ -337,24 +341,28 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                               style={{paddingBlockStart: 0}}
                               label={
                                 <HStack gap={2} wrap="wrap" vAlign="center">
-                                  <Text weight="semibold">{provider.name}</Text>
+                                  <LoadingText weight="semibold" loading={loading} children={provider.name} />
                                   <Badge
-                                    label={noticeText(provider.node_count === 1 ? t.subscriptionNodeCountOne : t.subscriptionNodeCount, {
-                                      count: new Intl.NumberFormat(locale).format(provider.node_count)
-                                    })}
+                                    {...loadingControl(
+                                      loading,
+                                      'label',
+                                      noticeText(provider.node_count === 1 ? t.subscriptionNodeCountOne : t.subscriptionNodeCount, {
+                                        count: new Intl.NumberFormat(locale).format(provider.node_count)
+                                      })
+                                    )}
                                   />
                                 </HStack>
                               }
                               description={
                                 <HStack gap={2} wrap="wrap" vAlign="center">
-                                  <Text type="supporting" color="secondary">
+                                  <LoadingText type="supporting" color="secondary" loading={loading}>
                                     {subscriptionHost(entries.find(e => e.tag === provider.name)?.url)}
-                                  </Text>
-                                  {provider.updated_at && <DateStamp plain relative value={provider.updated_at} />}
+                                  </LoadingText>
+                                  {provider.updated_at && <DateStamp plain relative value={provider.updated_at} loading={loading} />}
                                   {!!entries.find(entry => entry.tag === provider.name)?.interval && (
-                                    <Text type="supporting" color="secondary">
+                                    <LoadingText type="supporting" color="secondary" loading={loading}>
                                       {intervalSummary(entries.find(entry => entry.tag === provider.name)?.interval, t)}
-                                    </Text>
+                                    </LoadingText>
                                   )}
                                   {probes.running === provider.id ? (
                                     <Text type="supporting" role="status">
@@ -380,6 +388,7 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                           {expanded.has(provider.id) && (
                             <Section variant="muted" padding={pageRhythm.inset}>
                               <SubscriptionFeatureNodes
+                                loading={loading}
                                 addToGroup={writable && !draft.busy && task.busy === null ? setGroupNode : undefined}
                                 connection={connection}
                                 provider={provider.id}
@@ -391,11 +400,11 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                           )}
                         </Collapsible>
                         <HStack className="lite-disclosure-actions" gap={1} vAlign="center" hAlign="end" style={{minWidth: 0}}>
-                          <StatusLabel label={t[state.key]} variant={state.variant} />
+                          <StatusLabel label={t[state.key]} variant={state.variant} loading={loading} />
                           <Tooltip content={t.refresh}>
                             <IconButton
                               label={`${t.refresh}: ${provider.name}`}
-                              icon={<Icon icon={Refresh} size="sm" />}
+                              {...loadingControl(loading, 'icon', <Icon icon={Refresh} size="sm" />)}
                               variant="ghost"
                               size="sm"
                               isLoading={task.busy === provider.id}
@@ -413,6 +422,7 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                             />
                           </Tooltip>
                           <MoreMenu
+                            {...loadingControl(loading, 'icon')}
                             label={`${t.actions}: ${provider.name}`}
                             size="sm"
                             variant="ghost"
@@ -491,7 +501,7 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                   />
                 }
                 content={
-                  <LayoutContent>
+                  <LayoutContent className="lite-dialog-content">
                     <VStack gap={4}>
                       {dialog === 'delete' ? (
                         <>

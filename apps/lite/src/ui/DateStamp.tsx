@@ -1,22 +1,20 @@
 import {HoverCard} from '@astryxdesign/core/HoverCard';
 import {VStack} from '@astryxdesign/core/Stack';
 import {Text} from '@astryxdesign/core/Text';
+import {LoadingText} from './LoadingText';
 import * as stylex from '@stylexjs/stylex';
 import {useContext} from 'react';
 import {LocaleContext, useMessages} from '../i18n';
 import {focusRing} from './focusRing';
 import {RowTooltip as Tooltip} from './RowTooltip';
 
-export function DateStamp({value, plain = false, relative = false}: {value: string | null | undefined; plain?: boolean; relative?: boolean}) {
+type DateStampProps = {value: string | null | undefined; plain?: boolean; relative?: boolean; loading?: boolean};
+export function DateStamp({value, plain = false, relative = false, loading}: DateStampProps) {
   const locale = useContext(LocaleContext);
   const t = useMessages();
   const date = value ? new Date(value) : null;
   if (!date || !Number.isFinite(date.getTime()))
-    return (
-      <Text type={plain ? 'supporting' : undefined} color={plain ? 'secondary' : undefined}>
-        {t.unknown}
-      </Text>
-    );
+    return <LoadingText type={plain ? 'supporting' : undefined} color={plain ? 'secondary' : undefined} loading={loading} children={t.unknown} />;
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const full = (timeZone: string) => new Intl.DateTimeFormat(locale, {dateStyle: 'long', timeStyle: 'long', timeZone}).format(date);
   if (relative) {
@@ -33,11 +31,11 @@ export function DateStamp({value, plain = false, relative = false}: {value: stri
     const time = new Intl.RelativeTimeFormat(locale).format(Math.round(seconds / size), unit);
     return (
       <Tooltip content={full(zone)}>
-        <Text type="supporting" color="secondary" textWrap="wrap" hasTabularNumbers>
+        <LoadingText type="supporting" color="secondary" textWrap="wrap" hasTabularNumbers loading={loading}>
           <time dateTime={date.toISOString()} tabIndex={0} {...stylex.props(focusRing)}>
             {t.subscriptionUpdated.replace('{time}', time)}
           </time>
-        </Text>
+        </LoadingText>
       </Tooltip>
     );
   }

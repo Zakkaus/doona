@@ -14,6 +14,7 @@ import {Section} from '@astryxdesign/core/Section';
 import {SegmentedControl, SegmentedControlItem} from '@astryxdesign/core/SegmentedControl';
 import {Selector} from '@astryxdesign/core/Selector';
 import {Skeleton} from '@astryxdesign/core/Skeleton';
+import {LoadingText} from './ui/LoadingText';
 import {Spinner} from '@astryxdesign/core/Spinner';
 import {StatusDot} from '@astryxdesign/core/StatusDot';
 import {Heading, Text} from '@astryxdesign/core/Text';
@@ -65,6 +66,7 @@ export const inspectorStyles = stylex.create({
   },
   latency: {minWidth: 'var(--spacing-12)', textAlign: 'end'},
   // The template's active row: one step past hover in the neutral ramp, replayed on pinned cells.
+  // Astryx 0.6.8 has no selected-row overlay API that also paints pinned cells.
   active: {backgroundColor: 'var(--color-overlay-pressed)', '--table-row-overlay': 'var(--color-overlay-pressed)'},
   wrap: {overflowWrap: 'anywhere', minWidth: 0},
   search: {flexGrow: 1, flexBasis: 'calc(var(--spacing-10) * 5)', minWidth: 0}
@@ -566,13 +568,11 @@ export function GroupInspectorPlaceholder({count, nestedCount}: {count: number; 
             <Skeleton width="var(--size-element-sm)" height="var(--size-element-sm)" />
           </HStack>
           <HStack gap={2} vAlign="center" wrap="wrap">
-            <Text type="supporting" color="secondary">
-              {t.network}
-            </Text>
+            <LoadingText type="supporting" color="secondary" loading children={t.network} />
             <SegmentedControl label={t.network} value="both" onChange={() => {}} size="md" isDisabled>
-              <SegmentedControlItem value="both" label={t.both} />
-              <SegmentedControlItem value="tcp" label={t.tcpOnly} />
-              <SegmentedControlItem value="udp" label={t.udpOnly} />
+              <SegmentedControlItem value="both" label={t.both} style={{color: 'transparent'}} />
+              <SegmentedControlItem value="tcp" label={t.tcpOnly} style={{color: 'transparent'}} />
+              <SegmentedControlItem value="udp" label={t.udpOnly} style={{color: 'transparent'}} />
             </SegmentedControl>
           </HStack>
         </VStack>
@@ -587,10 +587,13 @@ export function GroupInspectorPlaceholder({count, nestedCount}: {count: number; 
             <Skeleton width={144} height="var(--size-element-md)" />
             <Skeleton width={144} height="var(--size-element-md)" />
             <HStack gap={2} vAlign="center" style={{width: 'auto'}}>
-              <ToggleButton label={t.onlyAvailable} size="md" isDisabled xstyle={[inspectorStyles.chip, inspectorStyles.chipIdle]} />
-              <Text type="supporting" color="secondary" hasTabularNumbers>
+              <HStack gap={0} className="lite-loading-control" style={{width: 'auto'}}>
+                <ToggleButton label={t.onlyAvailable} size="md" isDisabled xstyle={[inspectorStyles.chip, inspectorStyles.chipIdle]} />
+                <Skeleton className="lite-loading-shape" style={{opacity: 0.5, inset: 'var(--border-width)'}} />
+              </HStack>
+              <LoadingText type="supporting" color="secondary" hasTabularNumbers loading>
                 {t.memberCount.replace('{shown}', String(count)).replace('{total}', String(count))}
-              </Text>
+              </LoadingText>
               <Skeleton width="var(--size-element-md)" height="var(--size-element-md)" />
             </HStack>
           </CollectionToolbar>
@@ -598,9 +601,9 @@ export function GroupInspectorPlaceholder({count, nestedCount}: {count: number; 
             <VStack gap={pageRhythm.section}>
               {nestedCount > 0 && (
                 <VStack gap={2}>
-                  <Text type="label" color="secondary">
+                  <LoadingText type="label" color="secondary" loading>
                     {t.sectionCount.replace('{label}', t.groups).replace('{n}', String(nestedCount))}
-                  </Text>
+                  </LoadingText>
                   <RadioList label={t.groups} isLabelHidden value="" onChange={() => {}} width="100%">
                     {members(nestedCount)}
                   </RadioList>
@@ -609,9 +612,9 @@ export function GroupInspectorPlaceholder({count, nestedCount}: {count: number; 
               {count > nestedCount && (
                 <VStack gap={2}>
                   {nestedCount > 0 && (
-                    <Text type="label" color="secondary">
+                    <LoadingText type="label" color="secondary" loading>
                       {t.sectionCount.replace('{label}', t.nodes).replace('{n}', String(count - nestedCount))}
-                    </Text>
+                    </LoadingText>
                   )}
                   <RadioList label={t.nodes} isLabelHidden value="" onChange={() => {}} width="100%">
                     {members(Math.min(count - nestedCount, PAGE_SIZE))}

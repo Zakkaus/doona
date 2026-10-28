@@ -1,6 +1,6 @@
 import {Button} from '@astryxdesign/core/Button';
 import {HStack} from '@astryxdesign/core/Stack';
-import {Text} from '@astryxdesign/core/Text';
+import {LoadingText} from './ui/LoadingText';
 import {useEffect, useMemo, useSyncExternalStore} from 'react';
 import type {Node} from '../../../src/api/model';
 import type {Connection} from './api';
@@ -23,7 +23,7 @@ type NodeProbes = ReturnType<typeof useNodeProbes>;
 export function useProbeUpdates(probes: NodeProbes) {
   useSyncExternalStore(probes.subscribe, probes.snapshot);
 }
-export function NodeLatency({node, probes, compact}: {node: Node; probes: NodeProbes; compact?: boolean}) {
+export function NodeLatency({node, probes, compact, loading}: {node: Node; probes: NodeProbes; compact?: boolean; loading?: boolean}) {
   const t = useMessages();
   useProbeUpdates(probes);
   const result = probes.results.get(node.id);
@@ -31,9 +31,13 @@ export function NodeLatency({node, probes, compact}: {node: Node; probes: NodePr
   return (
     <HStack gap={1} vAlign="center" hAlign="end" data-node-latency={node.id} style={compact ? {width: '10ch', flexShrink: 0} : undefined}>
       {result === 'timeout' && <StatusDot variant="error" label={t.probeTimeout} />}
-      <Text type={result === 'timeout' ? 'supporting' : undefined} hasTabularNumbers color={typeof result === 'number' ? undefined : 'secondary'}>
-        {label ?? (typeof result === 'number' ? `${Math.round(result)} ms` : '—')}
-      </Text>
+      <LoadingText
+        loading={loading}
+        type={result === 'timeout' ? 'supporting' : undefined}
+        hasTabularNumbers
+        color={typeof result === 'number' ? undefined : 'secondary'}
+        children={label ?? (typeof result === 'number' ? `${Math.round(result)} ms` : '—')}
+      />
     </HStack>
   );
 }

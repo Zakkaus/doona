@@ -45,13 +45,13 @@ export function CollectionLoading({
       ref={root}
       gap={0}
       data-collection
-      data-loading-shape={loading && delayed && prepared ? name : undefined}
       data-placeholder={loading ? '' : undefined}
+      data-loading-shape={loading && delayed && prepared ? name : undefined}
       inert={loading}
       aria-busy={loading}
       role={loading ? 'status' : undefined}
       aria-label={loading ? t.loading : undefined}
-      style={{visibility: loading && (!delayed || !prepared) ? 'hidden' : undefined}}
+      style={{visibility: loading && (!delayed || !prepared) ? 'hidden' : undefined, opacity: loading && (!delayed || !prepared) ? 0 : undefined}}
     >
       {typeof children === 'function' ? children(loading && delayed && prepared) : children}
     </VStack>

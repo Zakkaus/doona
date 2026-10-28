@@ -12,6 +12,7 @@ import {HStack, VStack} from '@astryxdesign/core/Layout';
 import {SegmentedControl, SegmentedControlItem} from '@astryxdesign/core/SegmentedControl';
 import {SelectableCard} from '@astryxdesign/core/SelectableCard';
 import {Selector} from '@astryxdesign/core/Selector';
+import {LoadingText, loadingControl} from './ui/LoadingText';
 import {Heading, Text} from '@astryxdesign/core/Text';
 import {readMode, sameMode, writeMode, type OutboundMode} from '../../../src/dae/outboundMode';
 import {builtinOutbounds} from '../../../src/dae/vocab';
@@ -213,7 +214,6 @@ export function Routing({connection, setBusy}: {connection: Connection; setBusy:
                       aria-label={t.mode}
                       aria-busy={!ready && read.loading}
                       inert={!ready && read.loading}
-                      data-placeholder={!ready && read.loading ? '' : undefined}
                       data-loading-shape={!ready && read.loading ? 'routing-modes' : undefined}
                       xstyle={editorLayout.modes}
                     >
@@ -237,13 +237,13 @@ export function Routing({connection, setBusy}: {connection: Connection; setBusy:
                         >
                           <VStack gap={2}>
                             <HStack gap={2} wrap="wrap" vAlign="center">
-                              <Text weight="medium">{t[value]}</Text>
-                              {current.mode === value && <Badge label={t.modeActive} variant="neutral" />}
+                              <LoadingText weight="medium" loading={!ready && read.loading} children={t[value]} />
+                              {current.mode === value && <Badge {...loadingControl(!ready && read.loading, 'label', t.modeActive)} variant="neutral" />}
                               {modeDirty && shown.mode === value && <Badge label={t.modePending} variant="neutral" />}
                             </HStack>
-                            <Text color="secondary" type="supporting" textWrap="wrap">
+                            <LoadingText color="secondary" type="supporting" textWrap="wrap" loading={!ready && read.loading}>
                               {t[descriptions[value]]}
-                            </Text>
+                            </LoadingText>
                           </VStack>
                         </SelectableCard>
                       ))}
