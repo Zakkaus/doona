@@ -88,3 +88,42 @@ test('Chromium renders regional indicators with the self-hosted colour flag font
   await expect(page.locator('.cm-content[contenteditable=true]')).toBeVisible();
   expect(await page.locator('.cm-content').evaluate(node => getComputedStyle(node).fontFamily)).toMatch(/^"Twemoji Country Flags",/);
 });
+
+for (const lang of ['zh-TW', 'zh-CN']) {
+  test(`late ${lang} subsets render every title weight without system-font glyphs`, async ({page, context}) => {
+    await mockBackend(page);
+    await page.addInitScript(lang => localStorage.setItem('doona-lang', lang), lang);
+    // Longer than optional's block period: declaring a face alone must not release translated content.
+    await page.route('**/fonts/*.woff2', async route => {
+      await page.waitForTimeout(250);
+      await route.continue();
+    });
+    const cdp = await context.newCDPSession(page);
+    await cdp.send('DOM.enable');
+    await cdp.send('CSS.enable');
+    for (const route of ['activity', 'settings']) {
+      await page.goto(`/#/${route}`);
+      const titles = page.locator('.rp-content .rp-h3').filter({visible: true});
+      await expect(titles.first()).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      await page.locator('[data-font-title]').evaluateAll(nodes => nodes.forEach(node => node.removeAttribute('data-font-title')));
+      for (const weight of [700, 400, 500, 600, 800]) {
+        await titles.evaluateAll((nodes, weight) => {
+          nodes.forEach((node, index) => {
+            (node as HTMLElement).style.fontWeight = String(weight);
+            node.setAttribute('data-font-title', String(index));
+          });
+        }, weight);
+        const {root} = await cdp.send('DOM.getDocument');
+        const {nodeIds} = await cdp.send('DOM.querySelectorAll', {nodeId: root.nodeId, selector: '[data-font-title]'});
+        for (const [index, nodeId] of nodeIds.entries()) {
+          await titles.nth(index).scrollIntoViewIfNeeded();
+          const {fonts} = await cdp.send('CSS.getPlatformFontsForNode', {nodeId});
+          expect(fonts, `${lang}/${route}/${weight}`).toEqual([
+            expect.objectContaining({isCustomFont: true, familyName: lang === 'zh-CN' ? 'Noto Sans SC Thin' : 'Noto Sans TC Thin'})
+          ]);
+        }
+      }
+    }
+  });
+}

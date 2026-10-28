@@ -49,14 +49,18 @@ const partLoaders = () =>
     activity: import.meta.glob<Partial<Catalogue>>('./locales/*.json', {query: {part: 'activity'}, import: 'default'}),
     rest: import.meta.glob<Partial<Catalogue>>('./locales/*.json', {query: {part: 'rest'}, import: 'default'})
   });
-// Each part is its own chunk, loaded on first use; `translate` reads only what has loaded. The core part resolves with
-// its language's faces declared, so the page never renders in it before they are.
+// Each part is its own chunk, loaded on first use; translate reads only what has loaded. Its glyphs are ready before
+// the part is published, including later pages and language switches, so optional subsets cannot mix with fallbacks.
 type Reader = (lang: Lang, stage: Stage) => Promise<Partial<Catalogue>>;
 function readCatalogue(lang: Lang, stage: Stage): Promise<Partial<Catalogue>> {
   const part = partLoaders()[stage][`./locales/${lang}.json`]();
-  if (stage !== 'core') return part;
-  const {fonts} = languages.find(language => language.id === lang)!;
-  return Promise.all([part, loadFaces(fonts)]).then(([messages]) => messages);
+  const {fonts, faces} = languages.find(language => language.id === lang)!;
+  return part.then(messages => {
+    const text = Object.values(messages)
+      .flatMap(message => (typeof message === 'string' ? message : Object.values(message)))
+      .join('');
+    return loadFaces(fonts, faces[0], text).then(() => messages);
+  });
 }
 const catalogues = new Map<Lang, Partial<Catalogue>>();
 const loaded = new Set<Lang>();

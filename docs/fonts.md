@@ -27,7 +27,11 @@ In a production build, the first font load requests `fonts/README`. `src/fonts.t
 
 In development, the loader skips the probe and uses the installed Fontsource packages. [src/i18n/index.ts](../src/i18n/index.ts) loads the selected language's stylesheet with its catalogue. The common stylesheet also warms the Noto Sans TC face with the text `doona`.
 
-The browser fetches only the subsets needed for the page's text. Segmented-control labels use regular weight (400), as defined in [segmented.css](../src/ui/styles/segmented.css).
+Before publishing each catalogue stage (core, Activity and later pages), the loader awaits `document.fonts.load` for every message in that stage, including plural forms. The text comes from the catalogue, not a separate glyph list. Each subset is variable across weights 100–900, so loading it once makes it available at every UI weight. This also applies when changing languages.
+
+Declaring the stylesheets or waiting for `document.fonts.ready` after rendering is not enough: `font-display: optional` can retain a system fallback for a late subset beside already-loaded Noto glyphs within one title. Loading the stage's glyphs before rendering avoids that mixture without a later font swap. A slow font archive delays the stage; an absent archive or a failed font request still allows system-font rendering.
+
+Only subsets intersecting the loaded catalogue stages are fetched, rather than the whole archive. This can fetch more subsets than the currently visible page uses. Segmented-control labels remain regular weight (400), as defined in [segmented.css](../src/ui/styles/segmented.css). [e2e/flag-font.spec.ts](../e2e/flag-font.spec.ts) checks actual Chromium title faces with delayed subsets in both Chinese languages at weights 400, 500, 600, 700 and 800.
 
 ## Update or add fonts
 
