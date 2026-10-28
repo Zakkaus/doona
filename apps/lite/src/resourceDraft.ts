@@ -4,14 +4,14 @@ import {completeSubscriptionUrl, isSubscriptionUrl, readSubscriptionEntries, wri
 import {isQuotable, quote} from '../../../src/dae/text';
 import {LiteError} from './api';
 import {appendEntry, removeEntry} from './config';
-export type ResourceKind = 'node' | 'subscription';
-export type ResourceAction = 'form' | 'text' | 'duplicate' | 'delete';
+type ResourceKind = 'node' | 'subscription';
+type ResourceAction = 'form' | 'text' | 'duplicate' | 'delete';
 export function draftResources(content: string, kind: ResourceKind) {
   return kind === 'node'
     ? readNodeEntries(content).map(entry => ({name: entry.name, value: entry.link, from: entry.from, to: entry.to}))
     : readSubscriptionEntries(content).map(entry => ({name: entry.tag, value: entry.url, from: entry.from, to: entry.to}));
 }
-export function resourceReferenced(contents: string[], kind: ResourceKind, name: string) {
+function resourceReferenced(contents: string[], kind: ResourceKind, name: string) {
   return contents.some(content => (kind === 'node' ? nodeReferenced(content, name) : groupsNamingTag(content, name).length > 0));
 }
 export function changeResource(content: string, others: string[], kind: ResourceKind, action: ResourceAction, original: string, name: string, value: string) {

@@ -27,7 +27,7 @@ export const languages = [
 }>;
 
 export type Lang = (typeof languages)[number]['id'];
-export type CompleteLang = Extract<(typeof languages)[number], {complete: true}>['id'];
+type CompleteLang = Extract<(typeof languages)[number], {complete: true}>['id'];
 // The language startup falls back to when the negotiated one's catalogue does not load.
 export const DEFAULT_LANG = 'zh-TW' satisfies Lang;
 // The reference and fallback catalogue, always complete: its keys define Key (src/i18n/index.ts imports en.json by

@@ -65,7 +65,7 @@ export const preferredHealth = (node: Node) => preferredObservation(node.health)
 
 // A node's latest result per probe kind: DNS for a DNS probe, UDP for a UDP data probe, and HTTP or TCP for a TCP data
 // probe by its measurement. Keep the latest per family, rank by warmth and measurement, then fold IPv4 and IPv6.
-export type ProbeKind = 'TCP' | 'HTTP' | 'UDP' | 'DNS';
+type ProbeKind = 'TCP' | 'HTTP' | 'UDP' | 'DNS';
 const probeKindOrder: ProbeKind[] = ['TCP', 'HTTP', 'UDP', 'DNS'];
 const probeKind = (h: HealthObservation): ProbeKind =>
   h.purpose === 'dns' ? 'DNS' : h.transport === 'udp' ? 'UDP' : h.measurement.startsWith('http') ? 'HTTP' : 'TCP';
@@ -210,7 +210,7 @@ export function connectionRows(snapshot: ConnectionList | undefined) {
 
 export type MessageRef = {key: Key; params?: Record<string, string | number>};
 
-export type LabelFn = (key: Key) => string;
+type LabelFn = (key: Key) => string;
 export const eventKindLabels: Record<EventKind, Key> = {
   'stream.ready': 'event.k.streamReady',
   'runtime.updated': 'event.k.runtimeUpdated',

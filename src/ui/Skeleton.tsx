@@ -56,7 +56,7 @@ export function Skeleton({facts, helped, below}: {facts: number; helped?: number
 // control height; `bars`, ranking bars in the Bar's own label line and track, laid out as a wide card's list with
 // `columns`; `fields`, labelled fields in the field grid; `cards`, card surfaces `height` pixels tall, in a column or,
 // with `grid`, in a CardView's grid. `label` replaces the status text.
-export type SkeletonShape = 'block' | 'rows' | 'bars' | 'fields' | 'cards';
+type SkeletonShape = 'block' | 'rows' | 'bars' | 'fields' | 'cards';
 export function SkeletonBody({
   shape,
   count = 3,

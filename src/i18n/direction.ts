@@ -1,4 +1,4 @@
-export type Dir = 'ltr' | 'rtl';
+type Dir = 'ltr' | 'rtl';
 
 // The scripts written right to left. An engine whose Intl.Locale has no text info (Firefox) decides by the locale's
 // likely script, so Arabic, Hebrew or Persian need no entry of their own. tools/stamp.js receives this list at build.

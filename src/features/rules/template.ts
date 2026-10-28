@@ -99,7 +99,7 @@ export function templatesView(sources: ConfigSource[], t: Translator): Templates
 }
 
 // Why a template cannot be applied, in the order a person would fix it.
-export type TemplateRefusal = 'syntax' | 'writesOff' | 'noSource' | 'split' | 'secret' | 'readOnly' | 'incomplete' | 'denied';
+type TemplateRefusal = 'syntax' | 'writesOff' | 'noSource' | 'split' | 'secret' | 'readOnly' | 'incomplete' | 'denied';
 const refusalText: Record<TemplateRefusal, Key> = {
   syntax: 'rule.template.refused.syntax',
   writesOff: 'rule.template.refused.writesOff',
@@ -139,7 +139,7 @@ function routingIncludes(text: string): string[] {
   }
   return [...new Set(paths)];
 }
-export type TemplateTargetInput = {
+type TemplateTargetInput = {
   sources: ConfigSource[];
   configWritable: boolean;
   daeText: boolean;

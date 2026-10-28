@@ -2,7 +2,7 @@ import {languages as registry, REFERENCE_LANG} from './languages';
 
 // A file of the build as vite.config.ts hands it over: a catalogue chunk names its language, and every file lists the
 // sources it was built from.
-export interface BuiltFile {
+interface BuiltFile {
   name: string;
   catalogue: string | null;
   sources: readonly string[];

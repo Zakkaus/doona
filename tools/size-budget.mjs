@@ -1,10 +1,10 @@
 // Download budgets by user path. Sizes are gzip bytes; `size(file)` returns the size of one built file.
-export const loginKey = 'src/shell/Login.tsx';
-export const chartKeys = ['src/ui/charts/Donut.tsx', 'src/ui/charts/AreaChart.tsx', 'src/ui/charts/Sparkline.tsx'];
-export const configKey = 'src/features/config/Config.tsx';
+const loginKey = 'src/shell/Login.tsx';
+const chartKeys = ['src/ui/charts/Donut.tsx', 'src/ui/charts/AreaChart.tsx', 'src/ui/charts/Sparkline.tsx'];
+const configKey = 'src/features/config/Config.tsx';
 // Config loads its editor on the source tab, the usual first one, so the editor counts towards Config.
-export const editorKey = 'src/ui/code/CodeEditor.tsx';
-export const mockKey = 'mock/index.ts';
+const editorKey = 'src/ui/code/CodeEditor.tsx';
+const mockKey = 'mock/index.ts';
 export const budgetNames = ['startupLogin', 'startupActivity', 'startupCss', 'locale', 'fontCss', 'route', 'routePart', 'routeConfig', 'mock'];
 
 // Static import closure of a manifest key; dynamic imports are separate downloads and stay out.

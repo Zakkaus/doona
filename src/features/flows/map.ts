@@ -166,7 +166,7 @@ export function routingTree(flows: FlowSummary[], groups: GroupSummary[], nodes:
   };
 }
 
-export type TreeIndex = {outgoing: Map<string, TreeLink[]>; incoming: Map<string, TreeLink[]>; parents: Map<string, string>};
+type TreeIndex = {outgoing: Map<string, TreeLink[]>; incoming: Map<string, TreeLink[]>; parents: Map<string, string>};
 const indexes = new WeakMap<RoutingTree, TreeIndex>();
 export function treeIndex(tree: RoutingTree): TreeIndex {
   const cached = indexes.get(tree);

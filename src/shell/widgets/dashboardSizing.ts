@@ -4,9 +4,9 @@ import {contentLimit, heights, registry, rowChoices, widthsFor, type DashboardHe
 // A dashboard card's size, apart from its section's default footprint. Width is a fraction of the section, the same
 // width in every section; no width (Auto) keeps the footprint the section's profile gives the card's legacy size.
 // Height sets the chart area of a charted card or the row count of a list, never the type.
-export const heightLabels = {short: 'dashboard.height.short', standard: 'dashboard.height.standard', tall: 'dashboard.height.tall'} as const;
+const heightLabels = {short: 'dashboard.height.short', standard: 'dashboard.height.standard', tall: 'dashboard.height.tall'} as const;
 // A chart's height at each step, as a multiple of its standard height.
-export const heightScale = {short: 0.75, standard: 1, tall: 2} as const satisfies Record<DashboardHeight, number>;
+const heightScale = {short: 0.75, standard: 1, tall: 2} as const satisfies Record<DashboardHeight, number>;
 
 export const fraction = (width: DashboardWidth) => (width === 'full' ? 1 : Number(width[0]) / Number(width[2]));
 // What a card's height adjusts: a chart's height, or a list's row count. `main` is whether the card renders main's

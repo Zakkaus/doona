@@ -11,7 +11,6 @@ export {default as Clock} from './Clock';
 export {default as Close} from './Close';
 export {default as Contrast} from './Contrast';
 export {default as Copy} from './Copy';
-export {default as Delete} from './Delete';
 export {default as DragHandle} from './DragHandle';
 export {default as Edit} from './Edit';
 export {default as FileText} from './FileText';

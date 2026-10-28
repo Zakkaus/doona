@@ -110,7 +110,7 @@ export function assignStages(modules, keys, start = entry) {
   return assigned;
 }
 
-export function catalogueStages(root) {
+function catalogueStages(root) {
   const keys = new Set(Object.keys(JSON.parse(readFileSync(join(root, 'src/i18n/locales/en.json'), 'utf8'))));
   return assignStages(scanModules(root, keys), keys);
 }

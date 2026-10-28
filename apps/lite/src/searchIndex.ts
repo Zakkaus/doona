@@ -6,7 +6,7 @@ import {regions} from '../../../src/dae/regions';
 import {regionOf} from './regions';
 
 // A name that mentions a region also answers to that region's other names, in every script (japan finds 日本).
-export function regionTerms(name: string): string[] {
+function regionTerms(name: string): string[] {
   const iso = regionOf(name);
   const entry = iso ? regions.find(([code]) => code === iso) : undefined;
   if (!iso || !entry) return [];

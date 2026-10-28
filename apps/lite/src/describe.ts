@@ -9,11 +9,11 @@ import type {GroupChange} from './groupDraft';
 import type {MessageKey} from './i18n';
 import type {Messages} from './i18n/en';
 
-export type PhraseList = {items: string[]; join: 'or' | 'sep'; quote?: boolean};
-export type PhraseParts = {parts: PhraseValue[]; join: 'and' | 'sep'};
-export type PhraseValue = string | Phrase | PhraseList | PhraseParts | {regions: string[]};
-export type Phrase = {key: MessageKey; values?: Record<string, PhraseValue>};
-export type DescribedCondition = {kind: string; value: string; negate: boolean};
+type PhraseList = {items: string[]; join: 'or' | 'sep'; quote?: boolean};
+type PhraseParts = {parts: PhraseValue[]; join: 'and' | 'sep'};
+type PhraseValue = string | Phrase | PhraseList | PhraseParts | {regions: string[]};
+type Phrase = {key: MessageKey; values?: Record<string, PhraseValue>};
+type DescribedCondition = {kind: string; value: string; negate: boolean};
 
 const phrase = (key: MessageKey, values?: Record<string, PhraseValue>): Phrase => ({key, values});
 const names = (items: string[]): PhraseList => ({items, join: 'sep'});

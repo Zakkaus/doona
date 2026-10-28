@@ -89,7 +89,7 @@ export function recordDiagnostic(error: unknown): Diagnostic {
   return entry;
 }
 
-export type DiagnosticsHeader = {doona: string; engine?: string; route: string};
+type DiagnosticsHeader = {doona: string; engine?: string; route: string};
 
 // Plain text for a bug report: the versions and the page first, then one block per entry.
 export function formatDiagnostics(entries: Diagnostic[], {doona, engine, route}: DiagnosticsHeader): string {

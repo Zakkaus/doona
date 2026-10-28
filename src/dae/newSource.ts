@@ -69,7 +69,7 @@ export function newSourcePathProblem(
 
 // An include pattern whose one `*` stands for the new file's name: `<dir>/<head>*<tail>`, with a literal directory and
 // a tail ending in `.dae`. The dialog shows `prefix` and `suffix` fixed and asks only for the name.
-export type NamePattern = {pattern: string; prefix: string; suffix: string};
+type NamePattern = {pattern: string; prefix: string; suffix: string};
 
 export function namePatterns(patterns: string[]): NamePattern[] {
   const found: NamePattern[] = [];

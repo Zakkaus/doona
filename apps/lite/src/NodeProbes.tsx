@@ -19,7 +19,7 @@ export function useNodeProbes(connection: Connection) {
   }, [probes]);
   return probes;
 }
-export type NodeProbes = ReturnType<typeof useNodeProbes>;
+type NodeProbes = ReturnType<typeof useNodeProbes>;
 export function useProbeUpdates(probes: NodeProbes) {
   useSyncExternalStore(probes.subscribe, probes.snapshot);
 }

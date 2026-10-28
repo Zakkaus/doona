@@ -13,7 +13,7 @@ export const PROGRAM_LICENSES = ['OFL-1.1', 'Apache-2.0', 'LicenseRef-GitHub-Log
 
 // Build tools that write code of their own into dist/. Include only the shipped helpers' licence texts,
 // not the tools' build-only dependency closure.
-export const BUILD_RUNTIME = [
+const BUILD_RUNTIME = [
   {
     name: 'vite',
     from: [],
@@ -75,7 +75,7 @@ const readJson = path => JSON.parse(readFileSync(path, 'utf8'));
 const byNameVersion = (a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : a.version < b.version ? -1 : a.version > b.version ? 1 : 0);
 
 // Reads the exact installed packages recorded by the build; dependencies absent from the bundle are not followed.
-export function dependencyLicenses(directories, root = ROOT) {
+function dependencyLicenses(directories, root = ROOT) {
   const checkout = realpathSync(root);
   const seen = new Set();
   const packages = new Map();
@@ -107,7 +107,7 @@ export function dependencyLicenses(directories, root = ROOT) {
 
 // The named sections of a bundler-style LICENSE.md, each from its heading to the next heading, without the rule that
 // separates entries. Fails when a section is missing so a tool update cannot drop a notice silently.
-export function licenseSections(text, names, source) {
+function licenseSections(text, names, source) {
   const lines = text.replace(/\r\n?/g, '\n').split('\n');
   const heading = line => /^#{1,6} /.exec(line) && line.replace(/^#+ /, '').trim();
   return names
@@ -129,7 +129,7 @@ export function licenseSections(text, names, source) {
 }
 
 // BUILD_RUNTIME resolved against the installed build tools.
-export function buildRuntimeLicenses(root, names) {
+function buildRuntimeLicenses(root, names) {
   const checkout = realpathSync(root);
   return names.map(name => {
     const runtime = BUILD_RUNTIME.find(entry => entry.name === name);
@@ -178,7 +178,7 @@ export function splitCopyright(text) {
 
 // Packages whose licence texts match apart from their copyright statements share one entry: every package with its
 // copyright statements, then the text once. A package whose text matches no other keeps its text unchanged.
-export function formatNotices({packages, skipped}) {
+function formatNotices({packages, skipped}) {
   const rule = '='.repeat(72);
   const heading = ({name, version, license, file}) => `${name} ${version} (${license}) — ${file}`;
   const groups = new Map();
@@ -217,7 +217,7 @@ export function stageNotices(stage, list, root = ROOT) {
   return licenses;
 }
 
-export function main(args) {
+function main(args) {
   if (args.length !== 2) {
     console.error('Usage: node tools/notices.mjs STAGE PACKAGE_LIST');
     return 1;
