@@ -66,7 +66,11 @@ export function appendEntry(text: string, section: string, entry: string) {
   const block = scanConfig(text)
     .blocks.filter(block => block.name === section)
     .at(-1);
-  return block ? text.slice(0, block.close) + `  ${entry}\n` + text.slice(block.close) : `${text.trimEnd()}\n\n${section} {\n  ${entry}\n}\n`;
+  if (!block) return `${text.trimEnd()}\n\n${section} {\n  ${entry}\n}\n`;
+  const line = text.lastIndexOf('\n', block.close - 1) + 1;
+  const at = /^[ \t]*$/.test(text.slice(line, block.close)) ? line : block.close;
+  const eol = text.includes('\r\n') ? '\r\n' : '\n';
+  return text.slice(0, at) + (text[at - 1] === '\n' ? '' : eol) + `  ${entry}${eol}` + text.slice(at);
 }
 export function removeEntry(text: string, entry: {from: number; to: number}) {
   return text.slice(0, entry.from) + text.slice(entry.to);

@@ -29,6 +29,14 @@ it('keeps same-name nodes separate and qualifies the source in the stored filter
   expect(new Set(bindings.map(item => item.id)).size).toBe(2);
   expect(nodes.filter(compileFilters([bindings[0].filter]))).toEqual([nodes[0]]);
 });
+it('qualifies subscribed nodes even when provider metadata is unavailable', () => {
+  const node = {id: 'subscribed', name: 'same', provider_id: 'feed', subscription_tag: 'feed'} as Node;
+  const binding = nodeBinding(node, [], 'Manual');
+  const matches = compileFilters([binding.filter]);
+  expect(binding.description).toBe('feed');
+  expect(matches(node)).toBe(true);
+  expect(matches({...node, subscription_tag: null})).toBe(false);
+});
 it('validates Rust regex and preserves its text in the binding', () => {
   expect(subscriptionFilter('provider', '(?i)HK|香港')).toBe("subtag('provider') && name(regex: '(?i)HK|香港')");
   expect(subscriptionFilter('provider', '(?=x)')).toBeNull();

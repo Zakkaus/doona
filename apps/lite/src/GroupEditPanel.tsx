@@ -139,8 +139,7 @@ export function GroupEditPanel({
   const shownPolicy = honkPolicy(entry?.policy ?? 'select');
   const policies = [...new Set([shownPolicy, 'select', 'urltest', 'roundrobin', 'fallback', 'score'])];
   const editable = writable && !!entry;
-  const write = (next: string[], policy = entry?.policy ?? null) =>
-    stage(writeGroupEntry(content, name, {policy, filters: next.length ? next : [EMPTY_GROUP_FILTER]}));
+  const write = (next: string[]) => stage(writeGroupEntry(content, name, {policy: entry?.policy ?? null, filters: next.length ? next : [EMPTY_GROUP_FILTER]}));
   const focusRow = (selector: string) => () =>
     root.current?.querySelector<HTMLElement>(selector) ?? root.current?.querySelector<HTMLElement>('[data-transfer="members"] button') ?? null;
   const add = (items: Binding[]) => {
@@ -307,7 +306,7 @@ export function GroupEditPanel({
             label={t.policy}
             value={shownPolicy}
             options={policies.map(value => ({value, label: policyLabel(value, t)}))}
-            onChange={value => value && write(filters.length ? chosen : [], value === 'select' ? null : value)}
+            onChange={value => value && stage(writeGroupEntry(content, name, {policy: value === 'select' ? null : value, filters}))}
             isDisabled={!editable}
           />
           {['min', 'random', 'fixed(0)'].includes(entry.policy ?? '') && (

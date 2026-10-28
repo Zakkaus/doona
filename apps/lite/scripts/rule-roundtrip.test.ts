@@ -31,6 +31,16 @@ describe('lossless draft boundaries', () => {
     expect(added.indexOf('dport(443)')).toBeLessThan(added.indexOf('fallback:'));
     expect(setFallback(text, 'routing', 'block')).toBe(text.replace('fallback: direct', 'fallback: block'));
   });
+  it('adds rules and a fallback to an inline block without merging statements', () => {
+    const original = "routing { domain(suffix: 'one.example') -> direct }\n";
+    const added = addDraftRule(original, 'routing', "domain(suffix: 'two.example')", 'block');
+    expect(parseRuleList(added, 'routing').rows.map(row => row.target)).toEqual(['direct', 'block']);
+    const fallback = parseRuleList(setFallback(original, 'routing', 'block'), 'routing').rows;
+    expect(fallback.map(row => [row.target, row.fallback])).toEqual([
+      ['direct', false],
+      ['block', true]
+    ]);
+  });
   it('keeps multiline conditions opaque without losing their bytes', () => {
     const multiline = 'routing {\n # keep\n domain(\n  suffix: example.net,\n  suffix: example.org\n ) -> direct # tail\n fallback: direct\n}\n';
     const doc = parseRuleList(multiline, 'routing');

@@ -192,7 +192,7 @@ export function addDraftRule(text: string, kind: RuleListKind, condition: string
   const at = (position === 'first' ? doc.rows[0]?.from : fallback?.from) ?? (/^[ \t]*$/.test(text.slice(line, doc.block.close)) ? line : doc.block.close);
   const indent = doc.rows[0]?.anchor.indent || '  '.repeat(listPath(kind).length);
   const eol = text.includes('\r\n') ? '\r\n' : '\n';
-  return text.slice(0, at) + `${indent}${ruleLine(condition, target)}${eol}` + text.slice(at);
+  return text.slice(0, at) + (text[at - 1] === '\n' ? '' : eol) + `${indent}${ruleLine(condition, target)}${eol}` + text.slice(at);
 }
 export function editDraftRule(text: string, rule: DraftRule, conditions: Condition[], target: string): string {
   const condition = serializeBuilder(conditions);
@@ -211,7 +211,7 @@ export function setFallback(text: string, kind: RuleListKind, target: string): s
   const at = /^[ \t]*$/.test(text.slice(line, doc.block.close)) ? line : doc.block.close;
   const indent = doc.rows[0]?.anchor.indent || '  '.repeat(listPath(kind).length);
   const eol = text.includes('\r\n') ? '\r\n' : '\n';
-  return text.slice(0, at) + `${indent}fallback: ${target}${eol}` + text.slice(at);
+  return text.slice(0, at) + (text[at - 1] === '\n' ? '' : eol) + `${indent}fallback: ${target}${eol}` + text.slice(at);
 }
 
 export function changeCount(before: string, after: string): number {
