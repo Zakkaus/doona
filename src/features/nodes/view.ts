@@ -1,5 +1,4 @@
 import {isNodeLink} from '../../dae/nodes';
-export {isNodeLink} from '../../dae/nodes';
 import type {Capabilities, ConfigSource, HealthObservation, Node, Provider, ProviderCreate} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {
@@ -220,7 +219,6 @@ export function providerRows(providers: Provider[], nodes: Node[], entries: Subs
   return {list: [...pseudo, ...rows]};
 }
 
-// Null selects loose nodes; built-in outbounds have their own provenance.
 // The provider the link names while it is listed; a stale one falls back to the first real source, not every node.
 export function selectedProvider(list: ProviderRow[], requested: string | null): string | null {
   if (requested !== null && list.some(item => item.id === requested)) return requested;

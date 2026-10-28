@@ -55,7 +55,7 @@ export const answerAddresses = (answers: ReadonlyArray<Pick<DnsLogRecord['answer
   ...new Set(answers.filter(answer => answer.type === 'A' || answer.type === 'AAAA').map(answer => answer.data))
 ];
 
-export type RuleTarget = {kind: RuleConditionKind; condition: string};
+type RuleTarget = {kind: RuleConditionKind; condition: string};
 // Every condition the seed allows in a list, the default first, each address as one host; a value dae cannot hold is
 // left out. Routing: the exact domain, then its subdomains and keyword, the destination IP and the source IP. A DNS request: the
 // exact name, then its subdomains, and the client. A DNS response: each answered address, and the client.
@@ -156,7 +156,7 @@ export function acceptedRule(rules: RoutingRule[], condition: string, outbound: 
 }
 
 // A listed rule as the duplicate notice compares it: its condition, and what it writes after its arrow.
-export type ListedTarget = {kind: 'rule' | 'fallback'; index: number; expression: string; target: string};
+type ListedTarget = {kind: 'rule' | 'fallback'; index: number; expression: string; target: string};
 // Where the list already holds a rule with this condition and target, or a rule held for it does, as the dialog says
 // it; null when neither does. The accepted rule is named first, since it already applies. DNS upstream names compare
 // without regard to case, as honk resolves them.

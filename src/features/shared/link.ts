@@ -29,7 +29,7 @@ export function outboundTag(name: string | null, groups: ReadonlyArray<{id: stri
 
 // The routing trace with its form filled in from a link: the target, and the source and process when the link knows
 // them. The person runs the trace.
-export type TraceLink = {network: 'tcp' | 'udp'; domain: string; dst_ip: string; dst_port: string; src_ip: string; src_port: string; pname: string};
+type TraceLink = {network: 'tcp' | 'udp'; domain: string; dst_ip: string; dst_port: string; src_ip: string; src_port: string; pname: string};
 const traceKeys = ['network', 'domain', 'dst_ip', 'dst_port', 'src_ip', 'src_port', 'pname'] as const;
 export const traceQuery = (link: Partial<TraceLink>) => within('', {tab: 'trace', ...Object.fromEntries(traceKeys.map(key => [key, link[key] || null]))});
 // Null when the link names no target, so a plain visit to the tab keeps what was typed.

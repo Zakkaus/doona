@@ -14,7 +14,7 @@ const blankForm = {
   pname: '',
   dscp: '',
   mark: '',
-  // Null until the backend says what it offers: live when it can resolve, else none.
+  // Null keeps resolution automatic: live or DNS query for a domain when offered, otherwise none.
   resolve: null as TraceResolve | null
 };
 // Held by the rules page rather than the trace tab, so what was typed survives a tab switch. A link that names a
