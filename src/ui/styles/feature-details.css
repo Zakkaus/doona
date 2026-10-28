@@ -51,8 +51,9 @@
     top: env(safe-area-inset-top, 0px);
   }
 }
-/* Two rows: the commit actions, then the editing tools over the text, which stay on one line or fold into a menu. */
+/* Two rows until the editing tools fold into a menu beside the caller's actions. */
 .rp-editor-toolbar {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--rp-space-2);
@@ -72,12 +73,22 @@
   visibility: hidden;
   overflow: hidden;
 }
+/* Keep measuring the full tools width, independent of the actions and menu sharing the visible row. */
+.rp-editor-actions[data-merged] {
+  position: absolute;
+  inset-inline: 0;
+  visibility: hidden;
+}
 .rp-editor-overflow {
   position: absolute;
   inset-block: 0;
   inset-inline: 0 auto;
   display: flex;
   align-items: center;
+}
+.rp-toolbar > .rp-editor-overflow {
+  position: static;
+  margin-inline-start: auto;
 }
 .rp-editor .cm-editor {
   max-width: 100%;
