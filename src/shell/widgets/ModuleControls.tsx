@@ -41,11 +41,12 @@ function pageRow(): GalleryRow & {snap: number} {
 export function ModuleGallery({items, add, surface = 'panel'}: {items: Widget[]; add: (id: WidgetId, preset?: Preset) => void; surface?: Surface}) {
   const t = useT();
   const [row] = useState(pageRow);
+  const cards = surface === 'dashboard' ? dashboardItems(dashboardDefaults()) : [];
   return (Object.keys(registry) as WidgetId[])
     .filter(id => surface === 'panel' || !onlyPanel(id))
     .map(id => {
       const n = items.filter(item => item.id === id).length;
-      const card = dashboardItems(dashboardDefaults()).find(item => item.id === id) ?? defaultWidget(id);
+      const card = cards.find(item => item.id === id) ?? defaultWidget(id);
       // A preset's share snaps as a chosen width does on the page.
       const share = (preset: Preset) => {
         const f = fraction(preset.width);
@@ -86,11 +87,7 @@ export function ModuleGallery({items, add, surface = 'panel'}: {items: Widget[];
               : undefined
           }
         >
-          {surface === 'panel' && (
-            <SamplePreview id={id}>
-              <WidgetContent item={defaultWidget(id)} preview sample />
-            </SamplePreview>
-          )}
+          {surface === 'panel' && <WidgetContent item={defaultWidget(id)} preview sample />}
         </WidgetGalleryTile>
       );
     });
