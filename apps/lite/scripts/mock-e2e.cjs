@@ -48,6 +48,9 @@ async function quickSwitch(b, width) {
   await expect(inspector.getByRole('button', {name: 'Restore automatic', exact: true})).toHaveCount(0);
   await search.fill('');
   const rows = inspector.locator('[data-member-row]');
+  // The inspector appends rows after paint; End must not race a changing last row.
+  const totalMembers = Number((await inspector.getByText(/^\d+ of \d+$/).innerText()).split(' of ')[1]);
+  await expect(rows).toHaveCount(totalMembers);
   await rows.first().focus();
   await p.keyboard.press('ArrowDown');
   await expect(rows.nth(1)).toBeFocused();
