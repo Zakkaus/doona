@@ -6,7 +6,7 @@ import './styles/select-box.css';
 
 type SwatchChoice = SwatchProps & {id: string; label: string; desc?: string};
 // `plain` marks a section whose title only gathers its choices, so their names do not start with it.
-export type SwatchSection = {title: string; plain?: boolean; items: SwatchChoice[]};
+type SwatchSection = {title: string; plain?: boolean; items: SwatchChoice[]};
 type PickerProps = {label: string; sections: SwatchSection[]; value: string; onChange: (id: string) => void; help?: string};
 
 // One choice from boxes that each show it, after S2's SelectBoxGroup, on React Aria's grid ListBox: arrow keys move

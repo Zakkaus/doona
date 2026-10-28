@@ -20,7 +20,7 @@ const LIGHT = [-Math.SQRT1_2, -Math.SQRT1_2];
 // How much brighter the backdrop gets where the rim faces the light: 1 doubles it.
 const GAIN = 0.9;
 
-export function lensSupported(): boolean {
+function lensSupported(): boolean {
   // userAgentData exists only in secure contexts, and doona is often served over plain HTTP, so the engine check falls
   // back to Chromium's user agent token, which Safari, Firefox and the WebKit browsers on iOS do not carry.
   const brands = (navigator as Navigator & {userAgentData?: {brands: Array<{brand: string}>}}).userAgentData?.brands;

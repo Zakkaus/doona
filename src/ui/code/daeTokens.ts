@@ -2,7 +2,7 @@
 // A section name followed by `(` is a call instead, as `upstream(cloudflare)` in a DNS response rule.
 const sections = /^(global|dns|upstream|routing|request|response|subscription|node|group|include|fallback)\b(?!\s*\()/;
 
-export type DaeToken = 'comment' | 'string' | 'keyword' | 'number' | 'propertyName' | 'variableName' | 'punctuation' | 'operator' | null;
+type DaeToken = 'comment' | 'string' | 'keyword' | 'number' | 'propertyName' | 'variableName' | 'punctuation' | 'operator' | null;
 export type DaeState = {afterArrow: boolean};
 type Stream = {
   sol: () => boolean;

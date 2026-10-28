@@ -130,9 +130,6 @@
   max-block-size: 200px;
   mask-image: none;
 }
-.rp-widget-gallery-list .rp-widget-gallery-tile > .rp-cluster {
-  margin-block-start: auto;
-}
 
 .rp-widget-panel[data-more] > .rp-widget-body {
   mask-image: linear-gradient(to bottom, #000 calc(100% - var(--rp-space-4)), transparent);

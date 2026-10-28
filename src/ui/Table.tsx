@@ -58,7 +58,7 @@ type Col = {
 export type TableSort = {column: string; direction: 'ascending' | 'descending'};
 export type TableColumn<T> = Col & {render: (row: T) => ReactNode};
 // A group row in tree mode: its label spans columns before the totals, then its children.
-export type TableGroup<T> = {id: string; group: string; label: string; totals: Record<string, ReactNode>; children: T[]};
+type TableGroup<T> = {id: string; group: string; label: string; totals: Record<string, ReactNode>; children: T[]};
 
 // `resizable`: false leaves the resizers out. In a grid with no rows React Aria (1.21) keeps Tab on the first column's
 // resizer, so a table without rows has none.
