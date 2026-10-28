@@ -147,7 +147,7 @@ lite 的独立依赖安装与构建命令见[开发](https://doona.daeuniverse.o
 
 ## 支持
 
-问题与提问请到 [issues](https://github.com/Zakkaus/doona/issues)。后端问题请提交到所连接引擎的项目：[honk](https://github.com/daeuniverse/honk) 或 [dae](https://github.com/daeuniverse/dae)。报告安全漏洞的方式见 [SECURITY.md](.github/SECURITY.md)。
+界面问题与提问请到 [doona issues](https://github.com/Zakkaus/doona/issues)。代理、分流、DNS 等引擎问题请提交到 [honk issues](https://github.com/daeuniverse/honk/issues)。报告安全漏洞的方式见 [SECURITY.md](.github/SECURITY.md)。
 
 ## 许可与致谢
 

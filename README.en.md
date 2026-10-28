@@ -147,7 +147,7 @@ For lite’s separate dependency install and build commands, see [Development](h
 
 ## Support
 
-Report bugs and ask questions in the [issues](https://github.com/Zakkaus/doona/issues). Report backend issues to the connected engine's project: [honk](https://github.com/daeuniverse/honk) or [dae](https://github.com/daeuniverse/dae). See [SECURITY.md](.github/SECURITY.md) for reporting a vulnerability.
+Report interface problems and ask questions in [doona issues](https://github.com/Zakkaus/doona/issues). Report proxy, routing, DNS and other engine problems in [honk issues](https://github.com/daeuniverse/honk/issues). See [SECURITY.md](.github/SECURITY.md) for reporting a vulnerability.
 
 ## License and credits
 
