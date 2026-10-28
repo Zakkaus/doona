@@ -114,6 +114,11 @@ it('groups held rules by file and says so only when there is more than one', asy
   expect(pendingView([dns], 'request', null, sources, t)).toBeNull();
 });
 
+it('pluralizes held rule and written file counts independently', () => {
+  expect(translate('en', 'rule.applyFiles', {rules: t('rule.applyPending', {n: 3}), files: 1}, 'files')).toBe('Apply 3 rules; writes 1 file');
+  expect(translate('en', 'rule.applyFiles', {rules: t('rule.applyPending', {n: 1}), files: 2}, 'files')).toBe('Apply 1 rule; writes 2 files');
+});
+
 it('keeps the backend words an explained diagnostic leaves out, through a partial failure', async () => {
   const {sources} = await createMockApi().config();
   const raw = 'offline dependency /etc/dae/geosite.dat: No such file or directory';

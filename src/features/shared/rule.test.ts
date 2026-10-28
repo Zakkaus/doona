@@ -23,6 +23,7 @@ import {
   typedCondition,
   type QuickRuleSeed
 } from './rule';
+import {ruleWritten} from './ruleNotice';
 const t: Translator = (key, params) => translate('en', key, params);
 
 it('offers the exact domain first, then its subdomains and keyword, the destination IP and the source IP as one host', () => {
@@ -313,6 +314,32 @@ it('names a DNS duplicate by its action, comparing upstreams without case, and o
   const held: PendingRule[] = [{list: 'response', id: 1, condition: 'ip(1.2.3.4/32)', outbound: 'reject', must: false, before: null, sourceId: 'src-main'}];
   expect(duplicateOf('response', [], held, 'ip(1.2.3.4/32)', 'reject', t)).toBe('A held rule already has the same condition and action.');
   expect(duplicateOf('request', [], held, 'ip(1.2.3.4/32)', 'reject', t)).toBeNull();
+});
+
+it('keeps singular and plural counts in settled rule write notices', () => {
+  expect(ruleWritten('rule.applied', t, 1).text).toBe('1 rule is in effect');
+  expect(ruleWritten('rule.applied', t, 3).text).toBe('3 rules are in effect');
+});
+
+it('localizes the settled rule count and connection detail in Traditional Chinese', () => {
+  const zh: Translator = (key, params) => translate('zh-TW', key, params);
+  const localized = ruleWritten('rule.applied', zh, 2);
+  expect(localized.text).toBe(translate('zh-TW', 'rule.applied', {n: 2}));
+  expect(localized.text).toMatch(/^2 /);
+  expect(localized.detail).toBe(translate('zh-TW', 'rule.keepsRoute'));
+  expect(localized.detail).not.toBe(ruleWritten('rule.applied', t, 2).detail);
+});
+
+it('announces settled rule writes without asking for a reload', () => {
+  for (const lang of ['zh-TW', 'zh-CN', 'en'] as const) {
+    const localized: Translator = (key, params) => translate(lang, key, params);
+    for (const key of ['rule.added', 'rule.edited', 'rule.removed', 'rule.applied'] as const) {
+      const notice = ruleWritten(key, localized, 2);
+      expect(notice.text).toBe(translate(lang, key, {n: 2}));
+      expect(notice.detail).toBe(translate(lang, 'rule.keepsRoute'));
+      expect(`${notice.text} ${notice.detail}`).not.toMatch(/重新載入|重新加载|重載|重载|reload/i);
+    }
+  }
 });
 
 it('says what happens now without presetting it, and when a routing rule changes nothing', () => {
