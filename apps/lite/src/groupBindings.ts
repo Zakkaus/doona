@@ -17,7 +17,7 @@ export function regexLiterals(pattern: string): string[] | null {
 export type Binding = {id: string; label: string; description: string; filter: string; provider?: string};
 export function nodeBinding(node: Node, providers: Provider[], manual: string): Binding {
   const provider = providers.find(item => item.id === node.provider_id);
-  const subscription = provider?.kind === 'subscription' ? node.subscription_tag || provider.name : null;
+  const subscription = node.subscription_tag || (provider?.kind === 'subscription' ? provider.name : null);
   return {
     id: `node:${node.id}`,
     label: node.name || node.id,

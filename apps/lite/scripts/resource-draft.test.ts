@@ -41,6 +41,15 @@ describe('orchestration resource drafts', () => {
     expect(draftResources(next, 'node').map(entry => entry.name)).toEqual(['first', 'spare', 'copied']);
     expect(next.replace(`  'copied': '${link}'\n`, '')).toBe(source);
   });
+  it.each(['node', 'subscription'] as const)('duplicates an inline %s entry onto its own line', kind => {
+    const value = kind === 'node' ? 'anytls://secret@one.example:443' : 'https://example.net/feed';
+    const original = `${kind} { first: '${value}' }\n`;
+    const next = changeResource(original, [], kind, 'duplicate', 'first', 'copied', value);
+    expect(draftResources(next, kind).map(entry => [entry.name, entry.value])).toEqual([
+      ['first', value],
+      ['copied', value]
+    ]);
+  });
   it('changes only the chosen link', () => {
     const next = changeResource(source, [], 'node', 'text', 'first', 'first', 'anytls://new@one.example:443');
     expect(next).toBe(source.replace('anytls://secret@one.example:443#First', 'anytls://new@one.example:443'));
