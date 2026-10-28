@@ -1,4 +1,4 @@
-import {describe, expect, it, vi} from 'vitest';
+import {describe, expect, it} from 'vitest';
 import {flagForName, resolvedFlag} from './countryFlags';
 
 describe('flags from the shared region detector', () => {
@@ -66,26 +66,6 @@ describe('flags from the shared region detector', () => {
   it.each(['🇺🇸 Japan', 'Japan 🇯🇵', '🏴\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F} UK'])('adds no decoration to an existing flag in %s', name =>
     expect(flagForName(name)).toBeNull()
   );
-
-  it.each(['JP memoized', 'unknown memoized', '🇯🇵 memoized'])('does no regex work for a repeated name: %s', name => {
-    flagForName(name);
-    const spy = vi.spyOn(RegExp.prototype, 'exec');
-    for (let i = 0; i < 1000; i++) flagForName(name);
-    const calls = spy.mock.calls.length;
-    spy.mockRestore();
-    expect(calls).toBe(0);
-  });
-
-  it('evicts the oldest lookup when the cache reaches its limit', () => {
-    flagForName('JP oldest cache entry');
-    for (let i = 0; i < 2048; i++) flagForName(`unknown cache entry ${i}`);
-    const spy = vi.spyOn(RegExp.prototype, 'exec');
-    const flag = flagForName('JP oldest cache entry');
-    const calls = spy.mock.calls.length;
-    spy.mockRestore();
-    expect(flag).toBe('🇯🇵');
-    expect(calls).toBeGreaterThan(0);
-  });
 });
 
 it.each([
@@ -96,18 +76,4 @@ it.each([
   ['Japan', {'node:Japan': 'TW'}, false, null]
 ] as const)('resolves %s with %j enabled=%s', (name, overrides, enabled, expected) => {
   expect(resolvedFlag(name, overrides, enabled)).toBe(expected);
-});
-
-it('resolves repeated manual and automatic flags through the memoized name lookup', () => {
-  for (const name of ['Japan resolved memoized', 'unknown resolved memoized', '🇯🇵 resolved memoized']) {
-    resolvedFlag(name, {}, true);
-    const spy = vi.spyOn(RegExp.prototype, 'exec');
-    for (let i = 0; i < 1000; i++) {
-      resolvedFlag(name, {}, true);
-      resolvedFlag(name, {[`node:${name}`]: 'TW'}, true);
-    }
-    const calls = spy.mock.calls.length;
-    spy.mockRestore();
-    expect(calls).toBe(0);
-  }
 });

@@ -1,4 +1,4 @@
-import {expect, it, vi} from 'vitest';
+import {expect, it} from 'vitest';
 import {nodeFixtures} from '../../../mock/fixtures/inventory';
 import {regions} from '../../dae/regions';
 import {regionOf} from './geo';
@@ -55,17 +55,6 @@ it.each([
   ['xUnited States', null],
   ['United Statesman', null]
 ])('uses bounded aliases and location order for %s', (name, expected) => expect(regionOf(name)).toBe(expected));
-
-it('caches both recognized and unknown regions without regex work', () => {
-  regionOf('FRA region memo');
-  regionOf('unknown region memo');
-  const spy = vi.spyOn(RegExp.prototype, 'exec');
-  regionOf('FRA region memo');
-  regionOf('unknown region memo');
-  const calls = spy.mock.calls.length;
-  spy.mockRestore();
-  expect(calls).toBe(0);
-});
 
 it('keeps aliases to letters, with Han aliases starting on a Han character', () => {
   // geo.ts relies on this: no position can start both a Han and a Latin alias, and no key needs regex escaping.

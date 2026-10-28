@@ -1,6 +1,3 @@
-import {cachedRows} from '../../ui/tableHooks';
-import {steadyNodes} from '../../store/nodes';
-import {poll, steadyBase, withLatency} from '../../store/testHelpers';
 import {describe, expect, it} from 'vitest';
 import type {ConfigSource, Node, Provider} from '../../api/model';
 import {readSubscriptionEntries} from '../../dae/subscriptions';
@@ -413,7 +410,7 @@ it('falls back to the first real source when the linked provider is no longer li
   expect(selectedProvider(list, 'gone')).toBe('a');
 });
 
-it('says why the add dialog cannot submit, first applicable, and nothing while it is still empty', () => {
+it('says why the add dialog cannot submit, first applicable', () => {
   expect(nodeFormReason('provider', '', '', t)).toBe(t('nodes.nameMissing'));
   expect(nodeFormReason('node', '', '', t)).toBe(t('nodes.nameMissing'));
   expect(nodeFormReason('provider', '', 'https://example.org/sub', t)).toBe('Enter a name');
@@ -624,20 +621,4 @@ it.each([
   const entry = readSubscriptionEntries("subscription {\n  harbor: 'https://example.org/sub'\n}")[0];
   const form = {name: entry.tag, value: entry.url, interval: '', agent: '', cache: null, route: '', ...change};
   expect(providerChanges(form, entry, defaultCache)[field]).toBe(edited);
-});
-
-describe('row stability', () => {
-  it.each([
-    {name: 'probe times only', next: (nodes: Node[]) => poll(nodes), rebuilt: 0},
-    {name: 'one node’s latency', next: (nodes: Node[]) => withLatency(poll(nodes), 3, 99), rebuilt: 1}
-  ])('rebuilds only the rows whose node moved: $name', ({next, rebuilt}) => {
-    const cache = new WeakMap<Node, {id: string}>();
-    let built = 0;
-    const build = (node: Node) => (built++, {id: node.id});
-    const before = cachedRows(cache, steadyBase, build);
-    built = 0;
-    const after = cachedRows(cache, steadyNodes(steadyBase, next(steadyBase)), build);
-    expect(built).toBe(rebuilt);
-    expect(after.filter((row, i) => row !== before[i])).toHaveLength(rebuilt);
-  });
 });

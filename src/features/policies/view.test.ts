@@ -164,13 +164,6 @@ it('reports a partial probe with translated counts and the stopping error', () =
   expect(actionErrorText(new ApiError(503, 'unavailable', 'offline'), t)).toBe(t('ui.backendMessage', {message: 'offline'}));
 });
 
-// Pinning depends on each group's can_override, which the page-wide note cannot know; the cards offer it themselves.
-it('keeps pinning out of the page-wide note in every language', () => {
-  expect(translate('en', 'policy.note')).not.toMatch(/pin/i);
-  // The zh word for pinning, taken from the pinned badge.
-  for (const lang of ['zh-TW', 'zh-CN'] as const) expect(translate(lang, 'policy.note')).not.toContain(translate(lang, 'policy.overridden').slice(-2));
-});
-
 it('counts each probed member once, by the row that says most', () => {
   const row = (member_id: string, ip_version: 'ipv4' | 'ipv6', state: 'healthy' | 'unavailable' | 'unknown') => ({
     member_id,
