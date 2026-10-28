@@ -177,6 +177,7 @@ export async function probeHostedBackend(loc: Pick<Location, 'origin' | 'pathnam
     const json = response.headers.get('content-type')?.includes('application/json') ?? false;
     const challenged = response.status === 401 && /bearer/i.test(response.headers.get('www-authenticate') ?? '');
     const discovered = response.status === 200 && json && (await response.json())?.api_major === 1;
+    if (!response.bodyUsed) void response.body?.cancel().catch(() => {});
     return challenged || discovered ? api : null;
   } catch {
     return null;

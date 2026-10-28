@@ -30,6 +30,7 @@ export async function discoverAuth(base: string, signal?: AbortSignal): Promise<
 // A backend without discovery may still serve the native API; only a 404 from its capabilities says it does not.
 export async function servesNativeApi(base: string, signal?: AbortSignal): Promise<boolean> {
   const response = await send(url(base, '/api/v1/capabilities'), {headers: {Accept: 'application/json'}, cache: 'no-store', signal});
+  void response.body?.cancel().catch(() => {});
   return response.status !== 404;
 }
 
@@ -68,4 +69,5 @@ export async function closeSession(base: string, token: string, signal?: AbortSi
   });
   // An already-ended session is the outcome logout asked for.
   if (!response.ok && response.status !== 401) throw await responseError(response, 'POST');
+  void response.body?.cancel().catch(() => {});
 }
