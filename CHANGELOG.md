@@ -6,6 +6,72 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Entries live in [changes/](changes/) until release.
 
+## [0.1.0-rc.3] - 2026-10-28
+
+### Added
+
+- Lite detects honk on the page origin, connects when anonymous access is allowed, and otherwise opens the matching sign-in step with an option to use another backend. (#611)
+- Lite connection help identifies the honk native API root and explains anonymous access; sign-in text covers password sessions and tokens. (#611)
+- Lite served by honk or self-hosted no longer offers the demo; the demo site opens straight into it. (#611)
+- System status lists more features that are off, such as editing rules or groups, import and revision history, and geodata sources, each with the setting or start-up option that turns it on and a link to its requirements. (#604)
+- The read-only help on Configuration and on the outbound mode gives the same explanation as System status, with the setting that turns writes on and a link to the requirements. (#604)
+
+### Changed
+
+- Help links in doona and doona lite open the documentation at https://doona.daeuniverse.org/. (#600)
+- The README defaults to Traditional Chinese, with the English text in `README.en.md`, and the archives and packages ship both. (#603)
+- Use 600-weight page and section headings with compact header spacing in doona lite. (#610)
+- Pair Figtree with system Chinese fonts and retain stronger Chinese button labels in doona lite. (#610)
+- Use subtle neutral selection fills and 1 px emphasized borders for routing cards, group rows and segmented controls; reserve duck yellow for keyboard focus. (#610)
+- Give primary actions dark neutral fills in light mode and light neutral fills in dark mode, with contrasting text and the same 8 px corners as other controls. Destructive actions retain red with matching corners. (#610)
+- Give the sidebar and content a shared background with a 1 px divider, while keeping md segmented controls, control heights and aligned page-header actions. (#610)
+
+### Fixed
+
+- Retry failed catalogue stages without losing the loaded language, and wait only for the requested stage and its prerequisites. (#613)
+- Copying from an open dialog puts the text on the clipboard instead of reporting success with nothing copied. (#613)
+- Lite copies share links and restart values over a plain-HTTP router address, and reports when copying fails. (#613)
+- Keep folded editor tools beside the source actions instead of in a separate row. (#612)
+- Render translated pages with fallback fonts after a three-second wait when optional fonts stall. (#613)
+- Keep all node columns reachable in narrow lite tables. (#609)
+- Wrap lite subscription node descriptions within the visible table width. (#609)
+- Open lite node row menus above their triggers to keep pagination clear. (#609)
+- Label compact lite node latency values and truncate protocol/source details to one line. (#609)
+- Show the node import validation message once in the lite dialog footer, without an empty preview gap. (#609)
+- Keep lite dialog fields reachable by scrolling above the footer on short screens. (#609)
+- Align the lite subscription expand/collapse control with the search field and list on phones. (#609)
+- Hide lite pinned-column edge shadows on both sides while retaining pinning and opaque cell backgrounds. (#609)
+- doona lite: at mid window widths the groups list keeps each group name beside the details panel, and the latency is no longer cut off. (#607)
+- Prevent clicks on cached page actions from being lost when a refresh starts after navigation. (#613)
+- On the phone and tablet layouts, popovers stay between the top bar and the bottom navigation bar instead of running under it. (#606)
+- Rule templates refuse a file only when its experimental native_api or clash_api section holds a secret or a nested section, as honk does, rather than whenever such a section exists. (#601)
+- System status no longer says that flows set to Off are recorded on demand; it tells the Off mode in Settings apart from recording on demand and from a configuration that forbids recording. (#601)
+- Geodata hints name the assets.geodata.geosite and assets.geodata.geoip keys in an assets section, and say that honk refuses them together with the older experimental.native_api download URL keys. (#601)
+- A source whose text does not match its hash is described as incomplete, and as redacted only when the backend masked listener secrets. (#601)
+- Simplified Chinese names a policy group 组 and Traditional Chinese 群組 everywhere, instead of mixing 群组 and 策略組 into a few labels. (#598)
+- Load each translation stage's Noto glyphs before rendering so Traditional and Simplified Chinese card titles do not mix web-font and system-font weights on a cold load. (#613)
+- Preserve backend response fields named `__proto__` when updating cached data. (#613)
+- Clear derived connection rates when byte counters reset or become unavailable during a rapid refresh. (#613)
+- Wait for pending catalogue sections before switching back to a previously loaded language. (#613)
+- Preserve a group's all-node membership when changing its policy in lite. (#613)
+- Keep inline node, subscription and routing declarations separate when adding or duplicating entries in lite. (#613)
+- Keep subscribed-node group bindings scoped to their source when provider metadata is unavailable. (#613)
+- Make demo API reads and mutations respect unavailable capability flags. (#613)
+- Reject invalid DNS-log source filters instead of returning unfiltered records. (#613)
+- Preserve bare source IPs and IPv6 destinations in demo flow evidence, and count UTF-8 bytes when paging DNS logs. (#613)
+- Release dashboard tile references on unmount and prevent drag listeners from accumulating across repeated keyboard drags. (#613)
+- Release unread response bodies after authentication probes and successful or already-ended session logout. (#613)
+- Release decoded wallpaper bitmaps when canvas creation or drawing fails. (#613)
+
+### Internal
+
+- The root's `data-scrolled` attribute has one scroll listener, in the shell, instead of a second one the Glass palettes added and never removed. (#597)
+- Reduce repeated tag, chart, configuration, gallery and traffic projection work. (#613)
+- Share icon wrappers and subscription name quoting. (#613)
+- Remove obsolete UI, shell, store and feature exports, helpers, forwarding paths and state. (#613)
+- Share region-name matching and the clipboard helper between the standard and lite apps, and compose the existing toolbar and divider components. (#613)
+- Remove unused lite code, translation entries and unconsumed exports. (#613)
+
 ## [0.1.0-rc.2] - 2026-10-27
 
 ### Added
@@ -889,7 +955,8 @@ Entries live in [changes/](changes/) until release.
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
-[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.2...HEAD
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.3...HEAD
+[0.1.0-rc.3]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.2...v0.1.0-rc.3
 [0.1.0-rc.2]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.1...v0.1.0-rc.2
 [0.1.0-rc.1]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.20...v0.1.0-rc.1
 [0.1.0-beta.20]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.19...v0.1.0-beta.20

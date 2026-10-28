@@ -86,7 +86,7 @@ Available features depend on the backend’s capabilities and configuration; see
 
 ## Two editions
 
-doona lite is a preview in testing in 0.1.0-rc.2; its pages and behaviour may change. Both editions connect to the same honk with the same administrator credentials.
+doona lite is a preview in testing in 0.1.0-rc.3; its pages and behaviour may change. Both editions connect to the same honk with the same administrator credentials.
 
 | Area               | Standard edition                                          | doona lite (preview)                               |
 | ------------------ | --------------------------------------------------------- | -------------------------------------------------- |
@@ -125,7 +125,7 @@ WebSocket, gRPC and XHTTP are stream transports, separate from proxy protocols. 
 
 ## Latest release
 
-[0.1.0-rc.2](CHANGELOG.md) has 41 entries: 4 additions, 9 changes, 23 fixes and 5 internal updates.
+[0.1.0-rc.3](CHANGELOG.md) has 52 entries: 5 additions, 7 changes, 34 fixes and 6 internal updates.
 
 It adds a preview of doona lite, a smaller configuration editor shipped in its own archive. The Nodes page takes several node links at once and tests the filtered list, sorted by latency, and the route trace accepts a firewall mark. A first run opens a connection form in Settings, and up to four recently left pages reopen as they were. Suspending the service, clearing logs, switching to Direct or Global mode and leaving an unapplied rule template or group draft now ask for confirmation.
 
