@@ -213,6 +213,11 @@ export const siteTheme = {
       }
     },
     "icon": {
+      "base": {
+        ":is(.lite-disclosure > button > *)": {
+          "marginBlockStart": "var(--spacing-1)"
+        }
+      },
       "size:xsm": {
         "width": "1rem",
         "height": "1rem"
@@ -232,6 +237,9 @@ export const siteTheme = {
     },
     "button": {
       "base": {
+        ":is([data-skeleton-row] [data-drag-handle])": {
+          "color": "var(--color-text-secondary)"
+        },
         ":active": {
           "transform": "scale(.98)"
         },
@@ -248,7 +256,43 @@ export const siteTheme = {
     },
     "text-input": {
       "base": {
-        "borderRadius": "var(--radius-element)"
+        "borderRadius": "var(--radius-element)",
+        ":is(.lite-collection-toolbar *)": {
+          "maxWidth": "100%"
+        }
+      }
+    },
+    "text-area-control": {
+      "base": {
+        ":is([data-code-editor] *)": {
+          "fontFamily": "var(--font-family-code)",
+          "tabSize": "2",
+          "whiteSpace": "pre",
+          "overflowWrap": "normal",
+          "overflowX": "auto"
+        }
+      }
+    },
+    "collapsible-trigger": {
+      "base": {
+        ":is(.lite-disclosure > *)": {
+          "gridColumn": "1",
+          "gridRow": "1",
+          "minWidth": "0",
+          "alignItems": "flex-start"
+        },
+        ":is(.lite-subscription-row *)": {
+          "paddingInline": "var(--spacing-3)"
+        }
+      }
+    },
+    "collapsible-content": {
+      "base": {
+        ":is(.lite-disclosure > *)": {
+          "gridColumn": "1 / -1",
+          "gridRow": "2",
+          "minWidth": "0"
+        }
       }
     },
     "input-group": {
@@ -282,7 +326,10 @@ export const siteTheme = {
     "layout-content": {
       "base": {
         "scrollbarColor": "var(--color-border-emphasized) transparent",
-        "scrollbarWidth": "thin"
+        "scrollbarWidth": "thin",
+        ":is(.lite-shell [role=\"main\"])": {
+          "overflow": "clip"
+        }
       }
     },
     "layout-panel": {
@@ -307,6 +354,10 @@ export const siteTheme = {
       "base": {
         "scrollbarColor": "var(--color-border-emphasized) transparent",
         "scrollbarWidth": "thin",
+        ":where(*) :has(> .lite-dialog-content)": {
+          "display": "flex",
+          "flexDirection": "column"
+        },
         "backgroundColor": "var(--color-background-popover)"
       }
     },

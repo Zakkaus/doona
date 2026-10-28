@@ -514,7 +514,7 @@ export function Groups({connection, setBusy}: {connection: Connection; setBusy: 
           {sheetMounted || sheetOpen ? (
             <VStack gap={0}>
               <HStack hAlign="end" paddingInline={3} paddingBlockStart={2} data-sheet-close>
-                <IconButton label={t.close} variant="ghost" size="sm" icon={<Icon icon={Close} size="sm" />} onClick={() => setSheetOpen(false)} />
+                <IconButton label={t.close} variant="ghost" size="sm" icon={<Icon icon={Close} size="sm" />} style={{position: 'relative', zIndex: 2}} onClick={() => setSheetOpen(false)} />
               </HStack>
               {body}
             </VStack>

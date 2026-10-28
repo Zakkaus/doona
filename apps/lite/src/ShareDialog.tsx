@@ -26,7 +26,7 @@ export default function ShareDialog({name, link, close}: {name: string; link: st
       <Layout
         header={<DialogHeader title={`${t.share} ${name}`} onOpenChange={pending ? undefined : close} />}
         content={
-          <LayoutContent>
+          <LayoutContent className="lite-dialog-content">
             <VStack gap={4}>
               <VStack hAlign="center" padding={3}>
                 {tooLong ? (

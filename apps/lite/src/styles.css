@@ -1,10 +1,4 @@
 @layer product {
-  /* Astryx's floating grabber overlaps the top half of this button. */
-  [data-sheet-close] button {
-    position: relative;
-    z-index: 2;
-  }
-
   body {
     background: var(--color-background-body);
     color: var(--color-text-primary);
@@ -12,16 +6,6 @@
     overflow-wrap: anywhere;
   }
 }
-@layer product {
-  [data-code-editor] .astryx-text-area-control {
-    font-family: var(--font-family-code);
-    tab-size: 2;
-    white-space: pre;
-    overflow-wrap: normal;
-    overflow-x: auto;
-  }
-}
-
 @layer product {
   .rule-values span:has(> .rule-value-token) {
     max-width: 100%;
@@ -58,21 +42,13 @@
 }
 
 @layer product {
-  /* AppShell also supplies LayoutContent; only the page body owns scrolling. */
-  .lite-shell #astryx-app-shell-main {
-    overflow: clip;
-  }
   .lite-page-content {
     scrollbar-gutter: stable;
-  }
-  /* Layout's block content slot must let its scroller shrink with the dialog. */
-  .astryx-dialog :has(> .astryx-layout-content) {
-    display: flex;
-    flex-direction: column;
   }
 }
 
 @layer product {
+  /* Astryx 0.6.8 has no descendant bleed-reset API; Card padding would also change the owning inset. */
   .lite-table-inset {
     --container-padding-inline-start: var(--spacing-0);
     --container-padding-inline-end: var(--spacing-0);
@@ -108,17 +84,11 @@
     white-space: nowrap;
     overflow-wrap: normal;
   }
-  .lite-collection-toolbar .astryx-text-input {
-    max-width: 100%;
-  }
 }
 
 @layer product {
   .lite-subscription-row {
     border-block-end: var(--border-width) solid var(--color-border);
-  }
-  .lite-subscription-row .astryx-collapsible-trigger {
-    padding-inline: var(--spacing-3);
   }
 }
 

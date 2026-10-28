@@ -356,6 +356,10 @@
     line-height: var(--text-display-3-leading);
   }
 
+  .astryx-icon:is(.lite-disclosure > button > *) {
+    margin-block-start: var(--spacing-1);
+  }
+
   .astryx-icon[data-size="xsm"] {
     width: 1rem;
     height: 1rem;
@@ -381,6 +385,10 @@
     --_button-radius: var(--radius-element);
   }
 
+  .astryx-button:is([data-skeleton-row] [data-drag-handle]) {
+    color: var(--color-text-secondary);
+  }
+
   .astryx-button:active {
     transform: scale(.98);
   }
@@ -399,6 +407,35 @@
 
   .astryx-text-input {
     border-radius: var(--radius-element);
+  }
+
+  .astryx-text-input:is(.lite-collection-toolbar *) {
+    max-width: 100%;
+  }
+
+  .astryx-text-area-control:is([data-code-editor] *) {
+    font-family: var(--font-family-code);
+    tab-size: 2;
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: auto;
+  }
+
+  .astryx-collapsible-trigger:is(.lite-disclosure > *) {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    align-items: flex-start;
+  }
+
+  .astryx-collapsible-trigger:is(.lite-subscription-row *) {
+    padding-inline: var(--spacing-3);
+  }
+
+  .astryx-collapsible-content:is(.lite-disclosure > *) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-width: 0;
   }
 
   .astryx-input-group {
@@ -429,6 +466,10 @@
     scrollbar-width: thin;
   }
 
+  .astryx-layout-content:is(.lite-shell [role="main"]) {
+    overflow: clip;
+  }
+
   .astryx-layout-panel {
     scrollbar-color: var(--color-border-emphasized) transparent;
     scrollbar-width: thin;
@@ -448,6 +489,11 @@
     scrollbar-color: var(--color-border-emphasized) transparent;
     scrollbar-width: thin;
     background-color: var(--color-background-popover);
+  }
+
+  .astryx-dialog:where(*) :has(> .lite-dialog-content) {
+    display: flex;
+    flex-direction: column;
   }
 
   .astryx-card {
