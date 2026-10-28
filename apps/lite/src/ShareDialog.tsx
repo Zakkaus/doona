@@ -5,6 +5,7 @@ import {Text} from '@astryxdesign/core/Text';
 import {TextArea} from '@astryxdesign/core/TextArea';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
 import {Layout, LayoutContent, LayoutFooter} from '@astryxdesign/core/Layout';
+import {copyText} from '../../../src/features/shared/copy';
 import {DialogActions} from './ui/DialogActions';
 import {useMessages} from './i18n';
 export default function ShareDialog({name, link, close}: {name: string; link: string; close: () => void}) {
@@ -50,10 +51,9 @@ export default function ShareDialog({name, link, close}: {name: string; link: st
               isConfirmDisabled={pending}
               onConfirm={() => {
                 setPending(true);
-                void Promise.resolve()
-                  .then(() => navigator.clipboard.writeText(link))
+                void copyText(link)
                   .then(
-                    () => setStatus('copied'),
+                    copied => setStatus(copied ? 'copied' : 'failed'),
                     () => setStatus('failed')
                   )
                   .finally(() => setPending(false));

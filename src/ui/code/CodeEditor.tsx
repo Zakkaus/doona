@@ -31,6 +31,7 @@ import {Button, PrimaryActions} from '../Button';
 import {MenuButton} from '../Menu';
 import {ActionGroup, MoreMenu, type Action} from '../ActionGroup';
 import {useOverflow} from '../hooks';
+import {Toolbar} from '../Toolbar';
 
 // CodeMirror phrase keys are translated through the shared catalogue.
 const cmPhrases: Array<[string, Key]> = [
@@ -412,15 +413,15 @@ export function CodeEditor({
           <div className="rp-editor-toolbar">
             {/* Caller actions remain Buttons; folded editing tools trail them without taking another row. */}
             {actions.length > 0 && (
-              <div className="rp-toolbar">
+              <Toolbar>
                 <PrimaryActions>
                   <ActionGroup actions={actions} overflowMode="wrap" />
                 </PrimaryActions>
                 {foldedTools}
-              </div>
+              </Toolbar>
             )}
             <div className="rp-editor-actions" data-collapsed={collapsed || undefined} data-merged={(collapsed && actions.length > 0) || undefined}>
-              <div className="rp-toolbar" ref={toolbar}>
+              <Toolbar ref={toolbar}>
                 <Button onPress={() => run(openSearchPanel)}>{t(readOnly ? 'cm.find' : 'cm.findReplace')}</Button>
                 <Button onPress={() => run(gotoLine)}>{t('cm.gotoLine')}</Button>
                 {onChange && (
@@ -446,7 +447,7 @@ export function CodeEditor({
                     {t('cm.commands')}
                   </MenuButton>
                 )}
-              </div>
+              </Toolbar>
               {actions.length === 0 && foldedTools}
             </div>
           </div>

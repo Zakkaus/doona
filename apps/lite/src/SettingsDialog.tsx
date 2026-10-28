@@ -23,6 +23,7 @@ import {useCallback, useId, useState} from 'react';
 import {honkGlobal} from '../../../src/api/engines/honkSettings';
 import {serializeSetting, settingValue, writeSettings} from '../../../src/dae/settings';
 import {blockFields, scanConfig} from '../../../src/dae/text';
+import {copyText} from '../../../src/features/shared/copy';
 import {applyContent, readMain, type Connection} from './api';
 import {usePreferences} from './app/preferences';
 import {canWrite, validateContent} from './config';
@@ -124,8 +125,8 @@ export function SettingsDialog({
   useNoticeToast(task.notice);
   const copy = async (text: string, label: string) => {
     try {
-      await navigator.clipboard.writeText(text);
-      toast({body: t.restartCopied.replace('{label}', label), type: 'info'});
+      const copied = await copyText(text);
+      toast(copied ? {body: t.restartCopied.replace('{label}', label), type: 'info'} : {body: t.restartCopyFailed, type: 'error'});
     } catch {
       toast({body: t.restartCopyFailed, type: 'error'});
     }

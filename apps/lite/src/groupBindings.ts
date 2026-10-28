@@ -2,8 +2,7 @@ import type {Node, Provider} from '../../../src/api/model';
 import {quote} from '../../../src/dae/text';
 import {rustRegexToJs} from '../../../src/dae/rustRegex';
 import {parseConditionValues, parseGroupConditions} from '../../../src/dae/groupConditions';
-import {regions} from '../../../src/dae/regions';
-import {capitalOnlyRegionCodes} from './regions';
+import {capitalOnlyRegionCodes, regions} from '../../../src/dae/regions';
 
 // The filter a new group starts with; it admits nothing and is not a member.
 export const EMPTY_GROUP_FILTER = "name(regex: '^$')";
@@ -40,7 +39,7 @@ export function honkPolicy(value: string): string {
 export function regionPatterns(iso: string): string[] {
   const entry = regions.find(([code]) => code === iso);
   if (!entry) return [];
-  const capitalOnly = capitalOnlyRegionCodes.has(iso);
+  const capitalOnly = capitalOnlyRegionCodes[iso] === true;
   const keys = [...new Set([iso, ...entry[1]])];
   const han = keys.filter(key => /\p{Script=Han}/u.test(key));
   const latin = [...new Set(keys.filter(key => !han.includes(key) && !(capitalOnly && key.toUpperCase() === iso)).map(key => key.toLowerCase()))];

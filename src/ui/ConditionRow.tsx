@@ -2,9 +2,10 @@ import type {ReactNode} from 'react';
 import {Button} from './Button';
 import {DialogSection} from './Dialog';
 import {Switch} from './Fields';
+import {Toolbar} from './Toolbar';
 
 export function ConditionActions({children}: {children: ReactNode}) {
-  return <div className="rp-toolbar">{children}</div>;
+  return <Toolbar>{children}</Toolbar>;
 }
 
 // The condition row layout used by the routing editor: kind, values, then negate and remove.
