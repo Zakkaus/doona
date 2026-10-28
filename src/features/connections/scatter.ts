@@ -9,6 +9,9 @@ type TrafficSeries = {outbound: string | null; points: TrafficPoint[]};
 export function trafficSeries(rows: Array<Pick<Connection, 'id' | 'outbound' | 'upload_bytes' | 'download_bytes' | 'domain' | 'dst'>>, locale: string) {
   const byOutbound = new Map<string | null, TrafficPoint[]>();
   let unknown = 0;
+  // Totals are compared exactly: past 2^53 bytes two different totals can be the same Number.
+  let heaviest: (TrafficPoint & {outbound: string | null}) | undefined;
+  let most = -1n;
   for (const row of rows) {
     if (row.upload_bytes === null || row.download_bytes === null) {
       unknown++;
@@ -18,20 +21,14 @@ export function trafficSeries(rows: Array<Pick<Connection, 'id' | 'outbound' | '
     const points = byOutbound.get(row.outbound);
     if (points) points.push(point);
     else byOutbound.set(row.outbound, [point]);
+    const total = BigInt(row.upload_bytes) + BigInt(row.download_bytes);
+    if (total > most) {
+      most = total;
+      heaviest = {...point, outbound: row.outbound};
+    }
   }
   const series: TrafficSeries[] = [...byOutbound]
     .map(([outbound, points]) => ({outbound, points}))
     .sort((a, b) => compareNames(locale)(a.outbound ?? '', b.outbound ?? ''));
-  // Totals are compared exactly: past 2^53 bytes two different totals can be the same Number.
-  let heaviest: (TrafficPoint & {outbound: string | null}) | undefined;
-  let most = -1n;
-  for (const row of rows) {
-    if (row.upload_bytes === null || row.download_bytes === null) continue;
-    const total = BigInt(row.upload_bytes) + BigInt(row.download_bytes);
-    if (total > most) {
-      most = total;
-      heaviest = {id: row.id, up: Number(row.upload_bytes), down: Number(row.download_bytes), name: row.domain || row.dst || row.id, outbound: row.outbound};
-    }
-  }
   return {series, unknown, heaviest, placed: rows.length - unknown};
 }

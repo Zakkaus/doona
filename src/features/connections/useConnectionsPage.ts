@@ -20,8 +20,10 @@ import {connectionsTabs} from './nav';
 
 const connectionTabs = connectionsTabs().map(tab => tab.id);
 // The traffic chart comes first; a link into the table (a connection, a source, a filter) opens the table.
-const connectionsFallback = (query: string) =>
-  ['id', 'src', 'network', 'out', 'rule', 'q'].some(key => new URLSearchParams(query).has(key)) ? 'list' : 'traffic';
+const connectionsFallback = (query: string) => {
+  const params = new URLSearchParams(query);
+  return ['id', 'src', 'network', 'out', 'rule', 'q'].some(key => params.has(key)) ? 'list' : 'traffic';
+};
 // While the link decides the tab, a change within the page writes it, so clearing the filter or selection that opened
 // the table keeps the table.
 const stay = (query: string, patch: Record<string, string | null>) =>

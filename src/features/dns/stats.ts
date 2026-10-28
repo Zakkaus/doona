@@ -25,7 +25,11 @@ export function dnsAnalysis(records: DnsLogRecord[], locale: string) {
   }
   const sorted = samples.map(sample => sample.value).sort((a, b) => a - b);
   const byUpstream = new Map<string, LatencySample[]>();
-  for (const sample of samples) byUpstream.set(sample.upstream, [...(byUpstream.get(sample.upstream) ?? []), sample]);
+  for (const sample of samples) {
+    const list = byUpstream.get(sample.upstream);
+    if (list) list.push(sample);
+    else byUpstream.set(sample.upstream, [sample]);
+  }
   const upstreams: UpstreamLatency[] = [...byUpstream].map(([upstream, list]) => ({
     upstream,
     median: percentile(

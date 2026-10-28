@@ -13,7 +13,7 @@ import type {PathLatency} from './latency';
 
 const order = [0, 2, 3, 1, 4, 5, 6, 7];
 
-// Upload against download for the connections the table shows; the heavy ones stand apart from the crowd.
+// Upload against download for the snapshot's connections; the heavy ones stand apart from the crowd.
 export const Traffic = memo(function Traffic({
   records,
   outbounds,
@@ -25,7 +25,7 @@ export const Traffic = memo(function Traffic({
   onSelect
 }: {
   records: Connection[];
-  // Every outbound in the snapshot, before filters: colours follow it, so filtering never recolours a series.
+  // Every outbound in the snapshot, including connections without byte totals, for the series colours.
   outbounds: Array<string | null>;
   // Null when the backend lists no nodes or no health samples: the card is left out.
   latency: PathLatency | null;
