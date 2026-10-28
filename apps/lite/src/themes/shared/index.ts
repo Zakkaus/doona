@@ -61,10 +61,12 @@ const adaptations: ThemeAdaptations = {
           button: {
             base: {
               '::before': touchHit,
+              // Astryx 0.6.8 has no grouped-button hit-area API.
               ':is(.astryx-stack[data-direction="horizontal"][data-gap="1"]:has(> .astryx-button ~ .astryx-button) > *)::before': {
                 insetInline: `max(calc(var(--spacing-1) / -2), ${touchHit.insetInline})`
               },
               // A trailing action uses the text gap, not the row's scrollable inline end.
+              // Astryx 0.6.8 has no trailing-button hit-area API.
               ':is(.astryx-stack[data-direction="horizontal"][data-gap="2"] > .astryx-text + .astryx-button:last-of-type)::before': {
                 insetInlineStart: `min(0px, calc(100% - ${touchTarget}))`,
                 insetInlineEnd: '0'
@@ -109,6 +111,7 @@ export const panelShared = {
   components: {
     // Icons move up one step with the 15px type; Astryx sizes them in rem.
     icon: {
+      base: {':is(.lite-disclosure > button > *)': {marginBlockStart: 'var(--spacing-1)'}},
       'size:xsm': {width: '1rem', height: '1rem'},
       'size:sm': {width: '1.25rem', height: '1.25rem'},
       'size:md': {width: '1.5rem', height: '1.5rem'},
@@ -123,12 +126,23 @@ export const panelShared = {
     // reduced-motion rule in `panelShared.adaptations` removes the scale.
     button: {
       base: {
+        ':is([data-skeleton-row] [data-drag-handle])': {color: 'var(--color-text-secondary)'},
         ':active': {
           transform: 'scale(.98)'
         }
       }
     },
-    'text-input': {base: {borderRadius: 'var(--radius-element)'}},
+    'text-input': {base: {borderRadius: 'var(--radius-element)', ':is(.lite-collection-toolbar *)': {maxWidth: '100%'}}},
+    'text-area-control': {
+      base: {':is([data-code-editor] *)': {fontFamily: 'var(--font-family-code)', tabSize: '2', whiteSpace: 'pre', overflowWrap: 'normal', overflowX: 'auto'}}
+    },
+    'collapsible-trigger': {
+      base: {
+        ':is(.lite-disclosure > *)': {gridColumn: '1', gridRow: '1', minWidth: '0', alignItems: 'flex-start'},
+        ':is(.lite-subscription-row *)': {paddingInline: 'var(--spacing-3)'}
+      }
+    },
+    'collapsible-content': {base: {':is(.lite-disclosure > *)': {gridColumn: '1 / -1', gridRow: '2', minWidth: '0'}}},
     'input-group': {base: {gap: 'var(--spacing-1)'}},
     // List clips its rows in the inline axis so a swiped row stays inside it.
     // No list here uses swipe actions, but every one inside a card uses
@@ -139,14 +153,14 @@ export const panelShared = {
     'app-shell': {base: thin},
     'app-shell-sidenav': {base: thin},
     layout: {base: thin},
-    'layout-content': {base: thin},
+    'layout-content': {base: {...thin, ':is(.lite-shell [role="main"])': {overflow: 'clip'}}},
     'layout-panel': {base: thin},
     'scrollable-area': {base: thin},
     // Library scrollers the list above missed; without it they drew the
     // 15px native bar with arrow buttons. Tables scroll sideways at narrow
     // widths; a Card and the Dialog surface scroll when their content is long.
     'table-scroll-wrapper': {base: thin},
-    dialog: {base: thin},
+    dialog: {base: {...thin, ':where(*) :has(> .lite-dialog-content)': {display: 'flex', flexDirection: 'column'}}},
     // `brand` remains available to themed Card consumers.
     card: {
       base: thin,

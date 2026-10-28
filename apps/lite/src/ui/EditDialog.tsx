@@ -75,7 +75,7 @@ export function EditDialog({
       <Layout
         header={<DialogHeader title={title} onOpenChange={pending ? undefined : dismiss} />}
         content={
-          <LayoutContent>
+          <LayoutContent className="lite-dialog-content">
             <VStack gap={4}>
               {children}
               {notice && 'error' in notice && <Feedback notice={notice} />}

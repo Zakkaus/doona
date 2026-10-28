@@ -6,20 +6,6 @@
 .lite-disclosure {
   display: contents;
 }
-.lite-disclosure > .astryx-collapsible-trigger {
-  grid-column: 1;
-  grid-row: 1;
-  min-width: 0;
-  align-items: flex-start;
-}
-.lite-disclosure > .astryx-collapsible-trigger > .astryx-icon {
-  margin-block-start: var(--spacing-1);
-}
-.lite-disclosure > .astryx-collapsible-content {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  min-width: 0;
-}
 .lite-disclosure-actions {
   grid-column: 2;
   grid-row: 1;

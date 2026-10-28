@@ -498,7 +498,7 @@ export function SettingsDialog({
               </SideNav>
             }
             content={
-              <LayoutContent isScrollable padding={4}>
+              <LayoutContent className="lite-dialog-content" isScrollable padding={4}>
                 <HStack width="100%" justify="end" xstyle={styles.closeAnchor}>
                   <HStack xstyle={styles.closeBacking}>{closeButton}</HStack>
                 </HStack>
