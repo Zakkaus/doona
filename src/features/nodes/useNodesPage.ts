@@ -137,13 +137,15 @@ export function useNodesPage({go, query}: PageProps) {
   // A subscription is edited in whichever source declares it, and only in dae text this page knows how to write.
   const version = useVersion().data;
   const daeText = engineOf(version).daeText;
-  const parsed = parseNodeLinks(
-    form.value,
-    (nodeList ?? []).map(node => node.name),
-    t,
-    engineOf(version).nodeLinkSchemes
-  );
-  const batch = dialog?.kind === 'node' && parsed.multiple ? parsed : null;
+  const parsed =
+    dialog?.kind === 'node' &&
+    parseNodeLinks(
+      form.value,
+      (nodeList ?? []).map(node => node.name),
+      t,
+      engineOf(version).nodeLinkSchemes
+    );
+  const batch = parsed && parsed.multiple ? parsed : null;
   const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
   const isComplete = useCompleteness(sources);
   const declared = useMemo(() => {
@@ -350,7 +352,6 @@ export function useNodesPage({go, query}: PageProps) {
         if (!created) return;
         toast('positive', t('nodes.added', {name: created.name}));
       } else if (dialog.kind === 'editNode') {
-        if (!formValid) return;
         const current = sources.find(item => item.id === dialog.source.id);
         if (!current || !current.writable || isComplete(current) !== true) {
           refuse(t('nodes.editNodeMissing'));

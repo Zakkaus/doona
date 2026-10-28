@@ -69,3 +69,13 @@ it.each([
   await vi.waitFor(() => expect(toast).toHaveBeenCalledOnce());
   expect(vi.mocked(toast).mock.calls[0][0]).toBe(level);
 });
+
+it.each([
+  {filters: [], expected: []},
+  {filters: ['name(hk-01)', 'subtag(paid)'], expected: null},
+  {filters: ['name(hk-01)', 'subtag(paid) && !name(slow)'], expected: ['subtag(paid) && !name(slow)']},
+  {filters: ['name(regex: custom)'], expected: ['name(regex: custom)']}
+])('keeps only advanced membership filters from $filters in the summary', ({filters, expected}) => {
+  const declaration = {owner: {entry: {filters}}} as Parameters<typeof usePolicyGroup>[0]['declaration'];
+  expect(hookHarness.render(() => usePolicyGroup({...input, declaration})).includes.filters).toEqual(expected);
+});

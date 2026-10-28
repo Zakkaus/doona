@@ -112,7 +112,6 @@ export function useNodeTable(input: NodeTableInput) {
       groupLinks: node.group_ids.map(id => ({id, label: names.get(id) ?? id, href: href('policies', {group: id})})),
       canProbe: choices(node).length > 0,
       probeOptions: () => setProbeTarget(node),
-      canProbeOptions: choices(node).length > 0,
       probe: (options?: ProbeOptions) =>
         void runProbe(node, options).then(
           result => {
@@ -218,7 +217,6 @@ export type NodeTableView = {
     removeLabel: string;
     canProbe: boolean;
     probe: (options?: ProbeOptions) => void;
-    canProbeOptions: boolean;
     probeOptions: () => void;
     menu: () => Array<{id: string; label: string}>;
     join: (key: string) => void;

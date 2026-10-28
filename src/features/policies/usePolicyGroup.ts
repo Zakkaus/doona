@@ -111,14 +111,10 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     if (input.editRequested && declared.editable && !declared.open) openRequested();
   }, [input.editRequested, declared.editable, declared.open]);
   const filters = useMemo(() => (declaration.owner && declaration.owner !== 'ambiguous' ? declaration.owner.entry.filters : []), [declaration.owner]);
+  const otherFilters = useMemo(() => filters.filter(filter => !recogniseInclude(filter)), [filters]);
   const named = useMemo(() => selectedIncludeLabels(filters, input.nodes ?? [], input.providers ?? [], lang), [filters, input.nodes, input.providers, lang]);
   const includes = {
-    filters:
-      declaration.owner && declaration.owner !== 'ambiguous'
-        ? !filters.length || filters.some(filter => !recogniseInclude(filter))
-          ? filters.filter(filter => !recogniseInclude(filter))
-          : null
-        : null,
+    filters: declaration.owner && declaration.owner !== 'ambiguous' ? (!filters.length || otherFilters.length ? otherFilters : null) : null,
     tags: (['region', 'subscription', 'node', 'group'] as const).flatMap(kind =>
       selectedIncludes(filters, kind).map(value => {
         const region = kind === 'region' ? named.regions.get(value) : undefined;
