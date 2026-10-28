@@ -41,12 +41,12 @@ export function usePinnedColumns<T extends Record<string, unknown>>(startKeys: s
     (): TablePlugin<T> => ({
       ...sticky,
       transformScrollWrapper(props: ScrollWrapperRenderProps): ScrollWrapperRenderProps {
-        const pinned = sticky.transformScrollWrapper?.(props) ?? props;
-        const inner = pinned.htmlProps.ref;
+        // The stock wrapper transform only installs scroll-shadow tracking; retain cell pinning without it.
+        const inner = props.htmlProps.ref;
         return {
-          ...pinned,
+          ...props,
           htmlProps: {
-            ...pinned.htmlProps,
+            ...props.htmlProps,
             ref: (node: HTMLDivElement | null) => {
               watch(node);
               assignRef(inner, node);
