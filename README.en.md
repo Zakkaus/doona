@@ -112,22 +112,17 @@ To see error states, use [`?scenario=faults`](https://demo.daeuniverse.org/?scen
 
 ## Install
 
-Start with a honk build that provides the native API; the [installation guide](https://doona.daeuniverse.org/en/install.html#install) lists compatible builds and setup steps. Then download `doona-<version>.tar.gz` from the [releases page](https://github.com/Zakkaus/doona/releases).
-Extract it into the directory that honk's `native_api` block names in `ui`; honk serves doona at `/ui/`.
-The same release provides `doona-lite-<version>.tar.gz`; extract it to its own directory, `/usr/share/doona-lite`, and use `ui` to select the edition as described in the [lite guide](https://doona.daeuniverse.org/en/lite.html).
-Editing settings and configuration requires write permission on the backend. See [package details](docs/install.md) for archive contents.
+honk's full releases already embed doona. Follow the [quick start](https://doona.daeuniverse.org/en/quick-start.html) to use it; the documentation also covers installing doona separately.
 
 ## Backend protocols
 
-honk handles proxying, so protocol support depends on the backend version and build. Its proxy protocols include SOCKS5, Shadowsocks/2022, Trojan, VMess, VLESS, AnyTLS, Hysteria2, TUIC and Juicity; see the [honk node reference](https://github.com/daeuniverse/honk/blob/main/doc/en/reference/nodes.md#protocols) for supported options and limits.
-
-WebSocket, gRPC and XHTTP are stream transports, separate from proxy protocols. On honk versions with XHTTP support, Trojan/VMess/VLESS use the [H2 XHTTP profile](https://github.com/daeuniverse/honk/blob/main/doc/en/reference/nodes.md#xhttp-over-h2), with no H1/H3 fallback; the reference lists supported combinations and limitations.
+honk handles proxying; see the [honk node reference](https://github.com/daeuniverse/honk/blob/main/doc/en/reference/nodes.md#protocols) for supported protocols, transports and limits.
 
 ## Latest release
 
 [0.1.0-rc.3](CHANGELOG.md) has 54 entries: 5 additions, 7 changes, 35 fixes and 7 internal updates.
 
-It adds a preview of doona lite, a smaller configuration editor shipped in its own archive. The Nodes page takes several node links at once and tests the filtered list, sorted by latency, and the route trace accepts a firewall mark. A first run opens a connection form in Settings, and up to four recently left pages reopen as they were. Suspending the service, clearing logs, switching to Direct or Global mode and leaving an unapplied rule template or group draft now ask for confirmation.
+It updates the existing doona lite preview: it detects the honk serving it and opens sign-in or connects directly when honk allows anonymous access. It also changes lite's typography and controls and fixes narrow tables and Settings tabs.
 
 ## Documentation
 
@@ -143,7 +138,7 @@ It adds a preview of doona lite, a smaller configuration editor shipped in its o
 
 The build, test and packaging commands, the source layout and the contract pin are on the [development page](https://doona.daeuniverse.org/en/development.html). See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
-For lite’s separate dependency install and build commands, see [Development](https://doona.daeuniverse.org/en/development.html#doona-lite).
+For lite’s separate dependency install and build commands, see [Development](https://doona.daeuniverse.org/en/development.html#build-doona-lite).
 
 ## Support
 

@@ -112,22 +112,17 @@ doona 是用于监控代理流量、管理节点、组、规则与配置的静�
 
 ## 安装
 
-先按[安装指南](https://doona.daeuniverse.org/zh-CN/install.html#install)选择并配置支持原生 API 的 honk 版本，再从[发布页](https://github.com/Zakkaus/doona/releases)下载 `doona-<version>.tar.gz`。
-解压到 honk `native_api` 配置块中 `ui` 指定的目录，honk 即在 `/ui/` 提供 doona。
-同一次发布还提供 `doona-lite-<version>.tar.gz`；将其解压到独立目录 `/usr/share/doona-lite`，通过 `ui` 选择版本，具体步骤见 [lite 指南](https://doona.daeuniverse.org/zh-CN/lite.html)。
-修改设置与配置需要后端授予写入权限。各压缩包的内容见[安装说明](docs/install.zh-CN.md)。
+honk 的完整发布版本已内嵌 doona。按照[快速入门](https://doona.daeuniverse.org/zh-CN/quick-start.html)即可使用；文档也说明如何单独安装 doona。
 
 ## 后端协议
 
-honk 负责代理流量，协议支持取决于后端版本与构建。其代理协议包括 SOCKS5、Shadowsocks/2022、Trojan、VMess、VLESS、AnyTLS、Hysteria2、TUIC 与 Juicity；支持的选项与限制见 [honk 节点参考](https://github.com/daeuniverse/honk/blob/main/doc/zh/reference/nodes.md#协议)。
-
-WebSocket、gRPC 与 XHTTP 是流传输方式，与代理协议不同。在支持 XHTTP 的 honk 版本中，Trojan／VMess／VLESS 使用 [H2 XHTTP 兼容配置](https://github.com/daeuniverse/honk/blob/main/doc/zh/reference/nodes.md#h2-上的-xhttp)，不会回退到 H1/H3；参考文档列出支持的组合与限制。
+honk 负责代理流量；支持的协议、传输方式与限制见 [honk 节点参考](https://github.com/daeuniverse/honk/blob/main/doc/zh/reference/nodes.md#协议)。
 
 ## 最新版本
 
 [0.1.0-rc.3](CHANGELOG.md) 共 54 项更新：新增 5 项、变更 7 项、修复 35 项、内部调整 7 项。
 
-本版新增 doona lite 预览版，这是一个更精简的配置编辑器，以独立压缩包发布。节点页可一次粘贴多个节点链接，并测试筛选后的节点列表、按延迟排序；路由追踪可填写防火墙标记。首次运行时打开设置页的连接表单，最近离开的至多四个页面返回时保持原样。暂停服务、清空日志、切换到直连或全局模式，以及离开尚未应用的规则模板或组草稿时，均需确认。
+本版更新已有的 doona lite 预览版：检测提供界面的 honk，打开登录页面，或在允许匿名访问时直接连接，并调整 lite 的字体与控件，修复窄窗口中的表格与设置标签页。
 
 ## 文档
 
@@ -143,7 +138,7 @@ WebSocket、gRPC 与 XHTTP 是流传输方式，与代理协议不同。在支�
 
 构建、测试与打包命令、源码布局与契约的固定提交，见[开发](https://doona.daeuniverse.org/zh-CN/development.html)一页；提交 pull request 前先读 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-lite 的独立依赖安装与构建命令见[开发](https://doona.daeuniverse.org/zh-CN/development.html#doona-lite)一页。
+lite 的独立依赖安装与构建命令见[开发](https://doona.daeuniverse.org/zh-CN/development.html#构建-doona-lite)一页。
 
 ## 支持
 
