@@ -1,6 +1,6 @@
 /**
  * Keyboard and tree behaviour for a group of SelectableCards that act as one
- * radio group (see OsChooser): arrow keys move the selection and focus,
+ * radio group: arrow keys move the selection and focus,
  * Space and Enter select, and the checkbox each card renders leaves the tab
  * order and the accessibility tree.
  */

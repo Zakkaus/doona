@@ -1,10 +1,4 @@
-/**
- * The panel's non-colour adjustments, shared by every theme variant: control
- * sizes, supporting text, icon sizes, the text-input/input-group/list fixes,
- * thin scrollbars, the `brand` Card variant and the Spectrum registry. Each
- * variant is `defineTheme({name, extends: <official theme>, icons, tokens, components})`
- * plus its own typography (`panelScale`), which keeps the theme's fonts.
- */
+/** Non-colour adjustments for the site theme: controls, typography, icons and scrollbars. */
 import {spacingDefaults, type ThemeAdaptations} from '@astryxdesign/core/theme';
 import {appIconRegistry} from './icons';
 
@@ -14,22 +8,12 @@ declare module '@astryxdesign/core/Card' {
   }
 }
 
-/**
- * Shared type scale. The base is 15px on every theme, one step above the
- * default ramp's 14px text with 32px controls. The ratio is 1.2 on all
- * of them so headings land at the same size and position whichever theme is
- * picked (the official gothic, matcha and y2k themes use 1.25 on a 16px base).
- * `typography` replaces the base theme's config, so each variant repeats its
- * own fonts beside this scale.
- */
+/** Shared type scale; explicit site heading tokens keep the page hierarchy aligned. */
 export const panelScale = {base: 15, ratio: 1.2} as const;
 
 // CJK uses the platform fonts; only Figtree is shipped.
 export const cjkFallbacks =
   '"PingFang TC", "PingFang SC", "Noto Sans CJK TC", "Noto Sans CJK SC", "Source Han Sans TC", "Microsoft JhengHei", "Microsoft YaHei"';
-
-/** Fallback stack for UI text, as the official themes use it, plus Chinese. */
-export const sansFallbacks = `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, ${cjkFallbacks}, Arial, sans-serif`;
 
 /** System monospace stack; no additional font download. */
 export const systemMono = {
@@ -112,8 +96,7 @@ const adaptations: ThemeAdaptations = {
 
 export const panelShared = {
   tokens: {
-    // Core's 4px spacing scale on every theme: matcha and y2k stretch it to
-    // 6px steps, which moved the page padding and the whole layout.
+    // Keep Core's 4px spacing scale.
     ...spacingDefaults,
     // Control heights move up one 4px step: sm 32, md 36, lg 40. Supporting
     // text stays 13px on a 20px line.
@@ -164,8 +147,7 @@ export const panelShared = {
     // widths; a Card and the Dialog surface scroll when their content is long.
     'table-scroll-wrapper': {base: thin},
     dialog: {base: thin},
-    // `brand` Card: a flat accent-muted surface for the dashboard greeting.
-    // SelectableCard rings an added variant in `--selectable-card-ring-color`.
+    // `brand` remains available to themed Card consumers.
     card: {
       base: thin,
       'variant:brand': {

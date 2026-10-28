@@ -18,22 +18,6 @@ const extra: Record<string, [string, string]> = {
 export function kindsFor(kind: RuleListKind): string[] {
   return kind === 'routing' ? [...conditionKinds, 'domainRegex', 'ipversion', 'mac', 'dscp'] : [...dnsConditionKinds[kind], 'qnameRegex'];
 }
-export const kindLabel = (kind: string) =>
-  ({
-    domain: 'domain: full',
-    domainSuffix: 'domain: suffix',
-    domainKeyword: 'domain: keyword',
-    geosite: 'domain: geosite',
-    geoip: 'dip: geoip',
-    domainRegex: 'domain: regex',
-    qnameSuffix: 'qname: suffix',
-    qnameFull: 'qname: full',
-    qnameKeyword: 'qname: keyword',
-    qnameGeosite: 'qname: geosite',
-    qnameRegex: 'qname: regex',
-    answerIp: 'ip',
-    answerGeoip: 'ip: geoip'
-  })[kind] ?? kind;
 export function serializeBuilder(rows: Condition[]): string | null {
   if (!rows.length) return null;
   const result = rows.map(row => {

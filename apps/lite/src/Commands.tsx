@@ -133,7 +133,6 @@ export default function Commands({
     ...commands.map(command => ({...command, auxiliaryData: {group: t.actions}}))
   ];
   const found = useRef<ReturnType<typeof resultItems>>([]);
-  const visible = useRef<ReturnType<typeof resultItems>>([]);
   const queryItems = async (query: string, limit: number) => {
     const data = await load();
     const results = resultItems(data.items);
@@ -148,7 +147,6 @@ export default function Commands({
         counts.set(group, count + 1);
         return count < limit;
       });
-    visible.current = shown;
     return shown;
   };
   const execute = (item: ReturnType<typeof resultItems>[number] | undefined) => {
