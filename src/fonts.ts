@@ -18,11 +18,11 @@ const commonFaces = () => (common ??= import('./fonts.css').then(() => globalThi
 // Await the current catalogue part's glyphs before it renders. With optional faces, merely awaiting the stylesheet
 // lets late subsets stay on a system fallback beside earlier Noto subsets, even after document.fonts.ready.
 // One load covers every weight: each face is variable across 100–900. Missing archives or failed fonts stay optional.
-export function loadFaces(fonts: string | null, face: string, text: string): Promise<unknown> {
+export function loadFaces(fonts: string | null, face?: string, text?: string): Promise<unknown> {
   return fontsInstalled().then(ok =>
     ok
       ? Promise.all([commonFaces(), fonts && import(`./fonts-${fonts}.css`)])
-          .then(() => globalThis.document?.fonts?.load(`1em '${face}'`, text))
+          .then(() => (face ? globalThis.document?.fonts?.load(`1em '${face}'`, text) : undefined))
           .catch(() => undefined)
       : undefined
   );
