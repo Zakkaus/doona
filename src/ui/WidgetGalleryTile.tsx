@@ -6,7 +6,7 @@ import {TitlesShown} from './Card';
 import './styles/widget-gallery.css';
 
 // One of a gallery item's sizes: its share of a row, the card drawn at that size, and the action that adds it so.
-export type GalleryPreset = {key: string; label: string; addLabel: string; share: number; preview: ReactNode; onAdd: () => void};
+type GalleryPreset = {key: string; label: string; addLabel: string; share: number; preview: ReactNode; onAdd: () => void};
 // The page's row the presets stand for: its width and gap, in px.
 export type GalleryRow = {width: number; gap: number};
 

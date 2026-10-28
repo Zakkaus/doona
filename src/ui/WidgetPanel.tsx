@@ -95,7 +95,7 @@ export function WidgetHeader({backend, actions, summary}: {backend?: ReactNode; 
 }
 // The live rates in a collapsed header, one per line: each direction's icon in its chart colour, then the rate; the
 // direction's name is read out with it.
-export type WidgetRate = {icon: ReactNode; label: string; value: string; color: string};
+type WidgetRate = {icon: ReactNode; label: string; value: string; color: string};
 export function WidgetSpeed({rates, reserve}: {rates: WidgetRate[]; reserve?: string}) {
   return (
     <div className="rp-widget-speed" data-reserve={reserve}>

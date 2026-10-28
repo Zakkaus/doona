@@ -34,7 +34,6 @@ it('fits columns by the width alone, dropping one only below the sum of the mini
   // The same width always gives the same columns, however often the table asks.
   expect(fitColumns(cols, 456)).toBe(fitColumns(cols, 456));
   expect(ids(455)).toEqual(['target', 'device']);
-  expect(ids(455)).toEqual(ids(455));
   expect(ids(328)).toEqual(['target', 'device']);
   expect(ids(327)).toEqual(['target']);
 });
