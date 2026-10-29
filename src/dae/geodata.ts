@@ -1,4 +1,4 @@
-import type {GeoAssetKind} from '../api/model';
+import type {GeoAssetKind, GeoData} from '../api/model';
 
 // Known geodata sources, as measured on 2026-09-25. Each preset lists direct links only, raw first and then the
 // jsDelivr fastly mirror: the backend does not follow redirects, so a GitHub /releases/download/ link never works.
@@ -12,6 +12,30 @@ export type GeodataPreset = {
   sizes: Record<GeoAssetKind, number>;
   categories: Record<GeoAssetKind, readonly string[]> | null;
 };
+
+export const geodataKinds: GeoAssetKind[] = ['geosite', 'geoip'];
+export type GeodataUrls = Record<GeoAssetKind, string[]>;
+
+// Every URL of both assets must belong to the same preset; order and mirror choice do not matter.
+export function matchPreset(urls: GeodataUrls): GeodataPreset | null {
+  return (
+    geodataPresets.find(preset =>
+      geodataKinds.every(kind => urls[kind].length > 0 && urls[kind].every(url => preset.urls[kind].includes(url) || preset.mirrors[kind].includes(url)))
+    ) ?? null
+  );
+}
+
+// Unknown category lists stay subject to backend validation.
+export function missingCategories(preset: GeodataPreset | null, required: GeoData['required_codes'] | undefined): Partial<GeodataUrls> | null {
+  if (!preset?.categories || !required) return null;
+  const missing: Partial<GeodataUrls> = {};
+  for (const kind of geodataKinds) {
+    const known = new Set(preset.categories[kind]);
+    const lacking = (required[kind] ?? []).filter(code => !known.has(code));
+    if (lacking.length) missing[kind] = lacking;
+  }
+  return Object.keys(missing).length ? missing : null;
+}
 
 const jsdelivr = ['fastly', 'cdn', 'testingcf'];
 function preset(

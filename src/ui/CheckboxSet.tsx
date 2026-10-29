@@ -1,7 +1,7 @@
 import {useId} from 'react';
 import {Checkbox} from './Checkbox';
 
-export type CheckboxChoice = {id: string; label: string; isDisabled?: boolean; nodeName?: boolean};
+export type CheckboxChoice = {id: string; label: string; description?: string; isDisabled?: boolean; nodeName?: boolean};
 export function CheckboxSet({
   label,
   hideLabel = false,
@@ -28,6 +28,7 @@ export function CheckboxSet({
           <Checkbox
             key={item.id}
             label={item.label}
+            description={item.description}
             isSelected={value.includes(item.id)}
             isDisabled={isDisabled || item.isDisabled}
             onChange={selected => onChange(selected ? [...value, item.id] : value.filter(id => id !== item.id))}

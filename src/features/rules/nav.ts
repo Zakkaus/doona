@@ -31,6 +31,14 @@ export function rulesTargets(resources: Capabilities['resources'] | undefined): 
             aliases: ['condition']
           } as const,
           {
+            id: 'rules:services',
+            titleKey: 'rule.service.add',
+            parentKey: 'rule.listTitle',
+            route: 'rules',
+            params: {tab: 'list', view: 'simple', service: 'add'},
+            aliases: ['Steam Telegram GitHub geosite']
+          } as const,
+          {
             id: 'rules:modes',
             titleKey: 'rule.template.mode',
             parentKey: 'rule.listTitle',

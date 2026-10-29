@@ -5,6 +5,72 @@ import {demoRouting, demoRoutingInclude} from './startingRouting';
 export type RuleTemplate = 'global' | 'bypass' | 'gfw' | 'single' | 'services' | 'regions' | 'homebound';
 export type TemplateOptions = {blockAds: boolean; blockQuic: boolean; networkManagerDirect: boolean};
 export const defaultTemplateOptions: TemplateOptions = {blockAds: false, blockQuic: true, networkManagerDirect: true};
+
+const templateServices = {
+  media: [
+    {code: 'youtube', name: 'YouTube'},
+    {code: 'netflix', name: 'Netflix'},
+    {code: 'disney', name: 'Disney+'},
+    {code: 'hbo', name: 'HBO'},
+    {code: 'primevideo', name: 'Prime Video'},
+    {code: 'twitch', name: 'Twitch'},
+    {code: 'spotify', name: 'Spotify'}
+  ],
+  telegram: {code: 'telegram', name: 'Telegram'},
+  apple: {code: 'apple', name: 'Apple'},
+  microsoft: {code: 'microsoft', name: 'Microsoft'}
+} as const;
+export const serviceSections = [
+  {
+    id: 'games',
+    services: [
+      {code: 'steam', name: 'Steam'},
+      {code: 'epicgames', name: 'Epic Games'},
+      {code: 'playstation', name: 'PlayStation'},
+      {code: 'xbox', name: 'Xbox'},
+      {code: 'nintendo', name: 'Nintendo'},
+      {code: 'blizzard', name: 'Blizzard'},
+      {code: 'ea', name: 'EA'},
+      {code: 'ubisoft', name: 'Ubisoft'},
+      {code: 'riot', name: 'Riot Games'},
+      {code: 'category-games', name: 'All games'}
+    ]
+  },
+  {
+    id: 'media',
+    services: [...templateServices.media, {code: 'tiktok', name: 'TikTok'}, {code: 'bahamut', name: 'Bahamut'}, {code: 'bilibili', name: 'Bilibili'}]
+  },
+  {
+    id: 'social',
+    services: [
+      templateServices.telegram,
+      {code: 'discord', name: 'Discord'},
+      {code: 'twitter', name: 'X/Twitter'},
+      {code: 'facebook', name: 'Facebook'},
+      {code: 'instagram', name: 'Instagram'},
+      {code: 'whatsapp', name: 'WhatsApp'},
+      {code: 'line', name: 'LINE'}
+    ]
+  },
+  {
+    id: 'ai',
+    services: [
+      {code: 'openai', name: 'OpenAI'},
+      {code: 'anthropic', name: 'Anthropic'},
+      {code: 'google-gemini', name: 'Google Gemini'}
+    ]
+  },
+  {
+    id: 'developer',
+    services: [
+      {code: 'github', name: 'GitHub'},
+      {code: 'docker', name: 'Docker'},
+      {code: 'google', name: 'Google'},
+      templateServices.microsoft,
+      templateServices.apple
+    ]
+  }
+] as const;
 const networkManager = ['# NetworkManager', 'pname(NetworkManager) -> direct'];
 const local = ['# dae presets: the LAN and multicast stay off the proxy', "dip(224.0.0.0/3, 'ff00::/8') -> direct", 'dip(geoip:private) -> direct'];
 const quic = ['# Block UDP/443', 'l4proto(udp) && dport(443) -> block'];
@@ -12,11 +78,12 @@ const preset = [...networkManager, ...local, ...quic];
 const ads = ['# Ads', 'domain(geosite:category-ads-all) -> block'];
 const chinaVendors = ['# Google China services and mainland games', 'domain(geosite:google-cn, geosite:category-games@cn) -> direct'];
 const china = ['# Mainland China', 'domain(geosite:cn) -> direct', 'dip(geoip:cn) -> direct'];
-const telegram = (target: string) => ['# Telegram', `domain(geosite:telegram) -> ${target}`, `dip(geoip:telegram) -> ${target}`];
-const media = (target: string) => [
-  '# Overseas media',
-  `domain(geosite:youtube, geosite:netflix, geosite:disney, geosite:hbo, geosite:primevideo, geosite:twitch, geosite:spotify) -> ${target}`
+const telegram = (target: string) => [
+  '# Telegram',
+  `domain(geosite:${templateServices.telegram.code}) -> ${target}`,
+  `dip(geoip:${templateServices.telegram.code}) -> ${target}`
 ];
+const media = (target: string) => ['# Overseas media', `domain(${templateServices.media.map(service => `geosite:${service.code}`).join(', ')}) -> ${target}`];
 const gfw = (target: string) => ['# GFW list', `domain(geosite:gfw) -> ${target}`];
 
 // Selector groups include nested groups and all proxy nodes. Exclude injected direct/block nodes because an
@@ -85,9 +152,9 @@ export const templates: Record<RuleTemplate, {rules: string[]; fallback: string;
       ...preset,
       ...chinaVendors,
       '# Microsoft',
-      'domain(geosite:microsoft) -> direct',
+      `domain(geosite:${templateServices.microsoft.code}) -> direct`,
       '# Apple',
-      'domain(geosite:apple) -> apple',
+      `domain(geosite:${templateServices.apple.code}) -> apple`,
       ...telegram('telegram'),
       ...media('media'),
       ...gfw('proxy'),

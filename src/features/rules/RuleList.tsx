@@ -30,27 +30,46 @@ import {useRuleList, type DictionaryModel, type RuleListModel as Model} from './
 import {useRuleTemplates} from './useRuleTemplates';
 import {RuleTemplates} from './RuleTemplates';
 import {RuleDialogs} from './RuleDialogs';
+import {useServiceRules} from './useServiceRules';
+import {ServiceRulesDialog} from './ServiceRulesDialog';
 
 export function RuleList(props: PageProps) {
   const t = useT();
   const templates = useRuleTemplates(props);
+  const services = useServiceRules(props);
+  const serviceButton = services.available && <Button onPress={services.launch}>{t('rule.service.add')}</Button>;
+  const serviceDialog = <ServiceRulesDialog model={services} />;
   const view = useRuleList(props, templates.available && templates.mode === 'simple');
   const dictionary = view.kind === 'dictionary';
-  if (!templates.available) return dictionary ? <RuleDictionary view={view} /> : <Distribution view={view} />;
+  if (!templates.available)
+    return (
+      <>
+        {dictionary ? <RuleDictionary view={view} viewSwitch={serviceButton} /> : <Distribution view={view} viewSwitch={serviceButton} />}
+        {serviceDialog}
+      </>
+    );
   // The view switch ends the list's toolbar row in both views, after the rule count and Add rule.
   const viewSwitch = (
-    <Segmented
-      label={t('rule.viewMode')}
-      items={[
-        ['simple', t('rule.viewSimple')],
-        ['advanced', t('rule.viewAdvanced')]
-      ]}
-      value={templates.mode}
-      onChange={templates.setMode}
-    />
+    <>
+      {serviceButton}
+      <Segmented
+        label={t('rule.viewMode')}
+        items={[
+          ['simple', t('rule.viewSimple')],
+          ['advanced', t('rule.viewAdvanced')]
+        ]}
+        value={templates.mode}
+        onChange={templates.setMode}
+      />
+    </>
   );
   if (templates.mode === 'advanced')
-    return dictionary ? <RuleDictionary view={view} viewSwitch={viewSwitch} /> : <Distribution view={view} viewSwitch={viewSwitch} />;
+    return (
+      <>
+        {dictionary ? <RuleDictionary view={view} viewSwitch={viewSwitch} /> : <Distribution view={view} viewSwitch={viewSwitch} />}
+        {serviceDialog}
+      </>
+    );
   return (
     <div className="rp-col">
       <Toolbar page>
@@ -65,6 +84,7 @@ export function RuleList(props: PageProps) {
       </Toolbar>
       <ErrorMessage error={view.error} onRetry={view.retry} />
       <RuleTemplates model={templates} />
+      {serviceDialog}
     </div>
   );
 }

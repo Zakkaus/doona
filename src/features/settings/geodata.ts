@@ -1,27 +1,15 @@
-import type {GeoAssetKind, GeoData, GeoDataDownload, GroupSummary} from '../../api/model';
-import {geodataPresets, validGeodataUrl, type GeodataPreset, type GeodataPresetId} from '../../dae/geodata';
+import type {GeoData, GeoDataDownload, GroupSummary} from '../../api/model';
+import {geodataKinds, missingCategories, validGeodataUrl, type GeodataPreset, type GeodataPresetId, type GeodataUrls} from '../../dae/geodata';
 import type {Key, Translator} from '../../i18n';
 import {formatBytes, relativeStart} from '../../i18n/format';
 import {backendMessage, oneLine} from '../../i18n/backend';
 import type {KvItem} from '../../ui/ui';
-
-export const geodataKinds: GeoAssetKind[] = ['geosite', 'geoip'];
-export type GeodataUrls = Record<GeoAssetKind, string[]>;
 
 export const presetLabels: Record<GeodataPresetId, Key> = {
   metacubex: 'settings.geodataPreset.metacubex',
   'metacubex-lite': 'settings.geodataPreset.metacubexLite',
   loyalsoldier: 'settings.geodataPreset.loyalsoldier'
 };
-
-// A list names a preset when every URL of both assets is one of that preset's links or mirrors, in any order.
-export function matchPreset(urls: GeodataUrls): GeodataPreset | null {
-  return (
-    geodataPresets.find(preset =>
-      geodataKinds.every(kind => urls[kind].length > 0 && urls[kind].every(url => preset.urls[kind].includes(url) || preset.mirrors[kind].includes(url)))
-    ) ?? null
-  );
-}
 
 // A URL's host, which names a download source without the path the full URL carries.
 export const hostOf = (url: string) => {
@@ -31,19 +19,6 @@ export const hostOf = (url: string) => {
     return url;
   }
 };
-
-// The categories the configuration uses that a preset's file does not carry; null when nothing is missing or the
-// preset's list is unknown.
-export function missingCategories(preset: GeodataPreset | null, required: GeoData['required_codes'] | undefined): Partial<GeodataUrls> | null {
-  if (!preset?.categories || !required) return null;
-  const missing: Partial<GeodataUrls> = {};
-  for (const kind of geodataKinds) {
-    const known = new Set(preset.categories[kind]);
-    const lacking = (required[kind] ?? []).filter(code => !known.has(code));
-    if (lacking.length) missing[kind] = lacking;
-  }
-  return Object.keys(missing).length ? missing : null;
-}
 
 export function urlProblem(url: string, list: string[]): Key | null {
   const value = url.trim();

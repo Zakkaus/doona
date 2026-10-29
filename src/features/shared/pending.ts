@@ -23,6 +23,7 @@ function placeOf(sources: ConfigSource[], source: ConfigSource, rule: PendingRul
 // is gone.
 export function insertRules(sources: ConfigSource[], source: ConfigSource, rules: PendingRule[]): string | null {
   const text = source.content;
+  const newline = text.includes('\r\n') ? '\r\n' : '\n';
   const scan = scanConfig(text);
   const inserts = rules.map(rule => ({rule, anchor: placeOf(sources, source, rule, scan)}));
   if (inserts.some(insert => !insert.anchor)) return null;
@@ -42,9 +43,9 @@ export function insertRules(sources: ConfigSource[], source: ConfigSource, rules
     out += text.slice(at, from);
     for (const [open, group] of blocks)
       out +=
-        open +
-        group.map(({rule, anchor}) => anchor!.indent + ruleLine(rule.condition, rule.outbound, rule.must) + '\n').join('') +
-        (group[0].anchor!.close ?? '');
+        open.replaceAll('\n', newline) +
+        group.map(({rule, anchor}) => anchor!.indent + ruleLine(rule.condition, rule.outbound, rule.must) + newline).join('') +
+        (group[0].anchor!.close ?? '').replaceAll('\n', newline);
     at = from;
   }
   return out + text.slice(at);
