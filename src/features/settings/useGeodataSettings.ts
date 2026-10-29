@@ -6,7 +6,7 @@ import {useNow} from '../../ui/clock';
 import {LOCALE, formatList, formatNumber, useLang, useT} from '../../i18n';
 import {toast, toastErrorDetail} from '../../ui/ui';
 import {announceGeodataUpdate} from '../shared/geodataUpdate';
-import {geodataPresets, type GeodataPreset, type GeodataPresetId} from '../../dae/geodata';
+import {geodataKinds, geodataPresets, matchPreset, type GeodataPreset, type GeodataPresetId, type GeodataUrls} from '../../dae/geodata';
 import {geodataConfigurable} from './nav';
 import {geodataFromConfig, geodataRows, geodataUpdateReason} from './view';
 import {
@@ -15,16 +15,13 @@ import {
   cleanUrls,
   customFields,
   customInvalid,
-  geodataKinds,
   hostOf,
   intervalChoices,
   lackingCodes,
-  matchPreset,
   presetLabels,
   presetNote,
   statusLine,
-  urlProblem,
-  type GeodataUrls
+  urlProblem
 } from './geodata';
 
 type Route = 'routing' | 'direct' | 'group';

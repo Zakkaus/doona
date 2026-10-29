@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {GeoData} from '../../api/model';
-import {geodataPreset, geodataPresets, liteCategories} from '../../dae/geodata';
+import {geodataPreset, geodataPresets, liteCategories, matchPreset, missingCategories} from '../../dae/geodata';
 import {translate, type Translator} from '../../i18n';
 import {
   assetDetails,
@@ -10,8 +10,6 @@ import {
   customInvalid,
   intervalChoices,
   lackingCodes,
-  matchPreset,
-  missingCategories,
   presetNote,
   routeLabel,
   statusLine,
