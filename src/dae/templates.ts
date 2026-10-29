@@ -289,7 +289,7 @@ export function detectTemplate(text: string): (TemplateOptions & {template: Rule
 // Tokens are joined before comparing: the scanner splits `geosite:cn` into three tokens but keeps `'geosite:cn'` as one.
 export function routingOptions(text: string): TemplateOptions | null {
   const written = routingEntries(text)
-    ?.filter(entry => entry[0] !== 'fallback' && entry[0] !== 'include')
+    ?.filter(entry => !['fallback', 'default', 'include'].includes(entry[0]))
     .map(entry => entry.join(''));
   if (!written?.length) return null;
   const holds = (lines: string[]) => routingEntries(['routing {', ...lines, '}'].join('\n'))!.every(want => written.includes(want.join('')));

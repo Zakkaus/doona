@@ -268,6 +268,7 @@ describe('routingOptions', () => {
   it('reports nothing for routing that writes no rule', () => {
     expect(routingOptions('')).toBeNull();
     expect(routingOptions('routing { fallback: direct }')).toBeNull();
+    expect(routingOptions('routing {\n  default: direct\n}')).toBeNull();
     expect(routingOptions('group { proxy {} }')).toBeNull();
   });
 });
