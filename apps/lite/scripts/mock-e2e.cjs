@@ -25,7 +25,7 @@ async function quickSwitch(b, width) {
   p.on('pageerror', e => errors.push(e.message));
   await p.goto(base + '/?slow=600');
   await waitForDemo(p, {keepBadge: true});
-  await expect(p.getByRole('link', {name: 'Demo: sample data', exact: true})).toBeVisible();
+  await expect(p.getByRole('link', {name: 'Lite', exact: true})).toHaveAttribute('aria-current', 'page');
   await p.getByRole('button', {name: 'Hide demo badge', exact: true}).click();
   await expect(p.locator('[data-group-row="auto"]')).toBeVisible();
   await p.locator('[data-group-row="auto"] button').click();
@@ -86,7 +86,7 @@ async function quickSwitch(b, width) {
   p.on('pageerror', e => errors.push(e.message));
   await p.goto(base);
   await waitForDemo(p, {keepBadge: true});
-  await expect(p.getByRole('link', {name: 'Demo: sample data', exact: true})).toBeVisible();
+  await expect(p.getByRole('link', {name: 'Lite', exact: true})).toHaveAttribute('aria-current', 'page');
   await p.getByRole('button', {name: 'Hide demo badge', exact: true}).click();
   await p.evaluate(() => (location.hash = 'nodes'));
   await p.getByRole('heading', {name: 'Nodes', exact: true}).waitFor();

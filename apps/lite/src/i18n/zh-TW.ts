@@ -378,7 +378,6 @@ export const zhTW: Messages = {
   useAnotherBackend: '使用其他後端',
   backendHelp: '填入 honk native API 根網址，例如 http://192.168.1.1:9527；可包含反向代理前綴。不要填入代理節點網址、/ui/ 或 /api/v1。',
   tokenHelp: '若 honk 允許匿名存取，可留空。',
-  demoBadge: '示範：範例資料',
   hideDemoBadge: '隱藏示範標記',
   demoName: '示範',
   backend: 'honk native API 根網址',

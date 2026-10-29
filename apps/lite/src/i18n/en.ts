@@ -378,7 +378,6 @@ export const en = {
   backendHelp:
     'Enter the honk native API root, for example http://192.168.1.1:9527, including any reverse-proxy prefix. Do not enter a proxy node URL, /ui/, or /api/v1.',
   tokenHelp: 'Leave empty if honk allows anonymous access.',
-  demoBadge: 'Demo: sample data',
   hideDemoBadge: 'Hide demo badge',
   demoName: 'Demo',
   backend: 'honk native API root',
