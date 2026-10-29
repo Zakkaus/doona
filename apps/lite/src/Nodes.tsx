@@ -40,7 +40,7 @@ import {MEDIA} from './ui/metrics.stylex';
 import {RowEntrance} from './ui/motion';
 import {revealRow} from './ui/motion/revealRow';
 import {usePaged} from './ui/usePaged';
-import {focusRingInset} from './ui/focusRing';
+import {focusVars} from '@astryxdesign/core/theme/tokens.stylex';
 import {usePinnedColumns} from './ui/usePinnedColumns';
 
 const ShareDialog = lazy(() => import('./ShareDialog'));
@@ -689,12 +689,16 @@ function NodeTable({
   });
   const selection = useTableSelection<Row>({...selectionConfig, getRowLabel: item => item.name || item.id});
   const interaction: TablePlugin<Row> = {
+    transformBodyCell(props, _column, item, index) {
+      if (!item.id || index !== 0) return props;
+      return {...props, xstyle: [styles.focusAnchor, ...props.xstyle, styles.focusOutline]};
+    },
     transformBodyRow(props, item) {
       if (!item.id) return props;
       const entry = find(item);
       return {
         ...props,
-        xstyle: [...props.xstyle, focusRingInset, ...(entry ? [] : [styles.static])],
+        xstyle: [...props.xstyle, styles.rowFocus, ...(entry ? [] : [styles.static])],
         htmlProps: {
           ...props.htmlProps,
           'aria-disabled': entry ? disabled : undefined,
@@ -747,6 +751,37 @@ function NodeTable({
 }
 
 const styles = stylex.create({
+  rowFocus: {
+    // Keep native focus-visible modality, but paint the ring above the pinned cells.
+    outlineStyle: 'none',
+    '--lite-row-focus-display': {default: 'none', ':focus-visible': 'block'},
+    '--lite-row-focus-z': {default: '1', ':focus-visible': '2'}
+  },
+  focusAnchor: {position: 'relative'},
+  focusOutline: {
+    zIndex: 'var(--lite-row-focus-z)',
+    overflow: 'visible',
+    // The selection cell stays pinned at the visible start. Its one overlay spans
+    // the table viewport (NodeTable's inline-size container), including actions.
+    '::after': {
+      content: '""',
+      display: 'var(--lite-row-focus-display)',
+      position: 'absolute',
+      inset: 0,
+      width: '100cqi',
+      zIndex: 2,
+      pointerEvents: 'none',
+      // Replace this cell's unused sticky-edge shadow, not its opaque background.
+      transform: 'none',
+      opacity: 1,
+      backgroundImage: 'none',
+      transition: 'none',
+      outlineWidth: focusVars['--focus-outline-width'],
+      outlineStyle: focusVars['--focus-outline-style'],
+      outlineColor: focusVars['--focus-outline-color'],
+      outlineOffset: `calc(-1 * ${focusVars['--focus-outline-width']})`
+    }
+  },
   groupHeading: {
     minWidth: 0,
     // Leave room for the grouped-row chevron and its cell padding and gaps.
