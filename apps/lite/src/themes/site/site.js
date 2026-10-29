@@ -417,31 +417,6 @@ export const siteTheme = {
         "--color-background-surface": "var(--color-background-popover)"
       }
     },
-    "segmented-control": {
-      "base": {
-        "borderWidth": "var(--border-width)",
-        "borderStyle": "solid",
-        "borderColor": "var(--color-border-emphasized)",
-        "padding": "calc(var(--spacing-0-5) - var(--border-width))"
-      }
-    },
-    "segmented-control-item": {
-      "base": {
-        "borderRadius": "var(--radius-element)"
-      },
-      "selected": {
-        "backgroundColor": "var(--color-accent-muted)",
-        "boxShadow": "none",
-        "::after": {
-          "content": "\"\"",
-          "position": "absolute",
-          "inset": "0",
-          "border": "var(--border-width) solid var(--color-border-emphasized)",
-          "borderRadius": "inherit",
-          "pointerEvents": "none"
-        }
-      }
-    },
     "top-nav-item": {
       "selected": {
         "backgroundColor": "transparent",

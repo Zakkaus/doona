@@ -541,32 +541,6 @@
     --color-background-surface: var(--color-background-popover);
   }
 
-  .astryx-segmented-control {
-    border-width: var(--border-width);
-    border-style: solid;
-    border-color: var(--color-border-emphasized);
-    padding: calc(var(--spacing-0-5) - var(--border-width));
-    --_segmented-control-padding: calc(var(--spacing-0-5) - var(--border-width));
-  }
-
-  .astryx-segmented-control-item {
-    border-radius: var(--radius-element);
-  }
-
-  .astryx-segmented-control-item[data-selected="selected"] {
-    background-color: var(--color-accent-muted);
-    box-shadow: none;
-  }
-
-  .astryx-segmented-control-item[data-selected="selected"]::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border: var(--border-width) solid var(--color-border-emphasized);
-    border-radius: inherit;
-    pointer-events: none;
-  }
-
   .astryx-top-nav-item[data-selected="selected"] {
     background-color: transparent;
   }
