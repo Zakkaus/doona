@@ -98,18 +98,6 @@ export const siteTheme = defineTheme({
     'radio-list-item': {base: {':is([aria-current="true"])': {backgroundColor: 'var(--color-accent-muted)'}}},
     dialog: {base: {...panelShared.components.dialog.base, backgroundColor: 'var(--color-background-popover)'}},
     'bottom-sheet': {base: {'--color-background-surface': 'var(--color-background-popover)'}},
-    'segmented-control': {
-      base: {
-        borderWidth: 'var(--border-width)',
-        borderStyle: 'solid',
-        borderColor: 'var(--color-border-emphasized)',
-        padding: 'calc(var(--spacing-0-5) - var(--border-width))'
-      }
-    },
-    'segmented-control-item': {
-      base: {borderRadius: 'var(--radius-element)'},
-      selected: {backgroundColor: 'var(--color-accent-muted)', boxShadow: 'none', '::after': selectionBorder}
-    },
     // TopNav: no pill background on the selected item.
     'top-nav-item': {
       selected: {
