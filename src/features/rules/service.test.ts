@@ -77,7 +77,9 @@ describe('duplicates', () => {
     'domain(geosite:youtube, geosite: telegram, geosite:netflix) -> direct',
     'dip(GEOIP: TELEGRAM) -> direct',
     'l4proto(tcp)&&domain(suffix: example.com, geosite:telegram) -> direct',
-    'domain(geosite: "telegram") -> direct'
+    'domain(geosite: "telegram") -> direct',
+    "domain('geosite:telegram') -> proxy",
+    'domain("geosite:telegram", geosite:youtube) -> proxy'
   ])('skips the whole Telegram bundle for %s', expression => {
     const existing = rule(expression, 2);
     const result = build(undefined, {rules: [existing, rule('fallback: direct', 2, 'fallback')]});
@@ -89,6 +91,13 @@ describe('duplicates', () => {
     const again = build(undefined, {selected: ['steam'], held: first.rules});
     expect(again.rules).toEqual([]);
     expect(again.skipped).toContainEqual({service: 'steam', held: true});
+  });
+  it('does not queue Steam China direct again when a held rule already has it', () => {
+    const first = build(undefined, {selected: ['steam'], steamCn: true});
+    const held = first.rules.filter(item => item.condition === 'domain(geosite:steam@cn)');
+    expect(held).toHaveLength(1);
+    const again = build(undefined, {selected: ['steam'], steamCn: true, held});
+    expect(again.rules.map(item => item.condition)).toEqual(['domain(geosite:steam)']);
   });
   it.each(['qname(geosite: telegram) && qtype(https, svcb) -> reject', "qname(geosite:'telegram') -> reject"])(
     'keeps an existing Telegram DNS rule %s',

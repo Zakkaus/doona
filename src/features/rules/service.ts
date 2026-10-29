@@ -2,7 +2,7 @@ import type {ConfigSource, DnsRoutingRule, RoutingRule} from '../../api/model';
 import {parseConditions, serializeConditions} from '../../dae/conditions';
 import {conditionKinds} from '../../dae/groups';
 import {geodataKinds, missingCategories, type GeodataPreset} from '../../dae/geodata';
-import {scanConfig} from '../../dae/text';
+import {scanConfig, unquote} from '../../dae/text';
 import {dnsListEnd, dnsRuleAnchor, sourceFor} from '../../dae/ruleText';
 import {serviceSections} from '../../dae/templates';
 import {isBuiltinOutbound} from '../../dae/vocab';
@@ -37,7 +37,9 @@ function references(expression: string, kind: 'geosite' | 'geoip', code: string)
     if (tokens[i].kind !== 'text' || raw(i).replace(/^(?:!|&&|\|\|)+/, '') !== call || raw(i + 1) !== '(') continue;
     let argument = '';
     for (let j = i + 2; j < tokens.length; j++) {
-      const atom = raw(j);
+      // A fully quoted argument such as 'geosite:telegram' means the same unquoted; the picker's parser rejects it with the prefix inside the quotes.
+      const quoted = tokens[j].kind === 'quoted' && raw(j).length > 1 && raw(j).at(-1) === raw(j)[0];
+      const atom = quoted && unquote(raw(j)).includes(':') ? unquote(raw(j)) : raw(j);
       if (atom === ',' || atom === ')') {
         const rows = parseConditions(`${call}(${argument})`, conditionKinds);
         if (rows?.some(row => row.kind === kind && row.value === code)) return true;
@@ -87,7 +89,13 @@ export function serviceRules({sources, rules, dnsRules, selected, outbound, stea
       continue;
     }
     if (!selected.includes(code)) continue;
-    if (code === 'steam' && steamCn && !isBuiltinOutbound(outbound) && !rules.some(rule => references(rule.expression, 'geosite', 'steam@cn')))
+    if (
+      code === 'steam' &&
+      steamCn &&
+      !isBuiltinOutbound(outbound) &&
+      !rules.some(rule => references(rule.expression, 'geosite', 'steam@cn')) &&
+      !held.some(item => item.list === 'routing' && references(item.condition, 'geosite', 'steam@cn'))
+    )
       add('domain(geosite:steam@cn)', 'direct');
     add(`domain(geosite:${code})`, outbound);
     if (code !== 'telegram') continue;
