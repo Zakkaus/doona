@@ -1,4 +1,4 @@
-/** Header enters on mount; sections enter once when page data becomes ready. */
+/** Header and sections enter together on mount, never again when page data becomes ready. */
 import {EASE, MOTION, PAGE_ENTER_ID} from './tokens';
 import {cancelOnReducedMotion, prefersReducedMotion} from './useReducedMotion';
 

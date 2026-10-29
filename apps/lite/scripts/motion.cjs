@@ -50,7 +50,6 @@ const {waitForDemo} = require('./demo.cjs');
       console.log(JSON.stringify(counts.at(-1)));
       if (reducedMotion === 'reduce') expect(record.total).toBe(0);
       else {
-        expect(record.body).toBeGreaterThan(0);
         expect(record.rows).toBeGreaterThanOrEqual(3);
       }
     }

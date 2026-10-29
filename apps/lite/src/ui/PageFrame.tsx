@@ -36,7 +36,7 @@ export function PageFrame({
       header={
         <LayoutHeader ref={motion.header} padding={0} data-page-header>
           <VStack padding={pageRhythm.inset} paddingBlockEnd={0} gap={1}>
-            <HStack gap={pageRhythm.controls} vAlign="center" wrap="wrap">
+            <HStack gap={pageRhythm.controls} vAlign="center" wrap="wrap" minHeight="var(--size-element-md)">
               <StackItem size="fill">
                 <Heading level={1} tabIndex={-1}>
                   {title}
@@ -59,7 +59,7 @@ export function PageFrame({
         <LayoutContent
           className="lite-page-content"
           padding={pageRhythm.inset}
-          style={{contain: 'size layout style', paddingBlockStart: `var(--spacing-${pageRhythm.headerToToolbar})`}}
+          style={{contain: 'size layout style', scrollbarGutter: 'stable', paddingBlockStart: `var(--spacing-${pageRhythm.headerToToolbar})`}}
           label={title}
         >
           <VStack ref={motion.body} gap={pageRhythm.toolbarToCollection} className="lite-table-inset" data-page-frame>

@@ -1,4 +1,4 @@
-import {useEffect, useLayoutEffect, useRef} from 'react';
+import {useLayoutEffect, useRef} from 'react';
 import {runPageStagger} from './motion';
 
 export function focusPageHeading() {
@@ -16,34 +16,31 @@ export function usePageMotion(ready: boolean) {
   const body = useRef<HTMLDivElement>(null);
   const entered = useRef(false);
   const headerStart = useRef<number | null>(null);
-  const stopBody = useRef(() => {});
-  useEffect(() => {
+  useLayoutEffect(() => {
     const content = body.current?.closest<HTMLElement>('.lite-page-content');
     const heading = header.current;
     if (!content || !heading) return;
     const align = () => {
       heading.style.paddingInlineEnd = `${content.offsetWidth - content.clientWidth}px`;
     };
-    const frame = requestAnimationFrame(align);
+    align();
     const observer = new ResizeObserver(align);
     observer.observe(content);
     return () => {
-      cancelAnimationFrame(frame);
       observer.disconnect();
     };
   }, []);
   useLayoutEffect(() => {
     const frame = requestAnimationFrame(() => header.current?.querySelector<HTMLElement>('h1')?.focus({preventScroll: true}));
     const title = header.current?.querySelector('h1')?.textContent ?? '';
-    let stopHeader = () => {};
+    let stopEntrance = () => {};
     if (headerStart.current === null) {
       headerStart.current = handoff.get(title) ?? performance.now();
-      stopHeader = runPageStagger(header.current, null, performance.now() - headerStart.current);
+      stopEntrance = runPageStagger(header.current, body.current, performance.now() - headerStart.current);
     }
     return () => {
       cancelAnimationFrame(frame);
-      stopHeader();
-      stopBody.current();
+      stopEntrance();
       handoff.set(title, headerStart.current!);
       queueMicrotask(() => handoff.delete(title));
     };
@@ -52,7 +49,6 @@ export function usePageMotion(ready: boolean) {
     if (!ready || entered.current) return;
     entered.current = true;
     body.current?.setAttribute('data-page-body', '');
-    stopBody.current = runPageStagger(null, body.current);
   }, [ready]);
   return {header, body};
 }
