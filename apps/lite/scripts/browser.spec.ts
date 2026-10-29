@@ -13,6 +13,7 @@ const checks = [
   'page-cache',
   'loading-layout',
   'nodes-e2e',
+  'row-focus',
   'mode-switch',
   'mobile-sheet',
   'features-nodes',
