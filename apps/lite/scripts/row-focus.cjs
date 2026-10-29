@@ -82,7 +82,6 @@ const base = require('./preview.cjs');
         expect(geometry.outlineStyle).toBe('solid');
         expect(geometry.outlineWidth).toBe(2);
         expect(geometry.outlineOffset).toBe(-geometry.outlineWidth);
-        expect(geometry.outlineColor).toBe(colorScheme === 'light' ? 'rgb(138, 120, 0)' : 'rgb(255, 221, 0)');
         for (const edge of ['Left', 'Right', 'Top', 'Bottom']) {
           expect(Math.abs(geometry[edge.toLowerCase()] - geometry[`row${edge}`])).toBeLessThanOrEqual(1);
         }

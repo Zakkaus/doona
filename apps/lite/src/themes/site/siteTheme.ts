@@ -25,7 +25,6 @@ export const siteTheme = defineTheme({
   icons: appIconRegistry,
   tokens: {
     '--color-accent': PRIMARY,
-    '--focus-outline-color': 'light-dark(#8A7800, #FFDD00)',
     '--color-text-accent': PRIMARY,
     '--color-icon-accent': PRIMARY,
     '--color-accent-muted': 'light-dark(rgba(21, 17, 12, 0.05), rgba(223, 226, 229, 0.08))',

@@ -203,7 +203,6 @@
     --font-family-heading: Figtree, "PingFang TC", "PingFang SC", "Noto Sans CJK TC", "Noto Sans CJK SC", "Source Han Sans TC", "Microsoft JhengHei", "Microsoft YaHei", sans-serif;
     --font-family-code: ui-monospace, "SF Mono", Monaco, Consolas, monospace;
     --color-accent: light-dark(#15110C, #DFE2E5);
-    --focus-outline-color: light-dark(#8A7800, #FFDD00);
     --color-text-accent: light-dark(#15110C, #DFE2E5);
     --color-icon-accent: light-dark(#15110C, #DFE2E5);
     --color-accent-muted: light-dark(rgba(21, 17, 12, 0.05), rgba(223, 226, 229, 0.08));
