@@ -6,36 +6,18 @@ import {useMessages} from '../i18n';
 import {Close} from './icons';
 import './demoBadge.css';
 
-const key = 'doona-lite-demo-badge';
-
+// The demo is published beside the standard demo at /lite/; this switch moves between the two.
 export function DemoBadge() {
   const t = useMessages();
-  const [hidden, setHidden] = useState(() => {
-    try {
-      return localStorage.getItem(key) === 'hidden';
-    } catch {
-      return false;
-    }
-  });
+  const [hidden, setHidden] = useState(false);
   if (hidden) return null;
   return (
     <HStack className="lite-demo-badge" gap={0.5} vAlign="center">
-      <a href="https://github.com/Zakkaus/doona">{t.demoBadge}</a>
-      <IconButton
-        label={t.hideDemoBadge}
-        icon={<Icon icon={Close} />}
-        variant="ghost"
-        size="sm"
-        style={{color: 'inherit'}}
-        onClick={() => {
-          setHidden(true);
-          try {
-            localStorage.setItem(key, 'hidden');
-          } catch {
-            // Dismissal still applies to this visit.
-          }
-        }}
-      />
+      <a href="../">Standard</a>
+      <a href="./" aria-current="page">
+        Lite
+      </a>
+      <IconButton label={t.hideDemoBadge} icon={<Icon icon={Close} />} variant="ghost" size="sm" style={{color: 'inherit'}} onClick={() => setHidden(true)} />
     </HStack>
   );
 }

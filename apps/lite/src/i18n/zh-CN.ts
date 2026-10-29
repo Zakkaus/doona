@@ -378,7 +378,6 @@ export const zhCN: Messages = {
   useAnotherBackend: '使用其他后端',
   backendHelp: '填写 honk native API 根地址，例如 http://192.168.1.1:9527；可包含反向代理前缀。不要填写代理节点地址、/ui/ 或 /api/v1。',
   tokenHelp: '若 honk 允许匿名访问，可留空。',
-  demoBadge: '演示：示例数据',
   hideDemoBadge: '隐藏演示标记',
   demoName: '演示',
   backend: 'honk native API 根地址',
