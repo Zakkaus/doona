@@ -64,6 +64,18 @@ it('holds specific services before broad games and the first usable fallback, wi
   for (const held of result.rules) expect(held).toMatchObject({sourceId: 'main', list: 'routing', before, must: false});
 });
 
+it('holds a game service above a listed all-games rule, and other services before the fallback', () => {
+  const content = 'routing {\n  domain(geosite:category-games) -> proxy\n  fallback: direct\n}\n';
+  const games = {...rule('domain(geosite:category-games)', 2), outbound: 'proxy'};
+  const before = rule('fallback: direct', 3, 'fallback');
+  const result = build(content, {rules: [games, before], selected: ['steam', 'telegram', 'category-games']});
+  expect(result.rules.map(item => [item.condition, item.before])).toEqual([
+    ['domain(geosite:steam)', games],
+    ['domain(geosite:telegram)', before],
+    ['dip(geoip:telegram)', before]
+  ]);
+});
+
 it.each(['direct', 'block'])('does not add Steam China direct for builtin %s', outbound => {
   const result = build(undefined, {selected: ['steam'], steamCn: true, outbound});
   expect(result.rules.map(item => item.condition)).toEqual(['domain(geosite:steam)']);
