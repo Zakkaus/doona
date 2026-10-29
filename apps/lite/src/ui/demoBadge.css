@@ -13,8 +13,10 @@
     line-height: 1.6;
   }
 
+  /* Links share the close button's height; tools/demo-snippet.html copies these metrics. */
   .lite-demo-badge a {
     padding-inline: var(--spacing-2);
+    line-height: var(--size-element-sm);
     border-radius: var(--radius-full);
     color: inherit;
     text-decoration: none;
