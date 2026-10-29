@@ -60,8 +60,15 @@ export function serviceRules({sources, rules, dnsRules, selected, outbound, stea
   if (!fallback || !source || !outbound) return result;
   const scan = scanConfig(source.content);
   result.refusal = false;
+  // First match wins, so a game service must sit above a listed all-games rule in the same source, or that rule would still take its traffic.
+  const allGames = rules.find(
+    rule =>
+      rule.kind === 'rule' && rule.source?.source_id === source.id && ruleWritable(rule, sources) && references(rule.expression, 'geosite', 'category-games')
+  );
+  const games = serviceSections.find(section => section.id === 'games')!.services.map(service => service.code as string);
+  let anchor = fallback;
   const add = (condition: string, target: string) => {
-    result.rules.push({sourceId: source.id, list: 'routing', before: fallback, condition, outbound: target, must: false});
+    result.rules.push({sourceId: source.id, list: 'routing', before: anchor, condition, outbound: target, must: false});
   };
   const chosen = serviceSections.flatMap<{code: string; name: string}>(section => [...section.services]);
   chosen.sort((a, b) => Number(a.code === 'category-games') - Number(b.code === 'category-games'));
@@ -89,6 +96,7 @@ export function serviceRules({sources, rules, dnsRules, selected, outbound, stea
       continue;
     }
     if (!selected.includes(code)) continue;
+    anchor = allGames && code !== 'category-games' && games.includes(code) ? allGames : fallback;
     if (
       code === 'steam' &&
       steamCn &&
