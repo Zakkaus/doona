@@ -285,6 +285,17 @@ export function detectTemplate(text: string): (TemplateOptions & {template: Rule
   return null;
 }
 
+// Which optional rules the routing of `text` already holds, whatever else it holds; null when it writes no rule, only a fallback or includes.
+// Tokens are joined before comparing: the scanner splits `geosite:cn` into three tokens but keeps `'geosite:cn'` as one.
+export function routingOptions(text: string): TemplateOptions | null {
+  const written = routingEntries(text)
+    ?.filter(entry => entry[0] !== 'fallback' && entry[0] !== 'include')
+    .map(entry => entry.join(''));
+  if (!written?.length) return null;
+  const holds = (lines: string[]) => routingEntries(['routing {', ...lines, '}'].join('\n'))!.every(want => written.includes(want.join('')));
+  return {blockAds: holds(ads), blockQuic: holds(quic), networkManagerDirect: holds(networkManager)};
+}
+
 const directFallback = ['fallback', ':', 'direct'];
 function combinedRoutingEntries(text: string): string[][] | null {
   const entries = routingEntries(text);

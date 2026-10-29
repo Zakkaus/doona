@@ -1,7 +1,7 @@
 import {translate, type Translator} from '../i18n';
 import {describe, expect, it} from 'vitest';
 import legacy from './templates.legacy.json';
-import {defaultTemplateOptions, detectTemplate, templates, type RuleTemplate} from './templates';
+import {defaultTemplateOptions, detectTemplate, routingOptions, templates, type RuleTemplate} from './templates';
 import {holdsDns, holdsRouting, templateGroups, writeTemplate} from './setup';
 import {readGroupEntries} from './groups';
 
@@ -244,5 +244,30 @@ describe('template output', () => {
     const text = writeTemplate('', template, [], {t});
     expect(detectTemplate(text.replace(/#[^\n]*/g, '# old comment'))?.template).toBe(template);
     expect(detectTemplate(text.replace(/#[^\n]*/g, ''))?.template).toBe(template);
+  });
+});
+
+describe('routingOptions', () => {
+  const none = {blockAds: false, blockQuic: false, networkManagerDirect: false};
+  it('finds the optional rules among custom ones, however they are spelled', () => {
+    const custom = `routing {
+  domain(geosite:openai) -> proxy
+  domain(
+    'geosite:category-ads-all'
+  ) -> block
+  l4proto(udp)&&dport(443) -> block
+  pname(NetworkManager) -> direct
+  fallback: proxy
+}`;
+    expect(routingOptions(custom)).toEqual({blockAds: true, blockQuic: true, networkManagerDirect: true});
+    expect(routingOptions('routing {\n  domain(geosite:openai) -> proxy\n  fallback: proxy\n}')).toEqual(none);
+    expect(routingOptions('routing {\n  domain(geosite:category-ads-all) -> block\n  fallback: proxy\n}')).toEqual({...none, blockAds: true});
+    expect(routingOptions('routing {\n  l4proto(udp) && dport(443) -> block\n  fallback: proxy\n}')).toEqual({...none, blockQuic: true});
+    expect(routingOptions('routing {\n  domain(geosite:category-ads-all) -> direct\n  fallback: proxy\n}')).toEqual(none);
+  });
+  it('reports nothing for routing that writes no rule', () => {
+    expect(routingOptions('')).toBeNull();
+    expect(routingOptions('routing { fallback: direct }')).toBeNull();
+    expect(routingOptions('group { proxy {} }')).toBeNull();
   });
 });

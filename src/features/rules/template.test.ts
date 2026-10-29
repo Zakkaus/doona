@@ -40,6 +40,24 @@ it.each([
   for (const write of [plain, withDns]) expect(templatesView([source('main', write!.after, 'main')], t)).toMatchObject(options);
 });
 
+it('keeps the optional rules that custom routing holds', () => {
+  const custom = (rules: string[]) => [source('main', `routing {\n${rules.map(rule => `  ${rule}\n`).join('')}  fallback: proxy\n}`, 'main')];
+  expect(templatesView(custom(['domain(geosite:openai) -> proxy', 'domain(geosite:category-ads-all) -> block']), t)).toMatchObject({
+    blockAds: true,
+    blockQuic: false,
+    networkManagerDirect: false
+  });
+  expect(templatesView(custom(['pname(NetworkManager) -> direct', "domain('geosite:cn') -> direct"]), t)).toMatchObject({
+    blockAds: false,
+    blockQuic: false,
+    networkManagerDirect: true
+  });
+  expect(templatesView(custom(['l4proto(udp) && dport(443) -> block']), t)).toMatchObject({blockAds: false, blockQuic: true, networkManagerDirect: false});
+  expect(templatesView(custom(['domain(geosite:openai) -> proxy']), t)).toMatchObject({blockAds: false, blockQuic: false, networkManagerDirect: false});
+  const split = [...custom(['domain(geosite:category-ads-all) -> block']), source('extra', 'routing {\n  l4proto(udp) && dport(443) -> block\n}')];
+  expect(templatesView(split, t)).toMatchObject({blockAds: true, blockQuic: true, networkManagerDirect: false});
+});
+
 it('shows region flags in the apply impact while other labels stay plain', () => {
   const main = source('main', '', 'main');
   const created = templateImpact('regions', main, [main], [], t).created;
