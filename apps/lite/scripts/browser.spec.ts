@@ -14,6 +14,7 @@ const checks = [
   'loading-layout',
   'nodes-e2e',
   'row-focus',
+  'page-flash',
   'mode-switch',
   'mobile-sheet',
   'features-nodes',
