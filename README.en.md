@@ -86,7 +86,7 @@ Available features depend on the backend’s capabilities and configuration; see
 
 ## Two editions
 
-doona lite is a preview in testing in 0.1.0-rc.3; its pages and behaviour may change. Both editions connect to the same honk with the same administrator credentials.
+doona lite is a preview in testing in 0.1.0-rc.4; its pages and behaviour may change. Both editions connect to the same honk with the same administrator credentials.
 
 | Area               | Standard edition                                          | doona lite (preview)                               |
 | ------------------ | --------------------------------------------------------- | -------------------------------------------------- |
@@ -120,9 +120,9 @@ honk handles proxying; see the [honk node reference](https://github.com/daeunive
 
 ## Latest release
 
-[0.1.0-rc.3](CHANGELOG.md) has 54 entries: 5 additions, 7 changes, 35 fixes and 7 internal updates.
+[0.1.0-rc.4](CHANGELOG.md) has 28 entries: 6 additions, 3 changes and 19 fixes.
 
-It updates the existing doona lite preview: it detects the honk serving it and opens sign-in or connects directly when honk allows anonymous access. It also changes lite's typography and controls and fixes narrow tables and Settings tabs.
+This release adds node multi-select, to test latency together or remove manual nodes, common service rules, a Halloween palette and a Report a problem button. Lite explains the manual node form and backend settings, and error and unavailable states link to the docs section that explains the fix.
 
 ## Documentation
 
