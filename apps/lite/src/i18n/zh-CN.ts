@@ -31,7 +31,7 @@ export const zhCN: Messages = {
   'login.check': '继续',
   connectionSaveError: '无法在此浏览器中保存连接，请允许网站存储后重试。',
   locale: 'zh-CN',
-  about: '关于 doona',
+  about: '关于',
   reportProblem: '报告问题',
   aboutBackend: '后端',
   aboutConnection: '连接信息',

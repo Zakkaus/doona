@@ -241,8 +241,10 @@ async function download(p, action) {
     }
     await p.locator('[data-backend-status]').click();
     await shot(p, 'status-export');
-    // About follows the backend actions; export stays the last of them.
-    expect((await p.getByRole('menuitem').allTextContents()).map(text => text.trim()).at(-2)).toBe(l.export);
+    // Export is the last backend action; About lives in Settings, not this menu.
+    const items = (await p.getByRole('menuitem').allTextContents()).map(text => text.trim());
+    expect(items.at(-1)).toBe(l.export);
+    expect(items.filter(text => /^(About|关于|關於)/.test(text))).toEqual([]);
     expect(await download(p, () => p.getByRole('menuitem', {name: l.export, exact: true}).click())).toBe(content);
     await p.getByRole('button', {name: l.add, exact: true}).click();
     const form = p.getByRole('dialog');

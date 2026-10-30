@@ -30,7 +30,7 @@ export const en = {
   'login.check': 'Continue',
   connectionSaveError: 'Cannot save the connection in this browser. Allow site storage and try again.',
   locale: 'en',
-  about: 'About doona',
+  about: 'About',
   reportProblem: 'Report a problem',
   aboutBackend: 'Backend',
   aboutConnection: 'Connection details',

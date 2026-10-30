@@ -31,7 +31,7 @@ export const zhTW: Messages = {
   'login.check': '繼續',
   connectionSaveError: '無法在此瀏覽器中儲存連線，請允許網站儲存資料後重試。',
   locale: 'zh-TW',
-  about: '關於 doona',
+  about: '關於',
   reportProblem: '回報問題',
   aboutBackend: '後端',
   aboutConnection: '連線資訊',
