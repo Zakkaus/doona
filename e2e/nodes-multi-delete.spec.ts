@@ -75,6 +75,11 @@ test('selects nodes with the keyboard', async ({page}) => {
   await page.goto('/#/nodes?provider=inline');
   const table = page.locator('.rp-table').first();
   const first = table.getByRole('row').filter({has: page.getByRole('rowheader', {name: 'key-first', exact: true})});
+  // With nothing checked, a press opens the detail and marks the row apart from checked ones; a second press closes it.
+  await first.getByRole('rowheader').click();
+  await expect(first).toHaveAttribute('data-open', 'true');
+  await first.getByRole('rowheader').click();
+  await expect(first).not.toHaveAttribute('data-open');
   await first.locator('.rp-checkbox').click();
   await expect(table.getByRole('checkbox', {checked: true})).toHaveCount(1);
   await page.keyboard.press('Shift+ArrowDown');

@@ -348,7 +348,14 @@ export function DataTable<T extends {id: string}>({
     const content = (cell: ReactNode) => (tree ? <span className="cell">{text(cell)}</span> : text(cell));
     const renderRow = (row: T) => {
       return (
-        <Row key={row.id} id={row.id} textValue={getTextValue?.(row)} data-highlighted={row.id === highlighted || undefined}>
+        <Row
+          key={row.id}
+          id={row.id}
+          textValue={getTextValue?.(row)}
+          data-highlighted={row.id === highlighted || undefined}
+          // With checkboxes, `data-selected` marks the checked rows, so the row whose detail is open carries its own mark.
+          data-open={(selection && row.id === selected) || undefined}
+        >
           {selection && (
             <Cell key="__selection">
               <Checkbox slot="selection" />
@@ -425,7 +432,7 @@ export function DataTable<T extends {id: string}>({
       >
         <TableColumns cols={shown} firstVisibleHeader={!!tree} resizable={hasRows} selection={!!selection} />
         <TableRows<T | TableGroup<T>>
-          dependencies={[shown, getTextValue, highlighted, !!selection]}
+          dependencies={[shown, getTextValue, highlighted, !!selection, selection ? selected : null]}
           renderEmptyState={() => (
             <div className="rp-table-empty" style={{width: width ?? '100%'}}>
               {loading ? <TableSkeleton cols={shown} rows={skeletonRows} /> : <Empty>{empty ?? t('ui.empty')}</Empty>}
