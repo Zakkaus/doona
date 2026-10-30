@@ -327,19 +327,7 @@ pre-releases. Update the declared version and changelog before tagging.
 Publish in two phases so honk embeds the same doona version:
 
 1. Let the tagged release workflow build the standalone UI, fonts, precompressed assets and packages. Review and publish its draft before building honk. The workflow does not bundle honk.
-2. Update honk's `.github/ci/pins.env` with `DOONA_VERSION` (without `v`), `DOONA_REVISION` (the peeled doona tag commit) and `DOONA_SHA256` (the program asset's API digest). Wait for that exact honk commit's CI and numbered debug release to succeed, including its `doona-source-<version>.tar.gz` asset. Fetch the verified bundle into an empty directory, then attach it to the same doona release and refresh its checksums and notes.
-
-From the repository root, set `doona_tag` to the public release tag, `honk_tag` and `honk_commit` to the successful numbered debug tag and full commit SHA, and `work` to a private scratch directory outside the checkout. With Node and a GitHub API token available, run:
-
-```sh
-node tools/fetch-honk.mjs "$work/honk" --tag "$honk_tag" --commit "$honk_commit" --doona-tag "$doona_tag"
-```
-
-The command requires an empty output directory. It checks the honk release body, target, source tag and eight builds. It compares the fixed honk source pins with the public doona version, peeled tag commit and program digest, then verifies the corresponding doona source asset from the honk release. `HONK-SOURCE.txt` records both sources and their hashes. A failed fetch writes no completion note; discard that staging directory before retrying.
-
-For attachment or repair, save the current release's asset list, `SHA256SUMS` and notes outside the checkout first. Stage the final asset set privately, preserving the existing standalone program, fonts, precompressed archives and packages byte for byte. Replace only the eight honk builds, `HONK-SOURCE.txt` and corresponding sources. Generate `SHA256SUMS` from the final filenames, excluding the manifest itself, and run `sha256sum --strict -c SHA256SUMS` there. Compare the filename set as well as the hashes.
-
-Upload the staged additions or replacements to the existing release, then refresh its manifest and notes. Recheck every API asset digest and the final asset list; remove obsolete honk sources only after the replacement uploads succeed. Multi-asset uploads are not atomic: retain the saved bytes and retry interrupted uploads with that same set. Never move an existing numbered doona or honk tag, rebuild the standalone UI during repair, or rerun the first-phase workflow to repair honk. Honk's existing rolling `debug` alias may still advance during its normal release workflow.
+2. Update honk's `.github/ci/pins.env` with `DOONA_VERSION` (without `v`), `DOONA_REVISION` (the peeled doona tag commit), and `DOONA_SHA256` and `DOONA_LITE_SHA256` (the API digests of the program and lite archives). honk's release then embeds this doona version and attaches `doona-source-<version>.tar.gz`. Link that honk release from the doona release notes under Pairing with honk; the doona release carries no honk builds.
 
 For tag `v0.1.0-rc.4`, release assets keep the upstream version without `v`. See the
 [package version table](install/README.md#version-spellings) for every archive, binary package and source recipe.
@@ -354,7 +342,7 @@ Write the release body in English, in this order:
    Put the category and entry count in each `<summary>`, such as `Fixed (35)`; keep the entries and PR references unchanged.
    Generate the section as described in [Changelog fragments](#changelog-fragments).
 4. `## Pairing with honk`: name the honk release and the doona version it embeds, then explain how to use this doona release now.
-   Link the installation guide through [User documentation](#user-documentation); follow [Release versions](#release-versions) for matching honk attachments.
+   Link the installation guide through [User documentation](#user-documentation) and the matching honk release, as [Release versions](#release-versions) describes.
 5. `## Downloads`: list the files and their contents in a table, using the [package version table](install/README.md#version-spellings).
    Tell readers to download `SHA256SUMS` beside their selected assets and run `sha256sum -c --ignore-missing SHA256SUMS` there.
    Link the release's separate Alpine and OpenWrt signing keys; use [apk installation](install/README.md#installing-the-apk-packages) for their formats and use.
