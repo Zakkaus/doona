@@ -1663,8 +1663,8 @@ test.describe('small and narrow panel widgets', () => {
 
 // A byte fraction writes a shared unit once, so the docked memory meter keeps its label and value on one row.
 for (const [lang, slash] of [
-  ['zh-TW', '／'],
-  ['zh-CN', '／'],
+  ['zh-TW', '/'],
+  ['zh-CN', '/'],
   ['en', ' / ']
 ] as const)
   test.describe(`the docked memory meter in ${lang}`, () => {

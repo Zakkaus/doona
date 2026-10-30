@@ -223,7 +223,7 @@ function scaledBytes(input: string | bigint | number | null, locale: string, uni
 export function formatBytes(input: string | bigint | number | null, locale: string): string {
   return scaledBytes(input, locale, byteUnits);
 }
-// Used bytes out of a whole, the unit written once when both sides share it: 70／268 MB, but 461 GB／1.1 TB.
+// Used bytes out of a whole, the unit written once when both sides share it: 70 / 268 MB, but 461 GB / 1.1 TB.
 export function formatBytesFraction(part: string | bigint | number | null, whole: string | bigint | number | null, locale: string, t: Translator): string {
   const [a, b] = [scaleBytes(part, byteUnits), scaleBytes(whole, byteUnits)];
   if (a && b && a.unit === b.unit)
