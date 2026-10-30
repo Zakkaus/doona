@@ -592,7 +592,7 @@ export function Groups({connection, setBusy}: {connection: Connection; setBusy: 
         <Text weight="medium" xstyle={styles.wrap}>
           {deleting}
         </Text>
-        <Text>{t.deleteDescription}</Text>
+        <Text>{t.deleteDraftDescription}</Text>
       </EditDialog>
       <ReviewDialog
         open={reviewing}

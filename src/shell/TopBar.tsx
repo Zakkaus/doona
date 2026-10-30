@@ -2,6 +2,7 @@ import {memo, useRef, useState} from 'react';
 import {PhoneWidgets} from './widgets/host';
 import {About} from './About';
 import {BackendMenuPopover} from './Backend';
+import Bug from '../ui/icons/Bug';
 import Checkmark from '../ui/icons/Checkmark';
 import Color from '../ui/icons/Color';
 import Contrast from '../ui/icons/Contrast';
@@ -13,7 +14,8 @@ import Search from '../ui/icons/Search';
 import Translate from '../ui/icons/Translate';
 import logo from '../logo.svg';
 import {useT, type Lang} from '../i18n';
-import {Button, ChoiceMenu, Divider} from '../ui/ui';
+import {Button, ChoiceMenu, Divider, Link} from '../ui/ui';
+import {issuesUrl} from '../api/problemReport';
 import {ReloadConfirm} from '../features/shared/ReloadConfirm';
 import type {SettingsContext} from './preferences';
 import type {Scheme} from './preferences';
@@ -94,6 +96,9 @@ export const TopBar = memo(function TopBar({
         </Button>
       </div>
       <div className="rp-actions">
+        <Link appearance="button" quiet icon label={t('shell.report')} tip={t('shell.report')} href={issuesUrl} external rel="noopener noreferrer">
+          <Bug />
+        </Link>
         <PhoneWidgets route={route} backend={backend} />
         <span className="rp-search-compact" onPointerEnter={preloadSearch} onFocus={preloadSearch}>
           <Button quiet icon label={t('shell.search')} onPress={openSearch}>

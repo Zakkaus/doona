@@ -1827,6 +1827,7 @@
   "shell.reloadEngine": "重載 honk",
   "shell.reloadHelp": "honk 會重新讀取設定檔並重載。暫存的規則不會寫入。",
   "shell.reloadTitle": "重載 honk？",
+  "shell.report": "回報問題",
   "shell.search": "搜尋頁面、連線、節點、群組、節點來源與設定檔",
   "shell.searchUnavailable": "無法開啟搜尋：搜尋功能載入失敗。",
   "shell.shortcut": "Ctrl K",

@@ -71,6 +71,25 @@ async function controls(p) {
     }
   }
 }
+async function aboutDialog(p, locale) {
+  await p.locator('[data-backend-status]').click();
+  await p.getByRole('menuitem', {name: locale === 'en' ? 'About doona' : '关于 doona', exact: true}).click();
+  const dialog = p.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  // Opening focuses the dialog's own close control, never a link inside it.
+  await expect.poll(() => p.evaluate(() => document.activeElement?.tagName)).not.toBe('A');
+  // The report button lives in the sidebar footer, not here.
+  await expect(dialog.getByRole('link')).toHaveCount(3);
+  const hrefs = [`https://doona.daeuniverse.org/${locale}/`, 'https://github.com/Zakkaus/doona', 'https://github.com/Zakkaus/doona/releases'];
+  for (const [index, href] of hrefs.entries()) {
+    const link = dialog.getByRole('link').nth(index);
+    await expect(link).toHaveAttribute('href', href);
+    await expect(link).toHaveAttribute('target', '_blank');
+    await expect(link).toHaveAttribute('rel', /noopener noreferrer/);
+  }
+  await p.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+}
 async function footer(p, width, locale) {
   if (width === 390) {
     await p.getByRole('button', {name: locale === 'en' ? 'Open navigation' : '打开导航', exact: true}).click();
@@ -84,6 +103,18 @@ async function footer(p, width, locale) {
     b = await language.boundingBox();
   expect(Math.abs(a.height - b.height)).toBeLessThanOrEqual(1);
   expect(Math.abs(a.y - b.y)).toBeLessThanOrEqual(1);
+  const report = nav.getByRole('link', {name: locale === 'en' ? 'Report a problem' : '报告问题', exact: true});
+  await expect(report).toHaveCount(1);
+  await expect(report).toBeVisible();
+  await expect(report).toHaveAttribute('href', 'https://github.com/Zakkaus/doona/issues');
+  await expect(report).toHaveAttribute('target', '_blank');
+  await expect(report).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(report).toHaveText('');
+  await expect(report.locator('svg')).toBeVisible();
+  const c = await report.boundingBox();
+  expect(Math.abs(a.height - c.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs(a.y - c.y)).toBeLessThanOrEqual(1);
+  expect(c.x).toBeGreaterThan(b.x);
   if (width === 1440) {
     const collapse = await nav.getByRole('button', {name: locale === 'en' ? 'Collapse sidebar' : '折叠侧边栏', exact: true}).boundingBox();
     expect(Math.abs(a.height - collapse.height)).toBeLessThanOrEqual(1);
@@ -322,6 +353,7 @@ async function subscriptionActionInset(p) {
         );
         await p.goto(base);
         await waitForDemo(p);
+        if (width === 1440) await aboutDialog(p, locale);
         const rhythm = [];
         for (const route of routes) {
           await p.evaluate(route => (location.hash = route), route);

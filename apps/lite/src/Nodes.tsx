@@ -490,7 +490,16 @@ export function Nodes({connection, setBusy}: {connection: Connection; setBusy: (
         }
       >
         <Text>{bulkReferenced ? t.referenced : t.deleteDescription}</Text>
-        <Text>{selectedNodes.map(node => node.name).join(', ')}</Text>
+        <Text type="label">{t.selectedCount.replace('{n}', String(selectedNodes.length))}</Text>
+        <RowEntrance>
+          <VStack as="ul" gap={1}>
+            {selectedNodes.map(node => (
+              <VStack as="li" key={node.id}>
+                <Text style={{overflowWrap: 'anywhere'}}>{node.name}</Text>
+              </VStack>
+            ))}
+          </VStack>
+        </RowEntrance>
       </EditDialog>
       {share && (
         <Suspense fallback={null}>

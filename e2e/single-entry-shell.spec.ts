@@ -1,6 +1,46 @@
 import {expect, mockBackend, test, box} from './fixtures';
 import {writeMode} from '../src/dae/outboundMode';
 
+const issues = 'https://github.com/Zakkaus/doona/issues';
+
+for (const width of [1440, 390]) {
+  for (const [lang, label] of [
+    ['en', 'Report a problem'],
+    ['zh-CN', '报告问题'],
+    ['zh-TW', '回報問題']
+  ] as const) {
+    test.describe(`${width}px ${lang} report button`, () => {
+      test.use({viewport: {width, height: 900}, storage: {'doona-lang': lang}});
+      test('is an icon-only link to the issue tracker at the start of the top bar actions, and About has no report links', async ({page}) => {
+        await mockBackend(page);
+        await page.goto('/#/activity');
+        const top = page.locator('.rp-top');
+        const report = top.getByRole('link', {name: label, exact: true});
+        await expect(report).toHaveCount(1);
+        await expect(report).toBeInViewport();
+        await expect(report).toHaveAttribute('href', issues);
+        await expect(report).toHaveAttribute('target', '_blank');
+        await expect(report).toHaveAttribute('rel', 'noopener noreferrer');
+        await expect(report).toHaveText('');
+        await expect(report.locator('svg')).toBeVisible();
+        // The same size as the icon buttons beside it, and the first of the bar's actions.
+        const [link, neighbour] = [await box(report), await box(top.locator('.rp-actions button:visible').first())];
+        expect(link.height).toBe(neighbour.height);
+        expect(link.width).toBe(neighbour.width);
+        expect(link.x + link.width).toBeLessThanOrEqual(neighbour.x);
+        await page.context().route('https://github.com/**', route => route.fulfill({body: ''}));
+        const popup = page.waitForEvent('popup');
+        await report.click();
+        const opened = await popup;
+        await expect.poll(() => opened.url()).toBe(issues);
+        await opened.close();
+        await page.locator('button.rp-brand').click();
+        await expect(page.getByRole('dialog').locator(`a[href^="${issues}"]`)).toHaveCount(0);
+      });
+    });
+  }
+}
+
 test('the desktop theme shortcut stays in sync with the appearance editor', async ({page}) => {
   await page.emulateMedia({colorScheme: 'light'});
   await page.goto('/#/activity');

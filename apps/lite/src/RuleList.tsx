@@ -5,6 +5,7 @@ import {CollectionLoading, RowPlaceholder} from './ui/CollectionLoading';
 import {Button} from '@astryxdesign/core/Button';
 import {CheckboxInput} from '@astryxdesign/core/CheckboxInput';
 import {Collapsible} from '@astryxdesign/core/Collapsible';
+import {EmptyState} from '@astryxdesign/core/EmptyState';
 import {HStack, StackItem, VStack} from '@astryxdesign/core/Layout';
 import {Link} from '@astryxdesign/core/Link';
 import {List, ListItem} from '@astryxdesign/core/List';
@@ -265,7 +266,13 @@ export function RuleList({
                 ))}
               </List>
             </CollectionLoading>
-            {!loading && !visible.length && <Text color="secondary">{rows.length ? t.noMatches : t.noRules}</Text>}
+            {!loading && !visible.length && (
+              <EmptyState
+                isCompact
+                title={rows.length ? t.noMatches : t.noRules}
+                description={rows.length ? t.noMatchesHelp : disabled ? t.readOnly : t.noRulesHelp}
+              />
+            )}
           </VStack>
         </RowEntrance>
       )}
@@ -288,6 +295,7 @@ export function RuleList({
           <VStack paddingBlockStart={2}>
             <CheckboxInput
               label={t.forceTarget}
+              description={t.forceTargetHelp}
               value={fallbackForced}
               isDisabled={disabled}
               onChange={force => change(setFallback(text, kind, fallback!.target.replace(/\(must\)$/, '') + (force ? '(must)' : '')))}
@@ -510,7 +518,7 @@ function RuleForm({
       {kind === 'routing' && (
         <Collapsible isOpen={advanced} onOpenChange={setAdvanced} chevronPosition="start" trigger={<Text type="label">{t.advanced}</Text>}>
           <VStack paddingBlockStart={2}>
-            <CheckboxInput label={t.forceTarget} value={must} onChange={setMust} />
+            <CheckboxInput label={t.forceTarget} description={t.forceTargetHelp} value={must} onChange={setMust} />
           </VStack>
         </Collapsible>
       )}

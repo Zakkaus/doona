@@ -237,6 +237,7 @@
     --size-element-sm: 32px;
     --size-element-md: 36px;
     --size-element-lg: 40px;
+    --focus-outline-color: light-dark(#0064E0, #2694FE);
     --lite-primary-background: light-dark(#292929, #DFE2E5);
     --lite-primary-text: light-dark(var(--color-on-dark), var(--color-on-light));
     --color-brand: light-dark(#225BFF, #3D87FF);

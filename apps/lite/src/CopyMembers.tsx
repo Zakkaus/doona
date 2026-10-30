@@ -36,6 +36,7 @@ export default function CopyMembers({
       pending={false}
       label={t.save}
       disabled={!after || !current.writable}
+      disabledReason={!current.writable ? t.readOnly : entries.some(item => item.name !== name) ? t.chooseGroup : t.copyMembersEmpty}
       confirm={() => {
         if (after) {
           stage(draft?.source ?? currentSource, after, target);
@@ -48,6 +49,7 @@ export default function CopyMembers({
         label={t.targetGroup}
         value={target}
         onChange={setTarget}
+        isDisabled={!entries.some(item => item.name !== name)}
         options={entries.filter(item => item.name !== name).map(item => ({value: item.name, label: item.name}))}
       />
       {after && (

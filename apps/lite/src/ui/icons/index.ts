@@ -2,6 +2,7 @@ export {default as Add} from './Add';
 export {default as AlertTriangle} from './AlertTriangle';
 export {default as ArrowDown} from './ArrowDown';
 export {default as ArrowUp} from './ArrowUp';
+export {default as Bug} from './Bug';
 export {default as CheckmarkCircle} from './CheckmarkCircle';
 export {default as Checkmark} from './Checkmark';
 export {default as ChevronDown} from './ChevronDown';

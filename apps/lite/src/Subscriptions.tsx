@@ -518,7 +518,7 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                       {dialog === 'delete' ? (
                         <>
                           <Text weight="medium">{name}</Text>
-                          <Text>{t.deleteDescription}</Text>
+                          <Text>{t.deleteDraftDescription}</Text>
                         </>
                       ) : (
                         <>

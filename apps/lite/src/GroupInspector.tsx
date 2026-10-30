@@ -521,9 +521,7 @@ export function GroupInspector({
                   )}
                 </VStack>
               ) : (
-                <Text type="supporting" color="secondary">
-                  {t.noMatches}
-                </Text>
+                <EmptyState isCompact title={t.noMatches} description={t.noMatchesHelp} />
               )}
             </RowEntrance>
           )}
