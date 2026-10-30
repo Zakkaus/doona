@@ -69,7 +69,7 @@ export const runtimeOutbounds: RuntimeOutbounds = {
 // honk's latest upstream release as its /version reports it: the tag name and the tagged commit.
 export const version: Version = {
   api: {name: 'daeuniverse/native', major: 1, status: 'draft'},
-  engine: {name: 'honk', version: 'v0.0.1.beta.81'},
+  engine: {name: 'honk', version: 'v0.1.0-beta.4'},
   build: {revision: '697ac9ea5e82bc120ed942943fe0cafbdd7bf423', target: null, built_at: null}
 };
 export const runtime: Runtime = {
