@@ -37,7 +37,7 @@ import type {Node, Provider} from '../../../src/api/model';
 import {LiteError, readMain, readProviders, providerSnapshot, mainSnapshot, refreshProvider, type Connection} from './api';
 import {LocaleContext, useMessages} from './i18n';
 import {noticeText, useFocusRefresh, useRead, useTask} from './state';
-import {Feedback, ReadState, useNoticeToast} from './ui';
+import {DocsLink, Feedback, ReadOnlyNote, ReadState, useNoticeToast} from './ui';
 import {DateStamp} from './ui/DateStamp';
 import {StatusLabel} from './ui/StatusLabel';
 import {RowEntrance} from './ui/motion';
@@ -265,7 +265,7 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
       }
       content={
         <VStack gap={pageRhythm.section}>
-          {!writable && !config.loading && <Text color="secondary">{t.readOnly}</Text>}
+          {!writable && !config.loading && <ReadOnlyNote />}
 
           <ProbeFeedback probes={probes} />
           <ReadState error={read.error} reload={read.reload} />
@@ -320,6 +320,8 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                         : provider.node_count === 0
                           ? status.empty
                           : status[provider.status];
+                  // Why the last update failed; the rows still list the nodes of the update before it.
+                  const failure = state === status.error || state === status.stale ? provider.last_error?.message : undefined;
                   return (
                     <VStack as="li" key={provider.id} data-provider-id={provider.id} tabIndex={-1} className="lite-subscription-row">
                       <Grid className="lite-disclosure-grid" style={compact ? {gridTemplateColumns: 'minmax(0, 1fr) fit-content(50%)'} : undefined}>
@@ -359,6 +361,11 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                                     {subscriptionHost(entries.find(e => e.tag === provider.name)?.url)}
                                   </LoadingText>
                                   {provider.updated_at && <DateStamp plain relative value={provider.updated_at} loading={loading} />}
+                                  {failure && (
+                                    <LoadingText type="supporting" color="secondary" loading={loading} style={{overflowWrap: 'anywhere'}}>
+                                      {failure}
+                                    </LoadingText>
+                                  )}
                                   {!!entries.find(entry => entry.tag === provider.name)?.interval && (
                                     <LoadingText type="supporting" color="secondary" loading={loading}>
                                       {intervalSummary(entries.find(entry => entry.tag === provider.name)?.interval, t)}
@@ -387,6 +394,11 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                         >
                           {expanded.has(provider.id) && (
                             <Section variant="muted" padding={pageRhythm.inset}>
+                              {failure && (
+                                <VStack paddingBlockEnd={3}>
+                                  <DocsLink anchor="req-subscription-refresh" />
+                                </VStack>
+                              )}
                               <SubscriptionFeatureNodes
                                 loading={loading}
                                 addToGroup={writable && !draft.busy && task.busy === null ? setGroupNode : undefined}

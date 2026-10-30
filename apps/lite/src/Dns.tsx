@@ -21,7 +21,7 @@ import {RuleList} from './RuleList';
 import {dnsReview} from './ruleReview';
 import {useDraftBase, useFocusRefresh, useRead, useTask} from './state';
 import {codeEditorChunk} from './preload';
-import {Feedback, ReadState, useNoticeToast} from './ui';
+import {Feedback, ReadOnlyNote, ReadState, useNoticeToast} from './ui';
 import {DraftBar} from './ui/DraftBar';
 import {useDraftGuard} from './ui/draftGuard';
 import {Crossfade} from './ui/motion/Crossfade';
@@ -118,7 +118,7 @@ export function Dns({connection, setBusy}: {connection: Connection; setBusy: (bu
           {task.notice && 'error' in task.notice && !candidate && <Feedback notice={task.notice} />}
           {
             <>
-              {ready && !writable && <Text color="secondary">{t.readOnly}</Text>}
+              {ready && !writable && <ReadOnlyNote />}
               <VStack data-editor-content="dns">
                 <DnsUpstreams
                   loading={!ready && read.loading}

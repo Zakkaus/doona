@@ -631,10 +631,12 @@ export const en = {
   restartService: '3. Restart the service:',
   restartCommand: 'Restart command',
   restartDocs: 'Restart instructions for other systems',
+  docsLink: 'Documentation',
 
   probeUnsupported: 'Test unsupported',
   probeTimeout: 'Timed out',
   probeFailed: 'Test failed',
+  probeUnsupportedHelp: 'This backend cannot test latency for some nodes.',
   probeAvailable: '{answered} / {total} available',
   addNodeToGroup: 'Add to group…',
   addNodeToGroupTitle: 'Add to group',

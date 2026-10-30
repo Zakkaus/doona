@@ -8,6 +8,7 @@ import {DEMO_API, normalizeApi} from '../../../src/api/profiles';
 import {ApiError, LocalError} from '../../../src/api/error';
 import {sha256} from '../../../src/api/hash';
 import {activationError, etag, finished, readBackUnconfirmed, settle} from './operations';
+import type {DocsAnchor} from './docs';
 import type {MessageKey} from './i18n';
 import {validateContent} from './config';
 import {clearConnection, writeConnection} from './connectionStore';
@@ -16,7 +17,9 @@ export type Connection = {api: Api; capabilities: Capabilities; address: string}
 export class LiteError extends Error {
   constructor(
     public key: MessageKey,
-    public detail?: string
+    public detail?: string,
+    // The docs section that explains this failure, when it differs from the one its key links.
+    public docs?: DocsAnchor
   ) {
     super(key);
   }

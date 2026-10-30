@@ -631,10 +631,12 @@ export const zhCN: Messages = {
   restartService: '3. 重启服务：',
   restartCommand: '重启命令',
   restartDocs: '其他系统的重启方式',
+  docsLink: '说明文档',
 
   probeUnsupported: '不支持测试',
   probeTimeout: '超时',
   probeFailed: '测试失败',
+  probeUnsupportedHelp: '此后端无法测试部分节点的延迟。',
   probeAvailable: '{answered} / {total} 个可用',
   addNodeToGroup: '加入策略组…',
   addNodeToGroupTitle: '加入策略组',

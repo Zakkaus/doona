@@ -34,7 +34,7 @@ import {applyContent, configSnapshot, mainSnapshot, providerSnapshot, LiteError,
 import {appendEntry, canWrite, inspectLinks, linkInfo, nodeSnapshot, readNodePage, removeEntry, type ImportRow} from './config';
 import {useMessages} from './i18n';
 import {useFocusRefresh, useRead, useTask} from './state';
-import {ReadState, useNoticeToast} from './ui';
+import {ReadOnlyNote, ReadState, useNoticeToast} from './ui';
 import {EditDialog} from './ui/EditDialog';
 import {MEDIA} from './ui/metrics.stylex';
 import {RowEntrance} from './ui/motion';
@@ -417,7 +417,7 @@ export function Nodes({connection, setBusy}: {connection: Connection; setBusy: (
       }
       content={
         <VStack gap={pageRhythm.section}>
-          {!writable && read.data && <Text color="secondary">{t.readOnly}</Text>}
+          {!writable && read.data && <ReadOnlyNote />}
 
           <ReadState error={read.error} reload={read.reload} />
           <CollectionLoading loading={!ready && read.loading} name="nodes">
@@ -444,7 +444,7 @@ export function Nodes({connection, setBusy}: {connection: Connection; setBusy: (
                 (filtered.length ? nodeTable : <EmptyState title={search || protocol !== 'all' ? t.noMatches : t.emptyNodes} />)}
             </RowEntrance>
           </CollectionLoading>
-          <ProbeFeedback probes={probes} />
+          <ProbeFeedback probes={probes} nodes={filtered} />
         </VStack>
       }
     />

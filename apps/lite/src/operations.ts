@@ -26,7 +26,11 @@ export function finished<K extends Operation['kind']>(operation: OperationState,
     const activation = activationError(operation.error, {written});
     if (activation) throw activation;
   }
-  throw new LocalError(operation.status === 'failed' && (details?.written ?? written) ? 'ui.writtenNotApplied' : 'ui.operationFailed');
+  // The backend's reason travels as the detail, which the banner and the toast show under the message.
+  throw new LocalError(
+    operation.status === 'failed' && (details?.written ?? written) ? 'ui.writtenNotApplied' : 'ui.operationFailed',
+    (operation.status === 'failed' && operation.error?.message) || null
+  );
 }
 
 export function activationError(failure: unknown, {written = false} = {}): LocalError | null {

@@ -36,7 +36,7 @@ import {GroupTextDialog} from './GroupTextDialog';
 import {useMessages} from './i18n';
 import {readBackUnconfirmed} from './operations';
 import {useFocusRefresh, useRead, useTask} from './state';
-import {Feedback, ReadState, useNoticeToast} from './ui';
+import {Feedback, ReadOnlyNote, ReadState, useNoticeToast} from './ui';
 import {CollectionToolbar} from './ui/CollectionToolbar';
 import {usePageCommand, useSearchTarget} from './ui/commands';
 import {DraftBar} from './ui/DraftBar';
@@ -406,11 +406,7 @@ export function Groups({connection, setBusy}: {connection: Connection; setBusy: 
                 />
               }
             />
-            {!capabilities.resources.config.writable && (
-              <Text type="supporting" color="secondary">
-                {t.readOnly}
-              </Text>
-            )}
+            {!capabilities.resources.config.writable && <ReadOnlyNote type="supporting" />}
             <ReadState error={read.error ?? resources.error} reload={() => Promise.all([read.reload(), resources.reload()])} />
             {task.notice && 'error' in task.notice && <Feedback notice={task.notice} />}
             <CollectionLoading loading={!ready && (read.loading || resources.loading)} name="groups" prepared={expectedCount !== undefined}>

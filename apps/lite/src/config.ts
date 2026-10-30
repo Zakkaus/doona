@@ -58,7 +58,9 @@ export async function validateContent(connection: Connection, source: ConfigSour
       result.diagnostics
         .filter(item => item.level === 'error')
         .map(item => `${item.line ?? ''}: ${item.message}`)
-        .join('\n')
+        .join('\n'),
+      // honk's offline dependency codes: a file the configuration needs could not be read.
+      result.diagnostics.some(item => item.level === 'error' && item.code.includes('offline-dependency')) ? 'offline-dependency' : undefined
     );
   return result;
 }

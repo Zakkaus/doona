@@ -631,10 +631,12 @@ export const zhTW: Messages = {
   restartService: '3. 重新啟動服務：',
   restartCommand: '重新啟動指令',
   restartDocs: '其他系統的重新啟動方式',
+  docsLink: '說明文件',
 
   probeUnsupported: '不支援測試',
   probeTimeout: '逾時',
   probeFailed: '測試失敗',
+  probeUnsupportedHelp: '此後端無法測試部分節點的延遲。',
   probeAvailable: '{answered} / {total} 個可用',
   addNodeToGroup: '加入策略群組…',
   addNodeToGroupTitle: '加入策略群組',
