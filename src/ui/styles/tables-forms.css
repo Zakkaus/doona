@@ -85,7 +85,7 @@
   min-height: 0;
   padding-block: 0;
 }
-.rp-table [role='row'][data-selected] {
+.rp-table [role='row']:is([data-selected], [data-open]) {
   background: var(--rp-selected);
 }
 /* The sort arrow is one chevron that turns: ascending points up, descending down. */
@@ -132,7 +132,7 @@
 .rp-table [role='columnheader'][data-resizing] {
   color: var(--rp-text);
 }
-.rp-table [role='row'][data-hovered]:not([data-selected]) {
+.rp-table [role='row'][data-hovered]:not([data-selected], [data-open]) {
   background: var(--rp-fill);
 }
 .rp-table [role='rowheader'],

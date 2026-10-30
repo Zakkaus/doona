@@ -273,7 +273,7 @@
 :root[data-family='glass'] .rp-heatmap .cell.t0 {
   background: var(--rp-ctl);
 }
-:root[data-family='glass'] .rp-table [role='row'][data-hovered]:not([data-selected]) {
+:root[data-family='glass'] .rp-table [role='row'][data-hovered]:not([data-selected], [data-open]) {
   background: var(--rp-fill);
 }
 
