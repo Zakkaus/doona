@@ -4,7 +4,7 @@ English / [简体中文](install.zh-CN.md) / [繁體中文](install.zh-TW.md)
 
 doona is distributed as static web files. The current release is v0.1.0-rc.4; doona lite is a preview in testing.
 
-For installation, use the documentation site's [system requirements](https://doona.daeuniverse.org/en/requirements.html), [installation guide](https://doona.daeuniverse.org/en/install.html) and [doona lite guide](https://doona.daeuniverse.org/en/lite.html). Those pages cover backend setup, distribution-specific instructions and first sign-in. This page describes the files built by this repository. For current honk download names and attachment status, see [Matching honk builds](#matching-honk-builds).
+For installation, use the documentation site's [system requirements](https://doona.daeuniverse.org/en/requirements.html), [installation guide](https://doona.daeuniverse.org/en/install.html) and [doona lite guide](https://doona.daeuniverse.org/en/lite.html). Those pages cover backend setup, distribution-specific instructions and first sign-in. This page describes the files built by this repository. For where to download honk builds, see [Matching honk builds](#matching-honk-builds).
 
 ## Release archives
 
@@ -23,11 +23,9 @@ The precompressed archive contains copies of selected text assets at least 1 KiB
 
 ## Matching honk builds
 
-The standalone UI is published first. Matching honk builds and corresponding sources are attached afterward; check the [release notes and assets](https://github.com/Zakkaus/doona/releases/tag/v0.1.0-rc.4) for attachment status.
+honk's own releases carry the builds that embed doona: a full build serves this UI with `ui: embedded`, and `ui: embedded-lite` serves doona lite. The doona release notes name the matching honk release under Pairing with honk. Download the builds from that [honk release](https://github.com/daeuniverse/honk/releases); the doona release does not carry them.
 
-The full builds are named `honk-core-debug-<target>[-stock]-full.tar.gz`. Older releases omit `-full`, so use the current asset names when following older installation examples. The eight variants cover x86_64 and aarch64, musl and GNU, with mimalloc or the system allocator (`-stock`). Choose musl when unsure. When attached, these builds embed the matching doona version, served with `ui: embedded`.
-
-[tools/fetch-honk.mjs](../tools/fetch-honk.mjs) verifies the embedded version, revision and program SHA-256 against the published doona release. `HONK-SOURCE.txt` records the honk release and commit, embedded doona version and revision, program SHA-256, and corresponding sources. The source archives are `honk-source-<commit>.tar.gz` and `doona-source-<version>.tar.gz`.
+The full builds are named `honk-core-v<version>-<target>[-stock]-full.tar.gz`. The eight variants cover x86_64 and aarch64, musl and GNU, with mimalloc or the system allocator (`-stock`). Choose musl when unsure. Each honk release also carries `doona-source-<version>.tar.gz`, the corresponding source of the embedded UI.
 
 ## Package layout
 

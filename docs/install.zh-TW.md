@@ -4,7 +4,7 @@
 
 doona 以靜態網頁檔案發布。目前版本為 v0.1.0-rc.4；doona lite 是測試中的預覽版。
 
-安裝請參閱文件站的[系統需求](https://doona.daeuniverse.org/zh-TW/requirements.html)、[安裝指南](https://doona.daeuniverse.org/zh-TW/install.html)與 [doona lite 指南](https://doona.daeuniverse.org/zh-TW/lite.html)。這些頁面說明後端設定、各發行版的安裝步驟與首次登入。本頁說明本倉庫建置的檔案。目前 honk 下載檔名與附件狀態見[配套 honk 建置](#配套-honk-建置)。
+安裝請參閱文件站的[系統需求](https://doona.daeuniverse.org/zh-TW/requirements.html)、[安裝指南](https://doona.daeuniverse.org/zh-TW/install.html)與 [doona lite 指南](https://doona.daeuniverse.org/zh-TW/lite.html)。這些頁面說明後端設定、各發行版的安裝步驟與首次登入。本頁說明本倉庫建置的檔案。honk 建置的下載位置見[配套 honk 建置](#配套-honk-建置)。
 
 ## 發布封存檔
 
@@ -23,11 +23,9 @@ doona 以靜態網頁檔案發布。目前版本為 v0.1.0-rc.4；doona lite 是
 
 ## 配套 honk 建置
 
-獨立介面先發布，匹配的 honk 建置與對應原始碼隨後附加。附件是否已就緒，請查看[發布說明與附件](https://github.com/Zakkaus/doona/releases/tag/v0.1.0-rc.4)。
+內嵌 doona 的建置由 honk 自己的 release 提供：完整建置以 `ui: embedded` 提供本介面，`ui: embedded-lite` 則提供 doona lite。doona 發布說明的 Pairing with honk 一節列出配套的 honk 版本，請到該 [honk release](https://github.com/daeuniverse/honk/releases) 下載；doona 的 release 不附 honk 建置。
 
-完整建置的檔名為 `honk-core-debug-<target>[-stock]-full.tar.gz`。舊版本省略 `-full`，因此按舊安裝範例操作時，應使用目前附件名稱。八種建置涵蓋 x86_64 與 aarch64、musl 與 GNU，並分別使用 mimalloc 或系統記憶體配置器（`-stock`）。不確定時選擇 musl。附件就緒後，這些建置內嵌匹配的 doona 版本，透過 `ui: embedded` 提供介面。
-
-[tools/fetch-honk.mjs](../tools/fetch-honk.mjs) 核對內嵌介面的版本、原始碼修訂與程式 SHA-256，確保與已發布的 doona 版本一致。`HONK-SOURCE.txt` 記錄 honk 的發布版本與提交、內嵌 doona 的版本與修訂、程式 SHA-256 及對應原始碼。原始碼封存檔為 `honk-source-<commit>.tar.gz` 與 `doona-source-<version>.tar.gz`。
+完整建置的檔名為 `honk-core-v<version>-<target>[-stock]-full.tar.gz`。八種建置涵蓋 x86_64 與 aarch64、musl 與 GNU，並分別使用 mimalloc 或系統記憶體配置器（`-stock`）。不確定時選擇 musl。每個 honk release 也附有 `doona-source-<version>.tar.gz`，即內嵌介面的對應原始碼。
 
 ## 套件布局
 
