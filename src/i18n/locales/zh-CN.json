@@ -1827,6 +1827,7 @@
   "shell.reloadEngine": "重载 honk",
   "shell.reloadHelp": "honk 会重新读取配置文件并重载。暂存的规则不会写入。",
   "shell.reloadTitle": "重载 honk？",
+  "shell.report": "报告问题",
   "shell.search": "搜索页面、连接、节点、组、节点来源和配置文件",
   "shell.searchUnavailable": "无法打开搜索：搜索功能加载失败。",
   "shell.shortcut": "Ctrl K",

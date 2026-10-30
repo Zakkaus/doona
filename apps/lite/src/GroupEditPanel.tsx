@@ -321,9 +321,7 @@ export function GroupEditPanel({
             onChange={value => stage(writeGroupEntry(content, name, {policy: entry.policy, filters: value ? [] : [EMPTY_GROUP_FILTER]}))}
             isDisabled={!editable}
           />
-          {!before && !allNodes && chosen.length === 0 && (
-            <Banner status="info" title={sheet ? t.nextStepSheet : t.nextStep} collapsible={false} data-next-step />
-          )}
+          {!allNodes && chosen.length === 0 && <Banner status="info" title={sheet ? t.nextStepSheet : t.nextStep} collapsible={false} data-next-step />}
           <VStack gap={0} xstyle={styles.box}>
             <Pair gap={0}>
               <VStack gap={0} role="group" aria-labelledby="group-members" data-transfer="members" xstyle={styles.panel}>

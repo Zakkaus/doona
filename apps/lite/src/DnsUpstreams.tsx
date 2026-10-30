@@ -1,6 +1,7 @@
 import {useProgressiveRows} from './ui/useProgressiveRows';
 import {CollectionLoading, RowPlaceholder} from './ui/CollectionLoading';
 import {Button} from '@astryxdesign/core/Button';
+import {EmptyState} from '@astryxdesign/core/EmptyState';
 import {VStack} from '@astryxdesign/core/Layout';
 import {Link} from '@astryxdesign/core/Link';
 import {List, ListItem} from '@astryxdesign/core/List';
@@ -220,7 +221,9 @@ export function DnsUpstreams({
               ))}
             </List>
           </CollectionLoading>
-          {!fields.length && <Text color="secondary">{t.noUpstreams}</Text>}
+          {!loading && blocks.length <= 1 && !fields.length && (
+            <EmptyState isCompact title={t.noUpstreams} description={disabled ? t.readOnly : t.noUpstreamsHelp} />
+          )}
         </VStack>
       </RowEntrance>
     </>

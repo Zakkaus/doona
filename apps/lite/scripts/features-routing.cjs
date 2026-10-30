@@ -233,7 +233,8 @@ async function download(p, action) {
     }
     await p.locator('[data-backend-status]').click();
     await shot(p, 'status-export');
-    await expect(p.getByRole('menuitem').last()).toHaveText(l.export);
+    // About follows the backend actions; export stays the last of them.
+    expect((await p.getByRole('menuitem').allTextContents()).map(text => text.trim()).at(-2)).toBe(l.export);
     expect(await download(p, () => p.getByRole('menuitem', {name: l.export, exact: true}).click())).toBe(content);
     await p.getByRole('button', {name: l.add, exact: true}).click();
     const form = p.getByRole('dialog');

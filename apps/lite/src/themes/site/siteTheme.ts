@@ -1,5 +1,5 @@
-// Based on Astryx's site theme, with the console's typography and duck accent.
-import {defineTheme, type TokenValue} from '@astryxdesign/core/theme';
+// Based on Astryx's site theme, with the console's typography and neutral controls.
+import {colorDefaults, defineTheme, type TokenValue} from '@astryxdesign/core/theme';
 import {appIconRegistry, cjkFallbacks, systemMono, panelScale, panelShared} from '../shared';
 
 const PRIMARY = 'light-dark(#15110C, #DFE2E5)';
@@ -53,6 +53,7 @@ export const siteTheme = defineTheme({
     '--radius-container': '16px',
     '--radius-page': '32px',
     ...panelShared.tokens,
+    '--focus-outline-color': colorDefaults['--color-accent'],
     ...customTokens
   },
   typography: {

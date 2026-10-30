@@ -141,8 +141,11 @@ test('language, theme and palette are each two taps away in the overflow menu', 
   await expect(top.getByRole('button', {name: 'Reload honk'})).toBeHidden();
   for (const name of ['Language', 'Palette']) await expect(top.getByRole('button', {name, exact: true})).toBeHidden();
   const more = top.getByRole('button', {name: 'More options'});
-  const rect = await box(more);
-  expect(rect.x + rect.width).toBeGreaterThan((await box(top)).width - 24);
+  const report = top.getByRole('link', {name: 'Report a problem', exact: true});
+  await expect(report).toHaveText('');
+  const [moreRect, reportRect, firstRect] = [await box(more), await box(report), await box(top.locator('.rp-actions button:visible').first())];
+  expect(moreRect.x + moreRect.width).toBeGreaterThan((await box(top)).width - 24);
+  expect(reportRect.x + reportRect.width).toBeLessThanOrEqual(firstRect.x);
   // The menu is three short rows, each naming its current value, then Reload honk and the Backend row; a row opens its
   // choices in the same popover.
   await more.click();
@@ -708,7 +711,7 @@ const pressCases: {name: string; width: number; route: string; target: string; l
     layer: '.rp-hubbar-pill',
     shape: '.rp-hubbar > [aria-current] .rp-hubbar-pill'
   },
-  {name: 'menu item', width: 390, route: 'overview', open: '.rp-top .rp-btn.icon[aria-haspopup]', target: '[role=menuitem].rp-item'},
+  {name: 'menu item', width: 390, route: 'overview', open: '.rp-top button[aria-label="More options"]', target: '[role=menuitem].rp-item'},
   {name: 'list row', width: 390, route: 'connections?tab=list', target: '.rp-table [role=row][data-react-aria-pressable]'},
   {name: 'picker', width: 390, route: 'settings', target: '.rp-selectbtn:not([disabled])'}
 ];

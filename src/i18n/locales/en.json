@@ -2037,6 +2037,7 @@
   "shell.reloadEngine": "Reload honk",
   "shell.reloadHelp": "honk reads its config files again and reloads. Held rules are not written.",
   "shell.reloadTitle": "Reload honk?",
+  "shell.report": "Report a problem",
   "shell.search": "Search pages, connections, nodes, groups, node sources and config files",
   "shell.searchUnavailable": "Could not open search: it did not load.",
   "shell.shortcut": "Ctrl K",

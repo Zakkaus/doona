@@ -1,8 +1,9 @@
 import type {ComponentPropsWithRef} from 'react';
-import {Link as RLink, composeRenderProps} from 'react-aria-components';
+import {Link as RLink, TooltipTrigger, composeRenderProps} from 'react-aria-components';
 import {cx} from './cx';
 import {useControlSize} from './controlSize';
 import {buttonClass, type ButtonStyle} from './Button';
+import {Tip} from './Tooltip';
 
 // Navigation with an address: a real link, so it can be opened in a tab or copied, in text or button dress.
 // The button style applies only with `appearance="button"`.
@@ -11,6 +12,7 @@ export function Link({
   layout,
   appearance,
   label,
+  tip,
   className,
   quiet,
   secondary,
@@ -26,10 +28,11 @@ export function Link({
     appearance?: 'button' | 'version' | 'link';
     layout?: 'inline' | 'constrained';
     label?: string;
+    tip?: string;
   }) {
   const base = appearance === 'button' ? buttonClass({quiet, secondary, small, icon, accent, negative}) : `rp-${appearance}`;
   const controlSize = useControlSize(size);
-  return (
+  const link = (
     <RLink
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
@@ -39,6 +42,14 @@ export function Link({
       {...props}
       className={appearance ? composeRenderProps(className, value => cx(base, value)) : className}
     />
+  );
+  return tip ? (
+    <TooltipTrigger delay={400}>
+      {link}
+      <Tip>{tip}</Tip>
+    </TooltipTrigger>
+  ) : (
+    link
   );
 }
 

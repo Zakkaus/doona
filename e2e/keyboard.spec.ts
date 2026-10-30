@@ -210,7 +210,7 @@ test('charts are named and icon buttons show their tooltip on keyboard focus', a
   }
   await page.locator('.rp-search').focus();
   await page.keyboard.press('Tab');
-  await expect(page.locator('.rp-actions button[aria-label]:focus')).toHaveCount(1);
+  await expect(page.locator('.rp-actions :is(a, button)[aria-label]:focus')).toHaveCount(1);
   await expect(page.getByRole('tooltip')).toBeVisible();
 });
 
