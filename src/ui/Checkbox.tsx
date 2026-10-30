@@ -10,13 +10,15 @@ export function Checkbox({
   description,
   isSelected,
   onChange,
-  isDisabled
+  isDisabled,
+  slot
 }: {
-  label: string;
+  label?: string;
   description?: string;
-  isSelected: boolean;
-  onChange: (selected: boolean) => void;
+  isSelected?: boolean;
+  onChange?: (selected: boolean) => void;
   isDisabled?: boolean;
+  slot?: 'selection';
 }) {
   const labelId = useId();
   const descriptionId = useId();
@@ -24,23 +26,26 @@ export function Checkbox({
   return (
     <RCheckbox
       className="rp-radio rp-checkbox"
+      slot={slot}
       isSelected={isSelected}
       onChange={onChange}
       isDisabled={form.isDisabled}
-      aria-labelledby={labelId}
+      aria-labelledby={label ? labelId : undefined}
       aria-describedby={description ? descriptionId : undefined}
     >
       <span className="rp-checkbox-mark">
         <Checkmark />
       </span>
-      <span className="rp-radio-text">
-        <span id={labelId}>{label}</span>
-        {description && (
-          <span id={descriptionId} className="rp-note">
-            {description}
-          </span>
-        )}
-      </span>
+      {label && (
+        <span className="rp-radio-text">
+          <span id={labelId}>{label}</span>
+          {description && (
+            <span id={descriptionId} className="rp-note">
+              {description}
+            </span>
+          )}
+        </span>
+      )}
     </RCheckbox>
   );
 }

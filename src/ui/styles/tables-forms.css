@@ -80,6 +80,11 @@
   z-index: 1;
   outline: none;
 }
+/* The select-all box sits on the header line, without the form control height. */
+.rp-table [role='columnheader'] .rp-radio {
+  min-height: 0;
+  padding-block: 0;
+}
 .rp-table [role='row'][data-selected] {
   background: var(--rp-selected);
 }

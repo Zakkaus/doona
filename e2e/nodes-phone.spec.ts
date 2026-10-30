@@ -53,8 +53,7 @@ for (const width of [320, 360, 390])
         await expect(content.locator('.rp-table-pan')).toHaveCount(0);
         for (const table of await tables.all()) {
           const grid = table.locator('[role=grid]');
-          const primary = grid.getByRole('columnheader').nth(1);
-          await expect(primary).toHaveAttribute('data-key', /count|latency/);
+          const primary = grid.locator('[role=columnheader][data-key="count"], [role=columnheader][data-key="latency"]');
           const fits = (header: typeof primary) =>
             header.evaluate(el => {
               const box = el.getBoundingClientRect();

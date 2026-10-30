@@ -1,6 +1,6 @@
 import {href} from '../../shell/route';
 import {useCallback, useMemo, useState} from 'react';
-import {useFilter} from 'react-aria-components';
+import {useFilter, type Selection} from 'react-aria-components';
 import {useT, useLang, LOCALE, formatNumber} from '../../i18n';
 import type {Node, Provider} from '../../api/model';
 import type {ProbeOptions} from '../../store/probeOptions';
@@ -29,6 +29,7 @@ type NodeTableInput = {
   // Which source the table shows and how to change it, where there is more than one; `scopePending` while the sources
   // are on their way, when the line is held for it.
   scope: string | null;
+  scopeKey: string;
   scopePending?: boolean;
   multiple: boolean;
   query: string | null;
@@ -45,6 +46,7 @@ type NodeTableInput = {
   onAdd: () => void;
   onNewGroup: (node: Node) => void;
   onRemove: (node: Node) => void;
+  onRemoveSelected: (nodes: Node[], onRemoved: (id: string) => void) => void;
   // Whether the node's declaring source rules out removing it here.
   inInclude: (node: Node) => boolean;
   edit: (node: Node) => (() => void) | null;
@@ -135,9 +137,42 @@ export function useNodeTable(input: NodeTableInput) {
   );
   const cache = useMemo(() => ({build, rows: new WeakMap<Node, NodeTableView['rows'][number]>()}), [build]);
   const rows = useMemo(() => cachedRows(cache.rows, members, cache.build), [cache, members]);
-  const probeable = useMemo(() => members.filter(node => choices(node).length > 0), [members, choices]);
+  const visible = useMemo(() => new Set(rows.map(row => row.id)), [rows]);
+  // Selection belongs to the visible filter and source, never to rows hidden by a later navigation.
+  const selectionScope = JSON.stringify([input.scopeKey, input.nodeIds, search, activeGroup, activeProtocol]);
+  const [selected, setSelected] = useState({scope: selectionScope, keys: new Set<string>()});
+  const selectedKeys = useMemo(
+    () => new Set(selected.scope === selectionScope ? [...selected.keys].filter(id => visible.has(id)) : []),
+    [selected, selectionScope, visible]
+  );
+  if (selected.scope !== selectionScope || selected.keys.size !== selectedKeys.size) setSelected({scope: selectionScope, keys: selectedKeys});
+  const probeable = useMemo(
+    () => members.filter(node => (!selectedKeys.size || selectedKeys.has(node.id)) && choices(node).length > 0),
+    [members, choices, selectedKeys]
+  );
+  const removable = new Set(rows.filter(row => selectedKeys.has(row.id) && row.removable && !row.removeReason).map(row => row.id));
+  const clearSelection = () => setSelected({scope: selectionScope, keys: new Set<string>()});
+  const onSelectionChange = (keys: Selection) =>
+    setSelected({scope: selectionScope, keys: keys === 'all' ? new Set(rows.map(row => row.id)) : (keys as Set<string>)});
+  const removeSelected = () => {
+    if (!canManage || input.busy || !removable.size) return;
+    input.onRemoveSelected(
+      members.filter(node => removable.has(node.id)),
+      id =>
+        setSelected(previous => {
+          if (!previous.keys.has(id)) return previous;
+          const keys = new Set(previous.keys);
+          keys.delete(id);
+          return {...previous, keys};
+        })
+    );
+  };
   return {
     rows,
+    selection: {keys: selectedKeys, onChange: onSelectionChange},
+    clearSelection,
+    removeSelected,
+    deleteSelectedLabel: canManage && removable.size ? t('nodes.deleteSelected', {n: removable.size}) : null,
     probeBusy,
     testAll: () => {
       if (probeBusy || !probeable.length) return;
@@ -151,7 +186,12 @@ export function useNodeTable(input: NodeTableInput) {
         });
     },
     cancelTest: probe.cancel,
-    testLabel: probeBusy === '*' ? t('nodes.testingBatch', {n: progress.done, total: progress.total}) : t('nodes.testAll'),
+    testLabel:
+      probeBusy === '*'
+        ? t('nodes.testingBatch', {n: progress.done, total: progress.total})
+        : selectedKeys.size
+          ? t('nodes.testSelected', {n: selectedKeys.size})
+          : t('policy.probeAll'),
     testReason: probeBusy ? t('nodes.testBusy') : !members.length ? t('nodes.noMatch') : !probeable.length ? t('nodes.testNone') : null,
     probeOptions: probeTarget
       ? {
@@ -202,6 +242,10 @@ export function useNodeTable(input: NodeTableInput) {
   };
 }
 export type NodeTableView = {
+  selection: {keys: Set<string>; onChange: (keys: Selection) => void};
+  clearSelection: () => void;
+  removeSelected: () => void;
+  deleteSelectedLabel: string | null;
   rows: Array<{
     id: string;
     name: string;

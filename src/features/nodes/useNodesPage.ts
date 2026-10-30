@@ -56,6 +56,7 @@ type NodeDialog =
   | {kind: 'editNode'; source: ConfigSource; entry: NodeEntry}
   | {kind: 'removeProvider'; item: Provider}
   | {kind: 'removeNode'; item: Node}
+  | {kind: 'removeNodes'; items: Node[]; onRemoved: (id: string) => void}
   | SubscriptionEdit;
 
 export function runSubscriptionAction(query: string, action: {run: () => void} | null) {
@@ -105,6 +106,7 @@ export function useNodesPage({go, query}: PageProps) {
       session.next();
       setForm(blank);
       setBatchErrors([]);
+      setBatchProgress(null);
       setRefusedName(null);
       setRefusedLink(null);
       setHeaders(null);
@@ -130,7 +132,11 @@ export function useNodesPage({go, query}: PageProps) {
     refetchNodes();
     refetchConfig();
   }, [refetchProviders, refetchNodes, refetchConfig]);
-  const manage = useNodeManage(reload);
+  const removingBatch = useRef(false);
+  const manageReload = useCallback(() => {
+    if (!removingBatch.current) reload();
+  }, [reload]);
+  const manage = useNodeManage(manageReload);
   const refreshing = useProviderRefresh(reload);
   const refreshAll = useRefreshAll(providers, refreshing);
   const source = useMainSourceEdit();
@@ -199,6 +205,19 @@ export function useNodesPage({go, query}: PageProps) {
   const joinable = useMemo(() => joinableGroups(sources, isComplete, () => source.busy), [sources, isComplete, source.busy]);
   const nodeInInclude = useCallback((node: Node) => declaredInInclude(authored.filter(item => item.entry.name === node.name)), [authored]);
   const providerInInclude = useCallback((item: ProviderRow) => declaredInInclude(item.sourceTag ? (declared.get(item.sourceTag) ?? []) : []), [declared]);
+  const removableNodes = useMemo(() => {
+    const inline = new Set((providers.data?.providers ?? []).filter(item => item.kind === 'inline').map(item => item.id));
+    return new Map(
+      (resources?.nodes.can_manage ? (nodeList ?? []) : [])
+        .filter(node => typeof node.provider_id === 'string' && inline.has(node.provider_id) && !nodeInInclude(node))
+        .map(node => [node.id, node])
+    );
+  }, [providers.data, resources?.nodes.can_manage, nodeList, nodeInInclude]);
+  const currentRemovable = useRef(removableNodes);
+  useLayoutEffect(() => {
+    currentRemovable.current = removableNodes;
+  }, [removableNodes]);
+  const removeNodes = dialog?.kind === 'removeNodes' ? dialog.items.flatMap(item => removableNodes.get(item.id) ?? []) : [];
   const entries = useMemo(() => [...declared.values()].filter(items => items.length === 1).map(items => items[0].entry), [declared]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodeList ?? [], entries, t), [providers.data, nodeList, entries, t]);
   const params = useMemo(() => new URLSearchParams(query), [query]);
@@ -266,6 +285,7 @@ export function useNodesPage({go, query}: PageProps) {
     [go, t]
   );
   const removeNode = useCallback((item: Node) => open({kind: 'removeNode', item}), [open]);
+  const removeSelectedNodes = useCallback((items: Node[], onRemoved: (id: string) => void) => open({kind: 'removeNodes', items, onRemoved}), [open]);
   // The query while this page is shown, null once it is left, so a late result can tell whether the person moved on.
   const shown = useRef<string | null>(query);
   useLayoutEffect(() => {
@@ -396,6 +416,45 @@ export function useNodesPage({go, query}: PageProps) {
         if (result.kind !== 'ok') return;
         refetchProviders();
         toast('positive', t('nodes.edited', {name: tag}));
+      } else if (dialog.kind === 'removeNodes') {
+        const remaining = new Map(removeNodes.map(node => [node.id, node]));
+        const errors: string[] = [];
+        const removed: string[] = [];
+        removingBatch.current = true;
+        try {
+          for (const [index, item] of removeNodes.entries()) {
+            if (!isCurrent() || shown.current === null) break;
+            const node = currentRemovable.current.get(item.id);
+            if (!node) {
+              remaining.delete(item.id);
+              dialog.onRemoved(item.id);
+              continue;
+            }
+            setBatchProgress(t('nodes.deleteSelected', {n: `${index + 1}/${removeNodes.length}`}));
+            try {
+              if (!(await manage.removeNode(node.id))) break;
+              removed.push(node.name);
+              remaining.delete(node.id);
+              dialog.onRemoved(node.id);
+            } catch (error) {
+              errors.push(`${node.name}: ${errorText(error, t)}`);
+            }
+          }
+        } finally {
+          removingBatch.current = false;
+          reload();
+        }
+        // The dialog lists failures while it is open; a toast carries them once it was closed.
+        const lines = [...(removed.length ? [t('nodes.removed', {name: formatList(lang, removed)})] : []), ...(isCurrent() ? [] : errors)];
+        if (lines.length) toast(errors.length ? 'warning' : 'positive', lines.join('\n'));
+        if (isCurrent()) {
+          setBatchErrors(errors);
+          if (!remaining.size) {
+            guard.clear();
+            close();
+          } else setDialog({...dialog, items: [...remaining.values()]});
+        }
+        return;
       } else if (dialog.kind === 'removeProvider') {
         if (blockers.length || checkingRemoval) return;
         if (!(await manage.removeProvider(dialog.item.id))) return;
@@ -418,7 +477,7 @@ export function useNodesPage({go, query}: PageProps) {
       setBatchProgress(null);
     }
   };
-  const removing = dialog?.kind === 'removeProvider' || dialog?.kind === 'removeNode';
+  const removing = dialog?.kind === 'removeProvider' || dialog?.kind === 'removeNode' || dialog?.kind === 'removeNodes';
   const dialogTitle =
     dialog === null
       ? ''
@@ -430,7 +489,9 @@ export function useNodesPage({go, query}: PageProps) {
             ? t('nodes.editNodeTitle', {name: dialog.entry.name})
             : dialog.kind === 'editProvider'
               ? t('nodes.editProviderTitle', {name: dialog.entry.tag})
-              : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
+              : dialog.kind === 'removeNodes'
+                ? t('nodes.deleteSelected', {n: removeNodes.length})
+                : t(dialog.kind === 'removeProvider' ? 'nodes.removeProviderTitle' : 'nodes.removeNodeTitle', {name: dialog.item.name});
   const agentKey = agentProblem(form.agent, false);
   const agentError = agentKey && t(agentKey);
   const intervalKey = intervalProblem(form.interval);
@@ -473,7 +534,9 @@ export function useNodesPage({go, query}: PageProps) {
               !nodeNameError &&
               !linkError &&
               !headerError
-            : true;
+            : dialog?.kind === 'removeNodes'
+              ? removeNodes.length > 0
+              : true;
   const subscription: SubscriptionDraft = {name: form.name, url: form.value, interval: form.interval, agent: form.agent, cache: form.cache, route: form.route};
   // A new subscription shows each option the backend lists, with its default preselected or as the placeholder; an
   // edit writes the options in the declaring source.
@@ -519,6 +582,7 @@ export function useNodesPage({go, query}: PageProps) {
     loading: nodes.loading && !nodes.data,
     label: provider ? t('nodes.of', {name: provider.displayName ?? provider.name}) : t('nav.nodes'),
     scope: provider && list.length > 1 ? t('nodes.scope', {name: provider.displayName ?? provider.name}) : null,
+    scopeKey: selectedId ?? '',
     scopePending: providers.loading && !providers.data,
     multiple: list.length > 1,
     query: params.get('q'),
@@ -535,12 +599,13 @@ export function useNodesPage({go, query}: PageProps) {
     source,
     joinable,
     canManage: !!resources?.nodes.can_manage,
-    busy: !!manage.busy,
+    busy: !!manage.busy || pendingDialog?.kind === 'removeNodes',
     reload: refetchNodes,
     joinGroup: joinExistingGroup,
     onAdd: addNode,
     onNewGroup: newGroup,
     onRemove: removeNode,
+    onRemoveSelected: removeSelectedNodes,
     inInclude: nodeInInclude,
     edit: nodeEdit
   });
@@ -571,6 +636,7 @@ export function useNodesPage({go, query}: PageProps) {
     form,
     batch,
     batchErrors,
+    removeNodes,
     setForm: (next: typeof form) => {
       if (submitting.current !== dialog) setForm(next);
     },
@@ -607,7 +673,9 @@ export function useNodesPage({go, query}: PageProps) {
     submitLabel:
       batchProgress ??
       (removing
-        ? t('nodes.remove', {name: dialog.item.name})
+        ? dialog.kind === 'removeNodes'
+          ? t('nodes.deleteSelected', {n: removeNodes.length})
+          : t('nodes.remove', {name: dialog.item.name})
         : dialog?.kind === 'editProvider' || dialog?.kind === 'editNode'
           ? t('policy.save')
           : t('nodes.add')),
