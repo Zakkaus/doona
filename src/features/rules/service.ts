@@ -51,6 +51,13 @@ function references(expression: string, kind: 'geosite' | 'geoip', code: string)
   return false;
 }
 
+// Categories that catch a whole region. dae takes the first match, so a service rule added below one of them never
+// matches; serviceRules places new rules above the first one.
+const regionalCategories = {
+  geosite: ['gfw', 'greatfire', 'cn', 'geolocation-cn', 'geolocation-!cn', 'tld-cn', 'tld-!cn'],
+  geoip: ['cn', '!cn']
+} as const;
+
 const telegramDns = /\bqname\s*\([^)]*geosite\s*:\s*["']?telegram["']?\s*[,)]/i;
 
 export function serviceRules({sources, rules, dnsRules, selected, outbound, steamCn, preset, held = []}: ServiceInput): ServiceRules {
@@ -60,11 +67,21 @@ export function serviceRules({sources, rules, dnsRules, selected, outbound, stea
   if (!fallback || !source || !outbound) return result;
   const scan = scanConfig(source.content);
   result.refusal = false;
-  // First match wins, so a game service must sit above a listed all-games rule in the same source, or that rule would still take its traffic.
-  const allGames = rules.find(
-    rule =>
-      rule.kind === 'rule' && rule.source?.source_id === source.id && ruleWritable(rule, sources) && references(rule.expression, 'geosite', 'category-games')
-  );
+  // First match wins, so a service goes above the first regional catch-all in the fallback's source, and a game also
+  // above an all-games rule; rules above it, such as ad and private-range rules, keep their place.
+  type Category = ['geosite' | 'geoip', string];
+  const regional = Object.entries(regionalCategories).flatMap(([kind, codes]) => codes.map((code): Category => [kind as Category[0], code]));
+  const firstBroad = (codes: Category[]) =>
+    rules.find(
+      rule =>
+        rule.kind === 'rule' &&
+        rule.source?.source_id === source.id &&
+        rule.source.line < fallback.source!.line &&
+        ruleWritable(rule, sources) &&
+        codes.some(([kind, code]) => references(rule.expression, kind, code))
+    ) ?? fallback;
+  const regionAnchor = firstBroad(regional);
+  const gameAnchor = firstBroad([...regional, ['geosite', 'category-games']]);
   const games = serviceSections.find(section => section.id === 'games')!.services.map(service => service.code as string);
   let anchor = fallback;
   const add = (condition: string, target: string) => {
@@ -96,7 +113,7 @@ export function serviceRules({sources, rules, dnsRules, selected, outbound, stea
       continue;
     }
     if (!selected.includes(code)) continue;
-    anchor = allGames && code !== 'category-games' && games.includes(code) ? allGames : fallback;
+    anchor = games.includes(code) ? gameAnchor : regionAnchor;
     if (
       code === 'steam' &&
       steamCn &&
