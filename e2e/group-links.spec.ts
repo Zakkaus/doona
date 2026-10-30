@@ -28,7 +28,8 @@ for (const keyboard of [false, true]) {
     if (keyboard) {
       const row = link.locator('xpath=ancestor::tr');
       await row.focus();
-      for (let index = 0; index < 4; index++) await page.keyboard.press('ArrowRight');
+      // The checkbox cell comes first, then the node, protocol and latency.
+      for (let index = 0; index < 5; index++) await page.keyboard.press('ArrowRight');
       await expect(link).toBeFocused();
       await page.keyboard.press('Enter');
     } else await link.click({position: {x: 3, y: 3}});

@@ -48,6 +48,7 @@ export function Nodes(props: PageProps) {
     batch,
     batchErrors,
     setForm,
+    removeNodes,
     setNodeLink,
     xhttp,
     headerDuplicates,
@@ -243,12 +244,28 @@ export function Nodes(props: PageProps) {
         onCancel={() => setDialog(null)}
         confirmLabel={submitLabel}
         isPending={pending}
-        isDisabled={submitting || checkingRemoval}
+        isDisabled={submitting || checkingRemoval || !formValid}
         dismissOnly={!!referenced}
         error={problem}
+        scrollBody={dialog?.kind === 'removeNodes'}
         onConfirm={() => void submit(() => setDialog(null))}
       >
         {blocked ?? <p className="rp-label">{t(dialog?.kind === 'removeProvider' ? 'nodes.removeProviderHelp' : 'nodes.removeNodeHelp')}</p>}
+        {dialog?.kind === 'removeNodes' && (
+          <>
+            <ul>
+              {removeNodes.map(node => (
+                <li key={node.id}>{node.name}</li>
+              ))}
+            </ul>
+            {pending && <p role="status">{submitLabel}</p>}
+            {batchErrors.map((error, index) => (
+              <p key={index} className="rp-field-error">
+                {error}
+              </p>
+            ))}
+          </>
+        )}
       </ConfirmDialog>
     </div>
   );

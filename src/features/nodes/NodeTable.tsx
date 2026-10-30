@@ -74,7 +74,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
       {
         id: 'name',
         label: t('nodes.node'),
-        minWidth: 150,
+        minWidth: phone && canManage ? 100 : 150,
         grow: 2,
         isRowHeader: true,
         sortable: true,
@@ -240,6 +240,12 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
           <span aria-live="polite">{m.testLabel}</span>
         </Button>
         {m.probeBusy === '*' && <Button onPress={m.cancelTest}>{t('ui.cancel')}</Button>}
+        {m.selection.keys.size > 0 && <Button onPress={m.clearSelection}>{t('ui.clear')}</Button>}
+        {m.deleteSelectedLabel && (
+          <Button negative onPress={m.removeSelected} isDisabled={m.busy}>
+            {m.deleteSelectedLabel}
+          </Button>
+        )}
         {m.canManage && <Button onPress={m.onAdd}>{t('nodes.addNode')}</Button>}
       </Toolbar>
       <ProbeBusy.Provider value={m.probeBusy}>
@@ -247,6 +253,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
           label={m.label}
           loading={m.loading}
           rows={m.rows}
+          selection={m.selection}
           height={520}
           empty={m.empty}
           sort={m.sort}

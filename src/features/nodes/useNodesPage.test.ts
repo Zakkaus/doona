@@ -1,13 +1,24 @@
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 import {replaceRoute} from '../../shell/route';
-import type {ConfigSource, Node} from '../../api/model';
+import type {ConfigSource, Node, Provider} from '../../api/model';
 import {toast} from '../../ui/ui';
 import {deferred, hookHarness} from '../../store/testHelpers';
+import {formatList, translate} from '../../i18n';
 import {subscriptionActionKind} from './view';
 import {runSubscriptionAction, useNodesPage} from './useNodesPage';
 
 const {capabilities, version} = await vi.hoisted(() => import('../../../mock/fixtures'));
-const store = vi.hoisted(() => ({addNode: null as unknown as (input: unknown) => Promise<Node | null>}));
+const store = vi.hoisted(() => ({
+  addNode: null as unknown as (input: unknown) => Promise<Node | null>,
+  removeNode: vi.fn<(id: string) => Promise<unknown>>(),
+  nodes: [] as Node[],
+  providers: [] as Provider[],
+  sources: [] as ConfigSource[],
+  refetchNodes: vi.fn(),
+  refetchProviders: vi.fn(),
+  refetchConfig: vi.fn(),
+  deselect: vi.fn()
+}));
 vi.mock('react', async original => ({
   ...(await original<typeof import('react')>()),
   // The route mock below loads React before this file's static imports are initialized.
@@ -17,15 +28,26 @@ vi.mock('react', async original => ({
 }));
 vi.mock('../../store', async () => ({
   useCapabilities: () => ({data: capabilities}),
-  useNodeManage: () => ({addNode: (input: unknown) => store.addNode(input), busy: false}),
-  useNodes: () => ({data: [], refetch: () => undefined, loading: false, error: null}),
+  useNodeManage: (reload: () => void) => ({
+    addNode: (input: unknown) => store.addNode(input),
+    removeNode: (id: string) =>
+      store.removeNode(id).then(result => {
+        reload();
+        return result;
+      }),
+    busy: false
+  }),
+  useNodes: () => ({data: store.nodes, refetch: store.refetchNodes, loading: false, error: null}),
   useSteadyNodes: (data: unknown) => data,
-  useProviders: () => ({data: {providers: []}, refetch: () => undefined, loading: false, error: null}),
+  useProviders: () => ({data: {providers: store.providers}, refetch: store.refetchProviders, loading: false, error: null}),
   useOutboundNames: () => [],
   useProviderRefresh: () => ({refresh: vi.fn()}),
   useVersion: () => ({data: version})
 }));
-vi.mock('../../store/config', () => ({useCompleteness: () => () => true, useConfig: () => ({data: undefined, loading: false})}));
+vi.mock('../../store/config', () => ({
+  useCompleteness: () => () => true,
+  useConfig: () => ({data: {sources: store.sources}, refetch: store.refetchConfig, loading: false})
+}));
 vi.mock('../../store/mainSource', async original => ({
   ...(await original<typeof import('../../store/mainSource')>()),
   useMainSourceEdit: () => ({writable: false, busy: false, apply: vi.fn()})
@@ -74,7 +96,13 @@ it.each([true, false])('waits for source validation before consuming a subscript
 });
 
 const read = () => hookHarness.render(() => useNodesPage({go: vi.fn(), query: ''}));
-beforeEach(() => hookHarness.reset());
+beforeEach(() => {
+  hookHarness.reset();
+  store.nodes = [];
+  store.providers = [];
+  store.sources = [];
+  store.removeNode.mockReset();
+});
 afterEach(() => vi.clearAllMocks());
 
 // A request sent from one opening of the dialog settles after the person closed it or opened another: its success
@@ -205,4 +233,88 @@ it('stops a batch after closing its dialog without sending the next line', async
   expect(store.addNode).toHaveBeenCalledTimes(1);
   expect(read().form.value).toBe('');
   expect(read().batchErrors).toEqual([]);
+});
+
+it('deletes selected nodes sequentially, names failures and retries only the failed remainder with one reload per batch', async () => {
+  store.nodes = ['first', 'second', 'third'].map(name => ({id: name, name, provider_id: 'inline', group_ids: []}) as unknown as Node);
+  store.providers = [{id: 'inline', kind: 'inline', name: 'inline'}] as Provider[];
+  const first = deferred<unknown>();
+  store.removeNode.mockReturnValueOnce(first.promise).mockRejectedValueOnce(new Error('backend refused')).mockResolvedValue(true);
+  read().setDialog({kind: 'removeNodes', items: store.nodes, onRemoved: store.deselect});
+  expect(read().dialogTitle).toBe('Remove selected (3)');
+  const close = vi.fn();
+  const sent = read().submit(close);
+  expect(store.removeNode).toHaveBeenCalledExactlyOnceWith('first');
+  expect(read().submitLabel).toBe('Remove selected (1/3)');
+  await read().submit(close);
+  expect(store.removeNode).toHaveBeenCalledOnce();
+  expect(store.refetchNodes).not.toHaveBeenCalled();
+  first.resolve(true);
+  await sent;
+  expect(store.removeNode.mock.calls).toEqual([['first'], ['second'], ['third']]);
+  expect(store.deselect.mock.calls).toEqual([['first'], ['third']]);
+  expect(read().batchErrors).toEqual(['second: backend refused']);
+  expect(read().removeNodes.map(node => node.id)).toEqual(['second']);
+  expect(read().submitLabel).toBe('Remove selected (1)');
+  expect(close).not.toHaveBeenCalled();
+  expect(toast).toHaveBeenCalledExactlyOnceWith('warning', translate('en', 'nodes.removed', {name: formatList('en', ['first', 'third'])}));
+  expect(store.refetchNodes).toHaveBeenCalledOnce();
+  expect(store.refetchProviders).toHaveBeenCalledOnce();
+  expect(store.refetchConfig).toHaveBeenCalledOnce();
+  await read().submit(close);
+  expect(store.removeNode.mock.calls).toEqual([['first'], ['second'], ['third'], ['second']]);
+  expect(store.deselect.mock.calls).toEqual([['first'], ['third'], ['second']]);
+  expect(close).toHaveBeenCalledOnce();
+  expect(store.refetchNodes).toHaveBeenCalledTimes(2);
+  expect(store.refetchProviders).toHaveBeenCalledTimes(2);
+  expect(store.refetchConfig).toHaveBeenCalledTimes(2);
+});
+it('stops starting node deletes after closing the dialog and reloads once when the pending request settles', async () => {
+  store.nodes = ['first', 'second'].map(name => ({id: name, name, provider_id: 'inline', group_ids: []}) as unknown as Node);
+  store.providers = [{id: 'inline', kind: 'inline', name: 'inline'}] as Provider[];
+  const first = deferred<unknown>();
+  store.removeNode.mockReturnValueOnce(first.promise);
+  read().setDialog({kind: 'removeNodes', items: store.nodes, onRemoved: store.deselect});
+  const close = vi.fn();
+  const sent = read().submit(close);
+  read().setDialog(null);
+  read().addNode!();
+  first.resolve(true);
+  await sent;
+  expect(store.removeNode).toHaveBeenCalledExactlyOnceWith('first');
+  expect(store.deselect).toHaveBeenCalledExactlyOnceWith('first');
+  expect(store.refetchNodes).toHaveBeenCalledOnce();
+  expect(store.refetchProviders).toHaveBeenCalledOnce();
+  expect(store.refetchConfig).toHaveBeenCalledOnce();
+  expect(close).not.toHaveBeenCalled();
+  expect(read().dialog?.kind).toBe('node');
+  expect(read().batchErrors).toEqual([]);
+  expect(read().pending).toBe(false);
+});
+
+it('refuses a protected-only selection and filters protected nodes from a mixed removal dialog', async () => {
+  const manual = {id: 'manual', name: 'manual', provider_id: 'inline', group_ids: []} as unknown as Node;
+  const protectedNode = {...manual, id: 'subscription', name: 'subscription', provider_id: 'subscription'};
+  const included = {...manual, id: 'included', name: 'included'};
+  store.sources = [{id: 'include', kind: 'include', content: "node { included: 'vless://demo@example.com:443#included' }"}] as ConfigSource[];
+  store.nodes = [manual, protectedNode, included];
+  store.providers = [
+    {id: 'inline', kind: 'inline', name: 'inline'},
+    {id: 'subscription', kind: 'subscription', name: 'subscription'}
+  ] as Provider[];
+  store.removeNode.mockResolvedValue(true);
+  read().setDialog({kind: 'removeNodes', items: [protectedNode, included], onRemoved: store.deselect});
+  expect(read().removeNodes).toEqual([]);
+  expect(read().formValid).toBe(false);
+  await read().submit(vi.fn());
+  expect(store.removeNode).not.toHaveBeenCalled();
+  read().setDialog({kind: 'removeNodes', items: store.nodes, onRemoved: store.deselect});
+  expect(read().removeNodes).toEqual([manual]);
+  expect(read().dialogTitle).toBe('Remove selected (1)');
+  expect(read().formValid).toBe(true);
+  const close = vi.fn();
+  await read().submit(close);
+  expect(store.removeNode).toHaveBeenCalledExactlyOnceWith(manual.id);
+  expect(store.deselect).toHaveBeenCalledExactlyOnceWith(manual.id);
+  expect(close).toHaveBeenCalledOnce();
 });

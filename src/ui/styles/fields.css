@@ -242,7 +242,7 @@
 .rp-checkbox[data-hovered] .rp-checkbox-mark {
   border-color: var(--rp-text);
 }
-.rp-checkbox[data-selected] .rp-checkbox-mark {
+.rp-checkbox:is([data-selected], [data-indeterminate]) .rp-checkbox-mark {
   border-color: var(--rp-accent);
   background: var(--rp-accent);
 }
