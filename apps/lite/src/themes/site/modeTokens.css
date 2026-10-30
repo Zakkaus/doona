@@ -27,10 +27,10 @@
       --lite-editor-button-pressed-end: light-dark(#d0d3d6, var(--color-background-muted));
       --lite-editor-button-border: light-dark(#888, var(--color-border-emphasized));
 
-      /* Monochrome brand artwork and the public demo badge retain fixed colours. */
+      /* The brand artwork and the public demo badge keep fixed colours; the beak and feet match the standard logo. */
       --lite-brand-outline: #0b0a09;
       --lite-brand-body: #fff;
-      --lite-brand-detail: #a1a1a1;
+      --lite-brand-detail: #fd0;
       --lite-demo-background: rgb(0 0 0 / 72%);
       --lite-demo-foreground: #fff;
     }
