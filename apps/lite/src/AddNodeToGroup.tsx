@@ -1,3 +1,6 @@
+import {Button} from '@astryxdesign/core/Button';
+import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
+import {HStack, Layout, LayoutContent, LayoutFooter, VStack} from '@astryxdesign/core/Layout';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
 import {RadioList, RadioListItem} from '@astryxdesign/core/RadioList';
 import {Text} from '@astryxdesign/core/Text';
@@ -34,6 +37,43 @@ export function AddNodeToGroup({
   const contains = (entry: (typeof groups)[number]) => compileFilters(entry.filters)(node);
   const chosen = groups.find(entry => entry.name === selected);
   const filtered = groups.filter(entry => entry.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
+  if (!groups.length || groups.every(contains)) {
+    return (
+      <Dialog isOpen onOpenChange={open => !open && close()} width={480} maxHeight="85dvh">
+        <Layout
+          header={<DialogHeader title={t.addNodeToGroupTitle} onOpenChange={close} />}
+          content={
+            <LayoutContent>
+              <VStack gap={4}>
+                <Text>{node.name || node.id}</Text>
+                <EmptyState
+                  title={groups.length ? t.groupGuidanceAllContained : t.noEditableGroups}
+                  description={groups.length ? t.groupGuidanceAllContainedHelp : t.groupGuidanceNoEditable}
+                />
+              </VStack>
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter>
+              <HStack gap={2} justify="end" wrap="wrap">
+                <Button label={t.close} variant="secondary" onClick={close} />
+                {!groups.length && (
+                  <Button
+                    label={t.groupGuidanceCreate}
+                    variant="primary"
+                    onClick={() => {
+                      close();
+                      location.hash = 'groups';
+                    }}
+                  />
+                )}
+              </HStack>
+            </LayoutFooter>
+          }
+        />
+      </Dialog>
+    );
+  }
   return (
     <EditDialog
       title={t.addNodeToGroupTitle}
@@ -75,7 +115,7 @@ export function AddNodeToGroup({
           ))}
         </RadioList>
       </RowEntrance>
-      {!filtered.length && <EmptyState title={groups.length ? t.noMatches : t.noEditableGroups} />}
+      {!filtered.length && <EmptyState title={t.noMatches} description={t.noMatchesHelp} />}
     </EditDialog>
   );
 }
