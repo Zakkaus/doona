@@ -1,17 +1,19 @@
 import {Banner} from '@astryxdesign/core/Banner';
 import {Collapsible} from '@astryxdesign/core/Collapsible';
-import {VStack} from '@astryxdesign/core/Layout';
+import {HStack, VStack} from '@astryxdesign/core/Layout';
 import {Link} from '@astryxdesign/core/Link';
 import {NumberInput} from '@astryxdesign/core/NumberInput';
 import {Selector} from '@astryxdesign/core/Selector';
 import {Heading, Text} from '@astryxdesign/core/Text';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import {useCallback, useEffect, useRef, useState} from 'react';
+import {ApiError} from '../../../src/api/error';
 import {LiteError, type Connection} from './api';
 import {describeRule, describeTarget, phraseText} from './describe';
 import {useMessages} from './i18n';
 import {parseRuleList} from './ruleDraft';
 import {matchedRule, runRoutingTest, sourceRule, testInput, type RoutingTestResult} from './routingTest';
+import {DocsLink} from './ui';
 import {EditDialog} from './ui/EditDialog';
 import {numberPageStep} from './ui/numberPageStep';
 
@@ -70,7 +72,12 @@ export function RuleTester({
     try {
       setResult(await runRoutingTest(connection, testInput(address, port, network)));
     } catch (error) {
-      setError(error instanceof LiteError ? error : new LiteError('testFailed'));
+      // An input error stands alone; a trace the backend cannot run or refused keeps its reason and links what a test needs.
+      setError(
+        error instanceof LiteError && error.key !== 'unsupported'
+          ? error
+          : new LiteError(error instanceof LiteError ? error.key : 'testFailed', error instanceof ApiError ? error.message : undefined, 'req-routing-trace')
+      );
     } finally {
       setPending(false);
     }
@@ -167,7 +174,12 @@ export function RuleTester({
                     ) : (
                       <Text>{t.testRuleUnavailable}</Text>
                     ))}
-                  {!determinate && <Text>{t.testMissingConditions}</Text>}
+                  {!determinate && (
+                    <HStack gap={2} wrap="wrap" vAlign="center">
+                      <Text>{t.testMissingConditions}</Text>
+                      <DocsLink anchor="req-routing-trace" />
+                    </HStack>
+                  )}
                   {determinate && rule?.kind === 'rule' && index >= 0 && (
                     <Link
                       href="#routing"

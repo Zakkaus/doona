@@ -31,7 +31,7 @@ import {canWrite, validateContent} from './config';
 import {localeNames, useMessages, type MessageKey} from './i18n';
 import {docsHref} from './docs';
 import {useRead, useTask} from './state';
-import {Feedback, ReadState, useNoticeToast} from './ui';
+import {Feedback, ReadOnlyNote, ReadState, useNoticeToast} from './ui';
 import {ReviewBody} from './ui/ReviewDialog';
 import {CheckmarkCircle, Copy, FileText, Lighten, Link, Settings, SpeedFast, Translate, Visibility} from './ui/icons';
 import {geometry, MEDIA} from './ui/metrics.stylex';
@@ -277,7 +277,7 @@ export function SettingsDialog({
             </Card>
           ) : (
             <>
-              {!writable && !read.loading && <Text color="secondary">{t.readOnly}</Text>}
+              {!writable && !read.loading && <ReadOnlyNote />}
               {[false, true].map(restart => {
                 const list = honkGlobal.fields.filter(f => fieldPanel(f.key, f.group ?? '') === active && restartOnly.has(f.key) === restart);
                 if (!list.length) return null;

@@ -8,6 +8,7 @@ import {Activity, lazy, memo, startTransition, Suspense, useEffect, useMemo, use
 import type {Connection} from './api';
 import {PreferencesContext, type Mode} from './app/preferences';
 import {Connect} from './Connect';
+import type {DocsAnchor} from './docs';
 import {catalogs, LocaleContext, type Locale} from './i18n';
 import {commandsChunk, settingsChunk, pageChunks, warmGlyphsDuringIdle} from './preload';
 import {Shell, type Screen} from './Shell';
@@ -18,6 +19,7 @@ import {EditDialog} from './ui/EditDialog';
 import {PageFrame} from './ui/PageFrame';
 import {browserLocale, isTyping, shortcuts} from './ui/shortcuts';
 import {ToastViewport} from './ui/ToastViewport';
+import {DocsLink} from './ui';
 import {usePageMotion} from './ui/usePageMotion';
 const Demo = import.meta.env.VITE_LITE_DEMO === '1' ? lazy(() => import('./Demo')) : null;
 const Groups = lazy(() => pageChunks.groups().then(module => ({default: memo(module.Groups)})));
@@ -222,7 +224,11 @@ export default function App() {
                                 {page === 'dns' && <Dns connection={connection} setBusy={setBusy} />}
                               </Suspense>
                             ) : (
-                              <UnavailablePage title={t[page]} message={t.unsupported} />
+                              <UnavailablePage
+                                title={t[page]}
+                                message={t.unsupported}
+                                docs={resource === 'config' ? 'req-config-edit' : resource === 'groups' ? 'req-group-selection' : 'req-nodes'}
+                              />
                             )}
                           </Activity>
                         );
@@ -275,7 +281,7 @@ export default function App() {
   );
 }
 
-function UnavailablePage({title, message}: {title: string; message: string}) {
+function UnavailablePage({title, message, docs}: {title: string; message: string; docs: DocsAnchor}) {
   const ready = true;
   const motion = usePageMotion(ready);
   return (
@@ -290,8 +296,9 @@ function UnavailablePage({title, message}: {title: string; message: string}) {
       }
       content={
         <LayoutContent className="lite-page-content">
-          <VStack ref={motion.body}>
+          <VStack ref={motion.body} gap={2}>
             <Text>{message}</Text>
+            <DocsLink anchor={docs} />
           </VStack>
         </LayoutContent>
       }

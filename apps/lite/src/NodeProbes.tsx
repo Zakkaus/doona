@@ -1,11 +1,12 @@
 import {Button} from '@astryxdesign/core/Button';
 import {HStack} from '@astryxdesign/core/Stack';
+import {Text} from '@astryxdesign/core/Text';
 import {LoadingText} from './ui/LoadingText';
 import {useEffect, useMemo, useSyncExternalStore} from 'react';
 import type {Node} from '../../../src/api/model';
 import type {Connection} from './api';
 import {useMessages} from './i18n';
-import {Feedback} from './ui';
+import {DocsLink, Feedback} from './ui';
 import {StatusDot} from '@astryxdesign/core/StatusDot';
 import {createNodeProbes} from './nodeProbeState';
 
@@ -54,7 +55,20 @@ export function NodeProbeButton({probes, nodes, disabled}: {probes: NodeProbes; 
     />
   );
 }
-export function ProbeFeedback({probes}: {probes: NodeProbes}) {
+// A failed run keeps its cause; nodes shown as untestable get a line saying why, from the listed nodes or the last runs.
+export function ProbeFeedback({probes, nodes}: {probes: NodeProbes; nodes?: Node[]}) {
+  const t = useMessages();
   useProbeUpdates(probes);
-  return probes.error ? <Feedback notice={{error: probes.error}} /> : null;
+  const unsupported = nodes ? nodes.some(node => !probes.supports(node)) : [...probes.summaries.values()].some(summary => summary.unsupported > 0);
+  return (
+    <>
+      {!!probes.error && <Feedback notice={{error: probes.error}} docs="req-probes" />}
+      {unsupported && (
+        <HStack gap={2} wrap="wrap" vAlign="center">
+          <Text color="secondary">{t.probeUnsupportedHelp}</Text>
+          <DocsLink anchor="req-probes" />
+        </HStack>
+      )}
+    </>
+  );
 }

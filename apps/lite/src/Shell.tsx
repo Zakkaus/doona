@@ -16,12 +16,13 @@ import {Text} from '@astryxdesign/core/Text';
 import {Tooltip} from '@astryxdesign/core/Tooltip';
 import {useMediaQuery} from '@astryxdesign/core/hooks';
 import {useCallback, useContext, useRef, useState, type ComponentProps, type ReactNode} from 'react';
-import type {Connection} from './api';
+import {errorKey, type Connection} from './api';
+import {docsHref} from './docs';
 import {DraftContext} from './ui/draftGuard';
 import {ExportDraftContext, type ExportDraft} from './ui/exportDraft';
 import {useConfigExport} from './ConfigExport';
 import {pageChunks} from './preload';
-import {useMessages} from './i18n';
+import {LocaleContext, useMessages} from './i18n';
 import {finished, settle} from './operations';
 import {useRead, useTask} from './state';
 import {useNoticeToast} from './ui';
@@ -155,6 +156,15 @@ function ShellContent({
         : state
           ? states[state]
           : 'connected';
+  // What the status leaves out: the failed read, the failed reload or the engine's degradations.
+  const cause = runtime.error
+    ? t[errorKey(runtime.error)]
+    : statusKey === 'reloadFailed'
+      ? runtime.data?.last_reload?.error?.message
+      : statusKey === 'backendDegraded' || statusKey === 'shellFailed'
+        ? runtime.data?.degradations?.map(item => item.message).join('\n')
+        : undefined;
+  const troubled = ['shellDisconnected', 'reloadFailed', 'backendDegraded', 'shellFailed'].includes(statusKey);
   const statusTone =
     busy || state === 'reloading'
       ? 'accent'
@@ -193,6 +203,8 @@ function ShellContent({
                 address={connection.address === 'mock' ? t.demoName : connection.address}
                 label={runtime.loading && !runtime.data && !busy ? t.loading : t[statusKey]}
                 tone={statusTone}
+                cause={cause}
+                docs={troubled}
                 actions={actions}
                 pending={task.busy !== null || runtime.loading}
               />
@@ -264,16 +276,21 @@ function BackendStatus({
   address,
   label,
   tone,
+  cause,
+  docs,
   actions,
   pending
 }: {
   address: string;
   label: string;
   tone: ComponentProps<typeof StatusDot>['variant'];
+  cause?: string;
+  docs: boolean;
   actions: Array<{label: string; onClick: () => void}>;
   pending: boolean;
 }) {
   const t = useMessages();
+  const locale = useContext(LocaleContext);
   const {isCollapsed} = useSideNavCollapse();
   const status = (
     <VStack gap={0} align="start">
@@ -316,10 +333,22 @@ function BackendStatus({
         )
       }
     >
-      <DropdownMenuGroup title={status}>
+      <DropdownMenuGroup
+        title={
+          <VStack gap={1} align="start">
+            {status}
+            {cause && (
+              <Text type="supporting" color="secondary" style={{whiteSpace: 'pre-line', overflowWrap: 'anywhere'}}>
+                {cause}
+              </Text>
+            )}
+          </VStack>
+        }
+      >
         {actions.map(action => (
           <DropdownMenuItem key={action.label} {...action} />
         ))}
+        {docs && <DropdownMenuItem label={t.docsLink} href={docsHref(locale, 'no-native-api')} target="_blank" />}
       </DropdownMenuGroup>
     </DropdownMenu>
   );

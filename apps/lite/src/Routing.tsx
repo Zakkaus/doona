@@ -24,7 +24,7 @@ import {useExportDraft} from './ui/exportDraft';
 import {RuleList} from './RuleList';
 import {ruleReview} from './ruleReview';
 import {useDraftBase, useFocusRefresh, useRead, useTask} from './state';
-import {Feedback, ReadState, useNoticeToast} from './ui';
+import {Feedback, ReadOnlyNote, ReadState, useNoticeToast} from './ui';
 import {hasPendingRuleCommand, requestPageCommand, useCommand} from './ui/commands';
 import {DraftBar} from './ui/DraftBar';
 import {useDraftGuard} from './ui/draftGuard';
@@ -206,7 +206,7 @@ export function Routing({connection, setBusy}: {connection: Connection; setBusy:
                   <Heading level={2}>{t.mode}</Heading>
                 </VStack>
                 <VStack gap={pageRhythm.section}>
-                  {ready && !writable && <Text>{t.readOnly}</Text>}
+                  {ready && !writable && <ReadOnlyNote />}
                   <RowEntrance>
                     <Grid
                       ref={group}
