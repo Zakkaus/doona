@@ -72,8 +72,8 @@ it('writes every byte and byte-rate unit the same in English and Chinese', () =>
 it('writes a byte fraction with a shared unit once and keeps differing units on each side', () => {
   const cases: Array<[Lang, string, string, string, string]> = [
     ['en', '70 / 268 MB', '461 GB / 1.1 TB', '— / 268 MB', '70 MB / —'],
-    ['zh-TW', '70／268 MB', '461 GB／1.1 TB', '—／268 MB', '70 MB／—'],
-    ['zh-CN', '70／268 MB', '461 GB／1.1 TB', '—／268 MB', '70 MB／—']
+    ['zh-TW', '70/268 MB', '461 GB/1.1 TB', '—/268 MB', '70 MB/—'],
+    ['zh-CN', '70/268 MB', '461 GB/1.1 TB', '—/268 MB', '70 MB/—']
   ];
   for (const [lang, same, differing, noPart, noWhole] of cases) {
     const t: Translator = (key, params) => translate(lang, key, params);

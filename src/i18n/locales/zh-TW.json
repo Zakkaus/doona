@@ -1977,7 +1977,7 @@
   "ui.filterOutbounds": "篩選出站",
   "ui.filterPositions": "篩選位置",
   "ui.filterRules": "篩選規則",
-  "ui.fraction": "{part}／{whole}",
+  "ui.fraction": "{part}/{whole}",
   "ui.generation": "世代",
   "ui.generationHelp": "每次重新載入組態都會產生新的世代。",
   "ui.group": "群組",
