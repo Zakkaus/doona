@@ -26,6 +26,7 @@ import {honkGlobal} from '../../../src/api/engines/honkSettings';
 import {serializeSetting, settingValue, writeSettings} from '../../../src/dae/settings';
 import {blockFields, scanConfig} from '../../../src/dae/text';
 import {copyText} from '../../../src/features/shared/copy';
+import {AboutPanel} from './AboutPanel';
 import {applyContent, readMain, type Connection} from './api';
 import {usePreferences} from './app/preferences';
 import {canWrite, validateContent} from './config';
@@ -34,7 +35,7 @@ import {docsHref} from './docs';
 import {useRead, useTask} from './state';
 import {Feedback, ReadOnlyNote, ReadState, useNoticeToast} from './ui';
 import {ReviewBody} from './ui/ReviewDialog';
-import {CheckmarkCircle, Copy, FileText, Lighten, Link, Settings, SpeedFast, Translate, Visibility} from './ui/icons';
+import {CheckmarkCircle, Copy, FileText, InfoCircle, Lighten, Link, Settings, SpeedFast, Translate, Visibility} from './ui/icons';
 import {geometry, MEDIA} from './ui/metrics.stylex';
 import {Crossfade, RowEntrance} from './ui/motion';
 import {RowTooltip as Tooltip} from './ui/RowTooltip';
@@ -76,7 +77,7 @@ const restartOnly = new Set([
   'store_subscribe',
   'nfqueue_enable'
 ]);
-const panels = ['general', 'networkSettings', 'sniffing', 'healthCheck', 'bandwidth', 'storage', 'appearance', 'language'] as const;
+const panels = ['general', 'networkSettings', 'sniffing', 'healthCheck', 'bandwidth', 'storage', 'appearance', 'language', 'about'] as const;
 type Panel = (typeof panels)[number];
 const panelIcons = {
   general: Settings,
@@ -86,7 +87,8 @@ const panelIcons = {
   bandwidth: SpeedFast,
   storage: FileText,
   appearance: Lighten,
-  language: Translate
+  language: Translate,
+  about: InfoCircle
 } satisfies Record<Panel, unknown>;
 function fieldPanel(key: string, group: string): Panel {
   if (key === 'sniffing_timeout') return 'sniffing';
@@ -203,7 +205,7 @@ export function SettingsDialog({
   const heading = (
     <VStack gap={0.5}>
       <Heading level={2}>{candidate ? t.reviewConfig : t[active]}</Heading>
-      {!candidate && (
+      {!candidate && active !== 'about' && (
         <Text type="supporting" color="secondary">
           {['appearance', 'language'].includes(active) ? t.preferencesImmediate : t.globalSettingsDescription}
         </Text>
@@ -419,6 +421,7 @@ export function SettingsDialog({
       )}
     </>
   );
+  const panelBody = active === 'about' && !candidate ? <AboutPanel connection={connection} /> : body;
   const closeButton = <IconButton label={t.close} variant="ghost" size="sm" icon={<Icon icon="close" size="sm" />} isDisabled={pending} onClick={dismiss} />;
   return (
     <Dialog
@@ -484,7 +487,7 @@ export function SettingsDialog({
                   >
                     {heading}
                     <Crossfade swapKey={candidate ? 'review' : active} gap={4}>
-                      {body}
+                      {panelBody}
                     </Crossfade>
                   </VStack>
                 </StackItem>
@@ -534,7 +537,7 @@ export function SettingsDialog({
                     <VStack aria-hidden="true" width={32} />
                   </HStack>
                   <Crossfade swapKey={candidate ? 'review' : active} gap={4}>
-                    {body}
+                    {panelBody}
                   </Crossfade>
                 </VStack>
               </LayoutContent>

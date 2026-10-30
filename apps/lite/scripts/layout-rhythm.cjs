@@ -71,18 +71,19 @@ async function controls(p) {
     }
   }
 }
-async function aboutDialog(p, locale) {
-  await p.locator('[data-backend-status]').click();
-  await p.getByRole('menuitem', {name: locale === 'en' ? 'About doona' : '关于 doona', exact: true}).click();
+async function aboutPanel(p, locale) {
+  await p.getByRole('button', {name: locale === 'en' ? 'Settings' : '设置', exact: true}).click();
   const dialog = p.getByRole('dialog');
-  await expect(dialog).toBeVisible();
-  // Opening focuses the dialog's own close control, never a link inside it.
+  await dialog.getByRole('button', {name: locale === 'en' ? 'About' : '关于', exact: true}).click();
+  const panel = dialog.locator('.lite-dialog-content');
+  await expect(panel.getByRole('heading', {name: 'doona lite', exact: true})).toBeVisible();
+  // Selecting the section keeps focus on its navigation item, never a link inside the panel.
   await expect.poll(() => p.evaluate(() => document.activeElement?.tagName)).not.toBe('A');
   // The report button lives in the sidebar footer, not here.
-  await expect(dialog.getByRole('link')).toHaveCount(3);
+  await expect(panel.getByRole('link')).toHaveCount(3);
   const hrefs = [`https://doona.daeuniverse.org/${locale}/`, 'https://github.com/Zakkaus/doona', 'https://github.com/Zakkaus/doona/releases'];
   for (const [index, href] of hrefs.entries()) {
-    const link = dialog.getByRole('link').nth(index);
+    const link = panel.getByRole('link').nth(index);
     await expect(link).toHaveAttribute('href', href);
     await expect(link).toHaveAttribute('target', '_blank');
     await expect(link).toHaveAttribute('rel', /noopener noreferrer/);
@@ -353,7 +354,7 @@ async function subscriptionActionInset(p) {
         );
         await p.goto(base);
         await waitForDemo(p);
-        if (width === 1440) await aboutDialog(p, locale);
+        if (width === 1440) await aboutPanel(p, locale);
         const rhythm = [];
         for (const route of routes) {
           await p.evaluate(route => (location.hash = route), route);

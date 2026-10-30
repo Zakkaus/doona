@@ -103,14 +103,14 @@ async function demo(browser, width, theme) {
         const tabs = dialog.getByRole('tablist', {name: '设置分类'});
         const general = tabs.getByRole('tab', {name: '常规', exact: true});
         const network = tabs.getByRole('tab', {name: '网络', exact: true});
-        const language = tabs.getByRole('tab', {name: '语言', exact: true});
+        const about = tabs.getByRole('tab', {name: '关于', exact: true});
         await expect(general).toHaveAttribute('aria-selected', 'true');
         await general.focus();
         await page.keyboard.press('End');
-        await expect(language).toBeFocused();
-        await expect(language).toBeInViewport({ratio: 1});
+        await expect(about).toBeFocused();
+        await expect(about).toBeInViewport({ratio: 1});
         await page.keyboard.press('Enter');
-        await expect(dialog.getByRole('tabpanel', {name: '语言'})).toBeVisible();
+        await expect(dialog.getByRole('tabpanel', {name: '关于'})).toBeVisible();
         await page.keyboard.press('Home');
         await expect(general).toBeFocused();
         await page.keyboard.press('ArrowRight');

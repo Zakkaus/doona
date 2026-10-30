@@ -15,7 +15,7 @@ import {StatusDot} from '@astryxdesign/core/StatusDot';
 import {Text} from '@astryxdesign/core/Text';
 import {Tooltip} from '@astryxdesign/core/Tooltip';
 import {useMediaQuery} from '@astryxdesign/core/hooks';
-import {lazy, Suspense, useCallback, useContext, useRef, useState, type ComponentProps, type ReactNode} from 'react';
+import {useCallback, useContext, useRef, useState, type ComponentProps, type ReactNode} from 'react';
 import {errorKey, type Connection} from './api';
 import {docsHref} from './docs';
 import {DraftContext} from './ui/draftGuard';
@@ -31,8 +31,6 @@ import {EditDialog} from './ui/EditDialog';
 import {useCommand} from './ui/commands';
 import {GlobeGrid, Layers, Link, Location, Path, Search, Settings} from './ui/icons';
 import {ReportShortcut} from './ui/ReportShortcut';
-
-const AboutDialog = lazy(() => import('./AboutDialog').then(module => ({default: module.AboutDialog})));
 
 export type Screen = 'nodes' | 'groups' | 'subscriptions' | 'routing' | 'dns';
 const sections = [
@@ -111,7 +109,6 @@ function ShellContent({
   const task = useTask(setBusy);
   useNoticeToast(task.notice);
   const [pauseOpen, setPauseOpen] = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
   const resources = connection.capabilities.resources;
   const applicable = (kind: 'suspend' | 'resume' | 'reload') =>
     resources.operations.available &&
@@ -144,7 +141,6 @@ function ShellContent({
     onClick: () => (kind === 'suspend' ? setPauseOpen(true) : act(kind))
   }));
   if (resources.config.available && !busy && !exporter.pending) actions.push({label: t.exportConfig, onClick: exporter.start});
-  actions.push({label: t.about, onClick: () => setAboutOpen(true)});
   useCommand(command => {
     const kind = command.replace('backend:', '');
     if (command.startsWith('backend:') && ['suspend', 'resume', 'reload'].includes(kind) && applicable(kind as 'suspend' | 'resume' | 'reload')) {
@@ -249,11 +245,6 @@ function ShellContent({
     >
       <DraftContext value={trackDirty}>{children}</DraftContext>
       {exporter.dialog}
-      {aboutOpen && (
-        <Suspense fallback={null}>
-          <AboutDialog connection={connection} close={() => setAboutOpen(false)} />
-        </Suspense>
-      )}
       <EditDialog
         open={pauseOpen}
         title={t.pauseBackend}
