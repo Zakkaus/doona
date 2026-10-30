@@ -22,7 +22,7 @@ type ServiceInput = {
 };
 export type ServiceRules = {
   rules: HeldRule[];
-  skipped: {service: string; rule?: RoutingRule; held?: true; missing?: string[]}[];
+  skipped: {service: string; rule?: RoutingRule; held?: HeldRule; missing?: string[]; covered?: true}[];
   dnsSkipped: boolean;
   refusal: boolean;
 };
@@ -83,6 +83,11 @@ export function serviceRules({sources, rules, dnsRules, selected, outbound, stea
   const regionAnchor = firstBroad(regional);
   const gameAnchor = firstBroad([...regional, ['geosite', 'category-games']]);
   const games = serviceSections.find(section => section.id === 'games')!.services.map(service => service.code as string);
+  const heldRouting = held.filter(item => item.list === 'routing');
+  const gamesOutbound = (
+    rules.find(rule => rule.kind === 'rule' && references(rule.expression, 'geosite', 'category-games')) ??
+    heldRouting.find(item => references(item.condition, 'geosite', 'category-games'))
+  )?.outbound;
   let anchor = fallback;
   const add = (condition: string, target: string) => {
     result.rules.push({sourceId: source.id, list: 'routing', before: anchor, condition, outbound: target, must: false});
@@ -97,12 +102,11 @@ export function serviceRules({sources, rules, dnsRules, selected, outbound, stea
       result.skipped.push({service: code, rule: existing});
       continue;
     }
-    if (
-      held.some(
-        item => item.list === 'routing' && (references(item.condition, 'geosite', code) || (code === 'telegram' && references(item.condition, 'geoip', code)))
-      )
-    ) {
-      result.skipped.push({service: code, held: true});
+    const heldRule = heldRouting.find(
+      item => references(item.condition, 'geosite', code) || (code === 'telegram' && references(item.condition, 'geoip', code))
+    );
+    if (heldRule) {
+      result.skipped.push({service: code, held: heldRule});
       continue;
     }
     const required = {geosite: [code], geoip: code === 'telegram' ? [code] : []};
@@ -110,6 +114,11 @@ export function serviceRules({sources, rules, dnsRules, selected, outbound, stea
     const missing = missingCategories(preset ?? null, required);
     if (missing) {
       result.skipped.push({service: code, missing: geodataKinds.flatMap(kind => (missing[kind] ?? []).map(value => `${kind}:${value}`))});
+      continue;
+    }
+    // A game that an all-games rule already sends to the chosen outbound needs no rule of its own.
+    if (code !== 'category-games' && games.includes(code) && gamesOutbound !== undefined && unquote(gamesOutbound) === unquote(outbound)) {
+      result.skipped.push({service: code, covered: true});
       continue;
     }
     if (!selected.includes(code)) continue;

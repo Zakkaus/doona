@@ -3,6 +3,7 @@ import {offered} from '../../api/capabilities';
 import {outboundLabel} from '../../api/selectors';
 import {useT} from '../../i18n';
 import {matchPreset} from '../../dae/geodata';
+import {unquote} from '../../dae/text';
 import {isBuiltinOutbound} from '../../dae/vocab';
 import {serviceSections} from '../../dae/templates';
 import {within} from '../../shell/route';
@@ -118,11 +119,14 @@ export function useServiceRules({go, query}: PageProps): ServiceRulesModel {
     label: t(sectionLabels[section.id]),
     items: section.services.map(service => {
       const skipped = draft.skipped.find(item => item.service === service.code);
+      const existing = skipped && (skipped.rule ?? skipped.held);
       return {
         id: service.code,
         label: service.code === 'category-games' ? t('rule.service.allGames') : service.code === 'bahamut' ? t('rule.template.group.bahamut') : service.name,
         isDisabled: !!skipped,
-        description: skipped && t(skipped.missing ? 'rule.service.missing' : 'rule.service.alreadyPresent')
+        description: existing
+          ? t('rule.service.hasRule', {outbound: outboundLabel(unquote(existing.outbound), t)})
+          : skipped && t(skipped.missing ? 'rule.service.missing' : 'rule.service.covered')
       };
     })
   }));
@@ -147,10 +151,7 @@ export function useServiceRules({go, query}: PageProps): ServiceRulesModel {
   return {
     available,
     open,
-    selected: [
-      ...selected.filter(code => !draft.skipped.some(item => item.service === code)),
-      ...draft.skipped.filter(item => !item.missing).map(item => item.service)
-    ],
+    selected: selected.filter(code => !draft.skipped.some(item => item.service === code)),
     outbound,
     steamCn,
     sections,

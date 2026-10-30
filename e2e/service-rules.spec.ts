@@ -74,9 +74,9 @@ test('hold selected service rules, apply them from review, and show skipped serv
   await page.getByRole('button', {name: t('rule.service.add'), exact: true}).click();
   for (const name of services) {
     const checkbox = dialog.getByRole('checkbox', {name, exact: true});
-    await expect(checkbox).toBeChecked();
+    await expect(checkbox).not.toBeChecked();
     await expect(checkbox).toBeDisabled();
-    await expect(checkbox).toHaveAccessibleDescription(t('rule.service.alreadyPresent'));
+    await expect(checkbox).toHaveAccessibleDescription(t('rule.service.hasRule', {outbound: 'proxy'}));
   }
   await expect(dialog.getByRole('checkbox', {name: t('rule.service.steamCn'), exact: true})).toHaveCount(0);
   await expect(dialog.getByText(t('rule.service.dnsNote'), {exact: true})).toHaveCount(0);
