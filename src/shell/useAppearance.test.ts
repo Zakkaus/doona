@@ -2,7 +2,7 @@ import {afterEach, expect, it, vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToString} from 'react-dom/server';
 import {readSettings, type Scheme} from './preferences';
-import {loadGlass, useAppearance} from './useAppearance';
+import {loadStyles, useAppearance} from './useAppearance';
 
 const media = vi.hoisted(() => ({dark: false}));
 vi.mock('../ui/hooks', () => ({useMediaQuery: () => media.dark, withCrossfade: (change: () => void) => change()}));
@@ -56,7 +56,7 @@ it('applies a Glass palette once its stylesheet loads, unless another palette wa
   render();
   appearance.pickPalette('glass/frosted');
   appearance.pickPalette('nord/nord');
-  await loadGlass();
+  await loadStyles('glass');
   render();
   expect(appearance.palette).toBe('nord/nord');
   expect(readSettings(storage).palette).toBe('nord/nord');

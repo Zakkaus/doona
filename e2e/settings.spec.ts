@@ -428,6 +428,12 @@ test('every swatch matches the tokens it stands for, in both schemes', async ({p
   // Glass's tokens load with its stylesheet, which pointing at a Glass box preloads.
   await page.getByRole('listbox', {name: 'Palette'}).getByRole('option', {name: 'Glass Frosted'}).hover();
   await page.waitForFunction(() => document.querySelector<HTMLLinkElement>('link[data-glass]')?.sheet);
+  // Halloween's load only once it is picked.
+  await page
+    .getByRole('listbox', {name: 'Palette'})
+    .getByRole('option', {name: /^Halloween/})
+    .click();
+  await page.waitForFunction(() => document.querySelector<HTMLLinkElement>('link[data-halloween]')?.sheet);
   const mismatches = await page.evaluate(table => {
     const probe = document.body.appendChild(document.createElement('i'));
     const read = (colour: string) => ((probe.style.color = colour), getComputedStyle(probe).color);

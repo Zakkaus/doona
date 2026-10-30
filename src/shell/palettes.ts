@@ -31,6 +31,18 @@ export const palettes = [
       'theme.light': 'palette.qiangguoLight',
       'theme.dark': 'palette.qiangguoDark'
     }
+  },
+  {
+    id: 'halloween/halloween',
+    group: 'palette.other',
+    label: 'palette.halloween',
+    words: {
+      'lifecycle.running': 'palette.halloweenGood',
+      'ui.unavailable': 'palette.halloweenBad',
+      'lifecycle.degraded': 'palette.halloweenBad',
+      'theme.light': 'palette.halloweenLight',
+      'theme.dark': 'palette.halloweenDark'
+    }
   }
 ] as const satisfies ReadonlyArray<{id: `${string}/${string}`; group: Key; label: Key; desc?: Key; words?: Rewording}>;
 

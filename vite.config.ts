@@ -90,23 +90,28 @@ export default defineConfig({
     {
       // The stored theme and language are stamped on <html> by an inline script before the stylesheet can paint,
       // so a returning dark-theme reader never sees a light first frame. The CSP allows that one script by hash.
-      // Glass's stylesheet is linked from the script too, so the build's name for it is filled in once the bundle exists.
+      // Glass's and Halloween's stylesheets are linked from the script too, so the build's names for them are filled in
+      // once the bundle exists.
       name: 'first-paint-stamp',
       transformIndexHtml: {
         order: 'post',
         handler(html, {bundle}) {
-          const glass = bundle
-            ? Object.values(bundle).find(file => file.type === 'asset' && file.originalFileNames.some(name => name.endsWith('src/ui/styles/glass.css')))
-                ?.fileName
-            : 'src/ui/styles/glass.css';
-          if (!glass) throw new Error('The build has no Glass stylesheet to link before first paint');
+          const paletteStylesheets = Object.fromEntries(
+            Object.entries({glass: 'src/ui/styles/glass.css', halloween: 'src/ui/styles/palettes/halloween.css'}).map(([family, source]) => {
+              const file = bundle
+                ? Object.values(bundle).find(file => file.type === 'asset' && file.originalFileNames.some(name => name.endsWith(source)))?.fileName
+                : source;
+              if (!file) throw new Error(`The build has no ${family} stylesheet to link before first paint`);
+              return [family, `./${file}`];
+            })
+          );
           const stamp = stampScript({
             palettes: palettes.map(palette => palette.id),
             defaultPalette: DEFAULT_PALETTE,
             locales: Object.fromEntries(languages.map(language => [language.id, language.locale])),
             referenceLocale: languages.find(language => language.id === REFERENCE_LANG)!.locale,
             rtlScripts,
-            glassStylesheet: `./${glass}`
+            paletteStylesheets
           });
           const digest = createHash('sha256').update(stamp).digest('base64');
           return html

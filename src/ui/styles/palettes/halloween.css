@@ -1,0 +1,91 @@
+/* A seasonal palette with no upstream, so the official-values rule does not apply. Pumpkin orange is the accent, with
+   candle yellow and a sickly green beside it in the charts. Light is warm parchment with deep purple ink; dark is a
+   near-black purple night. Only the Halloween palette loads this file (src/shell/halloween.ts), with its art and logo. */
+:root[data-family='halloween'] {
+  --rp-base: #fdf6e9;
+  --rp-surface: #f7ecd8;
+  --rp-overlay: #efdfc3;
+  --rp-muted: #a08f9f;
+  --rp-subtle: #5c4570;
+  --rp-text: #2a1a33;
+  --rp-love: #b3172b;
+  --rp-gold: #8a5a00;
+  --rp-rose: #c4501a;
+  --rp-pine: #a84300;
+  --rp-foam: #2f6b1f;
+  --rp-iris: #6b2fa3;
+  --rp-c1: #ff7518;
+  --rp-c2: #6b2fa3;
+  --rp-c3: #e0a800;
+  --rp-c4: #6f9e00;
+  --rp-c5: #c2185b;
+  --rp-c6: #3d2b56;
+  --rp-c7: #e8894a;
+  --rp-c8: #4f8a2b;
+  --rp-hl-low: #f5e9d3;
+  --rp-hl-med: #ead8b8;
+  --rp-hl-high: #d9c09a;
+  --rp-shadow: 0 2px 10px rgba(61, 43, 86, 0.08);
+  --rp-on-accent: #ffffff;
+  --rp-line: var(--rp-hl-med);
+  --rp-fill: var(--rp-hl-med);
+  /* Orange, green and gold are just under 4.5:1 on a selected tile, so tiles take the body text. */
+  --rp-accent-tile-text: var(--rp-text);
+  --rp-info-tile-text: var(--rp-text);
+  --rp-notice-tile-text: var(--rp-text);
+  --rp-positive-tile-text: var(--rp-text);
+}
+:root[data-family='halloween'][data-scheme='dark'] {
+  --rp-base: #140e1c;
+  --rp-surface: #1d1528;
+  --rp-overlay: #2a1f3a;
+  --rp-muted: #7d6d8e;
+  --rp-subtle: #c9b8d9;
+  --rp-text: #f3e9dc;
+  --rp-love: #ff7a85;
+  --rp-gold: #ffd25e;
+  --rp-rose: #ffa86b;
+  --rp-pine: #ff8c3a;
+  --rp-foam: #a8d84e;
+  --rp-iris: #c49bff;
+  --rp-c1: #ff7518;
+  --rp-c2: #b57bff;
+  --rp-c3: #ffd25e;
+  --rp-c4: #9bd13c;
+  --rp-c5: #ff5c8a;
+  --rp-c6: #8a6cff;
+  --rp-c7: #ffa86b;
+  --rp-c8: #e8e0d0;
+  --rp-hl-low: #241a31;
+  --rp-hl-med: #352847;
+  --rp-hl-high: #4d3a66;
+  --rp-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --rp-on-accent: #140e1c;
+  --rp-accent-tile-text: var(--rp-accent-text);
+  --rp-info-tile-text: var(--rp-info-text);
+  --rp-notice-tile-text: var(--rp-notice-text);
+  --rp-positive-tile-text: var(--rp-positive-text);
+}
+/* A small, faint figure in the bottom corner of each card, drawn for doona: a jack-o'-lantern, bats, a black cat and a
+   spider web in turn, counted by dashboard cell where cards sit one to a cell. Each is drawn at a tenth of its opacity,
+   so text that reaches the corner keeps 4.5:1. A card whose own rules set its background shows none. */
+:root[data-family='halloween'] .rp-card {
+  --hw-art: url('./halloween/pumpkin.svg');
+  background:
+    var(--hw-art) no-repeat right 10px bottom 10px / 48px auto,
+    var(--rp-base);
+}
+:root[data-family='halloween'] :is(.rp-card:nth-child(4n + 2), .rp-dashboard-cell:nth-child(4n + 2) > .rp-card) {
+  --hw-art: url('./halloween/bats.svg');
+}
+:root[data-family='halloween'] :is(.rp-card:nth-child(4n + 3), .rp-dashboard-cell:nth-child(4n + 3) > .rp-card) {
+  --hw-art: url('./halloween/cat.svg');
+}
+:root[data-family='halloween'] :is(.rp-card:nth-child(4n), .rp-dashboard-cell:nth-child(4n) > .rp-card) {
+  --hw-art: url('./halloween/web.svg');
+}
+/* The duck wears a witch's hat wherever the app shows its logo. */
+:root[data-family='halloween'] :is(.rp-brand, .rp-login-brand) > img,
+:root[data-family='halloween'] .rp-about-duck > img:first-child {
+  content: url('./halloween/logo.svg');
+}

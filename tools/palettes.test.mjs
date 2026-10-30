@@ -13,10 +13,15 @@ it('has one stylesheet per palette family and none without a palette', () => {
   expect(files.sort()).toEqual(families);
 });
 
-// Glass's tokens load with its materials, only for the Glass palettes.
-it('imports every family stylesheet', () => {
+// Glass's tokens load with its materials, only for the Glass palettes. Halloween's stylesheet is imported by no other: its
+// own module links it, only for the Halloween palette.
+const onDemand = ['halloween'];
+it('imports every family stylesheet, or loads it on demand', () => {
   const index = ['palettes.css', 'glass.css'].map(file => readFileSync(new URL(file, styles), 'utf8')).join('\n');
-  expect([...index.matchAll(/@import '\.\/palettes\/(.+)\.css';/g)].map(match => match[1]).sort()).toEqual(families);
+  expect([...index.matchAll(/@import '\.\/palettes\/(.+)\.css';/g)].map(match => match[1]).sort()).toEqual(
+    families.filter(family => !onDemand.includes(family))
+  );
+  for (const family of onDemand) expect(readFileSync(new URL(`../src/shell/${family}.ts`, import.meta.url), 'utf8')).toContain(`/palettes/${family}.css?url'`);
 });
 
 // A token a palette block leaves out does not fail anywhere: it silently inherits Rosé Pine's `:root` default, so a

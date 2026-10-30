@@ -12,13 +12,15 @@ import {activated, announceBuild} from './shell/newBuild';
 import {DEFAULT_LANG, FONT, LangContext, LOCALE, loadLanguage, loadedLang, pageDirection, readLang, translate, type Lang} from './i18n';
 import startupText from 'virtual:startup-text';
 import {loadFaces} from './fonts';
-import {loadGlass} from './shell/useAppearance';
+import {hasOwnStyles, loadStyles} from './shell/useAppearance';
 import {isChunkLoadError, reloadForStaleChunk} from './ui/staleChunk';
 
 stampAppearance();
-// A stored Glass palette's stylesheet is linked before first paint (tools/stamp.js); its wallpaper loads now.
-if (document.documentElement.dataset.family === 'glass')
-  void loadGlass().catch(error => {
+// A stored Glass or Halloween palette's stylesheet is linked before first paint (tools/stamp.js); Glass's wallpaper
+// loads now, and a stylesheet that failed there is linked again.
+const family = document.documentElement.dataset.family!;
+if (hasOwnStyles(family))
+  void loadStyles(family).catch(error => {
     if (isChunkLoadError(error)) reloadForStaleChunk();
   });
 // The font archive check starts now, so it overlaps the catalogue fetch the language load waits on.
