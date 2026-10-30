@@ -4,7 +4,8 @@ import type {PaletteId} from '../src/shell/preferences';
 // Every palette, both schemes: the accent, the status tones and secondary text as text on the base, the surface, a
 // tile (the overlay) and a selected tile, text on an accent, success, error and notice fill, and body text.
 // Palettes keep their official values, so a failing pair is fixed by the token a use reads, never by a new colour.
-// Glass is left out: its surfaces are translucent over a gradient.
+// Glass is left out: its surfaces are translucent over a gradient. Halloween's tokens load only with its palette, so the
+// page starts in it.
 const palettes = {
   'rose-pine/main': 1,
   'rose-pine/moon': 1,
@@ -20,8 +21,10 @@ const palettes = {
   'antd/antd': 1,
   'arco/arco': 1,
   'semi/semi': 1,
-  'qiangguo/qiangguo': 1
+  'qiangguo/qiangguo': 1,
+  'halloween/halloween': 1
 } satisfies Record<PaletteId, 0 | 1>;
+test.beforeEach(({page}) => page.addInitScript(() => localStorage.setItem('doona-palette', 'halloween/halloween')));
 const roles = ['accent', 'negative', 'notice', 'positive', 'info'];
 // Page-level secondary text reads the palette's own subtle, a known exception on the base and surface as in the a11y
 // spec: [base, surface] floors for each look under 4.5:1 on either, 4.5 on a side that passes. Tiles read

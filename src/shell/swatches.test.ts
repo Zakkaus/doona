@@ -16,8 +16,11 @@ it('heads every palette section, gathering the palettes alone in their family un
     ['Catppuccin', 3],
     ['ByteDance', 2],
     ['Glass', 4],
-    ['Other', 4]
+    ['Other', 5]
   ]);
-  expect(sections.at(-1)).toMatchObject({plain: true, items: [{id: 'nord/nord'}, {id: 'kary/kary'}, {id: 'antd/antd'}, {id: 'qiangguo/qiangguo'}]});
+  expect(sections.at(-1)).toMatchObject({
+    plain: true,
+    items: [{id: 'nord/nord'}, {id: 'kary/kary'}, {id: 'antd/antd'}, {id: 'qiangguo/qiangguo'}, {id: 'halloween/halloween'}]
+  });
   expect(sections.flatMap(section => section.items).length).toBe(palettes.length);
 });

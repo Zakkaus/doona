@@ -24,7 +24,8 @@ export const swatches: Record<PaletteId, readonly [light: SwatchColours, dark: S
   'nord/nord': ['#e5e9f0 #eceff4 #2e3440 #5e81ac #8fbcbb', '#2e3440 #3b4252 #eceff4 #81a1c1 #8fbcbb'],
   'kary/kary': ['#e7f0f7 #f0f6fb #65758d #3778b7 #428226', '#1a1a1a #242424 #cacaca #819dc2 #7da76f'],
   'antd/antd': ['#f5f5f5 #ffffff rgba(0,0,0,0.88) #1677ff #52c41a', '#000000 #141414 rgba(255,255,255,0.85) #1668dc #49aa19'],
-  'qiangguo/qiangguo': ['#fffaf6 #f8ebe5 #2b0a0a #b0121a #1d6322', '#2a0000 #4a0004 #ffd700 #ff6b5b #b8f2a0']
+  'qiangguo/qiangguo': ['#fffaf6 #f8ebe5 #2b0a0a #b0121a #1d6322', '#2a0000 #4a0004 #ffd700 #ff6b5b #b8f2a0'],
+  'halloween/halloween': ['#fdf6e9 #f7ecd8 #2a1a33 #a84300 #2f6b1f', '#140e1c #1d1528 #f3e9dc #ff8c3a #a8d84e']
 };
 
 // What each box in Settings names under the palette: its light and dark variants, with their official names. The menus
@@ -43,7 +44,8 @@ const variants: Partial<Record<PaletteId, Key>> = {
   'nord/nord': 'palette.nordVariants',
   'kary/kary': 'palette.lightDark',
   'antd/antd': 'palette.defaultDark',
-  'qiangguo/qiangguo': 'palette.qiangguoModes'
+  'qiangguo/qiangguo': 'palette.qiangguoModes',
+  'halloween/halloween': 'palette.lightDark'
 };
 
 // How a palette's swatch is drawn: Glass over its wallpaper, and Liquid Glass, whose tokens are Glass's, with its lens.

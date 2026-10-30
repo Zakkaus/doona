@@ -15,7 +15,7 @@ const render = (lang: Lang, palette: PaletteId, key: Key) =>
     </LangContext.Provider>
   );
 
-it('reads the China palette words for its statuses and the catalogue words under the default palette', () => {
+it('reads the China and Halloween palette words for their statuses and the catalogue words under the default palette', () => {
   expect(render('en', 'qiangguo/qiangguo', 'lifecycle.running')).toBe('Improving');
   expect(render('en', 'qiangguo/qiangguo', 'ui.unavailable')).toBe('Severe test');
   expect(render('zh-TW', 'qiangguo/qiangguo', 'lifecycle.running')).toBe(translate('zh-TW', 'palette.qiangguoGood'));
@@ -24,6 +24,11 @@ it('reads the China palette words for its statuses and the catalogue words under
   expect(render('en', 'qiangguo/qiangguo', 'theme.light')).toBe('Day shift');
   expect(render('en', 'qiangguo/qiangguo', 'theme.dark')).toBe('Night shift');
   expect(render('zh-TW', 'qiangguo/qiangguo', 'theme.dark')).toBe(translate('zh-TW', 'palette.qiangguoDark'));
+  expect(render('en', 'halloween/halloween', 'lifecycle.running')).toBe('Haunting');
+  expect(render('en', 'halloween/halloween', 'lifecycle.degraded')).toBe('Cursed');
+  expect(render('zh-TW', 'halloween/halloween', 'ui.unavailable')).toBe(translate('zh-TW', 'palette.halloweenBad'));
+  expect(render('zh-CN', 'halloween/halloween', 'theme.light')).toBe(translate('zh-CN', 'palette.halloweenLight'));
+  expect(render('en', 'halloween/halloween', 'theme.dark')).toBe('Midnight');
   expect(render('en', DEFAULT_PALETTE, 'theme.light')).toBe('Light');
   expect(render('en', DEFAULT_PALETTE, 'lifecycle.running')).toBe('Running');
   expect(render('en', DEFAULT_PALETTE, 'ui.unavailable')).toBe('Unavailable');

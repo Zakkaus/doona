@@ -15,24 +15,27 @@ import type {RoutePath} from './routes';
 import {setDateFormat, setTimeFormat} from '../i18n/format';
 import {isChunkLoadError, reloadForStaleChunk} from '../ui/staleChunk';
 
-// Glass's stylesheet and wallpaper load only for the Glass palettes (glass.ts); a failed load is tried again next time.
-let glass: Promise<void> | undefined;
-let glassLoaded = false;
-export function loadGlass(): Promise<void> {
-  glass ??= import('./glass')
+// Glass's stylesheet and wallpaper (glass.ts) and Halloween's stylesheet (halloween.ts) load only for their palettes; a
+// failed load is tried again next time.
+const families: Record<string, () => Promise<{linkStylesheet(): Promise<void>}>> = {
+  glass: () => import('./glass'),
+  halloween: () => import('./halloween')
+};
+const loads: Record<string, Promise<void> | undefined> = {};
+const loaded = new Set<string>();
+export const hasOwnStyles = (family: string) => family in families;
+export function loadStyles(family: string): Promise<void> {
+  return (loads[family] ??= families[family]!()
     .then(module => module.linkStylesheet())
     .then(
-      () => {
-        glassLoaded = true;
-      },
+      () => void loaded.add(family),
       error => {
-        glass = undefined;
+        loads[family] = undefined;
         throw error;
       }
-    );
-  return glass;
+    ));
 }
-export const preloadGlass = () => void loadGlass().catch(() => undefined);
+export const preloadGlass = () => void loadStyles('glass').catch(() => undefined);
 
 export function applyAppearance(dark: boolean, palette: PaletteId, wordmark: Wordmark, blur: number) {
   const [family, flavour] = palette.split('/');
@@ -78,7 +81,7 @@ export function useAppearance(stored: Settings) {
   }, []);
   // A system preference toggles to its opposite; an override toggles back to system.
   const toggle = useCallback(() => pickScheme(scheme === 'system' ? (sysDark ? 'light' : 'dark') : 'system'), [pickScheme, scheme, sysDark]);
-  // A Glass palette applies once its stylesheet has loaded, so the page changes in one step, and only if no other
+  // A Glass or Halloween palette applies once its stylesheet has loaded, so the page changes in one step, and only if no other
   // palette was picked meanwhile. The pickers show it selected while it loads, so picking the current palette again is a
   // change that wins. A tab left from an older build reloads into the palette instead.
   const picked = useRef(stored.palette);
@@ -93,9 +96,10 @@ export function useAppearance(stored: Settings) {
       });
       writeSetting('palette', next);
     };
-    if (!next.startsWith('glass/') || glassLoaded) return apply();
+    const family = next.split('/')[0]!;
+    if (!hasOwnStyles(family) || loaded.has(family)) return apply();
     setPending(next);
-    loadGlass().then(apply, error => {
+    loadStyles(family).then(apply, error => {
       if (picked.current !== next) return;
       if (!isChunkLoadError(error)) return setPending(undefined);
       writeSetting('palette', next);

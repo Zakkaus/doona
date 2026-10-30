@@ -260,6 +260,50 @@ test('only a Glass palette loads Glass, before its look shows', async ({page}) =
   expect(glass.map(url => url.split('.').pop()).sort()).toEqual(['css', 'js']);
 });
 
+// The Halloween palette's stylesheet, card art and logo load only for it: nothing of it before it is picked, and the
+// stylesheet before the first paint once it is stored. Its logo then takes the place of the duck wherever the app shows
+// it.
+test('only the Halloween palette loads its stylesheet, art and logo', async ({page}) => {
+  const requested: string[] = [];
+  page.on('request', request => requested.push(new URL(request.url()).pathname));
+  const logo = page.locator('.rp-top .rp-brand > img');
+  const shown = () => logo.evaluate(img => getComputedStyle(img).content);
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-card').first()).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  const duck = new URL(await logo.evaluate(img => (img as HTMLImageElement).src)).pathname;
+  expect(requested.filter(path => /\/assets\/halloween-/.test(path))).toEqual([]);
+  expect(requested.filter(path => path.endsWith('.svg'))).toEqual([duck]);
+  expect(await shown()).toBe('normal');
+
+  requested.length = 0;
+  await page.goto('/#/settings');
+  await (await paletteBoxes(page)).getByRole('option', {name: /^Halloween/}).click();
+  await expect(page.locator('html')).toHaveAttribute('data-family', 'halloween');
+  expect(
+    requested
+      .filter(path => /\/assets\/halloween-[\w-]{8}\.(js|css)$/.test(path))
+      .map(path => path.split('.').pop())
+      .sort()
+  ).toEqual(['css', 'js']);
+  await expect.poll(shown).toMatch(/^url\(".+\.svg"\)$/);
+  const witch = new URL((await shown()).slice(5, -2)).pathname;
+  expect(witch).not.toBe(duck);
+  await expect.poll(() => requested.includes(witch)).toBe(true);
+  // The card art is small enough to sit inline in the stylesheet.
+  const art = await page
+    .locator('.rp-card')
+    .first()
+    .evaluate(card => getComputedStyle(card).backgroundImage);
+  expect(art).toMatch(/^url\("data:image\/svg\+xml,/);
+
+  requested.length = 0;
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-family', 'halloween');
+  expect(await page.evaluate(() => document.head.querySelector('link[rel="stylesheet"]')?.hasAttribute('data-halloween'))).toBe(true);
+  await expect.poll(shown).toBe(`url("${new URL(witch, page.url()).href}")`);
+});
+
 // While Glass loads, its pick shows selected and the page keeps its palette, so picking that palette again is a change,
 // and it wins over the Glass still loading.
 type PalettePicker = (page: Page) => Record<'glass' | 'moon' | 'shown', () => Promise<void>>;
