@@ -1,0 +1,1 @@
+function e(e){return e!=null&&typeof e!=`boolean`&&e!==``}var t=[`noopener`,`noreferrer`];function n(e,n){if(e!==`_blank`)return{target:e,rel:n};let r=n?.split(/\s+/).filter(Boolean)??[];for(let e of t)r.includes(e)||r.push(e);return{target:e,rel:r.join(` `)}}export{e as n,n as t};

@@ -1,0 +1,39 @@
+{
+  "root": "/work",
+  "packages": [
+    "/work/node_modules/.pnpm/@codemirror+autocomplete@6.20.3/node_modules/@codemirror/autocomplete",
+    "/work/node_modules/.pnpm/@codemirror+commands@6.11.1/node_modules/@codemirror/commands",
+    "/work/node_modules/.pnpm/@codemirror+language@6.12.4/node_modules/@codemirror/language",
+    "/work/node_modules/.pnpm/@codemirror+lint@6.9.7/node_modules/@codemirror/lint",
+    "/work/node_modules/.pnpm/@codemirror+search@6.7.2/node_modules/@codemirror/search",
+    "/work/node_modules/.pnpm/@codemirror+state@6.7.6/node_modules/@codemirror/state",
+    "/work/node_modules/.pnpm/@codemirror+view@6.43.13/node_modules/@codemirror/view",
+    "/work/node_modules/.pnpm/@fontsource-variable+noto-sans-sc@5.3.0/node_modules/@fontsource-variable/noto-sans-sc",
+    "/work/node_modules/.pnpm/@fontsource-variable+noto-sans-tc@5.3.0/node_modules/@fontsource-variable/noto-sans-tc",
+    "/work/node_modules/.pnpm/@internationalized+number@3.6.8/node_modules/@internationalized/number",
+    "/work/node_modules/.pnpm/@internationalized+string@3.2.10/node_modules/@internationalized/string",
+    "/work/node_modules/.pnpm/@lezer+common@1.5.2/node_modules/@lezer/common",
+    "/work/node_modules/.pnpm/@lezer+highlight@1.2.5/node_modules/@lezer/highlight",
+    "/work/node_modules/.pnpm/@marijn+find-cluster-break@1.0.4/node_modules/@marijn/find-cluster-break",
+    "/work/node_modules/.pnpm/@react-aria+optimize-locales-plugin@2.0.2/node_modules/@react-aria/optimize-locales-plugin",
+    "/work/node_modules/.pnpm/clsx@2.1.1/node_modules/clsx",
+    "/work/node_modules/.pnpm/crelt@1.0.7/node_modules/crelt",
+    "/work/node_modules/.pnpm/d3-path@3.1.0/node_modules/d3-path",
+    "/work/node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape",
+    "/work/node_modules/.pnpm/openapi-fetch@0.17.0/node_modules/openapi-fetch",
+    "/work/node_modules/.pnpm/react-aria-components@1.21.1_react-dom@19.3.0_react@19.3.0__react@19.3.0/node_modules/react-aria-components",
+    "/work/node_modules/.pnpm/react-aria@3.52.1_patch_hash=afaafe13b387db59f48029c404a5ecba218431e815ff90f2480baf3e80_4f145b54354b5a66914ba93b288ae750/node_modules/react-aria",
+    "/work/node_modules/.pnpm/react-dom@19.3.0_react@19.3.0/node_modules/react-dom",
+    "/work/node_modules/.pnpm/react-stately@3.50.0_react@19.3.0/node_modules/react-stately",
+    "/work/node_modules/.pnpm/react@19.3.0/node_modules/react",
+    "/work/node_modules/.pnpm/scheduler@0.28.0/node_modules/scheduler",
+    "/work/node_modules/.pnpm/style-mod@4.1.3/node_modules/style-mod",
+    "/work/node_modules/.pnpm/use-sync-external-store@1.7.0_react@19.3.0/node_modules/use-sync-external-store",
+    "/work/node_modules/.pnpm/w3c-keyname@2.2.8/node_modules/w3c-keyname"
+  ],
+  "buildRuntime": [
+    "vite",
+    "rollup",
+    "@react-aria/optimize-locales-plugin"
+  ]
+}

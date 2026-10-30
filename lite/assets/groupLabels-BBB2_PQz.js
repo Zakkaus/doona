@@ -1,0 +1,1 @@
+import{c as e}from"./describe-0gzV5Sr3.js";function t(t,n){return n[e(t)]}export{t};
