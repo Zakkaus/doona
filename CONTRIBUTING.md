@@ -306,9 +306,9 @@ Write the subject and body in English. Use an imperative subject and explain the
 
 Branch from `main`. Keep pull requests small and limited to one theme. Keep CI green.
 
-Use the GitHub issue and pull request templates, including their Chinese variants. Name the human responsible and report only verified results.
+Use the bilingual English / Simplified Chinese GitHub issue and pull request templates. Name the human responsible in an issue, check the boxes that apply in a pull request, and report only verified results.
 
-Write the pull request body in English with one short paragraph under each of `## Problem`, `## How I fixed it` and `## Verified`, in that order: what is wrong, what changed, and what was checked, not the reasoning that led there. Verified lists the commands you ran and what they reported; link long evidence instead of pasting it.
+Write the pull request body in English or Simplified Chinese with one short paragraph under each of `## Problem / 问题`, `## How I fixed it / 解决方法` and `## Verified / 验证`, in that order: what is wrong, what changed, and what was checked, not the reasoning that led there. Verified lists the commands you ran and what they reported; link long evidence instead of pasting it. Start the pull request body from `.github/PULL_REQUEST_TEMPLATE.md`, also when you open it with `gh pr create --body` or the API, which do not fill it in. Keep its checklist and check only true boxes. For an outside contributor, `template-check` closes a pull request that drops a required box or checks the unread or AI-agent box, and reopens it once the body is fixed.
 
 ### Changelog fragments
 

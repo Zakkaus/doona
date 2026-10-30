@@ -1,90 +1,116 @@
-name: Bug report
-description: Report a reproducible problem in doona.
+name: Bug report / 问题报告
+description: Report a reproducible problem in the doona interface. / 报告 doona 界面中可复现的问题。
 title: 'bug: '
 labels: [bug]
 body:
   - type: markdown
     attributes:
-      value: AI may help write this report. Unverified content may not be submitted.
+      value: |
+        AI may help you write this; unverified content may not be submitted.
+        可以用 AI 辅助撰写，但提交前须自行核实全部内容。
+
+        State each fact once; do not restate the title, diff or template.
+        同一件事只写一次，不要重复标题、代码改动或模板内容。
+        No filler, praise, summaries of your own work or emoji.
+        不写客套话、夸赞和自我总结，不用表情符号。
+        Paste only relevant log lines; link or collapse long output.
+        日志只贴相关的几行；较长的输出请附链接或折叠。
+        Say what you could not verify.
+        没有验证过的地方请注明。
+
+        This form is for doona interface problems. Report proxy, routing or DNS problems to [honk](https://github.com/daeuniverse/honk/issues/new/choose) or [dae](https://github.com/daeuniverse/dae/issues/new/choose).
+
+        本表单只受理 doona 界面的问题。代理、路由或 DNS 问题请到 [honk](https://github.com/daeuniverse/honk/issues/new/choose) 或 [dae](https://github.com/daeuniverse/dae/issues/new/choose) 提交。
   - type: input
     id: version
     attributes:
-      label: doona version or commit
-      description: Enter the release tag or commit you tested.
+      label: doona version / doona 版本
+      description: Copy the version shown on the About page. / 请填写“关于”窗口中显示的版本号。
     validations:
       required: true
   - type: input
     id: backend
     attributes:
-      label: Backend and version
-      description: Enter the backend name and version, or "mock".
+      label: Backend and version / 后端及版本
+      description: Enter the backend name and version, or "mock". / 请填写后端名称与版本，或 `mock`。
     validations:
       required: true
   - type: dropdown
     id: auth
     attributes:
-      label: Authentication mode
-      options: [Token, Password, Mock]
+      label: Authentication mode / 认证方式
+      description: Select how you connect to the backend. / 请选择连接后端时使用的认证方式。
+      options:
+        - Token / 令牌
+        - Password / 密码
+        - Mock / 模拟后端
     validations:
       required: true
   - type: input
     id: browser
     attributes:
-      label: Browser
-      description: Enter the browser name and version.
+      label: Browser / 浏览器
+      description: Enter the browser name and version. / 请填写浏览器名称与版本。
     validations:
       required: true
   - type: input
+    id: device
+    attributes:
+      label: OS and device / 操作系统与设备
+      description: Include the OS version and whether this is a phone, tablet or desktop. / 请填写操作系统版本，并注明设备是手机、平板还是电脑。
+  - type: input
     id: theme
     attributes:
-      label: Palette and theme
-      description: Enter the palette and light or dark mode.
-    validations:
-      required: true
+      label: Palette and theme / 配色与主题
+      description: Enter the palette and light or dark mode if relevant. / 如果问题与外观有关，请注明配色，以及使用浅色还是深色模式。
   - type: textarea
     id: what
     attributes:
-      label: What happens
-      description: Describe the actual result and the expected result.
+      label: What happened / 问题现象
+      description: Describe what you did, what you expected and what actually happened. / 请说明你做了什么、预期的结果和实际的结果。
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: Steps to reproduce
-      description: Give the smallest sequence that reproduces the problem.
+      label: Steps to reproduce / 复现步骤
+      description: Give the smallest sequence that reproduces the problem. / 请列出能复现问题的最少步骤。
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
     validations:
       required: true
   - type: textarea
     id: logs
     attributes:
-      label: Logs
-      description: Include relevant browser console and honk-core logs. Remove credentials and private data. If none are available, say so.
-      render: shell
+      label: Relevant logs / 相关日志
+      description: Include only relevant lines from doona's Logs page or the browser console; remove credentials and private data. If none, write "none" and explain why. / 只贴 doona“日志”页或浏览器控制台中的相关几行，并删去凭据和个人数据。没有日志请填“无”并说明原因。
+      render: text
     validations:
       required: true
   - type: textarea
     id: screenshots
     attributes:
-      label: Screenshots
-      description: Attach screenshots if they help reproduce or identify the problem.
+      label: Screenshots / 截图
+      description: Attach images that help identify or reproduce the problem. / 如果截图有助于定位或复现问题，请附上。
   - type: input
     id: owner
     attributes:
-      label: Human responsible
-      description: Enter your GitHub username. You must verify this report and answer follow-up questions; an AI cannot answer for you.
+      label: Human responsible / 负责人
+      description: Enter your GitHub username; you verified this content and will answer follow-up questions. / 请填写你的 GitHub 用户名。填写即表示你已核实内容，并会回复后续提问。
       placeholder: '@your-name'
     validations:
       required: true
   - type: checkboxes
     id: confirm
     attributes:
-      label: Confirm
-      description: Check only claims that are true. A false claim closes the issue.
+      label: Confirm / 确认
+      description: Check only true claims; an applicable unchecked box or a false claim closes the issue. / 只勾选属实的选项。适用的选项没有勾选，或勾选的内容不属实，issue 会被关闭。
       options:
-        - label: I searched existing issues and pull requests and found no matching report.
+        - label: I searched existing issues / 我已搜索过现有 issue
           required: true
-        - label: This report describes what I observed.
+        - label: This describes what I observed / 以上是我实际遇到的情况
           required: true
-        - label: I checked the boxes above without reading them.
-        - label: I am an AI agent, and this content was submitted without human review.
+        - label: I checked the boxes above without reading them / 我没有阅读上面的选项就直接勾选了
+        - label: I am an AI agent, and this content was submitted without human review / 我是 AI 代理，这些内容没有经过人工审核

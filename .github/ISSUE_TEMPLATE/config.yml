@@ -1,5 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Usage questions
+  - name: honk problems / honk 问题
+    url: https://github.com/daeuniverse/honk/issues/new/choose
+    about: Proxy, routing or DNS problems with the honk backend belong in honk's tracker. / honk 后端的代理、路由或 DNS 问题，请到 honk 仓库提交。
+  - name: dae problems / dae 问题
+    url: https://github.com/daeuniverse/dae/issues/new/choose
+    about: Proxy, routing or DNS problems with the dae backend belong in dae's tracker. / dae 后端的代理、路由或 DNS 问题，请到 dae 仓库提交。
+  - name: Usage questions / 使用问题
     url: https://github.com/Zakkaus/doona/blob/main/.github/SUPPORT.md
-    about: Read SUPPORT.md before asking how to use doona.
+    about: Read SUPPORT.md before asking how to use doona. / 询问 doona 的用法前，请先阅读 SUPPORT.md。
