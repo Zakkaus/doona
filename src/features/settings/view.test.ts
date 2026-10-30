@@ -35,12 +35,18 @@ it('validates numeric bounds and writes typed partial patches without losing sib
   expect(numericAccess['flows.max_flows'].read({...runtimeSettings, flows: undefined})).toBeUndefined();
 });
 it('distinguishes connection errors from successful status', () => {
-  const view = profileView([{id: 'a', name: 'Home'}], {key: 'settings.httpError', params: {status: 503}, error: true, requestId: 'req-1'}, t);
+  const view = profileView([{id: 'a', name: 'Home'}], {key: 'settings.httpError', params: {status: 503}, error: true, requestId: 'req-1'}, t, 'en');
   expect(view.choices).toEqual([{id: 'a', label: 'Home'}]);
   expect(view.result).toMatchObject({role: 'alert', error: true});
   expect(view.result?.text).toContain('503');
   expect(view.result?.request).toContain('req-1');
-  expect(profileView([], null, t).result).toBeNull();
+  expect(view.result?.link).toBeUndefined();
+  expect(profileView([], null, t, 'en').result).toBeNull();
+  expect(profileView([], {key: 'settings.cors', error: true, docs: 'sign-in'}, t, 'zh-TW').result?.link).toEqual({
+    href: 'https://doona.daeuniverse.org/zh-TW/troubleshooting.html#sign-in',
+    text: 'Sign-in and cross-origin failures',
+    external: true
+  });
 });
 
 it('offers a control for every setting its access table covers, in table order', () => {
@@ -95,8 +101,19 @@ it('names why a connection test failed and ignores a cancelled test', () => {
   expect(probeFailure(new ApiError(200, 'invalid_discovery', 'Missing API version'), idle, base, origin)).toEqual({key: 'settings.invalidResponse'});
   expect(probeFailure(new ApiError(502, 'bad_gateway', 'Bad gateway'), idle, base, origin)).toEqual({key: 'settings.httpError', params: {status: 502}});
   expect(probeFailure(new SyntaxError('Unexpected token'), idle, base, origin)).toEqual({key: 'settings.nonJson'});
-  expect(probeFailure(new TypeError('Failed to fetch'), idle, base, origin)).toEqual({key: 'settings.cors'});
-  expect(probeFailure(new TypeError('Failed to fetch'), idle, base, 'https://router.example')).toEqual({key: 'settings.network'});
+});
+
+it('gives a failed request the network advice and its docs, whether fetch threw or the client wrapped it as status 0', () => {
+  const idle = {aborted: false, reason: undefined};
+  const base = 'https://router.example/api';
+  const wrapped = new ApiError(0, 'network_error', 'Failed to fetch');
+  const cases: [error: unknown, origin: string, expected: ReturnType<typeof probeFailure>][] = [
+    [new TypeError('Failed to fetch'), 'https://doona.example', {key: 'settings.cors', docs: 'sign-in'}],
+    [wrapped, 'https://doona.example', {key: 'settings.cors', docs: 'sign-in'}],
+    [new TypeError('Failed to fetch'), 'https://router.example', {key: 'settings.network', docs: 'sign-in'}],
+    [wrapped, 'https://router.example', {key: 'settings.network', docs: 'sign-in'}]
+  ];
+  for (const [error, origin, expected] of cases) expect(probeFailure(error, idle, base, origin)).toEqual(expected);
 });
 
 it('says why Apply for backend options is disabled only for a value out of range, not for having nothing to apply', () => {

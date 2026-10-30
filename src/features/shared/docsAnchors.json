@@ -16,6 +16,7 @@
   "no-native-api": "troubleshooting",
   "sign-in": "troubleshooting",
   "read-only": "troubleshooting",
+  "geodata-update": "troubleshooting",
   "offline-dependency": "troubleshooting",
   "req-sign-in": "feature-requirements",
   "req-config-edit": "feature-requirements",

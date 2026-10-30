@@ -5,6 +5,7 @@ import {
   Card,
   Checkbox,
   ConfirmDialog,
+  ContextualHelp,
   DialogForm,
   DialogSection,
   Diff,
@@ -91,6 +92,7 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
             <Button accent type="submit" isDisabled={!model.canApply}>
               {t('rule.template.apply')}
             </Button>
+            {model.refusal && <ContextualHelp title={t('rule.template.apply')} text={model.refusal} link={model.refusalLink} />}
           </Toolbar>
         </Form>
       </Card>
@@ -178,7 +180,7 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
 }
 
 type ImpactRow = {name: string; label: string | null; warning: string | null};
-// The way out of a missing offline file: repair the loaded geodata in place, or read how to install it.
+// The way out of a missing offline file: repair the loaded geodata in place, or read how to install it or the file.
 function OfflineAction({fix}: {fix: OfflineFix}) {
   const t = useT();
   return fix.kind === 'download' ? (
@@ -187,7 +189,7 @@ function OfflineAction({fix}: {fix: OfflineFix}) {
     </Button>
   ) : (
     <Link appearance="link" external href={fix.href}>
-      {t('config.diagnostic.geodataDocs')}
+      {t(fix.geodata ? 'config.diagnostic.geodataDocs' : 'ov.lim.docsOffline')}
       <LinkOut />
     </Link>
   );

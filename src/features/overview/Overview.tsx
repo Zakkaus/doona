@@ -174,7 +174,7 @@ export function Overview({query}: PageProps) {
                 </Light>
               )}
               {vm.datapath.degradations.map(d => (
-                <HelpRow key={d.id} help={d.tooltip ? {title: d.text, text: d.tooltip} : undefined}>
+                <HelpRow key={d.id} help={d.tooltip ? {title: d.text, text: d.tooltip, link: d.link} : undefined}>
                   <Light small tone="warn">
                     {d.text}
                   </Light>

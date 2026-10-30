@@ -5,12 +5,12 @@ import {docsHref} from './docs';
 import {offlineDependencyCode} from './offlineDependency';
 import {announceGeodataUpdate, geodataNeed, type GeoKind} from './geodataUpdate';
 
-export type OfflineFix = {kind: 'download'; busy: boolean; run: () => Promise<boolean>} | {kind: 'docs'; href: string};
+export type OfflineFix = {kind: 'download'; busy: boolean; run: () => Promise<boolean>} | {kind: 'docs'; href: string; geodata: boolean};
 
 // For diagnostics that name a missing offline dependency, given the geodata kinds the write needs (null while
 // unknown): the geodata files to name in their words, and the way out. A geodata update repairs a file honk has
 // loaded; a file it never loaded has to be installed on the device, which the docs explain. A write needing no
-// geodata lacks some other file, so there is no geodata action.
+// geodata lacks some other file, so the docs are offered for offline files in general, not for geodata.
 export function useOfflineFix(diagnostics: ConfigDiagnostic[] | null | undefined, needed: GeoKind[] | null) {
   const t = useT();
   const lang = useLang();
@@ -19,10 +19,8 @@ export function useOfflineFix(diagnostics: ConfigDiagnostic[] | null | undefined
   const read = useGeodata(active && !!geodata?.available);
   if (!active) return {missingFiles: undefined, fix: null};
   const {missing, repair} = geodataNeed(needed, geodata, read.data);
-  const fix: OfflineFix | null = repair
-    ? {kind: 'download', busy: read.busy, run: () => announceGeodataUpdate(read.update(), t)}
-    : needed?.length === 0
-      ? null
-      : {kind: 'docs', href: docsHref(lang, 'offline-dependency')};
+  const fix: OfflineFix = repair
+    ? {kind: 'download', busy: read.busy, run: () => announceGeodataUpdate(read.update(), t, lang)}
+    : {kind: 'docs', href: docsHref(lang, 'offline-dependency'), geodata: needed?.length !== 0};
   return {missingFiles: missing.length ? formatList(lang, missing) : undefined, fix};
 }

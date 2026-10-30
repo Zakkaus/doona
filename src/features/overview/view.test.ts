@@ -45,6 +45,28 @@ it('lists runtime degradations in their own words, an unknown code by the backen
   expect(overviewView({runtime: {...runtime, degradations: undefined}}, loading, 'en-US', t).datapath.degradations).toEqual([]);
 });
 
+it('keeps the reason lost persistence gives and links where to restore it', () => {
+  const since = runtime.observed_at;
+  const docs = 'https://doona.daeuniverse.org/en/';
+  const cases = [
+    [
+      {code: 'persistence_unavailable', message: 'open state.db: permission denied', component: 'persistence', since},
+      'open state.db: permission denied',
+      `${docs}troubleshooting.html#state-db`
+    ],
+    [
+      {code: 'state_cache_unavailable', message: 'cache', component: 'cache', since, details: {reason: 'disk full'}},
+      'disk full',
+      `${docs}troubleshooting.html#state-db`
+    ]
+  ] as const;
+  for (const [entry, reason, href] of cases) {
+    const [row] = overviewView({runtime: {...runtime, degradations: [entry as never]}}, loading, 'en-US', t, 'en').datapath.degradations;
+    expect(row.tooltip).toBe(`${entry.code}: ${reason}`);
+    expect(row.link?.href).toBe(href);
+  }
+});
+
 it('distinguishes loading and unavailable sections and deduplicates datapath errors', () => {
   const view = overviewView({capabilities, runtime, version, datapath, memory: runtimeMemory}, loading, 'en-US', t);
   expect(view.datapath.warning).toBeNull();

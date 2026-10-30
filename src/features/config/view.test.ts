@@ -279,6 +279,17 @@ it('shows a backend diagnostic that lacks the demo parameters in its own words',
   expect(sourceMarks([item], item.source_id, t)[0].message).toBe(summary);
 });
 
+it('marks each offline dependency row for its docs link', () => {
+  const cases = [
+    ['missing-offline-dependency', true],
+    ['offline-dependency-denied', true],
+    ['invalid-offline-dependency', true],
+    ['unreadable-offline-dependency', true],
+    ['unknown_outbound', false]
+  ] as const;
+  for (const [code, offline] of cases) expect(diagnosticRows([{...configNotes[0], code}], [], 'en-US', t)[0].offline).toBe(offline);
+});
+
 it('does not merge diagnostics with different parameters', () => {
   const item = {...configNotes[0], code: 'unknown_outbound', message: '', params: {name: 'alpha'}};
   const other = {...item, params: {name: 'beta'}};

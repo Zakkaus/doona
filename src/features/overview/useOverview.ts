@@ -61,9 +61,10 @@ export function useOverview(query = '') {
         {...data, limits},
         {capabilities: capabilities.loading, runtime: runtime.loading, version: version.loading, memory: memory.loading, datapath: datapath.loading},
         locale,
-        t
+        t,
+        lang
       ),
-    [data, limits, capabilities.loading, runtime.loading, version.loading, memory.loading, datapath.loading, locale, t]
+    [data, limits, capabilities.loading, runtime.loading, version.loading, memory.loading, datapath.loading, locale, t, lang]
   );
   return {
     ...view,

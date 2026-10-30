@@ -1,9 +1,11 @@
 import type {GeoData, GeoDataDownload, GroupSummary} from '../../api/model';
 import {geodataKinds, missingCategories, validGeodataUrl, type GeodataPreset, type GeodataPresetId, type GeodataUrls} from '../../dae/geodata';
-import type {Key, Translator} from '../../i18n';
+import type {Key, Lang, Translator} from '../../i18n';
 import {formatBytes, relativeStart} from '../../i18n/format';
 import {backendMessage, oneLine} from '../../i18n/backend';
 import type {KvItem} from '../../ui/ui';
+import {docsHref} from '../shared/docs';
+import {lastingGeodataFailure} from '../shared/geodataUpdate';
 
 export const presetLabels: Record<GeodataPresetId, Key> = {
   metacubex: 'settings.geodataPreset.metacubex',
@@ -83,6 +85,7 @@ export function routeLabel(route: GeoDataDownload, groups: GroupSummary[] | unde
 // whether their checksums were verified.
 // canSkipChecksum: the backend verifies checksums and lets that be turned off, which a checksum failure then explains.
 // checksum: how the backend verifies downloads (resources.geodata.checksum), which the unverified help names.
+// lang: the docs language, for the stages a retry does not get past.
 export function statusLine(
   data: GeoData | undefined,
   updating: boolean,
@@ -90,24 +93,33 @@ export function statusLine(
   locale: string,
   t: Translator,
   canSkipChecksum = false,
-  checksum: 'sha256sum' | 'pinned' | null = 'sha256sum'
+  checksum: 'sha256sum' | 'pinned' | null = 'sha256sum',
+  lang?: Lang
 ) {
   if (updating) return {text: t('settings.geodataUpdating'), error: false};
   // last_error's code is the failed stage and its message is always the same, so a stage without words of its own
   // shows its code beside the message.
   if (data?.last_error) {
     const {code, message} = data.last_error;
+    const reason = backendMessage(code, message, t, {stage: code});
     return {
-      text: t('ui.valuePair', {label: t('settings.geodataLastError'), value: oneLine(backendMessage(code, message, t, {stage: code}), t)}),
+      text: t('ui.valuePair', {label: t('settings.geodataLastError'), value: oneLine(reason, t)}),
       error: true,
       // A mismatch may be a damaged or altered file, so it is not worded as a reason to turn verification off.
+      // A stage a retry does not get past shows the whole reason, which the line shortens, with the docs on that stage.
       help:
         canSkipChecksum && (code === 'checksum_unavailable' || code === 'checksum_mismatch')
           ? {
               title: t('settings.geodataVerifyChecksum'),
               text: t(code === 'checksum_mismatch' ? 'settings.geodataChecksumMismatchHelp' : 'settings.geodataVerifyChecksumHelp')
             }
-          : undefined
+          : lang && lastingGeodataFailure(code)
+            ? {
+                title: t('settings.geodataLastError'),
+                text: reason.detail ? [reason.summary, reason.detail] : reason.summary,
+                link: {href: docsHref(lang, 'geodata-update'), text: t('ov.lim.docsGeodataUpdate'), external: true}
+              }
+            : undefined
     };
   }
   const at = data?.last_updated_at;

@@ -14,9 +14,10 @@ import {parseHash, replaceAddress, replaceRoute} from '../../shell/route';
 import {defaultRoute, type RoutePath} from '../../shell/routes';
 import {useConnectionTest} from './connectionTest';
 import {cardHeadingId} from './nav';
+import type {ConnectionDocs} from './view';
 
 // `id` changes with each failed save, so the dialog's alert takes focus again on a repeat.
-type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | null; id?: number};
+type Result = {key: Key; params?: Params; error?: boolean; requestId?: string | null; id?: number; docs?: ConnectionDocs};
 
 function readPairing(query: string): {api: string; token: string} | null {
   const params = new URLSearchParams(query);
