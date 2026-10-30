@@ -583,7 +583,7 @@ test('a subscription is added with its refresh interval, User-Agent and cache se
   await dialog.getByLabel('Name').fill('sub-o');
   await dialog.getByLabel('Subscription URL').fill('https://example.org/sub?token=abc');
   await expect(dialog.getByRole('button', {name: 'Auto-update'})).toContainText('Every 24 hours');
-  await expect(dialog.getByLabel('User-Agent')).toHaveAttribute('placeholder', 'honk/0.0.1-alpha');
+  await expect(dialog.getByLabel('User-Agent')).toHaveAttribute('placeholder', 'honk/0.1.0');
   await expect(dialog.getByRole('switch', {name: 'Cache the subscription'})).toBeChecked();
   await dialog.getByRole('button', {name: 'Auto-update'}).click();
   await page.getByRole('option', {name: 'Every 6 hours', exact: true}).click();
@@ -655,7 +655,7 @@ test.describe('cold Nodes refresh', () => {
 
 test('an untouched option is left to the backend and an unadvertised one is not shown', async ({page}) => {
   const {api, capabilities} = await mockBackend(page);
-  capabilities.resources.providers.create_options = {user_agent: 'honk/0.0.1-alpha'};
+  capabilities.resources.providers.create_options = {user_agent: 'honk/0.1.0'};
   await page.goto('/#/nodes?tab=list');
   await page.getByRole('button', {name: 'Add subscription', exact: true}).click();
   const dialog = page.getByRole('dialog');

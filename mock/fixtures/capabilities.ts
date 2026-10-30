@@ -37,7 +37,7 @@ export const capabilities: Capabilities = {
       available: true,
       can_refresh: true,
       can_manage: true,
-      create_options: {update_interval: 86400, user_agent: 'honk/0.0.1-alpha', cache: true},
+      create_options: {update_interval: 86400, user_agent: 'honk/0.1.0', cache: true},
       max_page_size: 1000
     },
     geodata: {
