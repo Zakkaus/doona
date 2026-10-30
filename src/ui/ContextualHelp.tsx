@@ -44,14 +44,14 @@ export function ContextualHelp({
 }
 
 // A status explanation stays inside the content column even when its trigger is near an edge.
-export function IconTip({label, text, children}: {label: string; text: string; children: ReactNode}) {
+export function IconTip({label, text, link, children}: {label: string; text: string; link?: TextLinkTarget; children: ReactNode}) {
   const [boundaryElement, setBoundaryElement] = useState<Element>();
   const boundary = useCallback((element: HTMLSpanElement | null) => {
     setBoundaryElement(element?.closest('.rp-content') ?? undefined);
   }, []);
   return (
     <span className="rp-icontip" ref={boundary}>
-      <ContextualHelp title={label} label={label} text={text} icon={children} boundaryElement={boundaryElement} />
+      <ContextualHelp title={label} label={label} text={text} link={link} icon={children} boundaryElement={boundaryElement} />
     </span>
   );
 }

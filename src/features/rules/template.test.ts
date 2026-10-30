@@ -3,7 +3,7 @@ import {engineOf} from '../../api/engines';
 import type {ConfigSource} from '../../api/model';
 import {translate, type Translator} from '../../i18n';
 import {writeTemplate} from '../../dae/setup';
-import {refusalReason, routingSources, ruleViewMode, templateImpact, templatesView, templateTarget, templateWrites} from './template';
+import {refusalLink, refusalReason, routingSources, ruleViewMode, templateImpact, templatesView, templateTarget, templateWrites} from './template';
 
 const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 const source = (id: string, content: string, kind: ConfigSource['kind'] = 'include'): ConfigSource => ({
@@ -104,6 +104,21 @@ it('refuses routing split over files and files it may not write', () => {
   expect(refusalReason('secret', plain, t)).toBe(
     'main.dae holds a native_api or clash_api secret or nested section, which the backend does not write back. Edit the file on the host.'
   );
+});
+
+it('links each refusal to the docs on lifting it, and none where the refusal already says how', () => {
+  const docs = 'https://doona.daeuniverse.org/en/';
+  const cases = [
+    ['writesOff', `${docs}troubleshooting.html#read-only`],
+    ['readOnly', `${docs}troubleshooting.html#read-only`],
+    ['denied', `${docs}troubleshooting.html#read-only`],
+    ['incomplete', `${docs}troubleshooting.html#read-only`],
+    ['noSource', `${docs}feature-requirements.html#req-rules`],
+    ['syntax', `${docs}feature-requirements.html#req-rules`],
+    ['split', undefined],
+    ['secret', undefined]
+  ] as const;
+  for (const [refusal, href] of cases) expect(refusalLink(refusal, t, 'en')?.href).toBe(href);
 });
 
 it("refuses a file as the engine does: only for an experimental listener's secret or nested section", () => {
@@ -231,7 +246,7 @@ vi.mock('../../shell/draft', () => ({
   }
 }));
 vi.mock('../../ui/ui', async original => ({...(await original<typeof import('../../ui/ui')>()), toast: vi.fn()}));
-vi.mock('../../i18n', async original => ({...(await original<typeof import('../../i18n')>()), useT: () => t}));
+vi.mock('../../i18n', async original => ({...(await original<typeof import('../../i18n')>()), useT: () => t, useLang: () => 'en'}));
 const draftGuard = vi.hoisted(() => vi.fn());
 const clearDraft = vi.hoisted(() => vi.fn());
 const templateApply = vi.hoisted(() => vi.fn(async () => ({result: {}})));

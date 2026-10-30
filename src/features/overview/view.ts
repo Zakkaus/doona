@@ -1,5 +1,5 @@
 import type {Capabilities, Datapath, Runtime, RuntimeMemory, Version} from '../../api/model';
-import type {Key} from '../../i18n';
+import type {Key, Lang} from '../../i18n';
 import {formatDuration, localTime, formatBytes, formatBytesFraction, formatCpu} from '../../i18n/format';
 import {memoryTone, shortId} from '../../api/selectors';
 import {parseU64, pctU64} from '../../api/u64';
@@ -7,6 +7,7 @@ import {formatNumber, type Translator as LabelFn} from '../../i18n';
 import {backendMessage, oneLine} from '../../i18n/backend';
 import type {Help, KvItem} from '../../ui/ui';
 import {resourceLabels} from '../shared/limitHint';
+import {docsHref} from '../shared/docs';
 import type {LimitGroup} from '../shared/limits';
 import {engineStatus} from '../shared/engineStatus';
 import {engineOf} from '../../api/engines';
@@ -151,12 +152,17 @@ export function memoryFields(memory: RuntimeMemory, label: LabelFn, locale: stri
     );
 }
 
+// Lost persistence links the state database section, which leads on to the persistence requirements. Its words leave
+// out the backend's reason, such as why the database could not be opened, so the reason stays in the help.
+const persistenceCodes = new Set(['persistence_unavailable', 'state_cache_unavailable']);
 export function overviewView(
   // `limits` is backendLimits for the capabilities; the controller builds it because its links need the UI language.
   data: {capabilities?: Capabilities; runtime?: Runtime; version?: Version; memory?: RuntimeMemory; datapath?: Datapath; limits?: LimitGroup[]},
   loading: {capabilities: boolean; runtime: boolean; version: boolean; memory: boolean; datapath: boolean},
   locale: string,
-  t: LabelFn
+  t: LabelFn,
+  // The docs language, for the links in degradation help.
+  lang?: Lang
 ) {
   const {capabilities, runtime, version, memory, datapath, limits = []} = data;
   const unchecked = engineOf(version).uncheckedHooks;
@@ -267,7 +273,18 @@ export function overviewView(
           : null,
       // Features the engine keeps running reduced. The runtime reports them, so they show whether or not the datapath
       // was read; they sit with its warnings. An unknown code shows the backend's message.
-      degradations: runtime?.degradations?.map(d => ({id: d.component, tooltip: d.code, text: oneLine(backendMessage(d.code, d.message, t), t)})) ?? []
+      degradations:
+        runtime?.degradations?.map(d => {
+          const docs = persistenceCodes.has(d.code);
+          const detail = (d.details as {reason?: unknown} | null | undefined)?.reason;
+          const reason = typeof detail === 'string' ? detail : d.message;
+          return {
+            id: d.component,
+            tooltip: docs && reason ? t('ui.valuePair', {label: d.code, value: reason}) : d.code,
+            text: oneLine(backendMessage(d.code, d.message, t), t),
+            ...(docs && lang && {link: {href: docsHref(lang, 'state-db'), text: t('ov.lim.docsStateDb'), external: true}})
+          };
+        }) ?? []
     },
     resources: {
       state: section(!!capabilities, loading.capabilities),

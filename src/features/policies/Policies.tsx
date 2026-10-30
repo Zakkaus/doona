@@ -189,7 +189,7 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
                   <TextTooltip>{g.name}</TextTooltip>
                 </h2>
                 {m.actionsReason && (
-                  <IconTip label={t('policy.lockHelp', {name: g.name})} text={m.actionsReason}>
+                  <IconTip label={t('policy.lockHelp', {name: g.name})} text={m.actionsReason} link={m.actionsLink}>
                     <Lock />
                   </IconTip>
                 )}

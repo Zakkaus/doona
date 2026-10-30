@@ -4,7 +4,7 @@ import {enumLabel} from '../../i18n/enum';
 import {localTime, formatBytes} from '../../i18n/format';
 import {formatNumber, type Translator} from '../../i18n';
 import {refusalMessage, type BackendMessage} from '../../i18n/backend';
-import {explainDiagnostic} from '../shared/offlineDependency';
+import {explainDiagnostic, offlineDependencyCode} from '../shared/offlineDependency';
 import type {Key} from '../../i18n';
 import {fileName, redacted, sourceKinds} from '../../dae/sources';
 import {blockFields, scanConfig, type TextBlock, type TextToken} from '../../dae/text';
@@ -242,6 +242,8 @@ export type DiagnosticRow = {
   backend: string | null;
   // A line in the source on show moves its editor; another source opens there.
   action: 'jump' | 'open' | null;
+  // A missing or unreadable offline file, which the docs explain how to restore.
+  offline: boolean;
   count: number;
 };
 const tones = {error: 'err', warning: 'warn', info: 'info'} as const;
@@ -290,6 +292,7 @@ export function diagnosticRows(
             : t('config.atFile', {file: path, line, message}),
       backend: item.message || null,
       action: !own ? 'open' : item.line === null ? null : 'jump',
+      offline: offlineDependencyCode(item.code),
       count
     };
   });

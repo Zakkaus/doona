@@ -169,6 +169,23 @@ describe('rows', () => {
     const other = status({last_error: {code: 'download_timeout', message: 'x', details: null}});
     expect(statusLine(other, false, now, 'en-US', t, true).help).toBeUndefined();
   });
+  it('links the update failures in the docs for a stage a retry does not get past', () => {
+    const link = {href: 'https://doona.daeuniverse.org/en/troubleshooting.html#geodata-update', text: t('ov.lim.docsGeodataUpdate'), external: true};
+    const cases = [
+      ['asset_too_large', link],
+      ['asset_validation_failed', link],
+      ['geodata_update_failed', link],
+      ['replacement_failed', link],
+      ['directory_sync_failed', link],
+      ['download_timeout', undefined]
+    ] as const;
+    for (const [code, expected] of cases) {
+      const failed = status({last_error: {code, message: 'x', details: null}});
+      expect(statusLine(failed, false, now, 'en-US', t, false, 'sha256sum', 'en').help?.link).toEqual(expected);
+    }
+    const lasting = status({last_error: {code: 'replacement_failed', message: 'x', details: null}});
+    expect(statusLine(lasting, false, now, 'en-US', t, false, 'sha256sum', 'en').help?.title).toBe(t('settings.geodataLastError'));
+  });
   it('lists each asset with its size, host and route, and the full URL behind it', () => {
     const details = assetDetails(status(), [], 'en-US', t);
     expect(details[0]).toEqual({label: 'geosite', value: expect.stringMatching(/^4\.4 MB, raw\.githubusercontent\.com, Direct$/), full: full.urls.geosite[0]});

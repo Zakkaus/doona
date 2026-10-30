@@ -17,6 +17,7 @@ import {toast} from '../../ui/ui';
 import {failureNotice, requestIdOf} from '../../api/error';
 import {foldFamilies} from '../../api/selectors';
 import {selectMember} from '../shared/selectMember';
+import {featureLink} from '../shared/limitHint';
 export type PolicyGroupInput = {
   nodes?: Node[];
   providers?: Provider[];
@@ -215,6 +216,8 @@ export function usePolicyGroup(input: PolicyGroupInput) {
       {busy: !!control.busy, canProbe: !!control.canProbe},
       t
     ),
+    // A blocked edit links the requirements for editing groups.
+    actionsLink: source.writable && !source.busy && edit.tip ? featureLink(t, lang, 'group_edit') : undefined,
     untestedHelp: untestedHelp(card?.untested ?? null, !!control.canProbe, t),
     probeText: t(control.busy === 'probe' ? 'policy.probing' : 'policy.probeAll'),
     probe,

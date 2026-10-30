@@ -5,7 +5,7 @@ import {offered} from '../../api/capabilities';
 import {useNow} from '../../ui/clock';
 import {LOCALE, formatList, formatNumber, useLang, useT} from '../../i18n';
 import {toast, toastErrorDetail} from '../../ui/ui';
-import {announceGeodataUpdate} from '../shared/geodataUpdate';
+import {announceGeodataUpdate, docsAction, geodataDocs} from '../shared/geodataUpdate';
 import {geodataKinds, geodataPresets, matchPreset, type GeodataPreset, type GeodataPresetId, type GeodataUrls} from '../../dae/geodata';
 import {geodataConfigurable} from './nav';
 import {geodataFromConfig, geodataRows, geodataUpdateReason} from './view';
@@ -57,7 +57,7 @@ export function useGeodataSettings() {
   const checksum = geodataCaps?.checksum ?? null;
   const lifecycle = geodataCaps?.lifecycle;
 
-  const update = () => announceGeodataUpdate(geodata.update(), t);
+  const update = () => announceGeodataUpdate(geodata.update(), t, lang);
   // Resolves true once stored; a URL change then starts the update and leaves its outcome to the status row.
   // One save at a time: a second press while one is in flight, or while an update runs, does nothing.
   const inflight = useRef(false);
@@ -93,7 +93,10 @@ export function useGeodataSettings() {
       (error: unknown) => {
         inflight.current = false;
         setPending(null);
-        toast('negative', t('settings.geodataSaveFailed'), toastErrorDetail(error, t));
+        toast('negative', t('settings.geodataSaveFailed'), {
+          ...toastErrorDetail(error, t),
+          action: docsAction(geodataDocs(error, 'geodata_settings', t, lang))
+        });
         return false;
       }
     );
@@ -120,7 +123,7 @@ export function useGeodataSettings() {
     );
   const savePreset = (chosen: GeodataPreset) => void save({geosite: {urls: [...chosen.urls.geosite]}, geoip: {urls: [...chosen.urls.geoip]}});
   const saveLabel = t(canUpdate ? 'settings.geodataSaveUpdate' : 'settings.geodataSaveSources');
-  const status = statusLine(geodata.data, geodata.busy || (canUpdate && !!pending?.geosite), now, locale, t, verify === true, checksum);
+  const status = statusLine(geodata.data, geodata.busy || (canUpdate && !!pending?.geosite), now, locale, t, verify === true, checksum, lang);
 
   // From the capabilities, so the source settings' Skeleton draws the same help line before they arrive.
   const checksumHelp = t(

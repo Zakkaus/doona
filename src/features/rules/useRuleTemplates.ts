@@ -1,7 +1,7 @@
 import {useMemo, useState} from 'react';
 import {refetchAll, useCapabilities, useConfig, useConfigEditor, useNodes, useVersion} from '../../store';
 import {useCompleteness} from '../../store/config';
-import {useT} from '../../i18n';
+import {useLang, useT} from '../../i18n';
 import {ApiError} from '../../api/error';
 import {offered} from '../../api/capabilities';
 import {engineOf} from '../../api/engines';
@@ -9,6 +9,7 @@ import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
 import {oneLine} from '../../i18n/backend';
 import {refusalDetails} from '../shared/pending';
 import {useOfflineFix, type OfflineFix} from '../shared/useOfflineFix';
+import type {LimitLink} from '../shared/limitHint';
 import {backendWords, explainDiagnostic} from '../shared/offlineDependency';
 import {geodataKinds} from '../shared/geodataUpdate';
 import {toast, toastFailure} from '../../ui/ui';
@@ -19,6 +20,7 @@ import {useDraftGuard} from '../../shell/draft';
 import {within} from '../../shell/route';
 import {
   refusalReason,
+  refusalLink,
   ruleViewMode,
   templateChoice,
   templateImpact,
@@ -62,6 +64,8 @@ export type RuleTemplatesModel = TemplatesView & {
   setOption: (option: keyof TemplateOptions, enabled: boolean) => void;
   // Why no template can be applied, or null when one can; applying waits while the file's digest is checked.
   refusal: string | null;
+  // The docs on lifting the refusal, when it does not say so itself.
+  refusalLink: LimitLink | undefined;
   // Whether the template or its options differ from the detected routing and the file can be written.
   canApply: boolean;
   open: () => void;
@@ -79,6 +83,7 @@ const reread = () => void refetchAll();
 // It opens on the simple view, template or custom, and on the rule table for a link to a rule.
 export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
   const t = useT();
+  const lang = useLang();
   const resources = useCapabilities().data?.resources;
   const readable = offered(resources, 'config', {whileLoading: false});
   const config = useConfig(readable);
@@ -151,6 +156,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
     selected,
     select: setPicked,
     refusal: target.refusal && refusalReason(target.refusal, target.source, t),
+    refusalLink: target.refusal ? refusalLink(target.refusal, t, lang) : undefined,
     canApply,
     open: () => {
       const source = target.source;

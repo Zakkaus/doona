@@ -1,5 +1,7 @@
 import type {ConfigSource} from '../../api/model';
-import type {Key, Translator} from '../../i18n';
+import type {Key, Lang, Translator} from '../../i18n';
+import {docsHref, type DocsAnchor} from '../shared/docs';
+import type {LimitLink} from '../shared/limitHint';
 import {scanConfig} from '../../dae/text';
 import {allGroupNames, fileName} from '../../dae/sources';
 import {classifyFilters, readGroupEntries, type GroupEntry} from '../../dae/groups';
@@ -199,6 +201,14 @@ export function templateTarget({sources, configWritable, daeText, complete, hold
 }
 export const refusalReason = (refusal: TemplateRefusal, source: ConfigSource | null, t: Translator) =>
   t(refusalText[refusal], {file: source ? fileName(source) : ''});
+// The docs on lifting a refusal; split and secret already say what to do. The rules requirements link reads as the
+// overview's for rule editing, without loading its tables here.
+export function refusalLink(refusal: TemplateRefusal, t: Translator, lang: Lang): LimitLink | undefined {
+  if (refusal === 'split' || refusal === 'secret') return undefined;
+  const link = (anchor: DocsAnchor, text: string) => ({href: docsHref(lang, anchor), text, external: true});
+  if (refusal === 'syntax' || refusal === 'noSource') return link('req-rules', t('ov.lim.docsFor', {feature: t('ov.lim.ruleEdit')}));
+  return link('read-only', t('ov.lim.docsReadOnly'));
+}
 
 // A group pinned to one node: one exact name and nothing else, or a fixed policy. Every rule a template points at it
 // then leaves through that one node.

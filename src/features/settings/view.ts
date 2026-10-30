@@ -3,7 +3,7 @@ import type {Capabilities, RecorderState, RuntimeSettingField, RuntimeSettings, 
 import {engineOf} from '../../api/engines';
 import {formatList, formatNumber, type Lang, type Params, type Translator} from '../../i18n';
 import {href} from '../../shell/route';
-import {docsHref} from '../shared/docs';
+import {docsHref, type DocsAnchor} from '../shared/docs';
 import {geodataConfigurable, runtimeFieldLabels} from './nav';
 import {ApiError} from '../../api/error';
 import type {Key} from '../../i18n';
@@ -105,10 +105,13 @@ export function geodataRows(assets: GeoData['assets'], locale: string) {
     source: asset.source_redacted ?? '—'
   }));
 }
+// A failed connection test links the sign-in section, which also leads to access from another origin.
+export type ConnectionDocs = Extract<DocsAnchor, 'sign-in'>;
 export function profileView(
   profiles: Array<{id: string; name: string}>,
-  result: {key: Key; params?: Params; error?: boolean; requestId?: string | null; id?: number} | null,
-  t: Translator
+  result: {key: Key; params?: Params; error?: boolean; requestId?: string | null; id?: number; docs?: ConnectionDocs} | null,
+  t: Translator,
+  lang: Lang
 ) {
   return {
     choices: profiles.map(profile => ({id: profile.id, label: profile.name})),
@@ -118,7 +121,8 @@ export function profileView(
           role: result.error ? ('alert' as const) : ('status' as const),
           request: result.requestId ? t('ui.requestNote', {requestId: result.requestId}) : '',
           error: !!result.error,
-          id: result.id ?? 0
+          id: result.id ?? 0,
+          link: result.docs ? {href: docsHref(lang, result.docs), text: t('ov.lim.docsSignIn'), external: true} : undefined
         }
       : null
   };
@@ -162,9 +166,13 @@ export function probeFailure(
   base: string,
   origin: string,
   token = ''
-): {key: Key; params?: Params} | null {
+): {key: Key; params?: Params; docs?: ConnectionDocs} | null {
   if (signal.aborted && (signal.reason as {name?: string} | undefined)?.name === 'TimeoutError') return {key: 'settings.timeout'};
   if (signal.aborted) return null;
+  // Fetch does not distinguish cross-origin network failures from CORS rejection; the client wraps both as status 0.
+  const unreachable = (error instanceof ApiError && error.code === 'network_error') || error instanceof TypeError;
+  if (unreachable && new URL(base).origin !== origin) return {key: 'settings.cors', docs: 'sign-in'};
+  if (unreachable) return {key: 'settings.network', docs: 'sign-in'};
   if (error instanceof ApiError) {
     // The backend refuses a missing and a wrong token alike; which one it was is known here.
     if (error.status === 401) return {key: token ? 'settings.tokenRejected' : 'settings.unauthorized'};
@@ -173,7 +181,5 @@ export function probeFailure(
     return {key: 'settings.httpError', params: {status: error.status}};
   }
   if (error instanceof SyntaxError) return {key: 'settings.nonJson'};
-  // Fetch does not distinguish cross-origin network failures from CORS rejection.
-  if (error instanceof TypeError && new URL(base).origin !== origin) return {key: 'settings.cors'};
-  return {key: 'settings.network'};
+  return {key: 'settings.network', docs: 'sign-in'};
 }

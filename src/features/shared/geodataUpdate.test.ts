@@ -1,6 +1,8 @@
 import {expect, it} from 'vitest';
 import type {Capabilities, GeoData} from '../../api/model';
-import {geodataKinds, geodataNeed} from './geodataUpdate';
+import {ApiError, LocalError} from '../../api/error';
+import {translate, type Translator} from '../../i18n';
+import {geodataDocs, geodataKinds, geodataNeed} from './geodataUpdate';
 
 const asset = (kind: 'geoip' | 'geosite', size_bytes = '1024') => ({kind, size_bytes, sha256: 'a'.repeat(64), modified_at: null, source_redacted: null});
 const read = (...assets: ReturnType<typeof asset>[]) => ({observed_at: '2026-10-05T00:00:00Z', assets}) as GeoData;
@@ -41,4 +43,23 @@ it('offers nothing and names only empty loaded files while the needs or the back
   expect(geodataNeed([], caps(['geoip']), read(asset('geoip')))).toEqual({missing: [], repair: false});
   expect(geodataNeed(['geosite'], {available: false} as Capabilities['resources']['geodata'], undefined)).toEqual({missing: [], repair: false});
   expect(geodataNeed(['geosite'], undefined, undefined)).toEqual({missing: [], repair: false});
+});
+
+it('links the requirements of a refused geodata action and the update failures of a lasting one', () => {
+  const t: Translator = (key, params) => translate('en', key, params);
+  const docs = 'https://doona.daeuniverse.org/en/';
+  const failed = (code: string, stage?: string) => new LocalError('ui.operationFailed', null, code, stage ? {stage} : null);
+  const cases: [error: unknown, action: 'geodata' | 'geodata_settings', href: string | undefined][] = [
+    [new ApiError(403, 'permission_denied', 'denied'), 'geodata', `${docs}feature-requirements.html#req-geodata-update`],
+    [new ApiError(501, 'capability_not_supported', 'no'), 'geodata', `${docs}feature-requirements.html#req-geodata-update`],
+    [new ApiError(403, 'permission_denied', 'denied'), 'geodata_settings', `${docs}feature-requirements.html#req-geodata-settings`],
+    [failed('asset_too_large'), 'geodata', `${docs}troubleshooting.html#geodata-update`],
+    [failed('geodata_update_failed', 'replacement_failed'), 'geodata', `${docs}troubleshooting.html#geodata-update`],
+    [failed('other', 'directory_sync_failed'), 'geodata', `${docs}troubleshooting.html#geodata-update`],
+    [failed('asset_too_large'), 'geodata_settings', undefined],
+    [failed('download_timeout'), 'geodata', undefined],
+    [new ApiError(500, 'internal', 'x'), 'geodata', undefined],
+    [new Error('x'), 'geodata', undefined]
+  ];
+  for (const [error, action, href] of cases) expect(geodataDocs(error, action, t, 'en')?.href).toBe(href);
 });

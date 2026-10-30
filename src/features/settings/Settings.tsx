@@ -14,6 +14,7 @@ import {
   Switch,
   Tabs,
   TextField,
+  TextLink,
   Toolbar,
   Form
 } from '../../ui/ui';
@@ -195,6 +196,7 @@ export function Settings({query}: PageProps) {
             <div role={profile.result.role}>
               {profile.result.text}
               {profile.result.request && <span className="rp-code">{profile.result.request}</span>}
+              {profile.result.link && <TextLink link={profile.result.link} />}
             </div>
           )}
         </Form>

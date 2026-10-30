@@ -17,7 +17,7 @@ export function useSettingsPage(query: string) {
   const [showToken, setShowToken] = useState(false);
   if (!controls) throw new Error('Settings requires shell controls');
   const {lang, pickLang, ap, paletteSections, startPageItems} = controls;
-  const profile = profileView(form.saved.profiles, form.result, t);
+  const profile = profileView(form.saved.profiles, form.result, t, lang);
   const install = offer
     ? () => {
         void offer().then(accepted => {

@@ -1,6 +1,21 @@
 import {Suspense, useEffect, useRef, type ComponentProps} from 'react';
-import {useT} from '../../i18n';
-import {Badge, Button, Card, Disclosure, Light, Link, PageSkeleton, Segmented, Toolbar, VisuallyHidden, type Action, type PageShape} from '../../ui/ui';
+import {useLang, useT} from '../../i18n';
+import {
+  Badge,
+  Button,
+  Card,
+  Disclosure,
+  Light,
+  Link,
+  PageSkeleton,
+  Segmented,
+  TextLink,
+  Toolbar,
+  VisuallyHidden,
+  type Action,
+  type PageShape
+} from '../../ui/ui';
+import {docsHref} from '../shared/docs';
 import {ContextualHelp} from '../../ui/ContextualHelp';
 import {preloadable} from '../../ui/preloadable';
 import type {CodeEditor} from '../../ui/code/CodeEditor';
@@ -16,6 +31,7 @@ export const editorBlock: PageShape = [{block: 560}];
 export function SourceCard(props: SourceCardProps) {
   const {canValidate} = props;
   const t = useT();
+  const lang = useLang();
   const {
     writable,
     links,
@@ -101,6 +117,7 @@ export function SourceCard(props: SourceCardProps) {
                     <code>{item.backend}</code>
                   </Disclosure>
                 )}
+                {item.offline && <TextLink link={{href: docsHref(lang, 'offline-dependency'), text: t('ov.lim.docsOffline'), external: true}} />}
                 {item.action && (
                   <Button
                     small
