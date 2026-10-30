@@ -63,7 +63,9 @@ const looks = [
   ['Tinted Light', 'glass/tinted', 'light'],
   ['Tinted Dark', 'glass/tinted', 'dark'],
   ['China Day shift', 'qiangguo/qiangguo', 'light'],
-  ['China Night shift', 'qiangguo/qiangguo', 'dark']
+  ['China Night shift', 'qiangguo/qiangguo', 'dark'],
+  ['Halloween Daylight', 'halloween/halloween', 'light'],
+  ['Halloween Midnight', 'halloween/halloween', 'dark']
 ];
 const gallery = new Map([
   ['Rosé Pine Dawn', 'rose-pine-light'],
