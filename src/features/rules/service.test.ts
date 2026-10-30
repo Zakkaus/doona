@@ -147,6 +147,28 @@ describe('placement above broad catch-alls', () => {
   });
 });
 
+describe('games covered by an all-games rule', () => {
+  const content = 'routing {\n  domain(geosite:category-games) -> proxy\n  fallback: direct\n}\n';
+  const games = {...rule('domain(geosite:category-games)', 2), outbound: 'proxy'};
+  const fallback = rule('fallback: direct', 3, 'fallback');
+  const heldGames = build(undefined, {selected: ['category-games'], outbound: 'proxy'}).rules;
+  it.each([
+    {name: 'a listed rule to the chosen outbound', rules: [games, fallback], held: [], outbound: 'proxy', covered: true},
+    {name: 'a quoted chosen outbound', rules: [games, fallback], held: [], outbound: "'proxy'", covered: true},
+    {name: 'a held rule to the chosen outbound', rules: [fallback], held: heldGames, outbound: 'proxy', covered: true},
+    {name: 'a listed rule to another outbound', rules: [games, fallback], held: [], outbound: 'direct', covered: false},
+    {name: 'no all-games rule', rules: [fallback], held: [], outbound: 'proxy', covered: false}
+  ])('skips Steam for $name: $covered', ({rules, held, outbound, covered}) => {
+    const result = build(content, {rules, held, outbound, selected: ['steam', 'netflix']});
+    expect(result.skipped.some(item => item.service === 'steam' && item.covered)).toBe(covered);
+    expect(result.skipped.some(item => item.service === 'netflix')).toBe(false);
+    expect(result.rules.map(item => item.condition)).toEqual([...(covered ? [] : ['domain(geosite:steam)']), 'domain(geosite:netflix)']);
+  });
+  it('reports the all-games service itself as an existing rule', () => {
+    expect(build(content, {rules: [games, fallback], outbound: 'proxy'}).skipped).toContainEqual({service: 'category-games', rule: games});
+  });
+});
+
 it.each(['direct', 'block'])('does not add Steam China direct for builtin %s', outbound => {
   const result = build(undefined, {selected: ['steam'], steamCn: true, outbound});
   expect(result.rules.map(item => item.condition)).toEqual(['domain(geosite:steam)']);
@@ -173,7 +195,7 @@ describe('duplicates', () => {
     const first = build(undefined, {selected: ['steam']});
     const again = build(undefined, {selected: ['steam'], held: first.rules});
     expect(again.rules).toEqual([]);
-    expect(again.skipped).toContainEqual({service: 'steam', held: true});
+    expect(again.skipped).toContainEqual({service: 'steam', held: first.rules[0]});
   });
   it('does not queue Steam China direct again when a held rule already has it', () => {
     const first = build(undefined, {selected: ['steam'], steamCn: true});
