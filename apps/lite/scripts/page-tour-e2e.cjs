@@ -256,7 +256,7 @@ async function go(p, route) {
     await p.keyboard.press('Control+Space');
     await expect(p.locator('.cm-tooltip-autocomplete')).toBeVisible();
     await shot('code-completion');
-    await p.keyboard.press('Enter');
+    await p.locator('.cm-tooltip-autocomplete').getByText('domain', {exact: true}).click();
     await p.keyboard.type('suffix: editor.example) -> direct\n');
     await p.keyboard.press('Escape');
     await expect(editor).toContainText('domain(suffix: editor.example) -> direct');

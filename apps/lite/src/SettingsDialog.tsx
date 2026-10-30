@@ -1,3 +1,4 @@
+import {settingsCatalogs} from './i18n/settings';
 import {Banner} from '@astryxdesign/core/Banner';
 import {numberSetting} from '../../../src/dae/settings';
 import {SettingNumber} from './ui/SettingNumber';
@@ -108,6 +109,13 @@ export function SettingsDialog({
 }) {
   const t = useMessages();
   const prefs = usePreferences();
+  const guidance = settingsCatalogs[prefs.locale];
+  const displayValue = (value: string, isBoolean: boolean) => {
+    if (!value) return t.defaultValue;
+    if (isBoolean && value === 'true') return guidance.settingsGuideEnabled;
+    if (isBoolean && value === 'false') return guidance.settingsGuideDisabled;
+    return value;
+  };
   const toast = useToast();
   const titleId = useId();
   const isNarrow = useMediaQuery(MEDIA.settings);
@@ -242,8 +250,8 @@ export function SettingsDialog({
               const was = field ? settingValue(field, fields.find(item => item.name === key)?.value ?? '') : '';
               return t.reviewSetting
                 .replace('{label}', t[`setting_${key}` as MessageKey] ?? key)
-                .replace('{before}', was || t.defaultValue)
-                .replace('{after}', value || t.defaultValue);
+                .replace('{before}', displayValue(was, field?.type === 'boolean'))
+                .replace('{after}', displayValue(value, field?.type === 'boolean'));
             })}
             before={read.data.content}
             after={candidate}
@@ -314,6 +322,7 @@ export function SettingsDialog({
                         <VStack as="ul" role="list" gap={0}>
                           {list.map((field, index) => {
                             const label = t[`setting_${field.key}` as MessageKey];
+                            const help = guidance[`settingsGuide_${field.key}` as keyof typeof guidance];
                             const value = patch[field.key] ?? settingValue(field, fields.find(f => f.name === field.key)?.value ?? '');
                             const options = field.type === 'boolean' ? ['true', 'false'] : field.choices;
                             const update = (next: string) => setPatch(old => ({...old, [field.key]: next}));
@@ -323,13 +332,20 @@ export function SettingsDialog({
                                 <VStack padding={4} gap={2}>
                                   <HStack xstyle={styles.row}>
                                     <StackItem size="fill">
-                                      <Text type="label">{label}</Text>
+                                      <VStack gap={0.5}>
+                                        <Text type="label">{label}</Text>
+                                        {help && (
+                                          <Text type="supporting" color="secondary">
+                                            {help}
+                                          </Text>
+                                        )}
+                                      </VStack>
                                     </StackItem>
                                     <VStack xstyle={!restart && styles.control} style={{minWidth: 0}}>
                                       {restart ? (
                                         <HStack gap={2} align="center">
                                           <Text color="secondary" style={{overflowWrap: 'anywhere', minWidth: 0}}>
-                                            {value || t.defaultValue}
+                                            {displayValue(value, field.type === 'boolean')}
                                           </Text>
                                           <Tooltip content={t.restartCopyLine}>
                                             <IconButton
@@ -350,7 +366,10 @@ export function SettingsDialog({
                                           value={value}
                                           options={[
                                             {value: '', label: t.defaultValue},
-                                            ...[...new Set([...options, ...(value ? [value] : [])])].map(item => ({value: item, label: item}))
+                                            ...[...new Set([...options, ...(value ? [value] : [])])].map(item => ({
+                                              value: item,
+                                              label: displayValue(item, field.type === 'boolean')
+                                            }))
                                           ]}
                                           onChange={update}
                                           isDisabled={disabled}

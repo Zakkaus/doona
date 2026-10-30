@@ -195,6 +195,14 @@ async function download(p, action) {
   const browser = await chromium.launch();
   try {
     const {p, state, errors, l} = await fixture(browser);
+    await p.getByRole('radio', {name: '全局代理', exact: true}).click();
+    await p.getByRole('button', {name: '打开策略组', exact: true}).click();
+    const leave = p.getByRole('dialog', {name: '放弃未保存的更改？', exact: true});
+    await expect(leave).toBeVisible();
+    await leave.getByRole('button', {name: l.cancel, exact: true}).click();
+    await expect(p.getByRole('radio', {name: '全局代理', exact: true})).toHaveAttribute('aria-checked', 'true');
+    await expect(p.getByRole('button', {name: '查看并应用', exact: true})).toBeDisabled();
+    await p.getByRole('radio', {name: '规则分流', exact: true}).click();
     await test(p, l, 'https://example.com/a');
     await expect(p.getByRole('heading', {name: l.headline, exact: true})).toBeVisible();
     await expect(p.locator('[data-routing-test-result]')).toContainText(l.matched);
