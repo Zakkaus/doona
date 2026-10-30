@@ -6,6 +6,45 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Entries live in [changes/](changes/) until release.
 
+## [0.1.0-rc.4] - 2026-10-30
+
+### Added
+
+- A bug-icon report button opens doona's issue tracker in a new tab: first among the standard app's top-bar actions and at the bottom left of the lite sidebar, next to the theme and language buttons. It has no text; the accessible name and tooltip say "Report a problem". (#630)
+- Lite About shows the name, version, guide, GitHub and release links, and the connection address and backend. (#630)
+- Empty rule, DNS, group-member and copy-member states now offer guidance; the routing `must` control has supporting text. Group and subscription deletion text explains staged changes, and bulk node deletion lists the selected names. (#630)
+- Select nodes to test their latency together, including subscription and include-file nodes, or remove selected manual nodes with one confirmation. Closing the dialog stops further removals, and failed nodes remain selected for retry. Ctrl or Cmd+A selects every listed node, and the shortcut help lists it. (#635)
+- A Halloween palette under Other: pumpkin orange on warm parchment by day and on a deep purple night after dark, with a small jack-o'-lantern, bats, a black cat or a spider web in the corner of each card. The duck wears a witch's hat in the top bar, on the sign-in page and in About; running reads Haunting, unavailable and degraded read Cursed, and light and dark read Daylight and Midnight. Its styles, art and logo load only when the palette is chosen. (#636)
+- Add common service rules without replacing existing rules. Existing and unavailable services appear as disabled choices. Hold rules for review or apply them immediately; either action closes the dialog ([#619](https://github.com/Zakkaus/doona/issues/619)). (#623)
+
+### Changed
+
+- Lite groups manual node fields into connection, transport and TLS, and collapsed advanced sections, with explanations of field behavior and defaults. (#633)
+- Lite backend Settings explains honk configuration effects and defaults, including compatibility-only settings, and labels boolean values as enabled or disabled. (#633)
+- Lite guides empty node-group destinations and Global routing targets to Groups through the existing draft guard. Nodes already present in every editable group show a Close-only footer. (#633)
+
+### Fixed
+
+- Lite's logo shows the yellow beak and feet again, matching the standard logo. (#634)
+- Lite's skip link focuses the main content without changing the current route. (#633)
+- Lite's rule tester and Settings dialog return keyboard focus to their opening controls when closed. (#633)
+- Lite node rows show a continuous, theme-coloured keyboard focus ring above pinned columns while mouse-operated dialogs return focus without a row ring. (#621)
+- Lite keyboard focus rings use the neutral theme colour instead of yellow. (#621)
+- Lite segmented controls no longer show a double border. (#621)
+- Lite page descriptions and content no longer flash or jump after loading. (#621)
+- A routing block that holds only a `default:` fallback counts as holding no rules, like `fallback:`. (#628)
+- The service picker recognises a fully quoted rule such as `domain('geosite:telegram')` and no longer inserts the service again. (#628)
+- The service picker no longer queues `domain(geosite:steam@cn)` when a held rule already has it. (#628)
+- The service picker puts a game service such as Steam above an existing all-games rule, so that rule no longer takes its traffic first. (#629)
+- A connection test that cannot reach the backend shows the network or cross-origin advice again, with a link to the matching docs section, instead of HTTP 0. (#631)
+- Missing offline files, refused routing templates, locked group edits, failed geodata saves and updates, and lost persistence on System status link the docs section that explains the fix. (#631)
+- A refused template whose write needs no geodata still links the docs on files the configuration needs. (#631)
+- System status keeps the backend's reason for an unavailable state database or state cache. (#631)
+- Lite links the docs from read-only notes, unavailable pages, refused and rejected changes, failed latency tests and route tests, failed subscription updates, and a disconnected, degraded or failed backend. (#631)
+- Lite toasts and banners keep the validator's or backend's reason for a rejected change or a failed operation, a failed subscription update shows its last error, and the backend menu shows why it is disconnected, degraded or failed. (#631)
+- Lite pages for a feature the backend does not offer say what the page needs and link its requirements. (#631)
+- Applying a rule template keeps the Block ads, Block QUIC and NetworkManager rules that custom routing already holds. (#627)
+
 ## [0.1.0-rc.3] - 2026-10-28
 
 ### Added
@@ -957,7 +996,8 @@ Entries live in [changes/](changes/) until release.
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
-[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.3...HEAD
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.4...HEAD
+[0.1.0-rc.4]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.3...v0.1.0-rc.4
 [0.1.0-rc.3]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.2...v0.1.0-rc.3
 [0.1.0-rc.2]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.1...v0.1.0-rc.2
 [0.1.0-rc.1]: https://github.com/Zakkaus/doona/compare/v0.1.0-beta.20...v0.1.0-rc.1

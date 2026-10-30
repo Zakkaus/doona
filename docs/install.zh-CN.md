@@ -2,7 +2,7 @@
 
 [English](install.md) / 简体中文 / [繁體中文](install.zh-TW.md)
 
-doona 以静态网页文件发布。当前版本为 v0.1.0-rc.3；doona lite 是测试中的预览版。
+doona 以静态网页文件发布。当前版本为 v0.1.0-rc.4；doona lite 是测试中的预览版。
 
 安装请参阅文档站的[系统要求](https://doona.daeuniverse.org/zh-CN/requirements.html)、[安装指南](https://doona.daeuniverse.org/zh-CN/install.html)与 [doona lite 指南](https://doona.daeuniverse.org/zh-CN/lite.html)。这些页面说明后端配置、各发行版的安装步骤与首次登录。本页说明本仓库构建的文件。当前 honk 下载文件名与附件状态见[配套 honk 构建](#配套-honk-构建)。
 
@@ -23,7 +23,7 @@ doona 以静态网页文件发布。当前版本为 v0.1.0-rc.3；doona lite 是
 
 ## 配套 honk 构建
 
-独立界面先发布，匹配的 honk 构建与对应源码随后附加。附件是否已就绪，请查看[发布说明与附件](https://github.com/Zakkaus/doona/releases/tag/v0.1.0-rc.3)。
+独立界面先发布，匹配的 honk 构建与对应源码随后附加。附件是否已就绪，请查看[发布说明与附件](https://github.com/Zakkaus/doona/releases/tag/v0.1.0-rc.4)。
 
 完整构建的文件名为 `honk-core-debug-<target>[-stock]-full.tar.gz`。旧版本省略 `-full`，因此按旧安装示例操作时，应使用当前附件名称。八种构建覆盖 x86_64 与 aarch64、musl 与 GNU，并分别使用 mimalloc 或系统内存分配器（`-stock`）。不确定时选择 musl。附件就绪后，这些构建内嵌匹配的 doona 版本，通过 `ui: embedded` 提供界面。
 
