@@ -47,3 +47,42 @@ test.describe('backend', () => {
   test.use({baseURL: production});
   for (const name of ['login-e2e', 'features-routing', 'settings-restart']) test(name, async ({baseURL}) => expect(await run(name, baseURL!)).toBe(0));
 });
+
+test.describe('keyboard focus', () => {
+  test.use({locale: 'zh-TW'});
+
+  test('skip link preserves the route and focuses main content', async ({page}) => {
+    for (const [route, heading] of [
+      ['dns', 'DNS'],
+      ['routing', '路由']
+    ]) {
+      await page.goto(`/#${route}`);
+      await expect(page.locator(route === 'dns' ? '[data-editor-content="dns"]' : '[data-rule-list="routing"]')).toBeVisible();
+      await expect(page.getByRole('heading', {name: heading, exact: true, level: 1})).toBeFocused();
+      if (route === 'routing') await page.getByRole('radio', {name: '全部直連', exact: true}).click();
+      await page.getByRole('link', {name: '跳至內容', exact: true}).focus();
+      await page.keyboard.press('Enter');
+      await expect(page.getByRole('main')).toBeFocused();
+      await expect(page).toHaveURL(new RegExp(`#${route}$`));
+      await expect(page.getByRole('heading', {name: heading, exact: true, level: 1})).toBeVisible();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      if (route === 'routing') await expect(page.getByRole('button', {name: '檢視並套用', exact: true})).toBeVisible();
+    }
+  });
+
+  test('keyboard dialogs return focus to their trigger', async ({page}) => {
+    await page.goto('/#routing');
+    await expect(page.locator('[data-rule-list="routing"]')).toBeVisible();
+    await expect(page.getByRole('heading', {name: '路由', exact: true, level: 1})).toBeFocused();
+    for (const name of ['測試規則', '設定', '測試規則', '設定']) {
+      const trigger = page.getByRole('button', {name, exact: true});
+      await expect(trigger).toBeEnabled();
+      await trigger.focus();
+      await page.keyboard.press('Enter');
+      await expect(page.locator('dialog[open]')).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(trigger).toBeFocused();
+    }
+  });
+});

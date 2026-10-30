@@ -91,6 +91,8 @@ export default function App() {
   }, [connection]);
   const [commands, setCommands] = useState<'palette' | 'help' | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsMounted, setSettingsMounted] = useState(false);
+  if (settingsOpen && !settingsMounted) setSettingsMounted(true);
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [leaving, setLeaving] = useState<Screen | null>(null);
@@ -127,6 +129,13 @@ export default function App() {
   useEffect(() => warmGlyphsDuringIdle(t.pending), [t.pending]);
   useEffect(() => {
     const changed = () => {
+      const target = location.hash.slice(1);
+      const anchor = screens.includes(target as Screen) ? null : document.getElementById(target);
+      if (anchor) {
+        history.replaceState(null, '', `#${screen}`);
+        anchor.focus();
+        return;
+      }
       if (busy) history.replaceState(null, '', `#${screen}`);
       else if (dirty && route() !== screen) {
         const next = route();
@@ -237,9 +246,9 @@ export default function App() {
                           </Activity>
                         );
                       })}
-                    {settingsOpen && (
+                    {settingsMounted && (
                       <Suspense fallback={null}>
-                        <SettingsDialog isOpen connection={connection} setBusy={setBusy} close={() => setSettingsOpen(false)} />
+                        <SettingsDialog isOpen={settingsOpen} connection={connection} setBusy={setBusy} close={() => setSettingsOpen(false)} />
                       </Suspense>
                     )}
                     {commands && (

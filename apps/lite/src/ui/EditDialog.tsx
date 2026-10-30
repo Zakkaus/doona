@@ -1,6 +1,6 @@
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
 import {Layout, LayoutContent, LayoutFooter, VStack} from '@astryxdesign/core/Layout';
-import {useCallback, useState, type ReactNode, type RefCallback} from 'react';
+import {useCallback, useEffect, useState, type ReactNode, type RefCallback} from 'react';
 import type {Notice} from '../state';
 import {Feedback} from '../ui';
 import {DialogActions} from './DialogActions';
@@ -40,6 +40,9 @@ export function EditDialog({
   dialogRef?: RefCallback<HTMLDialogElement>;
   cancelLabel?: string;
 }) {
+  // Mount closed before opening so the header cannot replace Astryx's trigger focus.
+  const [shown, setShown] = useState(false);
+  useEffect(() => setShown(open), [open]);
   const [mounted, setMounted] = useState(open);
   if (open && !mounted) setMounted(true);
   const attach = useCallback(
@@ -62,7 +65,7 @@ export function EditDialog({
   };
   return (
     <Dialog
-      isOpen={open}
+      isOpen={open && shown}
       ref={attach}
       onOpenChange={value => {
         if (!value) dismiss();
