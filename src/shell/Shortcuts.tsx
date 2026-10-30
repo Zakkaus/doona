@@ -122,6 +122,7 @@ export function Shortcuts({
             <h3>{t('shell.shortcutTables')}</h3>
             <Row label={t('shell.shortcutMove')} keys={['↑', '↓']} />
             <Row label={t('shell.shortcutSelect')} keys={[t('shell.keyEnter'), t('shell.keySpace')]} />
+            <Row label={t('shell.shortcutSelectAll')} keys={[`${mod}A`]} />
             <Row label={t('shell.shortcutClose')} keys={[t('shell.keyEsc')]} />
           </section>
           <section>

@@ -67,3 +67,20 @@ test('selects subscription rows for testing without offering removal and sends o
   await page.getByRole('button', {name: 'Clear', exact: true}).filter({hasText: 'Clear'}).click();
   await expect(page.getByRole('button', {name: 'Test all', exact: true})).toBeVisible();
 });
+
+test('selects nodes with the keyboard', async ({page}) => {
+  const {api} = await mockBackend(page);
+  for (const name of ['key-first', 'key-second']) await api.createNode({name, link: `vless://demo@example.com:443#${name}`});
+  await page.setViewportSize({width: 1440, height: 900});
+  await page.goto('/#/nodes?provider=inline');
+  const table = page.locator('.rp-table').first();
+  const first = table.getByRole('row').filter({has: page.getByRole('rowheader', {name: 'key-first', exact: true})});
+  await first.locator('.rp-checkbox').click();
+  await expect(table.getByRole('checkbox', {checked: true})).toHaveCount(1);
+  await page.keyboard.press('Shift+ArrowDown');
+  await expect(table.getByRole('checkbox', {checked: true})).toHaveCount(2);
+  await page.keyboard.press('ControlOrMeta+a');
+  await expect(table.getByRole('checkbox', {checked: false})).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(table.getByRole('checkbox', {checked: true})).toHaveCount(0);
+});

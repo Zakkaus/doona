@@ -62,7 +62,7 @@ test('the shortcut help fits a 1280x720 window, and g d and g v open DNS and Eve
   for (const name of ['General', 'Tables and lists', 'Configuration editor', 'Go to page'])
     await expect(help.getByRole('heading', {name, exact: true})).toBeVisible();
   const rows = help.locator('.rp-row');
-  await expect(rows).toHaveCount(23);
+  await expect(rows).toHaveCount(24);
   for (const row of await rows.all()) await expect(row).toBeInViewport({ratio: 1});
   await expect(help.getByRole('button', {name: 'Close', exact: true})).toBeInViewport({ratio: 1});
   expect(await help.evaluate(dialog => dialog.scrollHeight <= dialog.clientHeight)).toBe(true);
