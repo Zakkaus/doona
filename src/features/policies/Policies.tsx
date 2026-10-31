@@ -348,6 +348,7 @@ export function Policies(props: PageProps) {
               focused={m.focus === card.id}
               nodes={m.nodes}
               providers={m.providers}
+              memberSources={m.memberSources}
               editRequested={m.focus === card.id && m.editRequested}
               seedNode={m.seedNode}
               editorOpened={m.editorOpened}

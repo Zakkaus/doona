@@ -3,7 +3,8 @@ import {nodeFixtures} from '../../../mock/fixtures';
 import {patchGroupConfig} from '../../../mock/control';
 import {translate, type Translator} from '../../i18n';
 import {ApiError, LocalError} from '../../api/error';
-import type {ConfigSource, Group} from '../../api/model';
+import type {ConfigSource, Group, Node, Provider} from '../../api/model';
+import {readSubscriptionEntries} from '../../dae/subscriptions';
 import {
   actionErrorText,
   checkDraft,
@@ -24,6 +25,7 @@ import {
   policyCardView,
   probeSummary,
   selectionSummary,
+  subscriptionSources,
   untestedHelp
 } from './view';
 import {
@@ -152,6 +154,71 @@ it('names the default member and describes an observation in words', () => {
   // The usual observation, over TCP on the data path, goes without saying on every tile.
   const [usual] = memberViews([{...member, kind: 'node', health: {...g.runtime.health[0], transport: 'tcp', purpose: 'data'}}], t);
   expect(usual.description).toBe(' ');
+});
+
+it('names each subscription node as the nodes page names its source, and no other node', () => {
+  const provider = (id: string, kind: Provider['kind'], url_redacted: string | null = null): Provider => ({
+    id,
+    name: `opaque-${id}`,
+    kind,
+    url_redacted,
+    node_count: 0,
+    updated_at: null,
+    expires_at: null,
+    traffic: null,
+    status: 'ok',
+    last_error: null
+  });
+  const node = (id: string, provider_id: string | null, subscription_tag: string | null = null, protocol: Node['protocol'] = 'vless'): Node => ({
+    id,
+    name: 'HK',
+    protocol,
+    provider_id,
+    subscription_tag,
+    group_ids: [],
+    health: []
+  });
+  const entries = readSubscriptionEntries(`subscription {\n  primary: 'https://primary.example/sub'\n  secondary: 'https://secondary.example/sub'\n}`);
+  const providers = [
+    provider('a', 'subscription'),
+    provider('b', 'subscription', 'https://secondary.example/x'),
+    provider('c', 'subscription', 'https://other.example/x'),
+    provider('inline', 'inline')
+  ];
+  const nodes = [node('a/hk', 'a', 'primary'), node('b/hk', 'b'), node('c/hk', 'c'), node('own', 'inline'), node('direct', null, null, 'direct')];
+  expect([...subscriptionSources(providers, nodes, entries)]).toEqual([
+    ['a/hk', 'primary'],
+    ['b/hk', 'secondary'],
+    ['c/hk', 'opaque-c']
+  ]);
+});
+const sourced = new Map([
+  ['a/hk', 'alpha'],
+  ['auto', 'alpha']
+]);
+it.each([
+  ['a subscription node with its source', {id: 'a/hk', name: 'HK', kind: 'node'}, false, 'alpha'],
+  ['a subscription node with its source and the observation', {id: 'a/hk', name: 'HK', kind: 'node'}, true, 'alpha, UDP (DNS)'],
+  ['a node from no subscription unchanged', {id: 'hk-01', name: 'hk-01', kind: 'node'}, false, ' '],
+  ['a built-in outbound unchanged', {id: 'direct', name: 'direct', kind: 'node'}, false, ' '],
+  ['a group unchanged, even one sharing a node id', {id: 'auto', name: 'auto', kind: 'group'}, false, ' ']
+] as const)('describes %s', (_, member, observed, description) => {
+  const health = {...nodeFixtures(0).groups[0].runtime.health[0], transport: 'udp', purpose: 'dns'} as const;
+  const [view] = memberViews([{...member, health: observed ? health : undefined}], t, sourced);
+  expect(view.description).toBe(description);
+  expect(view.name).toBe(member.name);
+});
+it('matches the member filter against the source name', () => {
+  const nodes = Array.from({length: 13}, (_, index) => ({
+    ...memberViews([{id: String(index), name: 'HK', kind: 'node'}], t, new Map([[String(index), index < 2 ? 'alpha' : 'beta']]))[0],
+    tcp: index
+  }));
+  const contains = (value: string, query: string) => value.includes(query);
+  expect(nodeGridView(nodes, {q: 'alpha', region: 'all', sort: 'latency', aliveOnly: false}, contains, t, 'en-US').shown.map(node => node.id)).toEqual([
+    '0',
+    '1'
+  ]);
+  expect(nodeGridView(nodes, {q: 'HK', region: 'all', sort: 'latency', aliveOnly: false}, contains, t, 'en-US').shown).toHaveLength(13);
 });
 
 it('reports a partial probe with translated counts and the stopping error', () => {

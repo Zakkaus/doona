@@ -1,7 +1,7 @@
 import {groupConfigLabels, healthStatus, type OutboundCatalogue} from '../shared/groupText';
 import {compareNames} from '../../i18n/format';
 import {enumLabel} from '../../i18n/enum';
-import type {Group, HealthObservation, JsonPatch, ProbeResult} from '../../api/model';
+import type {Group, HealthObservation, JsonPatch, Node, ProbeResult, Provider} from '../../api/model';
 import type {Key} from '../../i18n';
 import {compareLatency, foldFamilies, healthMillis, safeHttpUrl, type MessageRef} from '../../api/selectors';
 import {groupPolicyText} from '../shared/policyText';
@@ -12,6 +12,8 @@ import {regionOf} from '../shared/geo';
 import type {PartialProbeError} from '../../store/groups';
 import {errorText} from '../../api/error';
 import {within} from '../../shell/route';
+import {subscriptionNames} from '../shared/subscriptionNames';
+import type {SubscriptionText} from '../../dae/subscriptions';
 const units: Record<string, Key> = {check_interval: 'ui.seconds', idle_timeout: 'ui.seconds', tolerance: 'ui.latency'};
 // Known fields get a label and a unit; anything the contract adds later shows its raw name.
 export function groupConfigFields(group: Group): Array<[Key | MessageRef, string | MessageRef]> {
@@ -128,8 +130,15 @@ export type MemberView = {
   healthy: boolean;
   status: NodeStatus;
   description: string;
+  // The subscription a node member comes from, as the nodes page names it.
+  source?: string;
   region: string;
 };
+// The subscription each node comes from, by node id, named as the nodes page names it; other nodes are left out.
+export function subscriptionSources(providers: readonly Provider[], nodes: readonly Node[], entries: readonly SubscriptionText[]) {
+  const names = subscriptionNames(providers, nodes, entries);
+  return new Map(nodes.flatMap(node => (node.provider_id && names.has(node.provider_id) ? [[node.id, names.get(node.provider_id)!] as const] : [])));
+}
 const purposes: Record<HealthObservation['purpose'], Key> = {data: 'policy.purpose.data', dns: 'nav.dns', shared: 'policy.purpose.shared'};
 // The tile's status slot: a latency with its tone, or the state when there is no latency. A group member adds its
 // badge and shows a status only when it has an observation.
@@ -137,25 +146,35 @@ function memberStatus(member: {kind: string; health?: HealthObservation}, t: Tra
   if (member.kind === 'group') return {...(member.health ? healthStatus(member.health, t) : {text: ''}), badge: t('ui.group')};
   return healthStatus(member.health, t);
 }
-export function memberViews(members: Array<Group['members'][number] & {health?: HealthObservation}>, t: Translator): MemberView[] {
-  return members.map(member => ({
-    id: member.id,
-    name: member.name,
-    nodeName: member.kind === 'node',
-    tcp: healthMillis(member.health),
-    unavailable: member.health?.state === 'unavailable',
-    healthy: member.health?.state === 'healthy',
-    status: memberStatus(member, t),
+// `sources` maps a node's id to the subscription it comes from, which tells same-named nodes apart.
+export function memberViews(
+  members: Array<Group['members'][number] & {health?: HealthObservation}>,
+  t: Translator,
+  sources?: ReadonlyMap<string, string>
+): MemberView[] {
+  return members.map(member => {
+    const source = member.kind === 'node' ? sources?.get(member.id) : undefined;
     // Only an observation other than the usual TCP on the data path says how it was made.
-    description:
+    const via =
       member.health && (member.health.transport !== 'tcp' || member.health.purpose !== 'data')
         ? t('policy.observedVia', {
             transport: t(member.health.transport === 'udp' ? 'ui.udp' : 'ui.tcp'),
             purpose: enumLabel(purposes, member.health.purpose, t)
           })
-        : ' ',
-    region: regionOf(member.name) ?? '?'
-  }));
+        : undefined;
+    return {
+      id: member.id,
+      name: member.name,
+      nodeName: member.kind === 'node',
+      tcp: healthMillis(member.health),
+      unavailable: member.health?.state === 'unavailable',
+      healthy: member.health?.state === 'healthy',
+      status: memberStatus(member, t),
+      description: [source, via].filter(Boolean).join(t('ui.separator')) || ' ',
+      source,
+      region: regionOf(member.name) ?? '?'
+    };
+  });
 }
 // Which filter a group falls under: manual when the backend runs it as a selector, whose member is picked by hand, and
 // automatic for every other policy it lists. The contract's kind is honk's own reading of the policy, so a spelling
@@ -261,7 +280,9 @@ export function nodeGridView(
   const shown = big
     ? nodes.filter(
         node =>
-          (!filter.q || contains(node.name, filter.q)) && (filter.region === 'all' || node.region === filter.region) && (!filter.aliveOnly || node.healthy)
+          (!filter.q || contains(node.name, filter.q) || (!!node.source && contains(node.source, filter.q))) &&
+          (filter.region === 'all' || node.region === filter.region) &&
+          (!filter.aliveOnly || node.healthy)
       )
     : nodes;
   if (big && filter.sort === 'latency') shown.sort((a, b) => compareLatency(a.tcp, b.tcp));

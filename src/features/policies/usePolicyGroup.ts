@@ -21,6 +21,8 @@ import {featureLink} from '../shared/limitHint';
 export type PolicyGroupInput = {
   nodes?: Node[];
   providers?: Provider[];
+  // The subscription each node comes from, by node id.
+  memberSources?: ReadonlyMap<string, string>;
   editRequested?: boolean;
   seedNode?: string;
   editorOpened?: () => void;
@@ -70,7 +72,8 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   useEffect(() => {
     if (behind) refetch();
   }, [behind, selection, refetch]);
-  const members = useMemo(() => memberViews(memberHealth(g, health), t), [g, health, t]);
+  const {memberSources} = input;
+  const members = useMemo(() => memberViews(memberHealth(g, health), t, memberSources), [g, health, t, memberSources]);
   const card = g ? policyCardView(g, members, control.network, t, outbounds) : null;
   // Pinning opens members once; each new visit from a link opens them again.
   const [expanded, setExpanded] = useState(false);

@@ -7,7 +7,7 @@ import {toast, toastFailure, type Problem} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {isWritableName, groupsNamingTag, readGroupEntries} from '../../dae/groups';
 import {isBareName, quote} from '../../dae/text';
-import {agentProblem, readSubscriptionEntries, type SubscriptionText} from '../../dae/subscriptions';
+import {agentProblem} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
 import {readNodeEntries, writeNodeEntry, type NodeEntry} from '../../dae/nodes';
 import {duplicateXhttpHeaders, readXhttp, writeXhttp, type XhttpChange, type XhttpFields} from '../../dae/xhttp';
@@ -36,6 +36,7 @@ import {
 import {useProviderTable} from './useProviderTable';
 import {draftInterval, intervalProblem} from './subscription';
 import {useRefreshAll} from '../shared/useRefreshAll';
+import {declaredSubscriptions, uniqueEntries} from '../shared/subscriptionEntries';
 import {useNodeTable} from './useNodeTable';
 import {useSubscriptionEditor, type SubscriptionEdit} from './useSubscriptionEditor';
 import {useDialogSession, useDraftGuard} from '../../shell/draft';
@@ -154,12 +155,7 @@ export function useNodesPage({go, query}: PageProps) {
   const batch = parsed && parsed.multiple ? parsed : null;
   const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
   const isComplete = useCompleteness(sources);
-  const declared = useMemo(() => {
-    const found = new Map<string, Array<{source: ConfigSource; entry: SubscriptionText}>>();
-    for (const item of sources)
-      for (const entry of readSubscriptionEntries(item.content)) found.set(entry.tag, [...(found.get(entry.tag) ?? []), {source: item, entry}]);
-    return found;
-  }, [sources]);
+  const declared = useMemo(() => declaredSubscriptions(sources), [sources]);
   const groupsEverywhere = useMemo(() => [...new Set(sources.flatMap(item => readGroupEntries(item.content ?? '').map(entry => entry.name)))], [sources]);
   const subscriptionEdit = useSubscriptionEditor({
     dialog: dialog?.kind === 'editProvider' ? dialog : null,
@@ -218,7 +214,7 @@ export function useNodesPage({go, query}: PageProps) {
     currentRemovable.current = removableNodes;
   }, [removableNodes]);
   const removeNodes = dialog?.kind === 'removeNodes' ? dialog.items.flatMap(item => removableNodes.get(item.id) ?? []) : [];
-  const entries = useMemo(() => [...declared.values()].filter(items => items.length === 1).map(items => items[0].entry), [declared]);
+  const entries = useMemo(() => uniqueEntries(declared), [declared]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodeList ?? [], entries, t), [providers.data, nodeList, entries, t]);
   const params = useMemo(() => new URLSearchParams(query), [query]);
   const canAddProvider = resources?.providers.can_manage === true;

@@ -87,7 +87,7 @@ export function NodeTile({name, nodeName, status, description, current, mark}: N
         {status.text && <span className={cx('ms', status.tone)}>{status.text}</span>}
       </span>
       <span className="s">
-        {description}
+        {description.trim() ? <TextTooltip>{description}</TextTooltip> : description}
         {(mark || current) && <span className="cur">{mark ?? t('ui.current')}</span>}
       </span>
     </>
