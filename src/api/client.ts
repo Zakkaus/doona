@@ -1,6 +1,6 @@
 import createClient, {type Middleware} from 'openapi-fetch';
 import type {components, paths as StandardPaths} from './types';
-import {configPaths, exportFilename, type ConfigPaths} from './engines';
+import type {ConfigPaths} from './engines/types';
 type paths = StandardPaths & ConfigPaths;
 import type {Api} from './api';
 import {
@@ -63,10 +63,9 @@ type OperationStarts = {
 };
 // Requests that write nothing, so a refusal is safe to replay without an Idempotency-Key.
 const readOnlyPaths = ['/dns/query', '/config/validate', '/routing/trace'];
-// These requests write configuration; a missing reason still needs the backend's specific refusal message.
+// These requests write configuration; a missing reason still needs the backend's specific refusal message. So do an
+// engine's import and revision activation, which `writesConfig` marks.
 const configurationWrites = new Set([
-  `POST ${configPaths.import}`,
-  `POST ${configPaths.activate}`,
   'PUT /api/v1/config/sources/{source_id}',
   'POST /api/v1/config/sources',
   'PATCH /api/v1/groups/{group_id}/config',
@@ -75,6 +74,11 @@ const configurationWrites = new Set([
   'POST /api/v1/providers',
   'DELETE /api/v1/providers/{provider_id}'
 ]);
+const writesConfig = <T>(request: Promise<T>) =>
+  request.catch((error: unknown) => {
+    if (error instanceof ApiError) error.configurationWrite = true;
+    throw error;
+  });
 // Both streams send a heartbeat comment at least this often while idle. A half-open connection never errors, so a
 // stream silent for MISSED_HEARTBEATS intervals is treated as dropped.
 const HEARTBEAT_SECONDS = 15;
@@ -366,17 +370,18 @@ export function createApi(base: string, token?: string, clock: ServerClock = cre
     rules: async signal => read(await client.GET('/api/v1/rules', {signal})),
     dnsRules: async signal => read(await client.GET('/api/v1/dns/rules', {signal})),
     updateGeodata: async signal => accepted(await starts.POST('/api/v1/geodata/update', {signal})),
-    exportConfig: async signal => {
-      const result = await client.GET(configPaths.export, {signal, parseAs: 'text', headers: {Accept: 'text/plain'}});
+    exportConfig: async (config, signal) => {
+      const result = await client.GET(config.paths.export, {signal, parseAs: 'text', headers: {Accept: 'text/plain'}});
       return {
         content: data(result),
-        filename: exportFilename(result.response.headers.get('Content-Disposition')),
+        filename: config.exportFilename(result.response.headers.get('Content-Disposition')),
         contentType: result.response.headers.get('Content-Type') ?? 'text/plain;charset=utf-8'
       };
     },
-    importConfig: async (replace, signal) => accepted(await starts.POST(configPaths.import, {signal, body: {replace}})),
-    configRevisions: async signal => read(await client.GET(configPaths.revisions, {signal})),
-    activateConfigRevision: async (revision, signal) => accepted(await starts.POST(configPaths.activate, {signal, params: {path: {revision}}})),
+    importConfig: async (config, replace, signal) => accepted(await writesConfig(starts.POST(config.paths.import, {signal, body: {replace}}))),
+    configRevisions: async (config, signal) => read(await client.GET(config.paths.revisions, {signal})),
+    activateConfigRevision: async (config, revision, signal) =>
+      accepted(await writesConfig(starts.POST(config.paths.activate, {signal, params: {path: {revision}}}))),
     config: async signal => read(await client.GET('/api/v1/config', {signal})),
     validateConfig: async (body, signal) => read(await client.POST('/api/v1/config/validate', {body, signal})),
     replaceConfigSource: async (source_id, content, ifMatch, signal) =>

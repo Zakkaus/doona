@@ -93,6 +93,8 @@ const labels = {
             }
           });
         if (url.pathname === '/api/v1/groups') return json({groups: []});
+        if (url.pathname === '/api/v1/version')
+          return json({api: {name: 'daeuniverse/native', major: 1, status: 'draft'}, engine: {name: 'honk', version: '1'}});
         if (url.pathname === '/api/v1/config')
           return json({
             sources: [{id: 'main', kind: 'main', path: sourcePath, content, content_sha256: createHash('sha256').update(content).digest('hex'), writable: true}]

@@ -3,7 +3,7 @@ import {normalizeCapabilities} from '../capabilities';
 import {capabilities, version} from '../../../mock/fixtures';
 import type {Capabilities, ReportedCapabilities} from '../model';
 import {scanConfig} from '../../dae/text';
-import {engineOf, type EngineSubject} from '.';
+import {configManagement, configOf, engineOf, type EngineSubject} from '.';
 
 type Resources = Capabilities['resources'];
 const patched = (patch: {[K in keyof Resources]?: Partial<Resources[K]>}): Capabilities => ({
@@ -23,6 +23,23 @@ describe('engineOf', () => {
     expect(other.flowDemandGraceSeconds).toBeNull();
     expect(other.id).toBe('unknown');
     expect(engineOf(undefined).id).toBe('unknown');
+    expect(engineOf({engine: {name: 'constructor', version: '1'}}).id).toBe('unknown');
+  });
+
+  it.each([
+    ['honk', version, 'systemctl restart honk-core', true],
+    ['an unknown engine', {...version, engine: {...version.engine, name: 'other'}}, null, false],
+    ['no engine yet', undefined, null, false]
+  ])('gives %s its restart command and configuration extension', (_name, reported, command, managed) => {
+    const engine = engineOf(reported);
+    expect(engine.restartCommand).toBe(command);
+    expect(engine.restartOnly.includes('log_level')).toBe(managed);
+    const config = configOf(reported);
+    expect(config !== null).toBe(managed);
+    // An engine without the extension offers none of it and reports none of it off.
+    const extension = {'x-honk': {config_export: {available: true}, config_import: {available: false}, config_revisions: {available: true}}};
+    const management = configManagement(config, {...capabilities, extensions: extension});
+    expect([management.export, management.revisions, management.off.import]).toEqual([managed, managed, managed]);
   });
 });
 

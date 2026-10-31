@@ -1,6 +1,6 @@
 import type {Api} from '../src/api/api';
 import type {Capabilities, ConfigRevision, ConfigSource} from '../src/api/model';
-import {configManagement} from '../src/api/engines';
+import {honkConfig} from '../src/api/engines/honkConfig';
 import {ApiError} from '../src/api/error';
 import {sha256} from '../src/api/hash';
 import type {MockLifecycle} from './lifecycle';
@@ -12,7 +12,7 @@ export function createRevisions(
   load: () => Promise<Sources>,
   activate: (sources: Sources) => string
 ) {
-  const management = configManagement(capabilities);
+  const management = honkConfig.management(capabilities);
   const max = management.maxRevisions ?? 50;
   let entries: Array<{metadata: ConfigRevision; sources: Sources}> = [];
   let sequence = 0;
@@ -39,7 +39,7 @@ export function createRevisions(
     if (!available) throw new ApiError(404, 'capability_not_supported', 'Configuration management is unavailable');
   };
   const api: Pick<Api, 'exportConfig' | 'importConfig' | 'configRevisions' | 'activateConfigRevision'> = {
-    exportConfig: async signal => {
+    exportConfig: async (_config, signal) => {
       signal?.throwIfAborted();
       requireCapability(management.export);
       await load();
@@ -51,13 +51,13 @@ export function createRevisions(
         contentType: 'text/plain; charset=utf-8'
       };
     },
-    configRevisions: async signal => {
+    configRevisions: async (_config, signal) => {
       signal?.throwIfAborted();
       requireCapability(management.revisions);
       await load();
       return structuredClone({active: entries[0]?.metadata.revision ?? null, max_revisions: max, revisions: entries.map(entry => entry.metadata)});
     },
-    importConfig: async (replace, signal) => {
+    importConfig: async (_config, replace, signal) => {
       signal?.throwIfAborted();
       requireCapability(management.import);
       await load();
@@ -69,7 +69,7 @@ export function createRevisions(
         return {active_generation_id: generation, datapath_generation_id: null};
       });
     },
-    activateConfigRevision: async (revision, signal) => {
+    activateConfigRevision: async (_config, revision, signal) => {
       signal?.throwIfAborted();
       requireCapability(management.canActivate);
       await load();

@@ -1,15 +1,6 @@
-import type {Capabilities, EffectiveConfig, ConfigRevisionList, OperationAccepted} from '../model';
+import type {Capabilities, EffectiveConfig} from '../model';
+import type {ConfigManagement, EngineConfig} from './types';
 
-// `off` names the features the engine reports unavailable; one a build does not report is neither on nor off.
-type ConfigManagement = {
-  export: boolean;
-  import: boolean;
-  revisions: boolean;
-  replaceRequired: boolean;
-  canActivate: boolean;
-  maxRevisions?: number;
-  off: {export: boolean; import: boolean; revisions: boolean};
-};
 type Extension = {
   config_export?: {available?: boolean};
   config_import?: {available?: boolean; replace_required?: boolean};
@@ -18,7 +9,7 @@ type Extension = {
 type HonkConfig = EffectiveConfig & {
   'x-honk'?: {store?: {kind: 'file' | 'db'; revision: number | null; parent: number | null; recorded: boolean}};
 };
-export function configManagement(capabilities: Capabilities | undefined): ConfigManagement {
+function management(capabilities: Capabilities | undefined): ConfigManagement {
   const ext = capabilities?.extensions?.['x-honk'] as Extension | undefined;
   return {
     export: ext?.config_export?.available === true,
@@ -34,24 +25,11 @@ export function configManagement(capabilities: Capabilities | undefined): Config
     }
   };
 }
-export function configStore(config: EffectiveConfig | undefined) {
+function configStore(config: EffectiveConfig | undefined) {
   const store = (config as HonkConfig | undefined)?.['x-honk']?.store;
   return store ? {recorded: store.recorded} : undefined;
 }
-export const configPaths = {
-  export: '/api/v1/x-honk/config/export',
-  import: '/api/v1/x-honk/config/import',
-  revisions: '/api/v1/x-honk/config/revisions',
-  activate: '/api/v1/x-honk/config/revisions/{revision}/activate'
-} as const;
-type Reply<T, S extends number = 200> = {responses: {[K in S]: {content: {'application/json': T}}}};
-export type ConfigPaths = {
-  [configPaths.export]: {get: {responses: {200: {content: {'text/plain': string}}}}};
-  [configPaths.import]: {post: Reply<OperationAccepted, 202> & {requestBody: {content: {'application/json': {replace: boolean}}}}};
-  [configPaths.revisions]: {get: Reply<ConfigRevisionList>};
-  [configPaths.activate]: {post: Reply<OperationAccepted, 202> & {parameters: {path: {revision: number}}}};
-};
-export function exportFilename(disposition: string | null): string {
+function exportFilename(disposition: string | null): string {
   const name = /filename="([^"]+)"|filename=([^;\s]+)/i.exec(disposition ?? '');
   const basename = (name?.[1] ?? name?.[2] ?? '')
     .split(/[\\/]/)
@@ -59,3 +37,15 @@ export function exportFilename(disposition: string | null): string {
     ?.replace(/[\x00-\x1f\x7f]/g, '');
   return basename && basename !== '.' && basename !== '..' ? basename : 'honk.dae';
 }
+
+export const honkConfig: EngineConfig = {
+  management,
+  store: configStore,
+  paths: {
+    export: '/api/v1/x-honk/config/export',
+    import: '/api/v1/x-honk/config/import',
+    revisions: '/api/v1/x-honk/config/revisions',
+    activate: '/api/v1/x-honk/config/revisions/{revision}/activate'
+  },
+  exportFilename
+};

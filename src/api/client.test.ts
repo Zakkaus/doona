@@ -1,5 +1,6 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {createApi} from './client';
+import {honkConfig} from './engines/honkConfig';
 import {translate} from '../i18n';
 import type {Api} from './api';
 import {ApiError, errorText, send} from './error';
@@ -955,9 +956,9 @@ it.each([undefined, ['A', 'AAAA']])('sends exact-name DNS deletion with repeated
 });
 
 it.each([
-  ['import', (api: Api) => api.importConfig(true), 'POST', '/import', {replace: true}],
-  ['revisions', (api: Api) => api.configRevisions(), 'GET', '/revisions', null],
-  ['activate', (api: Api) => api.activateConfigRevision(42), 'POST', '/revisions/42/activate', null]
+  ['import', (api: Api) => api.importConfig(honkConfig, true), 'POST', '/import', {replace: true}],
+  ['revisions', (api: Api) => api.configRevisions(honkConfig), 'GET', '/revisions', null],
+  ['activate', (api: Api) => api.activateConfigRevision(honkConfig, 42), 'POST', '/revisions/42/activate', null]
 ] as const)('sends the configuration %s contract', async (_name, call, method, path, body) => {
   const fetcher = vi.fn(async () => json(method === 'GET' ? {active: null, max_revisions: 50, revisions: []} : acceptedBody, method === 'GET' ? 200 : 202));
   vi.stubGlobal('fetch', fetcher);
@@ -969,6 +970,19 @@ it.each([
   expect(request.headers.has('Idempotency-Key')).toBe(method === 'POST');
   expect(request.headers.has('If-Match')).toBe(false);
   expect(request.headers.get('Authorization')).toBe('Bearer token');
+});
+it.each([
+  ['import', (api: Api) => api.importConfig(honkConfig, true), true],
+  ['activate', (api: Api) => api.activateConfigRevision(honkConfig, 42), true],
+  ['revisions', (api: Api) => api.configRevisions(honkConfig), false]
+] as const)('marks a refused configuration %s as a configuration write when it writes', async (_name, call, write) => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => json({error: {code: 'config_write_disabled', message: 'Writes are off'}, request_id: null}, 403))
+  );
+  const error = await call(createApi('https://honk.test')).catch((caught: unknown) => caught);
+  expect(error).toBeInstanceOf(ApiError);
+  expect((error as ApiError).configurationWrite).toBe(write);
 });
 it.each([
   ['attachment; filename="honk-r42.dae"', 'honk-r42.dae'],
@@ -984,7 +998,7 @@ it.each([
       return new Response(content, {headers: {'Content-Type': 'text/plain; charset=utf-8', ...(disposition ? {'Content-Disposition': disposition} : {})}});
     })
   );
-  expect(await createApi('https://honk.test/prefix').exportConfig()).toEqual({content, filename, contentType: 'text/plain; charset=utf-8'});
+  expect(await createApi('https://honk.test/prefix').exportConfig(honkConfig)).toEqual({content, filename, contentType: 'text/plain; charset=utf-8'});
   expect(sent!.url).toBe('https://honk.test/prefix/api/v1/x-honk/config/export');
   expect(sent!.method).toBe('GET');
   expect(sent!.headers.get('Accept')).toBe('text/plain');

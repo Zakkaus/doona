@@ -22,7 +22,7 @@ import {Heading, Text} from '@astryxdesign/core/Text';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import * as stylex from '@stylexjs/stylex';
 import {useCallback, useId, useState} from 'react';
-import {honkGlobal} from '../../../src/api/engines/honkSettings';
+import {engineOf} from '../../../src/api/engines';
 import {serializeSetting, settingValue, writeSettings} from '../../../src/dae/settings';
 import {blockFields, scanConfig} from '../../../src/dae/text';
 import {copyText} from '../../../src/features/shared/copy';
@@ -56,27 +56,6 @@ const styles = stylex.create({
   },
   control: {flexShrink: 0}
 });
-const restartCommand = 'systemctl restart honk-core';
-// honk rejects these changes before storing a source. The API has no staged-save mode.
-const restartOnly = new Set([
-  'check_interval',
-  'tcp_check_url',
-  'tcp_check_http_method',
-  'udp_check_dns',
-  'tls_implementation',
-  'tproxy_port',
-  'tproxy_port_protect',
-  'pprof_port',
-  'so_mark_from_dae',
-  'log_level',
-  'log_file',
-  'lan_interface',
-  'wan_interface',
-  'auto_config_kernel_parameter',
-  'data_dir',
-  'store_subscribe',
-  'nfqueue_enable'
-]);
 const panels = ['general', 'networkSettings', 'sniffing', 'healthCheck', 'bandwidth', 'storage', 'appearance', 'language', 'about'] as const;
 type Panel = (typeof panels)[number];
 const panelIcons = {
@@ -131,6 +110,8 @@ export function SettingsDialog({
       [connection, isOpen]
     )
   );
+  // The engine names the global settings: the forms wait for its version, and one doona does not know offers none.
+  const version = useRead(useCallback((signal?: AbortSignal) => (isOpen ? connection.api.version(signal) : Promise.resolve(undefined)), [connection, isOpen]));
   const task = useTask(setBusy);
   useNoticeToast(task.notice);
   const copy = async (text: string, label: string) => {
@@ -146,11 +127,13 @@ export function SettingsDialog({
   const pending = task.busy !== null;
   const [editingNumber, setEditingNumber] = useState(false);
   const writable = canWrite(connection, read.data) && connection.capabilities.resources.config_validate.modes?.includes('full');
-  const disabled = !writable || read.loading || pending;
+  const disabled = !writable || read.loading || version.loading || pending;
+  const {globalSettings: schema, restartOnly, restartCommand} = engineOf(version.data);
+  const settings = schema?.fields ?? [];
   const scan = scanConfig(read.data?.content ?? '');
-  const block = scan.blocks.find(item => item.name === 'global');
+  const block = schema && scan.blocks.find(item => item.name === schema.name);
   const fields = read.data && block ? blockFields(read.data.content, block, scan.tokens) : [];
-  const invalid = honkGlobal.fields.some(field => Object.hasOwn(patch, field.key) && serializeSetting(field, patch[field.key]) === null);
+  const invalid = settings.some(field => Object.hasOwn(patch, field.key) && serializeSetting(field, patch[field.key]) === null);
   const select = (panel: Panel) => {
     setActive(panel);
     setQuery('');
@@ -166,7 +149,7 @@ export function SettingsDialog({
   };
   const icon = (panel: Panel) => panelIcons[panel];
   const matches = panels.filter(panel =>
-    [t[panel], ...honkGlobal.fields.filter(f => fieldPanel(f.key, f.group ?? '') === panel).flatMap(f => [f.key, t[`setting_${f.key}` as MessageKey]])]
+    [t[panel], ...settings.filter(f => fieldPanel(f.key, f.group ?? '') === panel).flatMap(f => [f.key, t[`setting_${f.key}` as MessageKey]])]
       .join(' ')
       .toLocaleLowerCase()
       .includes(query.trim().toLocaleLowerCase())
@@ -223,9 +206,9 @@ export function SettingsDialog({
         isDisabled={disabled || invalid || (!Object.keys(patch).length && !editingNumber)}
         onClick={() =>
           void task.run(candidate ? 'apply' : 'validate', async () => {
-            if (!read.data) return undefined;
+            if (!read.data || !schema) return undefined;
             if (!candidate) {
-              const next = writeSettings(read.data.content, honkGlobal, 0, patch);
+              const next = writeSettings(read.data.content, schema, 0, patch);
               await validateContent(connection, read.data, next);
               setCandidate(next);
               return undefined;
@@ -243,12 +226,13 @@ export function SettingsDialog({
   const body = (
     <>
       <ReadState error={read.error} reload={read.reload} />
+      <ReadState error={version.error} reload={version.reload} />
       {task.notice && 'error' in task.notice && Object.keys(patch).length > 0 && <Feedback notice={task.notice} />}
       {candidate && read.data ? (
         <>
           <ReviewBody
             summary={Object.entries(patch).map(([key, value]) => {
-              const field = honkGlobal.fields.find(item => item.key === key);
+              const field = settings.find(item => item.key === key);
               const was = field ? settingValue(field, fields.find(item => item.name === key)?.value ?? '') : '';
               return t.reviewSetting
                 .replace('{label}', t[`setting_${key}` as MessageKey] ?? key)
@@ -289,7 +273,7 @@ export function SettingsDialog({
             <>
               {!writable && !read.loading && <ReadOnlyNote />}
               {[false, true].map(restart => {
-                const list = honkGlobal.fields.filter(f => fieldPanel(f.key, f.group ?? '') === active && restartOnly.has(f.key) === restart);
+                const list = settings.filter(f => fieldPanel(f.key, f.group ?? '') === active && restartOnly.includes(f.key) === restart);
                 if (!list.length) return null;
                 return (
                   <VStack key={String(restart)} gap={3}>
@@ -300,18 +284,22 @@ export function SettingsDialog({
                           <Text>{t.restartEditGlobal}</Text>
                           <HStack gap={2} align="center" wrap="wrap">
                             <Text>{t.restartService}</Text>
-                            <Text style={{overflowWrap: 'anywhere'}}>
-                              <code>{restartCommand}</code>
-                            </Text>
-                            <Tooltip content={t.restartCopyCommand}>
-                              <IconButton
-                                label={t.restartCopy}
-                                icon={<Icon icon={Copy} size="sm" />}
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => void copy(restartCommand, t.restartCommand)}
-                              />
-                            </Tooltip>
+                            {restartCommand && (
+                              <>
+                                <Text style={{overflowWrap: 'anywhere'}}>
+                                  <code>{restartCommand}</code>
+                                </Text>
+                                <Tooltip content={t.restartCopyCommand}>
+                                  <IconButton
+                                    label={t.restartCopy}
+                                    icon={<Icon icon={Copy} size="sm" />}
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => void copy(restartCommand, t.restartCommand)}
+                                  />
+                                </Tooltip>
+                              </>
+                            )}
                           </HStack>
                           <TextLink href={docsHref(prefs.locale, 'reload-and-restart')} isExternalLink>
                             {t.restartDocs}

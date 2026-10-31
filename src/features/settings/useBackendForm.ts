@@ -28,7 +28,7 @@ function readPairing(query: string): {api: string; token: string} | null {
 export function useBackendForm(query: string, startPage: RoutePath = defaultRoute) {
   const t = useT();
   const [saved] = useState(readSettings);
-  // A first run suggests honk's native API on this page's host; a saved backend wins.
+  // A first run suggests the native API on this page's host; a saved backend wins.
   const [defaultApi] = useState(() => saved.api ?? suggestedBackendUrl());
   const [api, setApi] = useState(defaultApi);
   const [token, setToken] = useState(saved.token);

@@ -2,7 +2,7 @@ import type {Version} from '../model';
 import {honk} from './honk';
 import type {Engine} from './types';
 
-export type {Engine, EngineAction, EngineReason, EngineSubject} from './types';
+export type {Engine, EngineAction, EngineConfig, EngineReason, EngineSubject} from './types';
 
 // An engine doona has no knowledge of: the contract's own facts are all the page can give.
 const unknown: Engine = {
@@ -14,6 +14,8 @@ const unknown: Engine = {
   daeText: false,
   nodeLinkSchemes: null,
   globalSettings: null,
+  restartOnly: [],
+  restartCommand: null,
   flowDemandGraceSeconds: null,
   uncheckedHooks: []
 };
@@ -28,4 +30,4 @@ export function engineOf(version: Pick<Version, 'engine'> | undefined): Engine {
   }
 }
 
-export {configManagement, configStore, configPaths, exportFilename, type ConfigPaths} from './honkConfig';
+export {configManagement, configOf} from './config';

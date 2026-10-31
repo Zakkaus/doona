@@ -3,6 +3,7 @@ import {ApiError} from '../src/api/error';
 import type {createMockApi} from '../mock';
 import {downloadText, expect, expectLoadFailures, faults, test, fulfillAccepted, mockBackend, box} from './fixtures';
 import {sha256} from '../src/api/hash';
+import {honkConfig} from '../src/api/engines/honkConfig';
 import {readSubscriptionEntries} from '../src/dae/subscriptions';
 import {readGroupEntries} from '../src/dae/groups';
 
@@ -1262,9 +1263,9 @@ test('located subscriptions open the existing editor and groups focus their card
 async function revisionBackend(page: Page) {
   const backend = await mockBackend(page);
   const {api, handlers} = backend;
-  handlers['GET x-honk/config/revisions'] = () => api.configRevisions();
-  handlers['POST x-honk/config/import'] = request => api.importConfig(request.postDataJSON().replace);
-  handlers['POST x-honk/config/revisions/1/activate'] = () => api.activateConfigRevision(1);
+  handlers['GET x-honk/config/revisions'] = () => api.configRevisions(honkConfig);
+  handlers['POST x-honk/config/import'] = request => api.importConfig(honkConfig, request.postDataJSON().replace);
+  handlers['POST x-honk/config/revisions/1/activate'] = () => api.activateConfigRevision(honkConfig, 1);
   return backend;
 }
 
@@ -1278,7 +1279,7 @@ test('history is hidden without its extension and export-only downloads the resp
   const extensions = {'x-honk': {config_export: {available: true}}};
   capabilities.extensions = extensions;
   Object.assign(capabilities.resources, extensions, {config: {available: false, create: false}});
-  const exported = await api.exportConfig();
+  const exported = await api.exportConfig(honkConfig);
   await page.route('**/api/v1/x-honk/config/export', route =>
     route.fulfill({body: exported.content, contentType: exported.contentType, headers: {'Content-Disposition': `attachment; filename="${exported.filename}"`}})
   );
@@ -1300,7 +1301,7 @@ test('server import cancels without a write, then succeeds and lists a revision 
   await expect(dialog).toContainText('-c');
   await dialog.getByRole('button', {name: 'Cancel', exact: true}).click();
   expect(requests.filter(request => request.method() === 'POST')).toHaveLength(0);
-  expect((await api.configRevisions()).revisions).toHaveLength(1);
+  expect((await api.configRevisions(honkConfig)).revisions).toHaveLength(1);
   await page.getByRole('button', {name: 'Import server files', exact: true}).click();
   await dialog.getByRole('button', {name: 'Import server files', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('Server configuration imported');
@@ -1308,7 +1309,7 @@ test('server import cancels without a write, then succeeds and lists a revision 
   await expect(row).toContainText('2');
   await row.click();
   const details = page.getByRole('dialog', {name: 'Revision details'});
-  const revision = (await api.configRevisions()).revisions[0];
+  const revision = (await api.configRevisions(honkConfig)).revisions[0];
   await expect(details).toContainText(revision.content_sha256);
   await expect(details).toContainText(revision.sources[0].path);
   await expect(details).toContainText('demo');
@@ -1334,7 +1335,7 @@ test('an unknown import survives closing and navigation, and refresh reads the a
   const {api, handlers, requests} = await revisionBackend(page);
   let operationId = '';
   handlers['POST x-honk/config/import'] = async request => {
-    const accepted = await api.importConfig(request.postDataJSON().replace);
+    const accepted = await api.importConfig(honkConfig, request.postDataJSON().replace);
     operationId = accepted.operation_id;
     handlers[`GET operations/${operationId}`] = () => {
       throw new ApiError(503, 'service_unavailable', 'Operation unavailable');
@@ -1370,7 +1371,7 @@ test('an unknown import survives closing and navigation, and refresh reads the a
 
 test('restore confirms, shows 422 diagnostics, then creates a new revision', async ({page}) => {
   const {api, handlers, requests} = await revisionBackend(page);
-  await api.pollOperation(await api.importConfig(true));
+  await api.pollOperation(await api.importConfig(honkConfig, true));
   handlers['POST x-honk/config/revisions/1/activate'] = () => {
     throw new ApiError(422, 'unsupported_value', 'Revision validation failed', 'restore-request', {
       diagnostics: [
@@ -1386,21 +1387,21 @@ test('restore confirms, shows 422 diagnostics, then creates a new revision', asy
   await dialog.getByRole('button', {name: 'Restore revision', exact: true}).click();
   await expect(dialog).toContainText('Historical source cannot be activated');
   await expect(dialog.getByRole('button', {name: /Open config file|Go to line/})).toHaveCount(0);
-  handlers['POST x-honk/config/revisions/1/activate'] = () => api.activateConfigRevision(1);
+  handlers['POST x-honk/config/revisions/1/activate'] = () => api.activateConfigRevision(honkConfig, 1);
   await dialog.getByRole('button', {name: 'Restore revision', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('Revision restored');
   await expect(page.getByRole('row').filter({hasText: 'Latest database revision'})).toContainText('3');
-  const list = await api.configRevisions();
+  const list = await api.configRevisions(honkConfig);
   expect(list.revisions[0]).toMatchObject({revision: 3, parent: 2, origin: 'activate'});
 });
 
 test('a committed restore failure retains inline diagnostics and copies its original error from both surfaces', async ({page, context}) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const {api, handlers} = await revisionBackend(page);
-  await api.pollOperation(await api.importConfig(true));
+  await api.pollOperation(await api.importConfig(honkConfig, true));
   let operationId = '';
   handlers['POST x-honk/config/revisions/1/activate'] = async () => {
-    const accepted = await api.activateConfigRevision(1);
+    const accepted = await api.activateConfigRevision(honkConfig, 1);
     operationId = accepted.operation_id;
     // Answer the poll with the failure at once: the mock's own operation runs on a one second timer, and polling it from
     // here added up to two more seconds of real time to the client's first poll, close to the five second expectation.

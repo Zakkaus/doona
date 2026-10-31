@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest';
 import {normalizeCapabilities} from '../capabilities';
 import type {EffectiveConfig, ReportedCapabilities} from '../model';
-import {configManagement, configStore} from './honkConfig';
+import {honkConfig} from './honkConfig';
 
 it.each([
   ['missing', {}, [false, false, false, false, false, undefined]],
@@ -22,11 +22,11 @@ it.each([
   ['incomplete', {'x-honk': {config_import: {}, config_revisions: {can_activate: true}}}, [false, false, false, false, false, undefined]]
 ])('projects %s capabilities', (_name, resources, expected) => {
   const capabilities = normalizeCapabilities({resources} as unknown as ReportedCapabilities);
-  const {off: _off, ...management} = configManagement(capabilities);
+  const {off: _off, ...management} = honkConfig.management(capabilities);
   expect(Object.values(management)).toEqual(expected);
 });
 it('reports a feature off only when the extension says so', () => {
-  const off = (resources: object) => configManagement(normalizeCapabilities({resources} as unknown as ReportedCapabilities)).off;
+  const off = (resources: object) => honkConfig.management(normalizeCapabilities({resources} as unknown as ReportedCapabilities)).off;
   expect(off({})).toEqual({export: false, import: false, revisions: false});
   expect(off({'x-honk': {config_export: {available: false}, config_revisions: {available: true}}})).toEqual({export: true, import: false, revisions: false});
 });
@@ -34,7 +34,7 @@ it('reports a feature off only when the extension says so', () => {
 it.each([true, false])('exposes only the neutral recording state (recorded=%s)', recorded => {
   const base: EffectiveConfig = {generation_id: 'generation', revision: 'opaque', sources: [], diagnostics: [], secrets_redacted: true};
   const config = {...base, 'x-honk': {store: {kind: 'db', revision: 12345, parent: 12344, recorded}}};
-  expect(configStore(config)).toEqual({recorded});
-  expect(configStore(base)).toBeUndefined();
-  expect(configStore(undefined)).toBeUndefined();
+  expect(honkConfig.store(config)).toEqual({recorded});
+  expect(honkConfig.store(base)).toBeUndefined();
+  expect(honkConfig.store(undefined)).toBeUndefined();
 });

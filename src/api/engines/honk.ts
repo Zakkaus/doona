@@ -1,6 +1,6 @@
-import {honkGlobal} from './honkSettings';
+import {honkGlobal, honkRestartOnly} from './honkSettings';
 import {blockFields, scanConfig} from '../../dae/text';
-import {configManagement} from './honkConfig';
+import {honkConfig} from './honkConfig';
 import type {Capabilities, RuntimeSettings} from '../model';
 import type {Engine, EngineReason, EngineSetting, EngineSubject} from './types';
 
@@ -95,7 +95,7 @@ function reason(subject: EngineSubject, capabilities: Capabilities, recording?: 
     case 'import':
     case 'revisions':
       if (!resources.config.available) return {code: 'config-unloaded'};
-      if (!configManagement(capabilities).revisions) return storeFlag;
+      if (!honkConfig.management(capabilities).revisions) return storeFlag;
       return subject === 'import' ? reason('config', capabilities) : undefined;
     // honk geodata.rs: download URLs and the schedule are settings only while the state database is open.
     case 'geodata_settings':
@@ -158,6 +158,9 @@ export const honk: Engine = {
   nodeLinkSchemes: ['vless', 'vmess', 'trojan', 'trojan-go', 'ss', 'ssr', 'socks5', 'http', 'https', 'hysteria2', 'hy2', 'tuic', 'juicity', 'anytls'],
   flowDemandGraceSeconds: 60,
   globalSettings: honkGlobal,
+  restartOnly: honkRestartOnly,
+  // The service the install guide creates; its Reload and restart section covers the other init systems.
+  restartCommand: 'systemctl restart honk-core',
   reason,
   // Reading these back takes a BPF_PROG_QUERY per hook, or a switch into the daens namespace for dae0peer.
   uncheckedHooks: ['cgroup', 'sk_lookup', 'dae0peer'],

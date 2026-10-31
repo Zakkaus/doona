@@ -32,7 +32,7 @@ import {useValidationSources} from './useValidationSources';
 import {useCompleteness} from '../../store/config';
 import {useBackgroundValidation} from './useBackgroundValidation';
 import {offered} from '../../api/capabilities';
-import {engineOf} from '../../api/engines';
+import {configOf, engineOf} from '../../api/engines';
 import {limitHint} from '../shared/limitHint';
 import type {NewSourceProps} from './useNewSource';
 export type ConfigEditor = {
@@ -93,7 +93,7 @@ export function useConfigPage({go, query}: PageProps) {
   // The engine names the secrets that make a source read-only.
   const version = useVersion().data;
   const engine = useMemo(() => engineOf(version), [version]);
-  const tabs = configTabs(!!engine.globalSettings, capabilities.data);
+  const tabs = configTabs(!!engine.globalSettings, configOf(version), capabilities.data);
   const hint = capabilities.data && limitHint('config', capabilities.data, version, t, lang);
   const readOnly = source ? readOnlyBadge(source, configWritable, isComplete(source), engine, t, hint) : null;
   const canWrite = !!source && !readOnly;
@@ -362,6 +362,7 @@ export function useSourceCard({
       }
     },
     restart: dirty ? restartSettings(saveErrors ?? refusal ?? []) : [],
+    restartCommand: engine.restartCommand,
     marks,
     text,
     names,

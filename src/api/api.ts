@@ -58,12 +58,14 @@ import type {
 } from './model';
 import type {RoutingTraceRequest, RoutingTraceResponse} from './model';
 import type {components} from './types';
+import type {EngineConfig} from './engines';
 
 export interface Api {
-  exportConfig(signal?: AbortSignal): Promise<ConfigExport>;
-  importConfig(replace: boolean, signal?: AbortSignal): Promise<OperationAccepted>;
-  configRevisions(signal?: AbortSignal): Promise<ConfigRevisionList>;
-  activateConfigRevision(revision: number, signal?: AbortSignal): Promise<OperationAccepted>;
+  // The engine's configuration extension, through the routes `config` names.
+  exportConfig(config: EngineConfig, signal?: AbortSignal): Promise<ConfigExport>;
+  importConfig(config: EngineConfig, replace: boolean, signal?: AbortSignal): Promise<OperationAccepted>;
+  configRevisions(config: EngineConfig, signal?: AbortSignal): Promise<ConfigRevisionList>;
+  activateConfigRevision(config: EngineConfig, revision: number, signal?: AbortSignal): Promise<OperationAccepted>;
   discovery(signal?: AbortSignal): Promise<components['schemas']['Discovery']>;
   version(signal?: AbortSignal): Promise<Version>;
   capabilities(signal?: AbortSignal): Promise<Capabilities>;

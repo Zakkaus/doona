@@ -175,6 +175,7 @@ export function useGlobalSettings({query, go}: PageProps) {
     conflict,
     failure: Array.isArray(refusal) ? (restart.length ? null : t('config.invalid', {n: refusal.filter(item => item.level === 'error').length})) : refusal,
     restart,
+    restartCommand: engine.restartCommand,
     sources,
     // A write that landed but could not be read back is told on its own; the failed read is `config.error`, with Retry.
     unread: unread ? t('ui.writtenNotRead') : null,

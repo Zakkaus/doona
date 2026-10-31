@@ -20,6 +20,7 @@ vi.mock('./useConfigPage', () => ({
   useSourceCard: () => ({
     links: [],
     restart: state.restart,
+    restartCommand: 'systemctl restart honk-core',
     diagnostics: state.diagnostics,
     marks: [],
     text: '',
