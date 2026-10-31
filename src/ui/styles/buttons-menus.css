@@ -17,6 +17,9 @@
   background: var(--rp-overlay);
   color: var(--rp-text);
   cursor: pointer;
+  /* A label is not text to select: in a link, a press that dragged over it highlighted it. */
+  -webkit-user-select: none;
+  user-select: none;
   font: inherit;
   font-weight: 500;
   text-decoration: none;

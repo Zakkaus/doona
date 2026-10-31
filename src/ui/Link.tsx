@@ -1,4 +1,5 @@
-import type {ComponentPropsWithRef} from 'react';
+import {useEffect, type ComponentPropsWithRef} from 'react';
+import {useObjectRef} from 'react-aria';
 import {Link as RLink, TooltipTrigger, composeRenderProps} from 'react-aria-components';
 import {cx} from './cx';
 import {useControlSize} from './controlSize';
@@ -6,7 +7,9 @@ import {buttonClass, type ButtonStyle} from './Button';
 import {Tip} from './Tooltip';
 
 // Navigation with an address: a real link, so it can be opened in a tab or copied, in text or button dress.
-// The button style applies only with `appearance="button"`.
+// The button style applies only with `appearance="button"`. A link in button dress is not draggable: a press that
+// moved a few pixels started a native link drag, which cancelled the press and the navigation. React Aria's Link does
+// not pass `draggable` through, so the element gets it directly.
 export function Link({
   external,
   layout,
@@ -21,6 +24,7 @@ export function Link({
   accent,
   negative,
   size,
+  ref,
   ...props
 }: ComponentPropsWithRef<typeof RLink> &
   ButtonStyle & {
@@ -32,8 +36,13 @@ export function Link({
   }) {
   const base = appearance === 'button' ? buttonClass({quiet, secondary, small, icon, accent, negative}) : `rp-${appearance}`;
   const controlSize = useControlSize(size);
+  const linkRef = useObjectRef(ref);
+  useEffect(() => {
+    if (appearance === 'button' && linkRef.current) linkRef.current.draggable = false;
+  }, [appearance, linkRef]);
   const link = (
     <RLink
+      ref={linkRef}
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
       aria-label={label}

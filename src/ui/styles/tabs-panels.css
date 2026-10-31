@@ -157,9 +157,24 @@
   gap: var(--rp-space-1);
   border-block-end: 1px solid var(--rp-line);
 }
+/* The current page keeps the quiet button's corners; its underline is drawn apart, so hovering it fills the same
+   rounded shape as its neighbours. */
 .rp-page-links [aria-current='page'] {
-  border-radius: 0;
-  box-shadow: inset 0 -2px var(--rp-text);
+  position: relative;
+}
+.rp-page-links [aria-current='page']::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  block-size: 2px;
+  border-radius: var(--rp-r-pill);
+  background: var(--rp-text);
+}
+@media (forced-colors: active) {
+  .rp-page-links [aria-current='page']::after {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
 }
 .rp-disclosure[data-variant='nav'] {
   margin: 0;
