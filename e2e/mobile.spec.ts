@@ -423,6 +423,25 @@ for (const [scheme, palette] of [
   });
 }
 
+// A press that drifts a few pixels still opens the page: a link in button dress is not dragged, and its label is not
+// selected on the way.
+test.describe('390px page links', () => {
+  test.use({viewport: {width: 390, height: 844}});
+  test('a press that moves before release still navigates and selects no text', async ({page}) => {
+    const hub = hubs.find(item => item.pages.length > 1)!;
+    await page.goto(`/#/${hub.pages[0]}`);
+    const link = page.locator('.rp-hubnav .rp-btn').nth(1);
+    await expect(link).toHaveAttribute('draggable', 'false');
+    const at = (await link.boundingBox())!;
+    await page.mouse.move(at.x + at.width / 2, at.y + at.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(at.x + at.width / 2 + 8, at.y + at.height / 2, {steps: 4});
+    await page.mouse.up();
+    await expect(page).toHaveURL(new RegExp(`#/${hub.pages[1]}$`));
+    expect(await page.evaluate(() => String(getSelection()))).toBe('');
+  });
+});
+
 // A common phone width: every hub's pages are reachable in every language. A wide set wraps inside
 // the navigation, never the page, and every page name stays complete.
 test.describe('360px', () => {
