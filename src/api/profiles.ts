@@ -9,6 +9,10 @@ export const DEMO_API = 'mock';
 export function isDemoApi(api: string | undefined): api is typeof DEMO_API | '' | undefined {
   return !api || api === DEMO_API;
 }
+// Names the backend a profile reaches in per-backend storage keys.
+export function profileOwner(id: string, api: string) {
+  return JSON.stringify([id, api || DEMO_API]);
+}
 
 /** Accept a server root or proxy prefix, never credentials, a query, or a fragment. */
 export function normalizeApi(value: string): string {

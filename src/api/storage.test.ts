@@ -28,6 +28,7 @@ it('keeps the keys browsers already hold', () => {
     'doona-rings-',
     'doona-connections-view',
     'doona-activity-group',
+    'doona-policy-folds',
     'doona-getting-started',
     'doona-session',
     'doona-saved',

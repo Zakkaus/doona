@@ -1,5 +1,5 @@
 import {useEffect, useSyncExternalStore} from 'react';
-import {DEMO_API, pinnedProfile, readProfiles} from '../api/profiles';
+import {pinnedProfile, profileOwner as owner, readProfiles} from '../api/profiles';
 import {append, minute, type Fold, type Rings, type Timed} from '../api/rings';
 import {storageKeys} from '../api/storage';
 
@@ -8,7 +8,6 @@ import {storageKeys} from '../api/storage';
 type Stored = {key: string; rings: Rings<Timed>; saved: number; coarseSaved: number; writtenCoarse: Timed[] | null};
 const stores = new Map<string, Stored>();
 const coarseEvery = 10 * minute;
-const owner = (id: string, api: string) => JSON.stringify([id, api || DEMO_API]);
 // The backend this tab's client talks to, so another tab's profile edits cannot redirect its samples.
 function storageKey(name: string) {
   const profile = pinnedProfile();

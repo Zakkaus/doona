@@ -18,6 +18,7 @@ import {failureNotice, requestIdOf} from '../../api/error';
 import {foldFamilies} from '../../api/selectors';
 import {selectMember} from '../shared/selectMember';
 import {featureLink} from '../shared/limitHint';
+import {readFold, saveFold} from './folds';
 export type PolicyGroupInput = {
   nodes?: Node[];
   providers?: Provider[];
@@ -28,6 +29,7 @@ export type PolicyGroupInput = {
   editorOpened?: () => void;
   id: string;
   name: string;
+  kind: 'manual' | 'auto';
   health: Map<string, HealthObservation | undefined>;
   // What the edit dialog's final outbound can name.
   outbounds: OutboundCatalogue;
@@ -75,8 +77,10 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   const {memberSources} = input;
   const members = useMemo(() => memberViews(memberHealth(g, health), t, memberSources), [g, health, t, memberSources]);
   const card = g ? policyCardView(g, members, control.network, t, outbounds) : null;
-  // Pinning opens members once; each new visit from a link opens them again.
-  const [expanded, setExpanded] = useState(false);
+  // The fold the reader left the group in. Pinning opens members once and each new visit from a link opens them again,
+  // neither of which is remembered.
+  const automatic = input.kind === 'auto';
+  const [expanded, setExpanded] = useState(() => readFold(id, automatic));
   const [opened, setOpened] = useState(false);
   const [wasFocused, setWasFocused] = useState(focused);
   if (wasFocused !== focused) {
@@ -177,12 +181,12 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   return {
     includes,
     card,
-    summaryText: g
+    summary: g
       ? selectionSummary(g, members, t, id => {
           const index = members.findIndex(member => member.id === id);
           return index < 0 ? id : `{${index}}`;
         })
-      : '',
+      : {text: ''},
     edit,
     check,
     members,
@@ -195,7 +199,10 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     probeDisabled: !!control.busy || !control.canProbe,
     probeTip: !control.canProbe ? t('policy.noProbe') : undefined,
     expanded,
-    setExpanded,
+    setExpanded: (value: boolean) => {
+      setExpanded(value);
+      saveFold(id, automatic, value);
+    },
     // What the dialog shows beside the declaration, and alone when it opens read-only: the group's configuration as
     // the backend reports it. The interrupt switch edits the draft when present, otherwise the live group.
     details: card

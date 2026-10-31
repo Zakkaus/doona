@@ -28,6 +28,8 @@ export const storageKeys = {
   ringsPrefix: 'doona-rings-',
   connectionsView: 'doona-connections-view',
   activityGroup: 'doona-activity-group',
+  // Each backend's policy groups folded or opened against their default; see features/policies/folds.ts.
+  policyFolds: 'doona-policy-folds',
   gettingStarted: 'doona-getting-started',
   // The password session; see api/session.ts.
   session: 'doona-session',

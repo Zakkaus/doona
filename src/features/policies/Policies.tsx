@@ -51,6 +51,7 @@ import {CheckEdit} from './CheckEdit';
 import type {PageProps} from '../../shell/routes';
 import {usePolicies, usePolicyVisibility} from './usePolicies';
 import {usePolicyGroup, type PolicyGroupInput} from './usePolicyGroup';
+import {readFold} from './folds';
 import {useGroupDialog, type PolicyDeclaration} from './group/useGroupDialog';
 import type {MainSourceEdit} from '../../store/mainSource';
 import type {OutboundCatalogue} from '../shared/groupText';
@@ -59,8 +60,8 @@ import {isWritableName, quoteName} from '../../dae/groups';
 // The loaded tile's and scroll panel's heights (`.rp-node`, `.rp-nodegrid` in nodes.css).
 const nodeTileHeight = 56;
 const nodeGridHeight = 376;
-// Holds roughly the loaded card's height, so cards below do not move when the details arrive. A collapsed automatic
-// group holds its summary line alone. With a `label` the drawing reads one loading status; without, it is a stand-in
+// Holds roughly the loaded card's height, so cards below do not move when the details arrive. A folded group holds its
+// summary line alone. With a `label` the drawing reads one loading status; without, it is a stand-in
 // inside a card that is not loading yet, which a list-wide Skeleton already announces.
 function PolicyWait({heading, members, label, collapsed}: {heading: ReactNode; members: number; label?: string; collapsed?: boolean}) {
   const bars = collapsed ? (
@@ -131,7 +132,7 @@ function PolicyList({loading, children}: {loading: boolean; children: ReactNode}
     </FirstShow>
   );
 }
-function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
+function PolicyDetail(props: PolicyGroupInput) {
   const t = useT();
   const m = usePolicyGroup(props);
   const g = m.card;
@@ -176,7 +177,7 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
           }
           members={props.members}
           label={paused ? undefined : m.loadingText}
-          collapsed={props.kind === 'auto' && !props.focused}
+          collapsed={!m.expanded && !props.focused}
         />
       )}
       {g && (
@@ -227,40 +228,50 @@ function PolicyDetail(props: PolicyGroupInput & {kind: 'manual' | 'auto'}) {
               />
             </div>
           </ActionHelp>
-          {m.includes.tags.length > 0 && (
-            <Tags label={t('policy.includes')}>
-              {m.includes.tags.map(tag => (
-                <Fragment key={tag.id}>
-                  {tag.href ? <LinkTag href={tag.href}>{tag.label}</LinkTag> : <Tag>{tag.nodeName ? <NodeName name={tag.label} /> : tag.label}</Tag>}
-                </Fragment>
-              ))}
-            </Tags>
-          )}
-          {m.includes.filters && <FilterSummary filters={m.includes.filters} />}
-          {g.automatic ? (
-            // An automatic group chooses for itself, so its members fold under a one-line summary; a pinned member keeps
-            // its light beside the summary while they are folded.
-            <Disclosure title={<NodeText text={m.summaryText} names={m.members} />} aside={pin} isExpanded={m.expanded} onExpandedChange={m.setExpanded}>
-              {network && <Toolbar>{network}</Toolbar>}
-              {grid}
-            </Disclosure>
-          ) : (
-            <>
-              {(network || pin) && (
-                <Toolbar>
-                  {network}
-                  {pin}
-                </Toolbar>
-              )}
-              {grid}
-            </>
-          )}
+          {/* Members and what the group includes fold under a one-line summary of the current one; a pinned member keeps
+              its light beside the summary while they are folded. */}
+          <Disclosure
+            flush
+            title={
+              'text' in m.summary ? (
+                <NodeText text={m.summary.text} names={m.members} />
+              ) : (
+                <span className="rp-split-summary">
+                  {t('policy.current')}
+                  <span className="rp-split-net">{t('ui.tcp')}</span>
+                  <span>
+                    <NodeText text={m.summary.tcp} names={m.members} />
+                  </span>
+                  <span className="rp-split-net">{t('ui.udp')}</span>
+                  <span>
+                    <NodeText text={m.summary.udp} names={m.members} />
+                  </span>
+                </span>
+              )
+            }
+            aside={pin}
+            isExpanded={m.expanded}
+            onExpandedChange={m.setExpanded}
+          >
+            {m.includes.tags.length > 0 && (
+              <Tags label={t('policy.includes')}>
+                {m.includes.tags.map(tag => (
+                  <Fragment key={tag.id}>
+                    {tag.href ? <LinkTag href={tag.href}>{tag.label}</LinkTag> : <Tag>{tag.nodeName ? <NodeName name={tag.label} /> : tag.label}</Tag>}
+                  </Fragment>
+                ))}
+              </Tags>
+            )}
+            {m.includes.filters && <FilterSummary filters={m.includes.filters} />}
+            {network && <Toolbar>{network}</Toolbar>}
+            {grid}
+          </Disclosure>
         </>
       )}
     </>
   );
 }
-type PolicyCardProps = Omit<PolicyGroupInput, 'paused'> & {domId: string; kind: 'manual' | 'auto'};
+type PolicyCardProps = Omit<PolicyGroupInput, 'paused'> & {domId: string};
 const PolicyCard = memo(function PolicyCard({domId, ...props}: PolicyCardProps) {
   const gate = use(FirstShow);
   const {id} = props;
@@ -283,7 +294,7 @@ const PolicyCard = memo(function PolicyCard({domId, ...props}: PolicyCardProps) 
             </Button>
           }
           members={props.members}
-          collapsed={props.kind === 'auto' && !focused}
+          collapsed={!focused && !readFold(id, props.kind === 'auto')}
         />
       )}
     </Card>
