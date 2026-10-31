@@ -3,7 +3,7 @@ import {poll, useCapabilities, useGroups, useNodes, useProviders, useSteadyNodes
 import {healthMillis, preferredHealth} from '../../api/selectors';
 import {useMainSourceEdit} from '../../store/mainSource';
 import {useCompleteness, useConfig} from '../../store/config';
-import {editedCard, groupKind, kindFilter, kindQuery, kindView} from './view';
+import {editedCard, groupKind, kindFilter, kindQuery, kindView, subscriptionSources} from './view';
 import {groupOwners, outboundLinks, type OutboundCatalogue} from '../shared/groupText';
 import type {HealthObservation} from '../../api/model';
 import {sameHealth, selectionHealth} from './health';
@@ -15,6 +15,7 @@ import {useNearViewport} from '../../ui/ui';
 import {useGroupDialog} from './group/useGroupDialog';
 import {quoteName, isWritableName} from '../../dae/groups';
 import {useT} from '../../i18n';
+import {declaredSubscriptions, uniqueEntries} from '../shared/subscriptionEntries';
 
 export function usePolicies({go, query}: PageProps) {
   const t = useT();
@@ -50,6 +51,10 @@ export function usePolicies({go, query}: PageProps) {
   const sources = config.data?.sources;
   const owners = useMemo(() => groupOwners(sources ?? []), [sources]);
   const isComplete = useCompleteness(useMemo(() => sources ?? [], [sources]));
+  const memberSources = useMemo(
+    () => subscriptionSources(providers.data?.providers ?? [], roster ?? [], uniqueEntries(declaredSubscriptions(sources ?? []))),
+    [providers.data, roster, sources]
+  );
   const runtimeGroups = offered(resources, 'groups', {whileLoading: true});
   const declarations = useMemo(
     () =>
@@ -171,6 +176,7 @@ export function usePolicies({go, query}: PageProps) {
     onEditing,
     nodes: roster,
     providers: providers.data?.providers ?? [],
+    memberSources,
     create,
     createDisabled: !source.writable || !source.main || source.busy,
     editRequested: params.get('edit') === '1',
