@@ -151,66 +151,15 @@
   }
 }
 
-/* S2's Tabs at compact density: the label is the tab, M tall and 24px from the next; hover and press only darken the
-   text. The current tab's 2px indicator spans its label and sits on the row's divider. The link reaches half of each
-   gap, and on a touch screen a 44px height as an icon button does, so the label alone draws the focus ring. */
 .rp-page-links {
   display: flex;
   flex-wrap: wrap;
-  column-gap: var(--rp-space-6);
+  gap: var(--rp-space-1);
   border-block-end: 1px solid var(--rp-line);
 }
-.rp-page-link {
-  position: relative;
-  display: flex;
-  block-size: var(--rp-control);
-  padding-inline: calc(var(--rp-space-6) / 2);
-  margin-inline: calc(var(--rp-space-6) / -2);
-  color: var(--rp-subtle);
-  text-decoration: none;
-  white-space: nowrap;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-.rp-page-link > span {
-  position: relative;
-  display: flex;
-  align-items: center;
-  border-radius: var(--rp-r-sm);
-}
-.rp-page-link:is([data-hovered], [data-pressed], [aria-current='page']) {
-  color: var(--rp-text);
-}
-.rp-page-link:is(:focus-visible, [data-focus-visible]) {
-  outline: none;
-}
-.rp-page-link:is(:focus-visible, [data-focus-visible]) > span {
-  outline: var(--rp-focus-width) solid var(--rp-focus-color);
-  outline-offset: var(--rp-focus-offset);
-}
-.rp-page-link[aria-current='page'] > span::after {
-  content: '';
-  position: absolute;
-  inset: auto 0 0;
-  block-size: 2px;
-  border-radius: var(--rp-r-pill);
-  background: var(--rp-text);
-}
-@media (pointer: coarse) {
-  .rp-page-link::before {
-    content: '';
-    position: absolute;
-    inset: min(0px, 50% - 22px) 0;
-  }
-}
-@media (forced-colors: active) {
-  .rp-page-link[aria-current='page'] {
-    color: Highlight;
-  }
-  .rp-page-link[aria-current='page'] > span::after {
-    forced-color-adjust: none;
-    background: Highlight;
-  }
+.rp-page-links [aria-current='page'] {
+  border-radius: 0;
+  box-shadow: inset 0 -2px var(--rp-text);
 }
 .rp-disclosure[data-variant='nav'] {
   margin: 0;

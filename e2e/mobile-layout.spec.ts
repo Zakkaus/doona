@@ -47,19 +47,12 @@ for (const width of [1280, 1024, 390, 320]) {
         }
 
         if (width <= 390) {
-          const undersized = await page.locator('.rp-top .rp-btn.icon, .rp-hubbar > a, .rp-hubnav .rp-page-link, .rp-content .rp-tab').evaluateAll(elements =>
+          const undersized = await page.locator('.rp-top .rp-btn.icon, .rp-hubbar > a, .rp-hubnav .rp-btn, .rp-content .rp-tab').evaluateAll(elements =>
             elements
               .filter(element => element.getClientRects().length)
               .map(element => {
                 const box = element.getBoundingClientRect();
-                // A page link's invisible ::before extends its hit area on a touch screen.
-                const area = getComputedStyle(element, '::before');
-                const out = (side: 'top' | 'right' | 'bottom' | 'left') => (area.content === 'none' ? 0 : Math.max(0, -parseFloat(area[side]) || 0));
-                return {
-                  label: element.getAttribute('aria-label') ?? element.textContent,
-                  width: box.width + out('left') + out('right'),
-                  height: box.height + out('top') + out('bottom')
-                };
+                return {label: element.getAttribute('aria-label') ?? element.textContent, width: box.width, height: box.height};
               })
               .filter(box => box.width < 36 || box.height < 36)
           );
