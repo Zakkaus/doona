@@ -434,7 +434,7 @@ test.describe('360px', () => {
         for (const hub of hubs) {
           for (const route of hub.pages) {
             await page.goto(`/#/${route}`);
-            await expect(page.locator('.rp-hubnav .rp-btn')).toHaveCount(hub.pages.length);
+            await expect(page.locator('.rp-hubnav .rp-page-link')).toHaveCount(hub.pages.length);
             const strip = () =>
               page.locator('.rp-hubnav').evaluate(nav => {
                 const box = nav.getBoundingClientRect();

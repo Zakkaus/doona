@@ -81,7 +81,7 @@ test.describe('page rows on a phone', () => {
       await page.evaluate(() => document.fonts.ready);
       await settleFrames(page);
       for (const scope of ['.rp-content .rp-page-links', '.rp-content [data-page-tabrow] .rp-tablist'])
-        expect(await lineCount(page, scope, '.rp-btn, [role=tab]'), `${route} ${scope}`).toBeLessThanOrEqual(1);
+        expect(await lineCount(page, scope, '.rp-btn, .rp-page-link, [role=tab]'), `${route} ${scope}`).toBeLessThanOrEqual(1);
     }
     await page.goto('/#/connections');
     await page.locator('.rp-content [role=tab]:visible').nth(1).click();
@@ -136,7 +136,7 @@ async function toolbarGeometry(page: Page) {
     const sizes = getComputedStyle(document.documentElement);
     const mHeight = parseFloat(sizes.getPropertyValue('--rp-control'));
     const lHeight = parseFloat(sizes.getPropertyValue('--rp-control-lg'));
-    const controls = '.rp-btn, .rp-input, .rp-selectbtn, .rp-select, .rp-seg, .rp-switch, .rp-tab, .rp-tabbar';
+    const controls = '.rp-btn, .rp-page-link, .rp-input, .rp-selectbtn, .rp-select, .rp-seg, .rp-switch, .rp-tab, .rp-tabbar';
     return [...root.querySelectorAll<HTMLElement>(`${rows}, ${localRows}`)]
       .filter(row => row.checkVisibility({visibilityProperty: true}))
       .flatMap(row => {
