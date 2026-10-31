@@ -106,8 +106,14 @@ button.rp-node {
 .rp-split-summary {
   display: inline-flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   column-gap: 6px;
+}
+/* Each label and member centres on the line; as plain inline boxes a member's flag sat on the baseline and its name
+   in the middle, which lowered the name below the labels. */
+.rp-split-summary > span {
+  display: inline-flex;
+  align-items: center;
 }
 /* Each network's name reads as a quiet label before its member, with room between the two pairs. */
 .rp-split-net {
