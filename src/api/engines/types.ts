@@ -1,6 +1,6 @@
 import type {SettingsSection} from '../../dae/settings';
 import type {TextBlock} from '../../dae/text';
-import type {Capabilities, ConfigSource, RuntimeSettings} from '../model';
+import type {Capabilities, ConfigRevisionList, ConfigSource, EffectiveConfig, OperationAccepted, RuntimeSettings} from '../model';
 
 // What the engine can be asked about: a capabilities resource, or an action that can be off while its resource is on,
 // named after the contract field that flags it: `manage` (nodes and providers `can_manage`), `subscriptions`
@@ -65,6 +65,41 @@ export type EngineReason =
   // The running build does not have the feature.
   | {code: 'build-lacks'};
 
+// What an engine's configuration extension offers. `off` names the features the engine reports unavailable; one a
+// build does not report is neither on nor off.
+export type ConfigManagement = {
+  export: boolean;
+  import: boolean;
+  revisions: boolean;
+  replaceRequired: boolean;
+  canActivate: boolean;
+  maxRevisions?: number;
+  off: {export: boolean; import: boolean; revisions: boolean};
+};
+// The contract puts an engine's extension routes under /api/v1/x-<engine>; these are the configuration extension's.
+type ConfigRoute<P extends string> = `/api/v1/x-${string}/config/${P}`;
+type Reply<T, S extends number = 200> = {responses: {[K in S]: {content: {'application/json': T}}}};
+export type ConfigPaths = {
+  [path: ConfigRoute<'export'>]: {get: {responses: {200: {content: {'text/plain': string}}}}};
+  [path: ConfigRoute<'import'>]: {post: Reply<OperationAccepted, 202> & {requestBody: {content: {'application/json': {replace: boolean}}}}};
+  [path: ConfigRoute<'revisions'>]: {get: Reply<ConfigRevisionList>};
+  [path: ConfigRoute<'revisions/{revision}/activate'>]: {post: Reply<OperationAccepted, 202> & {parameters: {path: {revision: number}}}};
+};
+// The engine extension that exports, imports and keeps revisions of the configuration.
+export type EngineConfig = {
+  management(capabilities: Capabilities | undefined): ConfigManagement;
+  // Whether the effective configuration is recorded as a revision; undefined when the engine does not say.
+  store(config: EffectiveConfig | undefined): {recorded: boolean} | undefined;
+  paths: {
+    export: ConfigRoute<'export'>;
+    import: ConfigRoute<'import'>;
+    revisions: ConfigRoute<'revisions'>;
+    activate: ConfigRoute<'revisions/{revision}/activate'>;
+  };
+  // The export's file name, from its Content-Disposition.
+  exportFilename(disposition: string | null): string;
+};
+
 // An engine's explanations for what the native API contract states without a reason. An engine that does not know a
 // reason says nothing, so the page falls back to what the contract says.
 export type Engine = {
@@ -84,6 +119,10 @@ export type Engine = {
   daeText: boolean;
   nodeLinkSchemes: readonly string[] | null;
   globalSettings: SettingsSection | null;
+  // The global settings the engine applies only when it restarts, so a write that changes them is refused.
+  restartOnly: readonly string[];
+  // The command that restarts the engine's service; null when doona does not know it.
+  restartCommand: string | null;
   // The hooks the engine attaches but does not check afterwards, so it reports their state as `unknown`.
   uncheckedHooks: string[];
 };

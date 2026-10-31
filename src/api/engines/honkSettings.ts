@@ -47,3 +47,23 @@ export const honkGlobal: SettingsSection = {
     {key: 'store_subscribe', label: 'config.global.store_subscribe', group: 'storage', type: 'boolean'}
   ]
 };
+// honk rejects a change to these before storing a source; the API has no staged-save mode.
+export const honkRestartOnly = [
+  'check_interval',
+  'tcp_check_url',
+  'tcp_check_http_method',
+  'udp_check_dns',
+  'tls_implementation',
+  'tproxy_port',
+  'tproxy_port_protect',
+  'pprof_port',
+  'so_mark_from_dae',
+  'log_level',
+  'log_file',
+  'lan_interface',
+  'wan_interface',
+  'auto_config_kernel_parameter',
+  'data_dir',
+  'store_subscribe',
+  'nfqueue_enable'
+];

@@ -1,4 +1,4 @@
-import {configManagement, engineOf, type EngineAction, type EngineReason} from '../../api/engines';
+import {configManagement, configOf, engineOf, type EngineAction, type EngineReason} from '../../api/engines';
 import type {Capabilities, RuntimeSettings, Version} from '../../api/model';
 
 // The resources the overview's feature list shows, in its order.
@@ -96,7 +96,7 @@ export function classifyLimits(
   write('mode', configCause !== null && engine.daeText);
   write('rule_edit', configCause !== null && resources.rules.available);
   write('group_edit', resources.groups.available && resources.groups.config_patch === false);
-  const management = configManagement(capabilities);
+  const management = configManagement(configOf(version), capabilities);
   for (const id of ['export', 'import', 'revisions'] as const) action(id, management.off[id], true);
   action('restore', management.revisions && !management.canActivate, true);
   const lacking = (list: readonly string[] | undefined, value: string) => list !== undefined && !list.includes(value);

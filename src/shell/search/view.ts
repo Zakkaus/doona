@@ -5,7 +5,7 @@ import {chainLabel, connectionRows} from '../../api/selectors';
 import {offered} from '../../api/capabilities';
 import {features, navAvailable} from '../registry';
 import type {RoutePath} from '../routes';
-import type {Engine} from '../../api/engines';
+import type {Engine, EngineConfig} from '../../api/engines';
 import {parseHash, within} from '../route';
 import {dnsRuleTarget} from '../../dae/ruleText';
 import {settingGroups, type SettingsSection} from '../../dae/settings';
@@ -55,8 +55,8 @@ function labels(t: Translator, key: Key, parentKey?: Key): string[] {
   return words.flatMap(({title, parent}) => (parent ? [title, parent + ' ' + title] : [title]));
 }
 
-export function pageEntries(capabilities: Capabilities | undefined, t: Translator, hasGlobal: boolean): SearchEntry[] {
-  const available = (path: string) => navAvailable(path, capabilities);
+export function pageEntries(capabilities: Capabilities | undefined, t: Translator, hasGlobal: boolean, config: EngineConfig | null): SearchEntry[] {
+  const available = (path: string) => navAvailable(path, capabilities, config);
   const resources = capabilities?.resources;
   // Each page's own tab list, so search offers exactly the tabs the page shows.
   const subpages: Array<{path: RoutePath; params: Record<string, string>; titleKey: Key; aliases?: readonly string[]}> = [
@@ -65,7 +65,7 @@ export function pageEntries(capabilities: Capabilities | undefined, t: Translato
     ...flowsTabs(resources).map(tab => ({path: 'flows' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...rulesTabs(resources).map(tab => ({path: 'rules' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
     ...dnsTabs(resources).map(tab => ({path: 'dns' as const, params: {tab: tab.id}, titleKey: tab.titleKey})),
-    ...configTabs(hasGlobal, capabilities).map(tab => ({path: 'config' as const, params: {tab: tab.id}, titleKey: tab.titleKey, aliases: tab.aliases})),
+    ...configTabs(hasGlobal, config, capabilities).map(tab => ({path: 'config' as const, params: {tab: tab.id}, titleKey: tab.titleKey, aliases: tab.aliases})),
     ...settingsCardList(resources).map(card => ({path: 'settings' as const, params: {card: card.id}, titleKey: card.titleKey, aliases: card.aliases}))
   ];
   const parentKey = (path: RoutePath) => features.find(f => f.path === path)!.nav!.titleKey;
@@ -128,10 +128,10 @@ export function globalSettingEntries(section: SettingsSection | null, capabiliti
   );
 }
 // The feature entry points each page registers beside its tabs (see SearchTarget).
-export function featureEntries(capabilities: Capabilities | undefined, t: Translator): SearchEntry[] {
+export function featureEntries(capabilities: Capabilities | undefined, t: Translator, config: EngineConfig | null): SearchEntry[] {
   const resources = capabilities?.resources;
-  return [...rulesTargets(resources), ...policiesTargets(resources), ...nodesTargets(resources), ...configTargets(capabilities), ...widgetTargets]
-    .filter(target => target.route === null || navAvailable(target.route, capabilities))
+  return [...rulesTargets(resources), ...policiesTargets(resources), ...nodesTargets(resources), ...configTargets(capabilities, config), ...widgetTargets]
+    .filter(target => target.route === null || navAvailable(target.route, capabilities, config))
     .map(target =>
       entry(
         [...labels(t, target.titleKey, target.parentKey), ...(target.aliasKeys ?? []).flatMap(key => labels(t, key)), ...(target.aliases ?? [])],

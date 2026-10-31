@@ -9,6 +9,7 @@ import {palettes, type PaletteId} from './palettes';
 import {defaultRoute, hubs, type PageProps} from './routes';
 import {LANGS, type Translator} from '../i18n';
 import {features, navAvailable} from './registry';
+import {configOf} from '../api/engines';
 import {href} from './route';
 
 export type ShortcutView = {id: string; path: string; key: string; keys: string[]; label: string};
@@ -78,7 +79,8 @@ export function shellView(
 ): ShellView {
   const profile = settings.profiles.find(item => item.id === settings.activeId);
   const feature = features.find(item => item.path === route) ?? features.find(item => item.path === defaultRoute)!;
-  const offered = (path: string) => navAvailable(path, capabilities);
+  const config = configOf(version);
+  const offered = (path: string) => navAvailable(path, capabilities, config);
   const groups = hubs.map(hub => ({
     id: hub.id,
     label: t(hub.titleKey),

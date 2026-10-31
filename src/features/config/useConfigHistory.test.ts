@@ -4,7 +4,8 @@ import type {Api} from '../../api/api';
 import {ApiError} from '../../api/error';
 import {diagnostics, formatDiagnostics} from '../../api/diagnostics';
 import {createMockApi} from '../../../mock';
-import {capabilities} from '../../../mock/fixtures';
+import {capabilities, version} from '../../../mock/fixtures';
+import {configOf} from '../../api/engines';
 import type {ConfigRevisionList, EffectiveConfig, OperationState} from '../../api/model';
 import {hookHarness} from '../../store/testHelpers';
 import {useConfigHistory} from './useConfigHistory';
@@ -15,7 +16,7 @@ vi.mock('react', async original => ({
   useCallback: (callback: unknown) => callback,
   useSyncExternalStore: (_subscribe: unknown, read: () => unknown) => read()
 }));
-vi.mock('../../store', () => ({useCapabilities: () => ({data: capabilities}), useConfig: () => ({data: config})}));
+vi.mock('../../store', () => ({useCapabilities: () => ({data: capabilities}), useConfig: () => ({data: config}), useVersion: () => ({data: version})}));
 vi.mock('../../store/config', async original => ({
   ...(await original<typeof import('../../store/config')>()),
   useConfigRevisions: () => list
@@ -42,9 +43,10 @@ beforeEach(async () => {
   hookHarness.reset();
   diagnostics.clear();
   api = createMockApi();
-  await api.pollOperation(await api.importConfig(true));
+  const extension = configOf(version)!;
+  await api.pollOperation(await api.importConfig(extension, true));
   config = await api.config();
-  list = {data: await api.configRevisions(), error: null};
+  list = {data: await api.configRevisions(extension), error: null};
   vi.spyOn(apiSelection, 'getApi').mockReturnValue(api);
 });
 afterEach(() => {

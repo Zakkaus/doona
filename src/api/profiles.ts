@@ -144,12 +144,15 @@ export function hostedRoot(loc: {origin: string; pathname: string}): string {
   return loc.origin + prefix;
 }
 
-// The backend address suggested when nothing is saved: honk's native API
-// (port 9527) on this page's host. Empty unless the page is served over plain
-// http: honk's listener speaks http, which an https page may not call.
+// The native API's default port, the contract's example server.
+const NATIVE_API_PORT = 9527;
+
+// The backend address suggested when nothing is saved: the native API on its
+// default port on this page's host. Empty unless the page is served over plain
+// http: the engine's listener speaks http, which an https page may not call.
 export function suggestedBackendUrl(loc: {protocol: string; hostname: string} = location): string {
   // `hostname` already brackets an IPv6 address.
-  return loc.protocol === 'http:' && loc.hostname ? `http://${loc.hostname}:9527` : '';
+  return loc.protocol === 'http:' && loc.hostname ? `http://${loc.hostname}:${NATIVE_API_PORT}` : '';
 }
 
 export async function detectHostedBackend(

@@ -1,5 +1,6 @@
 import {describe, expect, it, vi} from 'vitest';
 import {createMockApi} from '../../../mock';
+import {version} from '../../../mock/fixtures';
 import {translate} from '../../i18n';
 import type {Capabilities, ConnectionList, DnsRuleList, Node, GroupSummary, ProviderList, EffectiveConfig, RuleList} from '../../api/model';
 import {
@@ -21,7 +22,7 @@ import {
 } from './view';
 import {sourceKinds} from '../../dae/sources';
 import {runtimeFieldLabels, settingsFields} from '../../features/settings/nav';
-import {engineOf, type Engine} from '../../api/engines';
+import {configOf, engineOf, type Engine} from '../../api/engines';
 import type {Lang, Translator} from '../../i18n';
 
 type SearchSources = {
@@ -35,14 +36,15 @@ type SearchSources = {
   dnsRules?: {data: DnsRuleList | undefined};
   version?: Engine;
 };
+const config = configOf(version);
 // Every dataset projected at once, as useSearch does one memo at a time.
 function searchIndex(sources: SearchSources, lang: Lang, t: Translator): SearchIndex {
   return searchSections(
     {
-      pages: pageEntries(sources.capabilities.data, t, true),
+      pages: pageEntries(sources.capabilities.data, t, true, config),
       settings: settingsEntries(sources.capabilities.data, t),
       globals: globalSettingEntries(sources.version?.globalSettings ?? null, sources.capabilities.data, t),
-      features: featureEntries(sources.capabilities.data, t),
+      features: featureEntries(sources.capabilities.data, t, config),
       conns: connectionEntries(sources.connections.data, t),
       nodes: nodeEntries(sources.nodes.data, sources.providers.data, lang),
       groups: groupEntries(sources.groups.data),

@@ -1,5 +1,5 @@
 import {holdsCredential} from '../api';
-import {configManagement} from '../api/engines';
+import {configManagement, type EngineConfig} from '../api/engines';
 import {withCatalogue, type Key} from '../i18n';
 import type {ComponentType} from 'react';
 import {preloadable} from '../ui/preloadable';
@@ -190,9 +190,9 @@ export function skipWarmUp() {
   if (!warming) document.documentElement.dataset.warm = 'skip';
 }
 
-export function navAvailable(path: string, capabilities: Capabilities | undefined): boolean {
+export function navAvailable(path: string, capabilities: Capabilities | undefined, config: EngineConfig | null): boolean {
   if (path === 'config') {
-    const management = configManagement(capabilities);
+    const management = configManagement(config, capabilities);
     if (management.export || management.import || management.revisions) return true;
   }
   const requires = features.find(feature => feature.path === path)?.requires;

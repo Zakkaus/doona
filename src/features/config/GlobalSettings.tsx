@@ -77,7 +77,7 @@ export function GlobalSettings(props: PageProps) {
       {m.unread && <InlineAlert tone="informative">{m.unread}</InlineAlert>}
       <ErrorMessage error={m.error} onRetry={m.retry} />
       {m.failure && <InlineAlert>{m.failure}</InlineAlert>}
-      {m.restart.length > 0 && <RestartNotice settings={m.restart} sources={m.sources} />}
+      {m.restart.length > 0 && <RestartNotice settings={m.restart} sources={m.sources} command={m.restartCommand} />}
       {m.conflict && <InlineAlert>{t('config.changedOnDisk')}</InlineAlert>}
       {m.source && !m.writable && <InlineAlert tone="informative">{t('config.readOnly')}</InlineAlert>}
       {m.groups.map(group => (

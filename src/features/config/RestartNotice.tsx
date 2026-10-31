@@ -5,16 +5,14 @@ import {fileName, type RestartSetting} from '../../dae/sources';
 import {copyText} from '../shared/copy';
 import {docsHref} from '../shared/docs';
 
-// The service the install guide creates; its Reload and restart section covers the other init systems.
-const command = 'systemctl restart honk-core';
-
-// A write honk refused because the change needs a restart: what needs it, that nothing was written, and how to apply it.
-// The alert takes focus so it is announced, and stays until the next edit, since the way forward is outside doona.
-export function RestartNotice({settings, sources}: {settings: RestartSetting[]; sources: ConfigSource[]}) {
+// A write the engine refused because the change needs a restart: what needs it, that nothing was written, and how to
+// apply it, with the engine's restart command when doona knows it. The alert takes focus so it is announced, and stays
+// until the next edit, since the way forward is outside doona.
+export function RestartNotice({settings, sources, command}: {settings: RestartSetting[]; sources: ConfigSource[]; command: string | null}) {
   const t = useT();
   const lang = useLang();
-  const copy = async () => {
-    const copied = await copyText(command);
+  const copy = async (text: string) => {
+    const copied = await copyText(text);
     toast(copied ? 'positive' : 'negative', t(copied ? 'config.restart.copied' : 'config.restart.copyFailed'));
   };
   return (
@@ -34,12 +32,14 @@ export function RestartNotice({settings, sources}: {settings: RestartSetting[]; 
             );
           })}
           <span>{t('config.restart.next')}</span>
-          <span className="rp-cluster">
-            <code className="rp-code rp-limit-snippet">{command}</code>
-            <Button small onPress={() => void copy()}>
-              {t('config.restart.copy')}
-            </Button>
-          </span>
+          {command && (
+            <span className="rp-cluster">
+              <code className="rp-code rp-limit-snippet">{command}</code>
+              <Button small onPress={() => void copy(command)}>
+                {t('config.restart.copy')}
+              </Button>
+            </span>
+          )}
           <Link appearance="link" external href={docsHref(lang, 'reload-and-restart')}>
             {t('config.restart.docs')}
             <span aria-hidden="true">↗</span>

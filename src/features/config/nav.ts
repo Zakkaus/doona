@@ -1,5 +1,4 @@
-import {configManagement} from '../../api/engines';
-import type {Engine} from '../../api/engines';
+import {configManagement, type Engine, type EngineConfig} from '../../api/engines';
 import type {Capabilities, EffectiveConfig} from '../../api/model';
 import type {Translator} from '../../i18n';
 import {href} from '../../shell/route';
@@ -11,9 +10,10 @@ import type {SearchTarget} from '../../shell/routes';
 // `aliases` are other words search finds a tab by.
 export function configTabs(
   hasGlobal: boolean,
+  config: EngineConfig | null,
   capabilities?: Capabilities
 ): Array<{id: 'modules' | 'global' | 'source' | 'history'; titleKey: Key; aliases?: readonly string[]}> {
-  const management = configManagement(capabilities);
+  const management = configManagement(config, capabilities);
   return [
     {id: 'modules' as const, titleKey: 'config.tabModules' as const},
     ...(hasGlobal ? [{id: 'global' as const, titleKey: 'config.tabGlobal' as const}] : []),
@@ -24,8 +24,8 @@ export function configTabs(
   ];
 }
 // Export and import sit on the history tab; search opens the tab and leaves the confirmation to the person.
-export function configTargets(capabilities: Capabilities | undefined): SearchTarget[] {
-  const management = configManagement(capabilities);
+export function configTargets(capabilities: Capabilities | undefined, config: EngineConfig | null): SearchTarget[] {
+  const management = configManagement(config, capabilities);
   return [
     ...(management.export
       ? [

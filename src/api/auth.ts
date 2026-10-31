@@ -16,14 +16,17 @@ const url = (base: string, path: string) => new URL(base.replace(/\/+$/, '') + p
 const demoAuth = () => import('../../mock/auth');
 export const DEMO_ACCOUNT = {username: 'demo', password: 'demo'} as const;
 
-// Discovery is public, so it is read without a token. An engine that still reports the old API name serves an API
-// older than this doona, which it cannot sign in to.
+// API names engines reported before the native API contract. An engine that still reports one serves an API older than
+// this doona, which it cannot sign in to.
+const retiredApiNames = ['dae/honk-native'];
+
+// Discovery is public, so it is read without a token.
 export async function discoverAuth(base: string, signal?: AbortSignal): Promise<AuthDiscovery> {
   if (isDemoApi(base)) return (await demoAuth()).mockDiscovery();
   const response = await send(url(base, '/api'), {headers: {Accept: 'application/json'}, cache: 'no-store', signal});
   if (!response.ok) throw await responseError(response);
   const body: {name?: string; auth: AuthDiscovery} = await response.json();
-  if (body.name === 'dae/honk-native') throw new LocalError('login.engineOutdated');
+  if (body.name !== undefined && retiredApiNames.includes(body.name)) throw new LocalError('login.engineOutdated');
   return body.auth;
 }
 

@@ -2,7 +2,8 @@ import {expect, it, onTestFinished, vi} from 'vitest';
 import * as apiSelection from '../api/index';
 import {ApiError, LocalError} from '../api/error';
 import {createMockApi} from '../../mock';
-import {capabilities} from '../../mock/fixtures';
+import {capabilities, version} from '../../mock/fixtures';
+import {configOf} from '../api/engines';
 // The mocked react reads hookHarness, so testHelpers loads before the modules that import react.
 import {deferred, hookHarness, stubVisibleDocument} from './testHelpers';
 import {closestLimit, createSource, readConfigFresh, refusalOutcome, useConfigEditor, useConfigRevisionAction, withinLimits} from './config';
@@ -29,13 +30,14 @@ it.each([null, 1])('requires confirmation again when the fresh head differs befo
   });
   const api = createMockApi();
   vi.spyOn(apiSelection, 'getApi').mockReturnValue(api);
-  const list = await api.configRevisions();
+  const config = configOf(version)!;
+  const list = await api.configRevisions(config);
   const fresh = vi.spyOn(api, 'configRevisions').mockResolvedValue({...list, active: 12345});
   const importing = vi.spyOn(api, 'importConfig');
   const activating = vi.spyOn(api, 'activateConfigRevision');
-  const action = hookHarness.render(useConfigRevisionAction);
+  const action = hookHarness.render(() => useConfigRevisionAction(config));
   expect(await action.apply(revision, true, list.active)).toEqual({changed: 12345});
-  expect(fresh).toHaveBeenCalledWith(expect.any(AbortSignal));
+  expect(fresh).toHaveBeenCalledWith(config, expect.any(AbortSignal));
   expect(importing).not.toHaveBeenCalled();
   expect(activating).not.toHaveBeenCalled();
 });

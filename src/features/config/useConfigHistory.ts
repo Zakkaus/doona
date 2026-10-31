@@ -2,8 +2,8 @@ import {useEffect, useState} from 'react';
 import {getApi} from '../../api';
 import {ApiError, LocalError, errorText} from '../../api/error';
 import type {ConfigDiagnostic} from '../../api/model';
-import {configManagement, configStore} from '../../api/engines';
-import {useCapabilities, useConfig} from '../../store';
+import {configManagement, configOf} from '../../api/engines';
+import {useCapabilities, useConfig, useVersion} from '../../store';
 import {useConfigRevisions, useConfigRevisionAction} from '../../store/config';
 import {useAction} from '../../store/action';
 import {useDialogSession} from '../../shell/draft';
@@ -18,10 +18,11 @@ export function useConfigHistory() {
   const locale = LOCALE[useLang()];
   const api = getApi();
   const capabilities = useCapabilities().data;
-  const management = configManagement(capabilities);
+  const extension = configOf(useVersion().data);
+  const management = configManagement(extension, capabilities);
   const config = useConfig(capabilities?.resources.config.available === true);
-  const list = useConfigRevisions(management.revisions);
-  const action = useConfigRevisionAction();
+  const list = useConfigRevisions(extension, management.revisions);
+  const action = useConfigRevisionAction(extension);
   const exporting = useAction<'export'>();
   const session = useDialogSession();
   useEffect(() => () => session.next(), [session]);
@@ -30,7 +31,7 @@ export function useConfigHistory() {
   const confirmation = dialog && {...dialog, ...action.pending};
   const [problem, setProblem] = useState<{id: number; text: string} | null>(null);
   const [diagnostics, setDiagnostics] = useState<ConfigDiagnostic[]>([]);
-  const view = historyView(list.data, configStore(config.data), management.canActivate, locale, t, confirmation?.head);
+  const view = historyView(list.data, extension?.store(config.data), management.canActivate, locale, t, confirmation?.head);
   const detail = view.rows.find(row => row.id === selected);
   const target = view.rows.find(row => row.revision === confirmation?.revision);
   const close = () => {
@@ -93,7 +94,8 @@ export function useConfigHistory() {
     exporting: !!exporting.busy,
     exportError: exporting.error,
     export: async () => {
-      const result = await exporting.run('export', signal => api.exportConfig(signal));
+      if (!extension) return;
+      const result = await exporting.run('export', signal => api.exportConfig(extension, signal));
       if (result && getApi() === api) downloadFile(result.filename, result.content, result.contentType);
     }
   };

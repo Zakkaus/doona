@@ -39,6 +39,7 @@ export function SourceCard(props: SourceCardProps) {
     note,
     refused,
     restart,
+    restartCommand,
     marks,
     text,
     names,
@@ -184,7 +185,7 @@ export function SourceCard(props: SourceCardProps) {
         </span>
       </div>
       {conflict && <ChangedOnDisk message={conflict} busy={busy} keep={keep} />}
-      {restart.length > 0 && <RestartNotice settings={restart} sources={props.sources} />}
+      {restart.length > 0 && <RestartNotice settings={restart} sources={props.sources} command={restartCommand} />}
       {located.length ? formLinks : links.length > 0 && <Disclosure title={t('config.forms')}>{formLinks}</Disclosure>}
       <Suspense fallback={<PageSkeleton panel shape={editorBlock} />}>
         <editor.Component
