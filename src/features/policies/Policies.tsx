@@ -97,7 +97,7 @@ function PolicyWait({heading, members, label, collapsed}: {heading: ReactNode; m
 // not carry, so no placeholder can know the loaded card's height; the list is laid out hidden behind generic Skeleton
 // cards instead, and shown once. Cards reached later by scrolling open off screen behind a placeholder.
 // Generic group cards: an open manual group's, then automatic groups folded to their summary.
-const policyCards: PageShape = [{cards: [614, 142, 150, 150]}];
+const policyCards: PageShape = [{cards: [674, 110, 110, 110]}];
 type FirstShowGate = {hold: (id: string) => void; release: (id: string) => void};
 const FirstShow = createContext<FirstShowGate>({hold() {}, release() {}});
 function PolicyList({loading, children}: {loading: boolean; children: ReactNode}) {
