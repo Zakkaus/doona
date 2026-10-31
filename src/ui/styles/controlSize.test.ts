@@ -5,6 +5,7 @@ import {expect, it} from 'vitest';
 import {ControlSizeContext, useControlSize} from '../controlSize';
 import {Segmented} from '../Segmented';
 import segmentedCss from './segmented.css?raw';
+import tagsCss from './tags-bars.css?raw';
 
 const owners: Record<string, string> = {
   'rp-btn': 'buttons-menus.css',
@@ -17,7 +18,8 @@ const owners: Record<string, string> = {
   'rp-segpick': 'segmented.css',
   'rp-tab': 'tabs-panels.css',
   'rp-tabbar': 'tabs-panels.css',
-  'rp-tablist': 'tabs-panels.css'
+  'rp-tablist': 'tabs-panels.css',
+  'rp-tag': 'tags-bars.css'
 };
 // The size tokens a control height may use: M and L follow the surrounding context; XS is fixed (a help trigger).
 const sizeTokens = /"--rp-control(?:-lg|-xs)?"/;
@@ -97,20 +99,20 @@ it('rejects page, one-off and literal control sizing, including logical sizes an
 });
 
 // A segmented control is S2's default M (32px), as S2's SegmentedControl has no size, so a time range in a card matches a
-// page filter, and a card's size never gives it L.
-function segmentedHeights(css: string): string[] {
+// page filter, and a card's size never gives it L. A tag is M too: doona's tags take no size, as S2's TagGroup defaults to M.
+function controlHeights(css: string, filename: string, control: string): string[] {
   const values: string[] = [];
   transform({
-    filename: 'segmented.css',
+    filename,
     code: new TextEncoder().encode(css),
     visitor: {
       Rule: {
         style(rule) {
-          const segmented = rule.value.selectors.some(selector => selector.some(part => part.type === 'class' && part.name === 'rp-seg'));
-          if (!segmented) return;
+          const owned = rule.value.selectors.some(selector => selector.some(part => part.type === 'class' && part.name === control));
+          if (!owned) return;
           for (const declaration of [...rule.value.declarations.declarations, ...rule.value.declarations.importantDeclarations]) {
             const property = declaration.property === 'unparsed' ? declaration.value.propertyId.property : declaration.property;
-            if (property in dimensions && property !== 'min-height') values.push(JSON.stringify(declaration.value));
+            if (property in dimensions && (control !== 'rp-seg' || property !== 'min-height')) values.push(JSON.stringify(declaration.value));
           }
         }
       }
@@ -120,7 +122,7 @@ function segmentedHeights(css: string): string[] {
 }
 
 it('sizes a segmented control at M', () => {
-  const heights = segmentedHeights(segmentedCss);
+  const heights = controlHeights(segmentedCss, 'segmented.css', 'rp-seg');
   expect(heights.length).toBeGreaterThan(0);
   expect(heights.filter(value => !value.includes('"--rp-control"'))).toEqual([]);
   const items: Array<[string, string]> = [
@@ -132,6 +134,12 @@ it('sizes a segmented control at M', () => {
     const markup = renderToStaticMarkup(createElement(ControlSizeContext, {value}, segmented));
     expect(markup.match(/data-size="[^"]*"/g)).toEqual(Array(3).fill('data-size="M"'));
   }
+});
+
+it('sizes a tag at M', () => {
+  const heights = controlHeights(tagsCss, 'tags-bars.css', 'rp-tag');
+  expect(heights.length).toBeGreaterThan(0);
+  expect(heights.filter(value => !value.includes('"--rp-control"'))).toEqual([]);
 });
 
 // A control is M unless it asks for L; its own size wins over the size a card provides.

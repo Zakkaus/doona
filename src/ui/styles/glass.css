@@ -424,7 +424,6 @@
 
 :root[data-family='glass'] .rp-tag {
   background: var(--rp-ctl);
-  border-color: transparent;
 }
 :root[data-family='glass'] .rp-tag.new {
   border-color: var(--rp-accent);

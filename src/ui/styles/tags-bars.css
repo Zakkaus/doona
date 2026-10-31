@@ -1,4 +1,8 @@
-/* ---- Tags: S2's Tag shape on doona's tokens. ---- */
+/* ---- Tags: S2's Tag at its default M on doona's tokens. ---- */
+/* A tag is an M control: the control height, M's 12px inset and corner, and no border. Its fill is S2's gray-100 (the
+   overlay here); a hover or keyboard focus takes gray-200 (highlight med), as an ActionButton's does. A tag with a
+   remove or undo button keeps no end inset: the button is the tag's end, a control square, 6px after the label (S2's
+   text-to-visual at M). Tags sit 8px apart. */
 .rp-tags {
   min-width: 0;
   max-width: 100%;
@@ -26,15 +30,15 @@
   max-width: 100%;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  min-height: 28px;
-  padding-inline: 10px 2px;
+  gap: var(--rp-space-1h);
+  min-height: var(--rp-control);
+  padding-inline: var(--rp-space-3) 0;
+  border: 0;
   border-radius: var(--rp-r-md);
   background: var(--rp-overlay);
-  border: 1px solid var(--rp-hl-med);
 }
 .rp-tag:not(:has(> .rp-btn, > .rp-tipwrap)) {
-  padding-inline-end: 10px;
+  padding-inline-end: var(--rp-space-3);
 }
 .rp-tag > :is(.rp-btn, .rp-tipwrap),
 .rp-tag > .rp-tipwrap > .rp-btn {
@@ -57,14 +61,14 @@
 .rp-tag-more {
   font-variant-numeric: tabular-nums;
 }
-:is(.rp-tag-link, .rp-tag-more)[data-hovered] {
+:is(.rp-tag-link, .rp-tag-more):is([data-hovered], [data-focus-visible]) {
   background: var(--rp-hl-med);
 }
 :is(.rp-tag-link, .rp-tag-more)[data-pressed] {
   background: var(--rp-hl-high);
 }
 .rp-tag.new {
-  border-color: var(--rp-accent);
+  border: 1px solid var(--rp-accent);
   background: var(--rp-fill);
 }
 .rp-tag.removed > .rp-tag-label {
