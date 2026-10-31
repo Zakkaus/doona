@@ -107,7 +107,7 @@ button.rp-node {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  column-gap: 6px;
+  column-gap: var(--rp-space-2);
 }
 /* Each label and member centres on the line; as plain inline boxes a member's flag sat on the baseline and its name
    in the middle, which lowered the name below the labels. */
@@ -115,14 +115,11 @@ button.rp-node {
   display: inline-flex;
   align-items: center;
 }
-/* Each network's name reads as a quiet label before its member, with room between the two pairs. */
+/* Each network's name reads as a quiet label 8px before its member; "Current" and the two pairs sit 16px apart. */
 .rp-split-net {
-  margin-inline-start: 8px;
+  margin-inline-start: var(--rp-space-2);
   font-size: var(--rp-text-sm);
   color: var(--rp-subtle);
-}
-.rp-split-net ~ .rp-split-net {
-  margin-inline-start: 20px;
 }
 .rp-policy-list {
   position: relative;
