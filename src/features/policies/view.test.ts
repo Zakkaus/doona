@@ -532,15 +532,14 @@ it('sorts groups into manual and automatic by the kind the backend reports, and 
   // No groups at all is the page's own empty state, not the filter's.
   expect(kindView([], 'auto', null, t).empty).toBeNull();
 });
-it('sums an automatic group up in one line: the member in place, per network when they differ, and how many are available', () => {
+it('sums a folded group up in one line: the member in place, per network when they differ', () => {
   const g = nodeFixtures(0).groups[0];
   const members = memberViews(memberHealth(g, new Map()), t);
-  const available = members.filter(member => member.healthy).length;
   const name = (id: string) => members.find(member => member.id === id)!.name;
-  expect(selectionSummary(g, members, t)).toBe(`Current TCP: ${name('hk-01')}, UDP: ${name('hk-02')}; ${available} available`);
+  expect(selectionSummary(g, members, t)).toEqual({tcp: name('hk-01'), udp: name('hk-02')});
   const same = {runtime: {...g.runtime, selection: {tcp: g.runtime.selection.tcp, udp: g.runtime.selection.tcp}}};
-  expect(selectionSummary(same, members, t)).toBe(`Current: ${name('hk-01')}, ${available} available`);
-  expect(selectionSummary({runtime: {...g.runtime, selection: {tcp: null, udp: null}}}, [], t)).toBe('Current: no member selected yet, 0 available');
+  expect(selectionSummary(same, members, t)).toEqual({text: `Current: ${name('hk-01')}`});
+  expect(selectionSummary({runtime: {...g.runtime, selection: {tcp: null, udp: null}}}, [], t)).toEqual({text: 'Current: no member selected yet'});
   expect(policyCardView(g, members, 'both', t)).toMatchObject({automatic: g.policy.kind !== 'selector'});
 });
 

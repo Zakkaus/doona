@@ -103,6 +103,21 @@ button.rp-node {
 }
 /* The policy cards are laid out hidden until the reads their sizes depend on arrive (Policies.tsx); the loading state
    stands over them meanwhile (generic Skeleton cards), so showing them moves nothing. */
+.rp-split-summary {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 6px;
+}
+/* Each network's name reads as a quiet label before its member, with room between the two pairs. */
+.rp-split-net {
+  margin-inline-start: 8px;
+  font-size: var(--rp-text-sm);
+  color: var(--rp-subtle);
+}
+.rp-split-net ~ .rp-split-net {
+  margin-inline-start: 20px;
+}
 .rp-policy-list {
   position: relative;
 }

@@ -173,7 +173,7 @@ test('an automatic group sums itself up, opens on a press and still takes a pinn
   await page.goto('/#/policies?kind=auto');
   const card = page.getByRole('region', {name: 'gaming', exact: true});
   const summary = card.getByRole('button', {name: /^Current/});
-  await expect(summary).toHaveText(/^Current: \S+, \d+ available$/);
+  await expect(summary).toHaveText(/^Current: \S+$/);
   await expect(card.getByRole('button', {name: /^jp-01\b/})).toHaveCount(0);
   await summary.click();
   const member = card.getByRole('button', {name: /^hk-02\b/});

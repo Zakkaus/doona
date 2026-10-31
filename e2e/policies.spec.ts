@@ -226,6 +226,26 @@ test('a group whose networks use different members marks each with its network',
   await expect(proxy.getByRole('row', {name: 'sg-01', exact: true})).not.toHaveClass(/\bcur\b/);
 });
 
+test('a manual group folds under its current members and stays folded after a reload', async ({page}) => {
+  await mockBackend(page);
+  await page.goto('/#/policies');
+  const proxy = page.getByRole('region', {name: 'proxy', exact: true});
+  const summary = proxy.getByRole('button', {name: /^Current/});
+  const filter = proxy.getByRole('searchbox', {name: 'Filter nodes'});
+  await expect(summary).toHaveAttribute('aria-expanded', 'true');
+  await expect(summary).toHaveText(/^CurrentTCP.*hk-01.*UDP.*hk-02.*$/);
+  await summary.click();
+  await expect(filter).toHaveCount(0);
+  await page.reload();
+  await expect(summary).toHaveAttribute('aria-expanded', 'false');
+  await expect(summary).toHaveText(/^CurrentTCP.*hk-01.*UDP.*hk-02.*$/);
+  await expect(filter).toHaveCount(0);
+  await summary.click();
+  await expect(filter).toBeVisible();
+  await page.reload();
+  await expect(filter).toBeVisible();
+});
+
 test('the page note does not promise pinning, which honk groups refuse', async ({page}) => {
   await mockBackend(page);
   await page.goto('/#/policies');

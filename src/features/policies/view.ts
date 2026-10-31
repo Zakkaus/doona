@@ -211,16 +211,16 @@ export function editedCard<T extends {id: string}>(cards: T[], editing: string |
   if (live) return {kept: live, gone: null};
   return editing !== null && kept?.id === editing ? {kept, gone: kept} : {kept: null, gone: null};
 }
-// A collapsed automatic group's one line: the member in place, each network's when they differ, and how many members
-// are available.
-export function selectionSummary(g: Pick<Group, 'runtime'>, members: MemberView[], t: Translator, renderName?: (id: string) => string): string {
+// A folded group's one line: the member in place, or each network's when they differ, which the card marks with the
+// network's name. The card's header already counts the available members.
+export type SelectionSummary = {text: string} | {tcp: string; udp: string};
+export function selectionSummary(g: Pick<Group, 'runtime'>, members: MemberView[], t: Translator, renderName?: (id: string) => string): SelectionSummary {
   const name = renderName ?? ((id: string) => members.find(member => member.id === id)?.name ?? id);
   const tcp = g.runtime.selection.tcp?.member_id;
   const udp = g.runtime.selection.udp?.member_id;
-  const n = members.filter(member => member.healthy).length;
-  if (tcp && udp && tcp !== udp) return t('policy.summarySplit', {tcp: name(tcp), udp: name(udp), n});
+  if (tcp && udp && tcp !== udp) return {tcp: name(tcp), udp: name(udp)};
   const id = tcp ?? udp;
-  return t('policy.summary', {member: id ? name(id) : t('policy.noneSelected'), n});
+  return {text: t('policy.summary', {member: id ? name(id) : t('policy.noneSelected')})};
 }
 export function policyCardView(g: Group, members: MemberView[], network: 'both' | 'tcp' | 'udp', t: Translator, outbounds?: OutboundCatalogue) {
   const tcp = g.runtime.selection.tcp?.member_id;
