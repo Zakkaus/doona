@@ -1216,10 +1216,11 @@ const showing = (page: Page) =>
       })
     )
   );
-// Every card drawn with its content: scrolled into view once and past its chart placeholder.
+// Every card drawn with its content: scrolled into view once and past its chart placeholder. The scroll runs in the page
+// in one step: a cell the dashboard redraws while Playwright waits for it to hold still is detached under the action.
 const settle = async (page: Page) => {
   for (const cell of await page.locator('.rp-dash-section > .rp-dashboard-cell').all()) {
-    await cell.scrollIntoViewIfNeeded();
+    await cell.evaluate(element => element.scrollIntoView({block: 'nearest'}));
     await expect(cell.locator('.rp-chart-wait')).toHaveCount(0);
   }
   await page.evaluate(() => window.scrollTo(0, 0));
