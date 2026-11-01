@@ -21,7 +21,8 @@ import {
   renameReferences,
   selectedProvider,
   joinableGroups,
-  joinNodesToGroups
+  joinNodesToGroups,
+  customGroup
 } from './view';
 import {translate, type Translator} from '../../i18n';
 import {readNodeEntries} from '../../dae/nodes';
@@ -640,6 +641,10 @@ describe('joining added nodes to groups', () => {
     '    all {',
     '        policy: min',
     '    }',
+    '    empty {',
+    "        filter: !name(regex: '.*')",
+    '        policy: min',
+    '    }',
     '    most {',
     '        filter: !name(direct, block)',
     '        policy: min',
@@ -659,6 +664,9 @@ describe('joining added nodes to groups', () => {
   ])('%s', (_, groups, names, expected) => {
     expect(filtersAfter(groups, names)).toMatchObject(expected);
   });
+  it('drops the empty placeholder once a node joins', () => {
+    expect(filtersAfter(['empty'], ['x'])).toMatchObject({empty: ['name(x)']});
+  });
   it('leaves the other groups as written', () => {
     expect(filtersAfter(['hk'], ['x'])).toMatchObject({jp: ["name('b c')"], all: []});
   });
@@ -668,4 +676,20 @@ describe('joining added nodes to groups', () => {
   ])('refuses %s', (_, groups, names) => {
     expect(joinNodesToGroups(text, groups, names)).toBeNull();
   });
+});
+
+it.each([
+  ['exact names', ["name('a', b)"], true],
+  ['several exact lines', ['name(a)', "name('b c')"], true],
+  ['the empty placeholder', ["!name(regex: '.*')"], true],
+  ['names with the placeholder', ['name(a)', "!name(regex: '.*')"], true],
+  ['no filter line', [], false],
+  ['a subscription', ['name(a)', 'subtag(sub)'], false],
+  ['a regex', ["name(regex: '^hk')"], false],
+  ['a keyword', ['name(keyword: hk)'], false],
+  ['a nested group', ['group(hk)'], false],
+  ['every node but direct and block', ['!name(direct, block)'], false],
+  ['a combined rule', ['name(a) && !name(b)'], false]
+])('offers a group to join only if it is custom: %s', (_, filters, expected) => {
+  expect(customGroup({filters})).toBe(expected);
 });

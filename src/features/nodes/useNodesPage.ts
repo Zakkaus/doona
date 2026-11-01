@@ -1,6 +1,17 @@
 import {useCallback, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useT, useLang, formatList} from '../../i18n';
-import {useCapabilities, useNodeManage, useNodes, useOutboundNames, useSteadyNodes, useProviderRefresh, useProviders, useVersion} from '../../store';
+import {getApi} from '../../api/index';
+import {
+  readConfigFresh,
+  useCapabilities,
+  useNodeManage,
+  useNodes,
+  useOutboundNames,
+  useSteadyNodes,
+  useProviderRefresh,
+  useProviders,
+  useVersion
+} from '../../store';
 import {useCompleteness, useConfig} from '../../store/config';
 import type {ConfigSource, Node, Provider} from '../../api/model';
 import {toast, toastFailure, type Problem} from '../../ui/ui';
@@ -15,7 +26,7 @@ import type {PageProps} from '../../shell/routes';
 import {replaceRoute} from '../../shell/route';
 import {
   editableSource,
-  holdsEveryNode,
+  customGroup,
   joinableOwners,
   joinNodesToGroups,
   subscriptionPlace,
@@ -157,6 +168,8 @@ export function useNodesPage({go, query}: PageProps) {
       engineOf(version).nodeLinkSchemes
     );
   const batch = parsed && parsed.multiple ? parsed : null;
+  // A single link is named like a batch row: its #fragment, else its host.
+  const newName = parsed && !batch ? (parsed.rows[0]?.name ?? '') : '';
   const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
   const isComplete = useCompleteness(sources);
   const declared = useMemo(() => declaredSubscriptions(sources), [sources]);
@@ -204,8 +217,8 @@ export function useNodesPage({go, query}: PageProps) {
   // Every source on this page is written through the one shared editor, so its busy flag covers each declaring source.
   const joinOwners = useMemo(() => joinableOwners(sources, isComplete, () => source.busy), [sources, isComplete, source.busy]);
   const joinable = useMemo(() => joinOwners.map(owner => owner.entry), [joinOwners]);
-  // The add dialog offers the groups a new node can join, minus any that hold every node already.
-  const joinChoices = useMemo(() => joinable.filter(entry => !holdsEveryNode(entry)).map(entry => ({id: entry.name, label: entry.name})), [joinable]);
+  // The add dialog offers custom groups only: a subscription, region or rule group takes its nodes from its own filters.
+  const joinChoices = useMemo(() => joinable.filter(customGroup).map(entry => ({id: entry.name, label: entry.name})), [joinable]);
   const joinPicked = joinPick.filter(name => joinChoices.some(choice => choice.id === name));
   const nodeInInclude = useCallback((node: Node) => declaredInInclude(authored.filter(item => item.entry.name === node.name)), [authored]);
   const providerInInclude = useCallback((item: ProviderRow) => declaredInInclude(item.sourceTag ? (declared.get(item.sourceTag) ?? []) : []), [declared]);
@@ -281,8 +294,17 @@ export function useNodesPage({go, query}: PageProps) {
   // Joins the added nodes to the picked groups, one write per declaring source; the nodes stay added when it fails.
   const joinPickedGroups = async (names: string[]): Promise<'none' | 'ok' | 'failed'> => {
     if (!joinPicked.length || !names.length) return 'none';
+    // Adding the nodes changed the configuration, so the groups are looked up in what the backend holds now.
+    const fresh = await readConfigFresh(getApi(), new AbortController().signal).catch(() => null);
+    refetchConfig();
     const byOrigin = new Map<string, {origin: ConfigSource; groups: string[]}>();
-    for (const {entry, origin} of joinOwners) {
+    for (const {entry, origin} of fresh
+      ? joinableOwners(
+          fresh.sources,
+          () => true,
+          () => false
+        )
+      : []) {
       if (joinPicked.includes(entry.name)) byOrigin.set(origin.id, {origin, groups: [...(byOrigin.get(origin.id)?.groups ?? []), entry.name]});
     }
     let failed = [...byOrigin.values()].reduce((n, item) => n + item.groups.length, 0) !== joinPicked.length;
@@ -392,7 +414,7 @@ export function useNodesPage({go, query}: PageProps) {
         }
         return;
       } else if (dialog.kind === 'node') {
-        const created = await manage.addNode({name: form.name.trim(), link: form.value.trim()});
+        const created = await manage.addNode({name: newName, link: form.value.trim()});
         if (!created) return;
         const joined = await joinPickedGroups([created.name]);
         if (joined === 'ok') toast('positive', t('nodes.addedJoined', {name: created.name, groups: formatList(lang, joinPicked)}));
@@ -494,7 +516,7 @@ export function useNodesPage({go, query}: PageProps) {
         close();
       }
     } catch (error) {
-      if (isCurrent() && dialog.kind === 'node' && error instanceof ApiError && error.code === 'state_conflict') setRefusedName(form.name.trim());
+      if (isCurrent() && dialog.kind === 'node' && error instanceof ApiError && error.code === 'state_conflict') setRefusedName(newName);
       else if (isCurrent() && dialog.kind === 'node' && error instanceof ApiError && error.code === 'unsupported_value') setRefusedLink(form.value.trim());
       else refuse(errorText(error, t), errorText(error, t, false), error);
     } finally {
@@ -535,9 +557,7 @@ export function useNodesPage({go, query}: PageProps) {
   const nodeState = dialog?.kind === 'editNode' ? nodeEditState(sources, dialog.source, dialog.entry, nodeList ?? [], form, t) : null;
   const nodeNameError =
     nodeState?.nameError ??
-    (dialog?.kind === 'node' && form.name.trim() && (refusedName === form.name.trim() || nodeList?.some(node => node.name === form.name.trim()))
-      ? t('nodes.nameTaken')
-      : null);
+    (dialog?.kind === 'node' && newName && (refusedName === newName || nodeList?.some(node => node.name === newName)) ? t('nodes.nameTaken') : null);
   const linkError = batch
     ? batch.error
     : dialog?.kind === 'node'
@@ -554,12 +574,7 @@ export function useNodesPage({go, query}: PageProps) {
         : dialog?.kind === 'provider'
           ? isBareName(form.name.trim()) && !!form.value.trim() && subscriptionUrlError(form.value, t) === null && !agentError && intervalSeconds !== null
           : dialog?.kind === 'node'
-            ? form.name.trim() !== '' &&
-              !!form.value.trim() &&
-              nodeFormReason('node', form.name, form.value, t) === null &&
-              !nodeNameError &&
-              !linkError &&
-              !headerError
+            ? newName !== '' && !!form.value.trim() && nodeFormReason('node', newName, form.value, t) === null && !nodeNameError && !linkError && !headerError
             : dialog?.kind === 'removeNodes'
               ? removeNodes.length > 0
               : true;
@@ -687,6 +702,7 @@ export function useNodesPage({go, query}: PageProps) {
     removing,
     dialogTitle,
     formValid,
+    newName,
     nodeNameError,
     nodeLinkError: linkError,
     formReason: batch
@@ -696,7 +712,14 @@ export function useNodesPage({go, query}: PageProps) {
         : dialog?.kind === 'editProvider'
           ? // A name error is shown on its field alone.
             subscriptionEdit.reason
-          : (nodeNameError ?? linkError ?? nodeFormReason(dialog?.kind, form.name, form.value, t) ?? headerError ?? agentError ?? intervalError),
+          : (nodeNameError ??
+            linkError ??
+            (dialog?.kind === 'node' && !form.value.trim()
+              ? t('nodes.linkInvalid')
+              : nodeFormReason(dialog?.kind, dialog?.kind === 'node' ? newName : form.name, form.value, t)) ??
+            headerError ??
+            agentError ??
+            intervalError),
     submit,
     pending: dialog !== null && pendingDialog === dialog,
     // A write abandoned by Cancel still holds the node actions until it settles, so no dialog can submit meanwhile.
