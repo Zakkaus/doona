@@ -138,6 +138,7 @@ it('editing the VMess cipher removes a conflicting security cipher alias', () =>
   const parsed = parseNodeLink(`vmess://${b64(`auto:${uuid}@example.com:443`)}?security=auto&tls=1`);
   const link = nodeLink({...parsed.fields, method: 'aes-128-gcm'}, parsed.document);
   expect(link).not.toContain('security=auto');
+  expect(Buffer.from(link.slice(8).split('?')[0], 'base64').toString()).toBe(`${uuid}@example.com:443`);
   expect(parseNodeLink(link).fields.method).toBe('aes-128-gcm');
   expect(parseNodeLink(link).fields.security).toBe('tls');
 });
