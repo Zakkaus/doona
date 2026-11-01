@@ -34,3 +34,16 @@ it('associates an edited node-link error with the field inside a form', async ()
   expect(described.split(' ')).toContain(errorId);
   expect(markup).toContain('Invalid node link');
 });
+
+it('marks a field with a fixed width, so a form row grows only the others', async () => {
+  const {TextField} = await import('./Fields');
+  const {NumberField} = await import('./NumberField');
+  const fixed = [<TextField key="t" label="Host" value="" width={96} />, <NumberField key="n" label="Port" value={1} width={120} />];
+  const growing = [<TextField key="t" label="Host" value="" />, <NumberField key="n" label="Port" value={1} />];
+  for (const field of fixed) {
+    const root = renderToStaticMarkup(field).match(/^<div[^>]+>/)![0];
+    expect(root).toContain('data-fixed=""');
+    expect(root).toMatch(/style="width:\d+px"/);
+  }
+  for (const field of growing) expect(renderToStaticMarkup(field).match(/^<div[^>]+>/)![0]).not.toMatch(/data-fixed|style=/);
+});

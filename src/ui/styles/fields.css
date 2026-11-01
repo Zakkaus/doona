@@ -273,6 +273,15 @@
 .rp-toolbar.top > .rp-tipwrap[data-passive] > .rp-field-row {
   margin-top: var(--rp-space-5);
 }
+/* A form row in a dialog: a field with no fixed width grows to fill the row, so its edges meet those of the full-width
+   fields around it. Two such fields share a row while each keeps 11rem, then the row wraps and each takes a row of its
+   own; a field with a fixed width keeps it. A wrapped row is spaced as the dialog's other fields are. */
+.rp-dialog .rp-toolbar.top {
+  row-gap: var(--rp-space-2);
+}
+.rp-dialog .rp-toolbar.top > .rp-field:not([data-fixed]) {
+  flex: 1 1 11rem;
+}
 /* S2 help text: an error reads in the negative tone at the hint's size, and the field it names takes a negative edge.
    The icon and weight carry it where a palette's negative text is the body colour. */
 .rp-field-error {

@@ -20,6 +20,7 @@ import {HelpRow, type Help} from './ContextualHelp';
 import {useControlSize, type ControlSize} from './controlSize';
 import {Necessity, useFormProps, type FormFieldProps} from './Form';
 import {Toolbar} from './Toolbar';
+import {fixedWidth} from './fixedWidth';
 
 // A switch in a labelled settings row has no text of its own, so it takes its name from `aria-label`.
 export function Switch({
@@ -141,7 +142,7 @@ export function TextField(fieldProps: TextFieldProps) {
         aria-label={label}
         aria-describedby={describedBy}
         className={cx('rp-search-field', className)}
-        style={width ? {width} : undefined}
+        {...fixedWidth(width)}
       >
         <span className="rp-input" data-size={controlSize}>
           <Search />
@@ -192,7 +193,7 @@ export function TextField(fieldProps: TextFieldProps) {
       // The fixed text is read with the field, so a screen reader hears the whole path, not only the value.
       aria-describedby={[describedBy, prefix && `${affixId}-prefix`, suffix && `${affixId}-suffix`].filter(Boolean).join(' ') || undefined}
       className={cx(side ? 'rp-cluster' : 'rp-field', className)}
-      style={width ? {width} : undefined}
+      {...fixedWidth(width)}
     >
       {help ? <HelpRow help={help}>{name}</HelpRow> : name}
       {action ? (
