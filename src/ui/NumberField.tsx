@@ -17,6 +17,7 @@ import {useT} from '../i18n';
 import {cx} from './cx';
 import {useControlSize, type ControlSize} from './controlSize';
 import {Necessity, useFormProps, type FormFieldProps} from './Form';
+import {fixedWidth} from './fixedWidth';
 
 // A number with S2's stepper at the field's end, the same box as TextField. NaN is an empty field: the value is unset.
 // Grouping is off by default, so a port reads 8080, not 8,080. The steppers take doona's own names: React Aria's
@@ -54,7 +55,7 @@ export function NumberField(
   // An error text marks the field invalid for assistive technology too, as TextField does.
   const validity = error || props.isInvalid ? {isInvalid: true, validationBehavior: 'aria' as const} : {};
   return (
-    <RNumberField {...props} {...validity} formatOptions={formatOptions} className="rp-field" style={width ? {width} : undefined}>
+    <RNumberField {...props} {...validity} formatOptions={formatOptions} className="rp-field" {...fixedWidth(width)}>
       <Label className="rp-label">
         {label}
         <Necessity isRequired={props.isRequired} necessityIndicator={necessityIndicator} />
