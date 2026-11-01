@@ -165,9 +165,12 @@ export function parseNodeLink(original: string): {document: NodeDocument; fields
     }
     if (!fields.name) fields.name = params.get('remark') ?? '';
     if (protocol === 'vmess') {
-      fields.method = fields.username;
-      fields.username = fields.password;
-      fields.password = '';
+      // `cipher:uuid@host:port`, or the bare `uuid@host:port` honk reads for any cipher but auto.
+      if (fields.password) {
+        fields.method = fields.username;
+        fields.username = fields.password;
+        fields.password = '';
+      }
       fields.method =
         params.get('scy') ??
         params.get('encryption') ??
@@ -215,6 +218,8 @@ export function nodeLink(fields: NodeFields, document?: NodeDocument): string {
     if (params.has('security') && !['none', 'tls'].includes(params.get('security')!)) params.delete('security');
     params.set('scy', fields.method);
   }
+  // A VMess link names `security` only for TLS; none is the default.
+  if (fields.protocol === 'vmess' && params.get('security') === 'none') params.delete('security');
   if (fields.mport && (!same || fields.mport !== document?.initial.mport || /[:,]/.test(document?.original.split('?')[0] ?? '')))
     params.set('mport', fields.mport);
   const enc = encodeURIComponent;
@@ -226,6 +231,8 @@ export function nodeLink(fields: NodeFields, document?: NodeDocument): string {
         : `${enc(fields.username)}${fields.password ? `:${enc(fields.password)}` : ''}`;
   const host = fields.host.includes(':') ? `[${fields.host.replace(/^\[|\]$/g, '')}]` : fields.host;
   const authority =
-    fields.protocol === 'vmess' ? encode64(`${fields.method}:${fields.username}@${host}:${fields.port}`) : `${auth ? `${auth}@` : ''}${host}:${fields.port}`;
+    fields.protocol === 'vmess'
+      ? encode64(`${fields.method === 'auto' ? 'auto:' : ''}${fields.username}@${host}:${fields.port}`)
+      : `${auth ? `${auth}@` : ''}${host}:${fields.port}`;
   return `${fields.protocol}://${authority}${params.size ? `?${params}` : ''}${fields.name ? `#${enc(fields.name)}` : ''}${same ? (document?.tail ?? '') : ''}`;
 }
