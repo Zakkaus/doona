@@ -61,7 +61,7 @@ import {diagnosticMessage, oneLine} from '../../i18n/backend';
 import {nodesTabs} from './nav';
 import type {SubscriptionDraft, SubscriptionFieldSet} from './SubscriptionFields';
 import {parseNodeLinks} from './batch';
-import {emptyNode, isProtocol, manualLink, type NodeFields} from '../../dae/nodeForm';
+import {emptyNode, isProtocol, manualLink, settle, type NodeFields} from '../../dae/nodeForm';
 
 const blank: ProviderForm = {name: '', value: '', interval: '', agent: '', cache: null, route: ''};
 
@@ -713,7 +713,7 @@ export function useNodesPage({go, query}: PageProps) {
       setDraft(previous =>
         key === 'protocol'
           ? {...emptyNode(isProtocol(value) ? value : undefined), name: previous.name, host: previous.host, port: previous.port}
-          : {...previous, [key]: value}
+          : settle({...previous, [key]: value})
       );
     },
     xhttp: !batch && xhttp && {...xhttp, headers: headerRows},
