@@ -1,6 +1,6 @@
 import {groupFilterText, groupFilterTexts, reconcileGroupFilters, type GroupFilterDraft} from '../../../dae/groupConditions';
 import type {Node, Provider} from '../../../api/model';
-import {describeFilters, exactTokens, isWritableName, quoteName} from '../../../dae/groups';
+import {describeFilters, exactTokens, isWritableName, noNodes, quoteName} from '../../../dae/groups';
 import {compileFilters} from '../../../dae/groupFilters';
 import {regions} from '../../../dae/regions';
 import {flagChoices} from '../../../dae/flags';
@@ -51,7 +51,7 @@ export function selectedIncludes(filters: string[], kind: IncludeKind): string[]
     )
   ];
 }
-export const noNodes = "!name(regex: '.*')";
+export {noNodes};
 export const includesEveryNode = (filters: string[]) => !filters.some(filter => filter.trim()) || describeFilters(filters).everyNode;
 export function setEveryNode(filters: string[], selected: boolean): string[] {
   if (selected) return includesEveryNode(filters) ? filters : [...filters.filter(filter => filter !== noNodes), '!name(direct, block)'];

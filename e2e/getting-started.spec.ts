@@ -20,7 +20,6 @@ async function addNodes(page: Page) {
   await subscription.getByRole('button', {name: 'Cancel', exact: true}).click();
   await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
   const node = page.getByRole('dialog', {name: 'Paste node link', exact: true});
-  await node.getByRole('textbox', {name: 'Name', exact: true}).fill('first-node');
   await node.getByRole('textbox', {name: 'Node link', exact: true}).fill('vless://demo@first.example.org:443?security=tls#first-node');
   await node.getByRole('button', {name: 'Add', exact: true}).click();
   await expect(node).toHaveCount(0);

@@ -244,6 +244,8 @@ export function classifyFilters(entry: Pick<GroupEntry, 'filters'>) {
 }
 
 // Describe only complete calls; compound or unknown filters retain their source syntax.
+// The line a group holds when it takes no node at all.
+export const noNodes = "!name(regex: '.*')";
 export function describeFilters(filters: string[]) {
   let everyNode = false;
   const groups: string[] = [];

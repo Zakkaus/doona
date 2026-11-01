@@ -51,6 +51,7 @@ export function Nodes(props: PageProps) {
     setForm,
     removeNodes,
     setNodeLink,
+    newName,
     joinChoices,
     joinPicked,
     setJoinPicked,
@@ -192,7 +193,7 @@ export function Nodes(props: PageProps) {
         {(dialog?.kind === 'node' || dialog?.kind === 'editNode') && (
           <Form id={dialogForm} className="rp-list" onSubmit={send}>
             <span className="rp-label">{t(dialog.kind === 'editNode' ? 'nodes.editNodeHelp' : 'nodes.addNodeHelp')}</span>
-            {!batch && (
+            {!batch && dialog.kind === 'editNode' && (
               <TextField
                 error={nodeNameError ?? undefined}
                 isDisabled={pending}
@@ -203,13 +204,14 @@ export function Nodes(props: PageProps) {
               />
             )}
             <NodeLinkField
-              error={nodeLinkError ?? undefined}
+              error={nodeLinkError ?? (dialog.kind === 'node' ? nodeNameError : null) ?? undefined}
               isDisabled={pending}
               label={t('nodes.link')}
               value={form.value}
               placeholder="vless://…"
               onChange={setNodeLink}
             />
+            {dialog.kind === 'node' && !batch && newName && <span className="rp-label">{t('nodes.willAddAs', {name: newName})}</span>}
             {dialog.kind === 'node' && joinChoices.length > 0 && (
               <SearchMultiSelect
                 label={t('nodes.addToGroup')}
