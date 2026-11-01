@@ -567,7 +567,7 @@ test('a completed provider creation cannot close a newer node draft or clear its
   await provider.getByRole('button', {name: 'Add', exact: true}).click();
   await submitted;
   await provider.getByRole('button', {name: 'Cancel', exact: true}).click();
-  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  await page.getByRole('button', {name: 'Add node', exact: true}).click();
   const node = page.getByRole('dialog');
   await node.getByLabel('Node link', {exact: true}).fill('vless://uuid@example.org:443');
   release();
@@ -695,7 +695,7 @@ test('node creation freezes its submitted draft until the response arrives', asy
     await route.fulfill({json: await api.createNode(route.request().postDataJSON())});
   });
   await page.goto('/#/nodes?provider=inline');
-  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  await page.getByRole('button', {name: 'Add node', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Node link').fill('vless://uuid@example.com:443?security=tls#submitted-node');
   const request = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/nodes'));

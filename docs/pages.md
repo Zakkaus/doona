@@ -39,7 +39,7 @@ Group links in node details open the corresponding group card on Policies. When 
 
 ### XHTTP node options
 
-When Paste node link or Edit… contains a supported VLESS or Trojan XHTTP link, XHTTP options exposes mode, path, host, headers, padding, POST pacing and a separate download peer. The saved value remains the link. The fields update the corresponding query parameters or `extra` JSON members; links that cannot be represented by these fields remain editable as raw text.
+When Add node or Edit… contains a supported VLESS or Trojan XHTTP link, XHTTP options exposes mode, path, host, headers, padding, POST pacing and a separate download peer. The saved value remains the link. The fields update the corresponding query parameters or `extra` JSON members; links that cannot be represented by these fields remain editable as raw text.
 
 Unchanged query parameter strings survive. Editing `extra` reserializes the object, normalizes whitespace and uses JavaScript number precision. Header names are trimmed; duplicate names are case-insensitive and must be corrected before saving. Unfinished header rows count as unsaved changes, and replacing the raw link replaces those rows.
 

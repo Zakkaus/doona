@@ -18,8 +18,8 @@ async function addNodes(page: Page) {
   const subscription = page.getByRole('dialog', {name: 'Add subscription', exact: true});
   await expect(subscription).toBeVisible();
   await subscription.getByRole('button', {name: 'Cancel', exact: true}).click();
-  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
-  const node = page.getByRole('dialog', {name: 'Paste node link', exact: true});
+  await page.getByRole('button', {name: 'Add node', exact: true}).click();
+  const node = page.getByRole('dialog', {name: 'Add node', exact: true});
   await node.getByRole('textbox', {name: 'Node link', exact: true}).fill('vless://demo@first.example.org:443?security=tls#first-node');
   await node.getByRole('button', {name: 'Add', exact: true}).click();
   await expect(node).toHaveCount(0);
