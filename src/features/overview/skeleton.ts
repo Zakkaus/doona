@@ -5,7 +5,7 @@ import type {PageShape} from '../../ui/PageSkeleton';
 export const statusRow: PageShape = [{summary: {state: 60, facts: [96, 121, 103, 167], badge: 52, actions: [147, 52, 52]}}];
 // The engine, counters and memory cards, then the datapath and backend cards, in the page's own grids and at the heights
 // their loaded facts take, on a wide screen and on a phone. The datapath card's attachments table follows the data, so
-// it draws the box it is capped at and the rows below are held to their top.
+// that card draws the box it is capped at, held to its top, and what follows it to its size.
 export const overviewSkeleton: PageShape = [
   ...statusRow,
   {
@@ -22,7 +22,7 @@ export const overviewSkeleton: PageShape = [
       [242, 418]
     ],
     class: 'rp-g21 rp-overview-lower',
-    typical: true
+    typical: [0]
   },
   // The card of features that are off, which a backend that has them all on does not draw.
   {cards: [[169, 173]], typical: true}

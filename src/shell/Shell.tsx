@@ -2,7 +2,7 @@ import './install';
 import {lazy, Suspense, useCallback, useState, type ComponentProps, type ReactNode} from 'react';
 import {I18nProvider, RouterProvider} from 'react-aria-components';
 import {LangContext, LOCALE, RewordingContext, useT, withCatalogue, type Lang, type Key} from '../i18n';
-import {ConfirmDialog, Toasts, ErrorMessage, Loading, PageSkeleton, PageShapeContext} from '../ui/ui';
+import {ConfirmDialog, Toasts, ErrorMessage, Loading, PageSkeleton, PageShapeContext, WaitScope} from '../ui/ui';
 import {DraftContext, draftLabels, useDraftGuard} from './draft';
 import {useModeDraft} from '../features/shared/useModeDraft';
 import {searchDialog} from './search/load';
@@ -22,6 +22,7 @@ import {expectsAccess} from '../api';
 import {features} from './registry';
 import {headingOf, navGroups} from './view';
 import {PageHead} from './PageHead';
+import {useHeldScroll} from './heldScroll';
 import logo from '../logo.svg';
 import type {Frame, FrameProps} from './Frame';
 const FlagPicker = lazy(() => import('../ui/FlagPicker').then(module => ({default: module.FlagPicker})));
@@ -129,6 +130,7 @@ export const preloadFrame = () => void frame.preload().catch(() => undefined);
 // the shape of its Skeleton, so the page's blocks are drawn where they will stay.
 export function StartupFrame({route, children}: {route?: string; children: ReactNode}) {
   const t = useT();
+  useHeldScroll(route, true);
   const feature = route && features.find(item => item.path === route);
   return (
     <div className="rp-shell">
@@ -147,7 +149,7 @@ export function StartupFrame({route, children}: {route?: string; children: React
               hub={navGroups(feature.path, t, () => true).find(group => group.items.some(item => item.current))}
             />
           )}
-          {feature ? <PageShapeContext value={feature.skeleton}>{children}</PageShapeContext> : children}
+          <WaitScope value={route}>{feature ? <PageShapeContext value={feature.skeleton}>{children}</PageShapeContext> : children}</WaitScope>
         </div>
       </main>
     </div>
@@ -177,6 +179,7 @@ function ShellFrame(props: FrameProps) {
 }
 
 function SignIn({lang, pickLang, ap, view, content}: FrameProps & {view: ShellModel; content: Extract<ShellModel['content'], {kind: 'login'}>}) {
+  useHeldScroll(undefined, false);
   const {menu, paletteSections} = useShellFrame(lang, pickLang, ap);
   return (
     <Suspense fallback={<Loading />}>

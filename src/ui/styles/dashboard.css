@@ -142,6 +142,135 @@
   grid-column: 1 / -1;
 }
 
+/* A Skeleton card, named for its module, at the height its loaded card takes. The height follows the width of the
+   card's cell, which the cell's tile container (above) tells as the cards' own container queries do, and the columns
+   its section has at the viewport's width. A card holding a control is taller by what the control takes over 32px, which
+   is its height on a phone (--x). A module not named here is 260px. */
+[data-card] {
+  --x: calc(var(--rp-control) - 32px);
+}
+/* A charted card's height step multiplies the chart (dashboardSizing.ts), whose standard height (--chart) repeats the one
+   ActivityCard.tsx draws at scale 1; the rest of the card stays. The saved-height cases in page-skeletons.spec.ts
+   catch the two drifting apart. */
+.rp-dashboard-cell[data-height='short'] {
+  --rp-chart-scale: 0.75;
+}
+.rp-dashboard-cell[data-height='tall'] {
+  --rp-chart-scale: 2;
+}
+.rp-skeleton-cards > .rp-card[data-card] {
+  height: calc(var(--h, 260px) + var(--x) + var(--chart, 0px) * (var(--rp-chart-scale, 1) - 1));
+}
+[data-card='history'] {
+  --chart: 120px;
+}
+[data-card='memory'] {
+  --chart: 150px;
+}
+:is([data-card='mode'], [data-card='global'], [data-card='status']) {
+  --h: 66px;
+}
+/* The quick row's cards put their label over their control when the row's labels do not all fit beside their controls,
+   which packSection measures (controlLayout). English labels do not from 1280px, where the row is as wide as it gets. */
+@media (min-width: 1280px) {
+  :lang(en) :is([data-card='mode'], [data-card='global'], [data-card='status']) {
+    --h: 94px;
+  }
+}
+/* A value tile stacks its sparkline under its value below 174px of content (cards-dashboard.css), which is a cell of
+   less than 208px, for the card's padding and border. */
+:is([data-card='download'], [data-card='upload'], [data-card='connections'], [data-card='latency'], [data-card='cpu']) {
+  --h: 110px;
+}
+@container rp-tile (width < 208px) {
+  :is([data-card='download'], [data-card='upload'], [data-card='connections'], [data-card='latency'], [data-card='cpu']) {
+    --h: 146px;
+  }
+}
+[data-card='history'] {
+  --h: 226px;
+}
+[data-card='outbounds'] {
+  --h: 98px;
+}
+/* From tablet width, a card two thirds of its row or wider lists its statistics beside its chart (data-wide, see
+   packSection), which makes the CPU and outbounds cards taller. */
+@container rp-tile (width >= 688px) {
+  [data-card='cpu'] {
+    --h: 118px;
+  }
+  [data-card='outbounds'] {
+    --h: 214px;
+  }
+}
+/* The traffic pair side by side is as tall as the taller of the two, which is the outbounds list: the narrower it is
+   the more lines it takes. */
+@media (min-width: 1024px) {
+  :is([data-card='history'], [data-card='outbounds']) {
+    --h: 226px;
+  }
+  @container rp-tile (width < 656px) {
+    [data-card='history'] {
+      --h: 342px;
+    }
+  }
+  @container rp-tile (width < 524px) {
+    [data-card='history'] {
+      --h: 358px;
+    }
+  }
+  @container rp-tile (width < 322px) {
+    [data-card='outbounds'] {
+      --h: 342px;
+    }
+  }
+  @container rp-tile (width < 262px) {
+    [data-card='outbounds'] {
+      --h: 358px;
+    }
+  }
+}
+[data-card='ranking'] {
+  --h: 214px;
+}
+@media (min-width: 1024px) {
+  [data-card='ranking'] {
+    --h: 260px;
+  }
+}
+:is([data-card='memory'], [data-card='notices']) {
+  --h: 260px;
+}
+:is([data-card='memorySparkline'], [data-card='nodeLatency'], [data-card='connectionOutbounds'], [data-card='dnsAnswers'], [data-card='policyGroups']) {
+  --x: 0px;
+}
+[data-card='memorySparkline'] {
+  --h: 110px;
+}
+[data-card='nodeLatency'] {
+  --h: 534px;
+}
+[data-card='policyGroups'] {
+  --h: 146px;
+}
+:is([data-card='connectionOutbounds'], [data-card='dnsAnswers']) {
+  --h: 138px;
+}
+@media (min-width: 1280px) {
+  :is([data-card='connectionOutbounds'], [data-card='dnsAnswers']) {
+    --h: 146px;
+  }
+}
+@media (max-width: 599.98px) {
+  [data-card='history'] {
+    --h: 134px;
+    --x: 0px;
+  }
+  [data-card='nodeLatency'] {
+    --h: 594px;
+  }
+}
+
 /* A section holding a card with a chosen width uses the fraction grid from tablet width up; phones keep the profile's
    columns. 420 tracks hold fifths, quarters, thirds, halves, sixths and sevenths exactly. The column gap is each cell's
    inline-start margin, and the section reaches one gap before its start, so a card's width depends on its fraction

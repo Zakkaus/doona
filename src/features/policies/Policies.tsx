@@ -394,7 +394,11 @@ export function Policies(props: PageProps) {
           {m.showKinds ? (
             <Segmented label={m.kindLabel} value={m.kind} onChange={m.setKind} items={m.kindItems} />
           ) : (
-            m.loading && <SkeletonBar width={kindsWidth} />
+            m.loading && (
+              <SkeletonGroup quiet>
+                <SkeletonBar width={kindsWidth} />
+              </SkeletonGroup>
+            )
           )}
           <span className="rp-grow" />
           <Button secondary isDisabled={m.createDisabled} onPress={() => m.create.show()}>

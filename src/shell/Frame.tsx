@@ -1,6 +1,6 @@
 import {Activity, memo, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ContextType} from 'react';
 import {useT, type Lang} from '../i18n';
-import {Button, ErrorMessage, Empty, PageSkeleton, PageShapeContext, type PageShape} from '../ui/ui';
+import {Button, ErrorMessage, Empty, PageSkeleton, PageShapeContext, WaitScope, type PageShape} from '../ui/ui';
 import {PageActionsTarget} from '../ui/PageActions';
 import {useApplyHeld} from '../features/shared/usePendingApply';
 import {useLifecycle} from '../features/shared/useLifecycle';
@@ -10,6 +10,7 @@ import {Shortcuts} from './Shortcuts';
 import {SideNav} from './SideNav';
 import {HubBar} from './HubBar';
 import {PageHead} from './PageHead';
+import {useHeldScroll} from './heldScroll';
 import {TopBar} from './TopBar';
 import {AboutContext, type ShellModel} from './useShell';
 import {useShellFrame} from './useShellController';
@@ -69,6 +70,7 @@ function useCommands() {
 
 function Layout({lang, pickLang, ap, route, query, go, openSearch, mac, view}: FrameProps & {view: ShellModel}) {
   const t = useT();
+  useHeldScroll(route, false);
   const {paletteSections, settingsValue, menu} = useShellFrame(lang, pickLang, ap);
   const {commands, apply, reload} = useCommands();
   const [actions, setActions] = useState<HTMLElement | null>(null);
@@ -102,26 +104,28 @@ function Layout({lang, pickLang, ap, route, query, go, openSearch, mac, view}: F
           <ErrorMessage error={view.error} onRetry={view.refresh} />
           <RefusalWait />
           <PageActionsTarget value={actions}>
-            <PageShapeContext value={view.current.skeleton}>
-              <SettingsContext.Provider value={settingsValue}>
-                <Pages
-                  shown={view.content.kind === 'page' ? {id: view.current.id, page: {Page, skeleton: view.current.skeleton, overlays: {}}} : null}
-                  query={query}
-                  go={go}
-                  formats={`${ap.dateFormat} ${ap.timeFormat}`}
-                />
-                {view.content.kind === 'loading' ? (
-                  <PageSkeleton />
-                ) : (
-                  view.content.kind === 'unavailable' && (
-                    <Empty>
-                      {t('shell.notOffered')}
-                      <Button onPress={() => go('activity')}>{t('shell.toActivity')}</Button>
-                    </Empty>
-                  )
-                )}
-              </SettingsContext.Provider>
-            </PageShapeContext>
+            <WaitScope value={route}>
+              <PageShapeContext value={view.current.skeleton}>
+                <SettingsContext.Provider value={settingsValue}>
+                  <Pages
+                    shown={view.content.kind === 'page' ? {id: view.current.id, page: {Page, skeleton: view.current.skeleton, overlays: {}}} : null}
+                    query={query}
+                    go={go}
+                    formats={`${ap.dateFormat} ${ap.timeFormat}`}
+                  />
+                  {view.content.kind === 'loading' ? (
+                    <PageSkeleton />
+                  ) : (
+                    view.content.kind === 'unavailable' && (
+                      <Empty>
+                        {t('shell.notOffered')}
+                        <Button onPress={() => go('activity')}>{t('shell.toActivity')}</Button>
+                      </Empty>
+                    )
+                  )}
+                </SettingsContext.Provider>
+              </PageShapeContext>
+            </WaitScope>
           </PageActionsTarget>
         </div>
       </main>
