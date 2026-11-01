@@ -2,26 +2,15 @@ import {configManagement, type Engine, type EngineConfig} from '../../api/engine
 import type {Capabilities, EffectiveConfig} from '../../api/model';
 import type {Translator} from '../../i18n';
 import {href} from '../../shell/route';
+import {allConfigTabs} from './tabs';
 import {sectionSummaries} from './view';
-import type {Key} from '../../i18n';
 import type {SearchTarget} from '../../shell/routes';
 
 // The global tab edits the engine's global section, so it shows only for an engine whose settings doona knows.
-// `aliases` are other words search finds a tab by.
-export function configTabs(
-  hasGlobal: boolean,
-  config: EngineConfig | null,
-  capabilities?: Capabilities
-): Array<{id: 'modules' | 'global' | 'source' | 'history'; titleKey: Key; aliases?: readonly string[]}> {
+export function configTabs(hasGlobal: boolean, config: EngineConfig | null, capabilities?: Capabilities): Array<(typeof allConfigTabs)[number]> {
   const management = configManagement(config, capabilities);
-  return [
-    {id: 'modules' as const, titleKey: 'config.tabModules' as const},
-    ...(hasGlobal ? [{id: 'global' as const, titleKey: 'config.tabGlobal' as const}] : []),
-    {id: 'source' as const, titleKey: 'config.tabSource' as const},
-    ...(management.export || management.import || management.revisions
-      ? [{id: 'history' as const, titleKey: 'config.tabHistory' as const, aliases: ['history', 'revision', 'backup']}]
-      : [])
-  ];
+  const offered = {modules: true, global: hasGlobal, source: true, history: management.export || management.import || management.revisions};
+  return allConfigTabs.filter(tab => offered[tab.id]);
 }
 // Export and import sit on the history tab; search opens the tab and leaves the confirmation to the person.
 export function configTargets(capabilities: Capabilities | undefined, config: EngineConfig | null): SearchTarget[] {

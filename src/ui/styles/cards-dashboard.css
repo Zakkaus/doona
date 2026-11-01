@@ -8,6 +8,9 @@
 .rp-chart-wait.tall {
   min-height: 264px;
 }
+.rp-chart-wait.swarm {
+  min-height: 381px;
+}
 .rp-chart-wait.bars {
   min-height: 136px;
 }
@@ -150,6 +153,52 @@
 .rp-skeleton-controls > .rp-skeleton-text {
   height: 100%;
   border-radius: var(--rp-r-md);
+}
+/* A summary's actions at the control height; on a phone the page's actions fold into one icon beside the first. */
+.rp-skeleton-summary > .rp-cluster:last-child > .rp-skeleton-text {
+  height: var(--rp-control);
+  border-radius: var(--rp-r-md);
+}
+@media (max-width: 599.98px) {
+  .rp-skeleton-summary > .rp-cluster:last-child > :nth-child(2) {
+    max-width: var(--rp-control);
+  }
+  .rp-skeleton-summary > .rp-cluster:last-child > :nth-child(n + 3) {
+    display: none;
+  }
+}
+/* The controls that sit at the row's end, as a toolbar's actions do. */
+.rp-skeleton-controls > .end {
+  margin-inline-start: auto;
+}
+.rp-page-skeleton > .rp-tabbar {
+  justify-self: auto;
+  align-self: start;
+}
+/* A table's header band, inside the frame the table's class draws. */
+.rp-table-skeleton-head {
+  height: 38px;
+  background: var(--rp-base);
+  border-bottom: 1px solid var(--rp-hl-med);
+}
+.rp-page-skeleton [style*='--wide'],
+.rp-skeleton-bar[style*='--wide'] {
+  height: var(--wide);
+}
+@media (max-width: 599.98px) {
+  .rp-page-skeleton [style*='--narrow'],
+  .rp-skeleton-bar[style*='--narrow'] {
+    height: var(--narrow);
+  }
+  /* Controls that wrap into rows on a phone, spread over the row's taller box. */
+  .rp-skeleton-controls[style*='--narrow'] {
+    flex-wrap: wrap;
+    align-content: space-between;
+  }
+  .rp-skeleton-controls[style*='--narrow'] > .rp-skeleton-text {
+    height: var(--rp-control);
+    flex: 1 1 40%;
+  }
 }
 .rp-skeleton-cards.page {
   gap: var(--rp-space-6);

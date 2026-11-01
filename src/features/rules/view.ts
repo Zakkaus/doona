@@ -33,7 +33,7 @@ import {href, pickTab, within} from '../../shell/route';
 import {offered} from '../../api/capabilities';
 import {nodeHref} from '../shared/link';
 import type {Help} from '../../ui/ui';
-import {rulesTabs, type RuleTab} from './nav';
+import {rulesTabs, type RuleTab} from './tabs';
 import {dnsActions, dnsUpstreamChoices, ruleKindLabels, ruleOutbounds, type QuickRuleSeed} from '../shared/rule';
 import {dnsEndPosition} from '../shared/ruleNotice';
 import {recorderEmpty} from '../shared/recorder';

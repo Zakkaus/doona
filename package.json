@@ -41,14 +41,14 @@
     "check": "pnpm typecheck && pnpm lint && pnpm check:i18n && pnpm format:check && pnpm test && pnpm check:gen"
   },
   "sizeBudget": {
-    "startupLogin": 213700,
-    "startupActivity": 327034,
-    "startupCss": 30962,
+    "startupLogin": 214856,
+    "startupActivity": 328209,
+    "startupCss": 31053,
     "locale": 25463,
     "fontCss": 36000,
     "route": 72800,
     "routePart": 16000,
-    "routeConfig": 196091,
+    "routeConfig": 196095,
     "mock": 38000
   },
   "dependencies": {

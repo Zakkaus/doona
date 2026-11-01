@@ -8,13 +8,9 @@ import {ConfigHistory} from './ConfigHistory';
 import {Modules} from './Modules';
 import {GlobalSettings} from './GlobalSettings';
 import {NewSource} from './NewSource';
+import {configSkeleton, moduleCards, summaryRow} from './skeleton';
 import {editorBlock, preloadEditor, SourceCard} from './SourceCard';
-// The first read's Skeletons: the summary row, each tab's body (the module cards, the source editor under its
-// toolbar), and the tab row over the editor, the usual first tab, while the tabs are not known yet.
-const summaryRow: PageShape = [{toolbar: 3, height: 24}];
-const moduleCards: PageShape = [{cards: [94, 94, 94, 94, 94, 94, 94], gap: 'page'}];
 const sourceEditor: PageShape = [{toolbar: 1, height: 16}, ...editorBlock];
-const tabsAndEditor: PageShape = [{tabs: 3}, {toolbar: 1}, ...sourceEditor];
 export function Config(props: PageProps) {
   const t = useT();
   const {
@@ -85,7 +81,7 @@ export function Config(props: PageProps) {
     <div className="rp-page">
       <ErrorMessage error={error} onRetry={reload} />
       {/* The summary row's Skeleton; the tabs below show as soon as they are known, each with its body's Skeleton. */}
-      {loading && <PageSkeleton shape={tabsReady ? summaryRow : [...summaryRow, ...tabsAndEditor]} />}
+      {loading && <PageSkeleton shape={tabsReady ? summaryRow : configSkeleton} />}
       {ready && (
         <Toolbar page>
           <Kv row items={metadata} />

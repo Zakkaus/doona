@@ -19,21 +19,35 @@ export function SkeletonStatus({label}: {label?: string}) {
 // S2's Skeleton for a card body of facts while its data arrives: the facts' grid with each label and value drawn as a
 // shimmering block in its place, then what the body holds below them (a caption line, a body line, or a height in
 // pixels such as a table's), so the card keeps its height when the values replace it. `helped` lists the facts whose
-// label carries a help button, whose line takes the button's height.
-export function Skeleton({facts, helped, below}: {facts: number; helped?: number[]; below?: 'caption' | 'body' | number}) {
+// label carries a help button, whose line takes the button's height, and `metered` those with a meter's track under
+// their value. A `typical` height below follows the data.
+export function Skeleton({
+  facts,
+  helped,
+  metered,
+  below,
+  typical
+}: {
+  facts: number;
+  helped?: number[];
+  metered?: number[];
+  below?: 'caption' | 'body' | number;
+  typical?: boolean;
+}) {
   const wait = useWaitAttr();
   return (
-    <div className="rp-skeleton" data-wait={wait}>
+    <div className="rp-skeleton" data-wait={wait} data-typical={typical}>
       <SkeletonStatus />
       <div className="rp-kv" inert aria-hidden="true">
         {Array.from({length: facts}, (_, i) => (
-          <div key={i}>
+          <div key={i} className={cx(metered?.includes(i) && 'rp-kv-meter')}>
             <span className={cx('k', helped?.includes(i) && 'helped')}>
               <span className="rp-skeleton-text" />
             </span>
             <span className="v">
               <span className="rp-skeleton-text" />
             </span>
+            {metered?.includes(i) && <span className="track" />}
           </div>
         ))}
       </div>
@@ -63,6 +77,7 @@ export function SkeletonBody({
   height,
   grid,
   columns,
+  typical,
   label
 }: {
   shape: SkeletonShape;
@@ -70,13 +85,15 @@ export function SkeletonBody({
   height?: number;
   grid?: boolean;
   columns?: boolean;
+  // The body's height follows the data, so `height` is a typical one.
+  typical?: boolean;
   label?: string;
 }) {
   const wait = useWaitAttr();
   const n = shape === 'block' ? 1 : count;
   if (shape === 'cards')
     return (
-      <div className={cx('rp-skeleton-cards', grid && 'grid')} data-wait={wait}>
+      <div className={cx('rp-skeleton-cards', grid && 'grid')} data-wait={wait} data-typical={typical}>
         <SkeletonStatus label={label} />
         {Array.from({length: n}, (_, i) => (
           <div key={i} className="rp-card" style={{height}} inert aria-hidden="true" />
@@ -89,6 +106,7 @@ export function SkeletonBody({
       className={cx('rp-skeleton-body', shape, shape === 'bars' && 'rp-list', columns && 'rp-columns')}
       style={columns ? listColumns(n) : height ? {height} : undefined}
       data-wait={wait}
+      data-typical={typical}
     >
       <SkeletonStatus label={label} />
       {Array.from({length: n}, (_, i) =>
@@ -117,9 +135,17 @@ export function SkeletonBody({
   );
 }
 // One Skeleton bar for a part a feature lays out beside its real labels: a control at the control height, a line of
-// body or caption text, or a block `height` pixels tall such as a small chart. Inert and hidden from assistive technology; a SkeletonGroup round it reads the status.
-export function SkeletonBar({line, width, height}: {line?: 'body' | 'caption'; width?: number | string; height?: number}) {
-  return <span className={cx('rp-skeleton-text', 'rp-skeleton-bar', line ?? 'control')} style={{width, height}} inert aria-hidden="true" />;
+// body or caption text, or a block `height` pixels tall such as a small chart, or its height wide and then on a phone
+// for a note that takes more lines there. Inert and hidden from assistive technology; a SkeletonGroup round it reads the status.
+export function SkeletonBar({line, width, height}: {line?: 'body' | 'caption'; width?: number | string; height?: number | readonly [number, number]}) {
+  return (
+    <span
+      className={cx('rp-skeleton-text', 'rp-skeleton-bar', line ?? 'control')}
+      style={{width, ...(height === undefined ? undefined : sized(height))}}
+      inert
+      aria-hidden="true"
+    />
+  );
 }
 // A Skeleton block over its positioned parent's whole box, for a hold that lays out the loaded view hidden underneath
 // so the block takes its exact size. It shows after the same 150ms; it reads no status, which a table or group beside
@@ -127,12 +153,15 @@ export function SkeletonBar({line, width, height}: {line?: 'body' | 'caption'; w
 export function SkeletonCover() {
   return <span className="rp-skeleton-text rp-skeleton-cover" data-wait={useWaitAttr()} inert aria-hidden="true" />;
 }
+// A height, or its height wide and then on a phone, where the content takes more lines (see cards-dashboard.css).
+export const sized = (height: number | readonly [number, number]) =>
+  typeof height === 'number' ? {height} : {['--wide' as string]: `${height[0]}px`, ['--narrow' as string]: `${height[1]}px`};
 // One card's surface `height` pixels tall with its Skeleton block, for a grid that places cards itself, such as the
-// dashboard's; inside a SkeletonGroup, which reads the status.
-export function SkeletonCard({height}: {height: number}) {
+// dashboard's; inside a PageSkeleton, which reads the status. A `typical` height follows the card's data.
+export function SkeletonCard({height, typical}: {height: number | readonly [number, number]; typical?: boolean}) {
   return (
     <div className="rp-skeleton-cards" inert aria-hidden="true">
-      <div className="rp-card" style={{height}} />
+      <div className="rp-card" style={sized(height)} data-typical={typical || undefined} />
     </div>
   );
 }
@@ -157,7 +186,7 @@ export function TableSkeleton({cols, rows, quiet}: {cols: SkeletonColumn[]; rows
   const wait = useWaitAttr();
   const template = cols.map(c => `minmax(${c.minWidth}px, ${c.minWidth * (c.grow ?? (c.isRowHeader ? 2 : 1))}fr)`).join(' ');
   return (
-    <div className="rp-table-skeleton" data-wait={quiet ? undefined : wait}>
+    <div className="rp-table-skeleton" data-wait={quiet ? undefined : wait} data-typical>
       {!quiet && <SkeletonStatus />}
       <div style={{gridTemplateColumns: template}} inert aria-hidden="true">
         {Array.from({length: rows}, (_, row) =>
