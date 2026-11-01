@@ -55,6 +55,7 @@ type SettingsFieldId =
   | 'startPage'
   | 'countryFlags'
   | 'sparklines'
+  | 'limitNotice'
   | 'mirrored'
   | 'wallpaper'
   | 'blur'
@@ -90,6 +91,7 @@ export const settingsFields: ReadonlyArray<SettingsField> = [
   {id: 'startPage', card: 'appearance', labelKey: 'settings.startPage', aliases: ['start page', 'home page']},
   {id: 'countryFlags', card: 'appearance', labelKey: 'settings.countryFlags', aliases: ['flags']},
   {id: 'sparklines', card: 'appearance', labelKey: 'settings.sparklines', aliases: ['sparklines']},
+  {id: 'limitNotice', card: 'appearance', labelKey: 'settings.limitNotice', aliases: ['status card']},
   {id: 'mirrored', card: 'appearance', labelKey: 'settings.mirror', aliases: ['rtl']},
   {id: 'wallpaper', card: 'appearance', labelKey: 'settings.wallpaper', aliases: ['background', 'image']},
   {id: 'blur', card: 'appearance', labelKey: 'settings.blur'},

@@ -71,6 +71,16 @@ const families: Family[] = [
     target: page => page.locator('section.rp-card:has(#overview-limits)')
   },
   {
+    name: 'status card setting, from the Overview limits card',
+    profile: 'base',
+    go: async page => {
+      await page.goto('/#/overview');
+      await page.getByRole('link', {name: 'Status card setting', exact: true}).click();
+    },
+    hash: /settings\?card=appearance&field=limitNotice$/,
+    target: page => page.locator('[data-setting="limitNotice"]')
+  },
+  {
     name: 'Activity history card, from the Overview',
     go: async page => {
       await page.goto('/#/overview');

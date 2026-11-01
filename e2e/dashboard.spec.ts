@@ -278,6 +278,30 @@ test.describe('status details link', () => {
     await links.click();
     await expect(page).toHaveURL(/#\/overview$/);
   });
+
+  test('the Settings switch hides the count on the status card and shows it again', async ({page}) => {
+    const field = page.locator('[data-setting="limitNotice"]');
+    const toggle = field.getByRole('switch', {name: translate('zh-TW', 'settings.limitNotice'), exact: true});
+    // The input is hidden under its track, so a click goes to the switch as drawn.
+    const flip = () => field.locator('.rp-switch').click();
+    const links = tile(page, 'status').getByRole('link');
+    await page.goto('/#/activity');
+    await expect(links).toHaveText(translate('zh-TW', 'act.limited', {n: 1}));
+    await page.goto('/#/settings?tab=appearance');
+    await expect(toggle).toBeChecked();
+    await flip();
+    await expect(toggle).not.toBeChecked();
+    await page.goto('/#/activity');
+    await expect(links).toHaveText(translate('zh-TW', 'act.viewDetails'));
+    await page.reload();
+    await expect(links).toHaveText(translate('zh-TW', 'act.viewDetails'));
+    await page.goto('/#/settings?tab=appearance');
+    await expect(toggle).not.toBeChecked();
+    await flip();
+    await expect(toggle).toBeChecked();
+    await page.goto('/#/activity');
+    await expect(links).toHaveText(translate('zh-TW', 'act.limited', {n: 1}));
+  });
 });
 
 // A control card's title is never cut to an ellipsis: a row whose titles do not all fit whole stacks instead.

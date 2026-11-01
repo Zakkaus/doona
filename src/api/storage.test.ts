@@ -15,6 +15,7 @@ it('keeps the keys browsers already hold', () => {
     'doona-country-flags',
     'doona-lens-pause',
     'doona-sparklines',
+    'doona-limit-notice',
     'doona-flag-overrides',
     'doona-toast-placement',
     'doona-start-page',

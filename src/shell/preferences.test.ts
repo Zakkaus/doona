@@ -190,7 +190,8 @@ it.each([null, '', 'last', 'login', 'unknown', 'rules?tab=dns'])('defaults an in
 it.each([
   ['countryFlags', 'doona-country-flags'],
   ['lensPause', 'doona-lens-pause'],
-  ['sparklines', 'doona-sparklines']
+  ['sparklines', 'doona-sparklines'],
+  ['limitNotice', 'doona-limit-notice']
 ] as const)('defaults %s on and preserves an explicit off preference', (key, stored) => {
   expect(readSettings(storageFrom())[key]).toBe(true);
   expect(readSettings(storageFrom([[stored, 'on']]))[key]).toBe(true);

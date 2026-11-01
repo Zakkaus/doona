@@ -63,6 +63,7 @@ export function useAppearance(stored: Settings) {
   const [countryFlags, setCountryFlags] = useState(stored.countryFlags);
   const [lensPause, setLensPause] = useState(stored.lensPause);
   const [sparklines, setSparklines] = useState(stored.sparklines);
+  const [limitNotice, setLimitNotice] = useState(stored.limitNotice);
   const [toastPlacement, setToastPlacement] = useState<ToastPlacement>(stored.toastPlacement);
   const [startPage, setStartPage] = useState<RoutePath>(stored.startPage);
   const [dateFormat, setDateFormatState] = useState<DateFormat>(stored.dateFormat);
@@ -139,6 +140,10 @@ export function useAppearance(stored: Settings) {
     },
     [flagOverrides]
   );
+  const pickLimitNotice = useCallback((next: boolean) => {
+    setLimitNotice(next);
+    writeSetting('limitNotice', next ? 'on' : 'off');
+  }, []);
   const pickToastPlacement = useCallback((next: ToastPlacement) => {
     setToastPlacement(next);
     writeSetting('toastPlacement', next);
@@ -182,6 +187,8 @@ export function useAppearance(stored: Settings) {
       pickLensPause,
       sparklines,
       pickSparklines,
+      limitNotice,
+      pickLimitNotice,
       toastPlacement,
       pickToastPlacement,
       startPage,
@@ -213,6 +220,8 @@ export function useAppearance(stored: Settings) {
       pickLensPause,
       sparklines,
       pickSparklines,
+      limitNotice,
+      pickLimitNotice,
       toastPlacement,
       pickToastPlacement,
       startPage,

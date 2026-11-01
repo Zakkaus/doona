@@ -36,6 +36,7 @@ export type Settings = {
   countryFlags: boolean;
   lensPause: boolean;
   sparklines: boolean;
+  limitNotice: boolean;
   flagOverrides: FlagOverrides;
   toastPlacement: ToastPlacement;
   startPage: RoutePath;
@@ -55,6 +56,7 @@ export function writeSetting(
     | 'countryFlags'
     | 'lensPause'
     | 'sparklines'
+    | 'limitNotice'
     | 'flagOverrides'
     | 'toastPlacement'
     | 'startPage',
@@ -96,6 +98,7 @@ export function readSettings(storage?: StoragePort): Settings {
     countryFlags: read(storageKeys.countryFlags) !== 'off',
     lensPause: read(storageKeys.lensPause) !== 'off',
     sparklines: read(storageKeys.sparklines) !== 'off',
+    limitNotice: read(storageKeys.limitNotice) !== 'off',
     flagOverrides: readFlagOverrides(storage),
     toastPlacement: TOAST_PLACEMENTS.find(item => item === placement) ?? 'bottom'
   };
@@ -127,6 +130,8 @@ type Appearance = {
   pickLensPause: (value: boolean) => void;
   sparklines: boolean;
   pickSparklines: (value: boolean) => void;
+  limitNotice: boolean;
+  pickLimitNotice: (value: boolean) => void;
   pickFlag: (name: string, value: string) => void;
   toastPlacement: ToastPlacement;
   pickToastPlacement: (value: ToastPlacement) => void;
