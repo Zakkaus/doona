@@ -1228,6 +1228,8 @@ for (const width of [1280, 390])
   test(`edit mode shows every card's content and controls as the page does at ${width} px`, async ({page}) => {
     await page.setViewportSize({width, height: 900});
     await page.goto('/#/activity');
+    // The startup Skeleton draws the same sections and cards, so the page is in once it has gone.
+    await expect(page.locator('.rp-content .rp-page-skeleton')).toHaveCount(0);
     await expect(page.locator("[data-profile='details'] .rp-card")).toHaveCount(3);
     await settle(page);
     const view = await showing(page);

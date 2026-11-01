@@ -151,26 +151,29 @@ export function SkeletonBar({line, width, height}: {line?: 'body' | 'caption'; w
 // so the block takes its exact size. It shows after the same 150ms; it reads no status, which a table or group beside
 // it already reads for the same load.
 export function SkeletonCover() {
-  return <span className="rp-skeleton-text rp-skeleton-cover" data-wait={useWaitAttr()} inert aria-hidden="true" />;
+  const wait = useWaitAttr();
+  return <span className="rp-skeleton-text rp-skeleton-cover" data-wait={wait} inert aria-hidden="true" />;
 }
 // A height, or its height wide and then on a phone, where the content takes more lines (see cards-dashboard.css).
 export const sized = (height: number | readonly [number, number]) =>
   typeof height === 'number' ? {height} : {['--wide' as string]: `${height[0]}px`, ['--narrow' as string]: `${height[1]}px`};
-// One card's surface `height` pixels tall with its Skeleton block, for a grid that places cards itself, such as the
-// dashboard's; inside a PageSkeleton, which reads the status. A `typical` height follows the card's data.
-export function SkeletonCard({height, typical}: {height: number | readonly [number, number]; typical?: boolean}) {
+// One card's surface with its Skeleton block, for a grid that places cards itself, such as the dashboard's; inside a
+// PageSkeleton, which reads the status. It is `height` pixels tall, or a dashboard module's `card`, whose height the
+// dashboard's CSS tells at the card's width (see dashboard.css). A `typical` height follows the card's data.
+export function SkeletonCard({height, card, typical}: {height?: number | readonly [number, number]; card?: string; typical?: boolean}) {
   return (
     <div className="rp-skeleton-cards" inert aria-hidden="true">
-      <div className="rp-card" style={sized(height)} data-typical={typical || undefined} />
+      <div className="rp-card" style={height === undefined ? undefined : sized(height)} data-card={card} data-typical={typical || undefined} />
     </div>
   );
 }
 // Labelled parts drawn with SkeletonBars, in place in their container's own layout: one loading status for them all,
-// shown after the same 150ms.
-export function SkeletonGroup({label, children}: {label?: string; children: ReactNode}) {
+// shown after the same 150ms. `quiet`: another Skeleton of the same read holds the status.
+export function SkeletonGroup({label, quiet, children}: {label?: string; quiet?: boolean; children: ReactNode}) {
+  const wait = useWaitAttr();
   return (
-    <div className="rp-skeleton-group" data-wait={useWaitAttr()}>
-      <SkeletonStatus label={label} />
+    <div className="rp-skeleton-group" data-wait={wait}>
+      {!quiet && <SkeletonStatus label={label} />}
       {children}
     </div>
   );
@@ -183,7 +186,7 @@ export function SkeletonGroup({label, children}: {label?: string; children: Reac
 type SkeletonColumn = {minWidth: number; grow?: number; isRowHeader?: boolean; actions?: boolean; text?: 'wrap'};
 // `quiet`: inside a page's Skeleton, which holds the status and the delay.
 export function TableSkeleton({cols, rows, quiet}: {cols: SkeletonColumn[]; rows: number; quiet?: boolean}) {
-  const wait = useWaitAttr();
+  const wait = useWaitAttr(!quiet);
   const template = cols.map(c => `minmax(${c.minWidth}px, ${c.minWidth * (c.grow ?? (c.isRowHeader ? 2 : 1))}fr)`).join(' ');
   return (
     <div className="rp-table-skeleton" data-wait={quiet ? undefined : wait} data-typical>

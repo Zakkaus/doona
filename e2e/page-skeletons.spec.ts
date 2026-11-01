@@ -4,8 +4,8 @@ import type {Page} from '@playwright/test';
 // The Skeleton of every route holds the shape of the page that replaces it (CONTRIBUTING, Loading states): at startup,
 // while the route's code loads and while its first reads are pending, the page column's blocks sit where the loaded
 // page's blocks will, so nothing moves when the content arrives. A block whose height follows the data (a table, the
-// flows map) draws a typical height and is held to its top only, and the blocks after it to their size; it says so with
-// data-typical. One page load per route and width walks through the three states, and DOONA_SKELETON_SHOTS=<dir> also
+// flows map, one card of a grid) draws a typical height and is held to its place and width, not its height, and the
+// blocks after it to their size; it says so with data-typical. A grid of cards is read card by card. One page load per route and width walks through the three states, and DOONA_SKELETON_SHOTS=<dir> also
 // saves a picture of each, taken after the state has been held for HOLD ms. A Skeleton has to be seen as well as laid
 // out: each held state needs its shimmer visible, and from the frame it first shows, no frame of the whole walk may be
 // without one, so a phase that restarts the 150ms delay or leaves a gap between phases fails.
@@ -14,9 +14,13 @@ test.skip(isLive, 'holds the mock backend');
 test.use({storage: {'doona-lang': 'zh-TW'}, serviceWorkers: 'block'});
 
 const TOLERANCE = 4;
+// The heights are drawn in Chromium. WebKit rounds line boxes differently, so a card of a list of seven bars is 5px taller.
+const tolerance = () => (test.info().project.name === 'webkit' ? 2 * TOLERANCE : TOLERANCE);
 // Longer than the 150ms a Skeleton waits before it shows, with room for a frame.
 const HOLD = 250;
-type Block = {name: string; top: number; left: number; width: number; height: number; typical: boolean};
+type Box = {top: number; left: number; width: number; height: number; typical: boolean};
+// A grid of cards is also read card by card, so the cards of a page's grids are held to their own place and size.
+type Block = Box & {name: string; cells: Box[]};
 
 // The blocks of the page column, top to bottom: what is left of the column's children once the wrappers that only
 // carry layout (the page, its tabs and panel, a Skeleton's own group) give way to theirs. The heading is not one.
@@ -37,18 +41,59 @@ const blocks = (page: Page): Promise<Block[]> =>
       const cards = element.matches('.rp-dash-section') ? [...element.children].map(child => child.getBoundingClientRect()) : [box];
       const left = Math.min(...cards.map(card => card.left));
       const top = Math.min(...cards.map(card => card.top));
+      const typical = (of: Element) => of.matches('[data-typical]') || !!of.querySelector('[data-typical]');
+      // A table or a block follows its data as a whole; a grid of cards is read card by card.
+      const cells =
+        style.display === 'grid' && !element.matches('.rp-dash-section, [data-typical]')
+          ? [...element.children].flatMap(child => {
+              const rect = child.getBoundingClientRect();
+              const {position} = getComputedStyle(child);
+              if (!rect.height || position === 'absolute' || position === 'fixed') return [];
+              return {
+                top: Math.round(rect.top + scrollY),
+                left: Math.round(rect.left),
+                width: Math.round(rect.width),
+                height: Math.round(rect.height),
+                typical: typical(child)
+              };
+            })
+          : [];
       out.push({
         name: `${element.tagName.toLowerCase()}.${[...element.classList].join('.')}`,
         top: Math.round(box.top + scrollY),
         left: Math.round(left),
         width: Math.round(Math.max(...cards.map(card => card.right)) - left),
         height: Math.round(Math.max(...cards.map(card => card.bottom)) - top),
-        typical: element.matches('[data-typical]') || !!element.querySelector('[data-typical]')
+        typical: typical(element),
+        cells
       });
     };
     for (const child of document.querySelector('.rp-content')!.children) if (!child.classList.contains('rp-head')) visit(child);
     return out;
   });
+
+// The dashboard's cards one by one, in page order: the cells of the sections the loaded page lays out, and the cards of
+// the startup Skeleton, which draws the default layout's. The blocks above read a grid of cards as one block, which would
+// pass a Skeleton whose cards sit in other cells.
+type Cell = Box & {name: string; fitted: boolean};
+const cells = (page: Page): Promise<Cell[]> =>
+  page.evaluate(() =>
+    [...document.querySelectorAll('.rp-content :is(.rp-page-skeleton > .rp-skeleton-cards > .rp-card, .rp-dash-section > .rp-dashboard-cell)')].flatMap(
+      element => {
+        const box = element.getBoundingClientRect();
+        if (!box.height) return [];
+        return {
+          name: element.className,
+          top: Math.round(box.top + scrollY),
+          left: Math.round(box.left),
+          width: Math.round(box.width),
+          height: Math.round(box.height),
+          typical: element.matches('[data-typical]') || !!element.querySelector('[data-typical]'),
+          fitted: !!element.parentElement?.hasAttribute('data-fit')
+        };
+      }
+    )
+  );
 
 // Geometry is stable once two reads a poll apart agree, with the fonts in and something drawn.
 async function settled(page: Page) {
@@ -63,7 +108,7 @@ async function settled(page: Page) {
   return blocks(page);
 }
 
-const shape = (list: Block[]) =>
+const shape = (list: Array<Box & {name: string}>) =>
   list.map(block => `${block.name} ${block.left},${block.top} ${block.width}x${block.height}${block.typical ? ' typical' : ''}`).join('\n');
 
 function expectSameShape(state: string, skeleton: Block[], content: Block[]) {
@@ -72,15 +117,52 @@ function expectSameShape(state: string, skeleton: Block[], content: Block[]) {
   if (!more) expect.soft(skeleton.length, `${state}: blocks\nskeleton:\n${shape(skeleton)}\ncontent:\n${shape(content)}`).toBe(content.length);
   skeleton.forEach((block, i) => {
     const loaded = content[i];
-    // A run of typical blocks is one list that follows its data: only where it starts is held.
-    if (!loaded || (block.typical && skeleton[i - 1]?.typical)) return;
+    if (!loaded) return;
     const label = `${state}: block ${i} (${block.name} against ${loaded.name})`;
-    // What follows a data-sized block moves with it, so only its size is held.
-    if (!skeleton.slice(0, i).some(before => before.typical)) expect.soft(Math.abs(block.top - loaded.top), `${label} top`).toBeLessThanOrEqual(TOLERANCE);
-    if (block.typical) return;
-    expect.soft(Math.abs(block.left - loaded.left), `${label} left`).toBeLessThanOrEqual(TOLERANCE);
-    expect.soft(Math.abs(block.width - loaded.width), `${label} width`).toBeLessThanOrEqual(TOLERANCE);
-    expect.soft(Math.abs(block.height - loaded.height), `${label} height`).toBeLessThanOrEqual(TOLERANCE);
+    // What follows a data-sized block moves with it, so only its size is held. A data-sized block's own height is
+    // unknown, but where it starts across the page and how wide it is are not.
+    const moved = skeleton.slice(0, i).some(before => before.typical);
+    if (!moved) expect.soft(Math.abs(block.top - loaded.top), `${label} top`).toBeLessThanOrEqual(tolerance());
+    expect.soft(Math.abs(block.left - loaded.left), `${label} left`).toBeLessThanOrEqual(tolerance());
+    expect.soft(Math.abs(block.width - loaded.width), `${label} width`).toBeLessThanOrEqual(tolerance());
+    if (!block.typical) expect.soft(Math.abs(block.height - loaded.height), `${label} height`).toBeLessThanOrEqual(tolerance());
+    if (!block.cells.length) return;
+    // A last card that is typical stands for the rest of a list that grows with its data, as with the blocks.
+    if (!(block.cells.at(-1)?.typical && loaded.cells.length > block.cells.length))
+      expect
+        .soft(loaded.cells.length, `${label} cards\nskeleton: ${JSON.stringify(block.cells)}\ncontent: ${JSON.stringify(loaded.cells)}`)
+        .toBe(block.cells.length);
+    block.cells.forEach((card, n) => {
+      const other = loaded.cells[n];
+      if (!other) return;
+      const name = `${label} card ${n}`;
+      if (!moved && !block.cells.some(above => above.typical && above.top < card.top))
+        expect.soft(Math.abs(card.top - other.top), `${name} top`).toBeLessThanOrEqual(tolerance());
+      expect.soft(Math.abs(card.left - other.left), `${name} left`).toBeLessThanOrEqual(tolerance());
+      expect.soft(Math.abs(card.width - other.width), `${name} width`).toBeLessThanOrEqual(tolerance());
+      if (!card.typical) expect.soft(Math.abs(card.height - other.height), `${name} height`).toBeLessThanOrEqual(tolerance());
+    });
+  });
+}
+
+// The startup Skeleton's cards against the loaded ones, cell for cell: where a card is, how large, and in which order. A
+// card of a list follows its data, so it holds its top, and so do the cards laid out below it. A row of one-line cards
+// takes the widths its labels need (data-fit), which a Skeleton without the labels cannot know, so its cards hold their
+// top and height.
+function expectSameCells(skeleton: Cell[], content: Cell[]) {
+  expect.soft(skeleton.length, `startup: cards\nskeleton:\n${shape(skeleton)}\ncontent:\n${shape(content)}`).toBe(content.length);
+  skeleton.forEach((card, i) => {
+    const loaded = content[i];
+    if (!loaded) return;
+    const label = `startup: card ${i} (against ${loaded.name})`;
+    const below = skeleton.slice(0, i).some(above => above.typical && above.top < card.top);
+    if (!below) expect.soft(Math.abs(card.top - loaded.top), `${label} top`).toBeLessThanOrEqual(tolerance());
+    if (card.typical) return;
+    if (!loaded.fitted) {
+      expect.soft(Math.abs(card.left - loaded.left), `${label} left`).toBeLessThanOrEqual(tolerance());
+      expect.soft(Math.abs(card.width - loaded.width), `${label} width`).toBeLessThanOrEqual(tolerance());
+    }
+    expect.soft(Math.abs(card.height - loaded.height), `${label} height`).toBeLessThanOrEqual(tolerance());
   });
 }
 
@@ -124,11 +206,18 @@ const gate = () => {
   return {promise, resolve: open};
 };
 
-for (const [width, height] of [
-  [1280, 900],
-  [390, 844]
-]) {
-  for (const route of routes) {
+// Every route is walked at a wide screen and a phone; Activity also at the other widths its cards change height at
+// (dashboard.css): a tablet's single column, the traffic pair side by side at 1024px, and a value tile with room for
+// its sparkline beside its value at 1440px.
+const walks = [
+  {width: 1280, height: 900, walked: routes},
+  {width: 390, height: 844, walked: routes},
+  {width: 768, height: 1024, walked: ['activity']},
+  {width: 1024, height: 800, walked: ['activity']},
+  {width: 1440, height: 920, walked: ['activity']}
+];
+for (const {width, height, walked} of walks) {
+  for (const route of walked) {
     test(`${route} keeps its shape from skeleton to content at ${width}px`, async ({page}) => {
       const {api, capabilities} = await mockBackend(page);
       const runtime = await api.runtime();
@@ -179,6 +268,7 @@ for (const [width, height] of [
       await expect(page.locator('.rp-content .rp-page-skeleton').first()).toBeAttached();
       await expectSeen(page, 'startup');
       const startup = await settled(page);
+      const startupCells = route === 'activity' ? await cells(page) : [];
       await shoot('startup');
 
       gates.startup.resolve();
@@ -212,8 +302,69 @@ for (const [width, height] of [
       await shoot('content');
 
       expectSameShape('startup', startup, content);
+      if (route === 'activity') expectSameCells(startupCells, await cells(page));
       if (chunk) expectSameShape('code loading', held, content);
       expectSameShape('reads pending', reading, content);
     });
   }
 }
+
+// The startup Skeleton is as tall as the page, so a reader can scroll it. The page that replaces it opens at the same
+// offset, and WebKit would drop it to the top as the new tree lays out; another page opens at its top.
+test.describe('scrolling the startup Skeleton', () => {
+  test.use({viewport: {width: 390, height: 600}});
+
+  for (const [name, next, offset] of [
+    ['keeps the offset on the same page', undefined, 200],
+    ['opens another page at its top', 'connections', 0]
+  ] as const) {
+    test(name, async ({page}) => {
+      await mockBackend(page);
+      const startup = gate();
+      await page.route('**/api/v1/capabilities', async hold => {
+        await startup.promise;
+        await hold.fallback();
+      });
+      await page.goto('/#/activity');
+      await expect(page.locator('.rp-content .rp-page-skeleton').first()).toBeAttached();
+      await page.evaluate(() => scrollTo(0, 200));
+      await expect.poll(() => page.evaluate(() => scrollY)).toBe(200);
+      if (next) await page.evaluate(route => (location.hash = `#/${route}`), next);
+      startup.resolve();
+      await expect(page.locator('.rp-content .rp-page-skeleton')).toHaveCount(0);
+      await expect(page.locator('.rp-content .rp-head h1')).toBeVisible();
+      // A frame after the page is in, when the browser would have moved the offset.
+      await page.evaluate(() => new Promise(requestAnimationFrame));
+      expect(await page.evaluate(() => scrollY)).toBe(offset);
+    });
+  }
+});
+
+// A saved layout redraws the dashboard's cards while the capabilities load, each at the height step chosen for it. Only a
+// tab that holds a bearer shows the page before they arrive.
+test.describe('a saved dashboard layout', () => {
+  test.use({storage: {'doona-lang': 'zh-TW', 'doona-api-token': 'e2e'}});
+  for (const height of ['short', 'tall']) {
+    test(`a saved ${height} history card keeps its size from skeleton to content`, async ({page}) => {
+      await mockBackend(page);
+      await page.setViewportSize({width: 1280, height: 900});
+      await page.addInitScript(
+        layout => localStorage.setItem('doona-dashboard', layout),
+        JSON.stringify({version: 3, sections: [{id: 'traffic', items: [{id: 'history', form: 'area', size: 'medium', width: 'full', height}]}]})
+      );
+      const capabilities = gate();
+      await page.route('**/api/v1/capabilities', async hold => {
+        await capabilities.promise;
+        await hold.fallback();
+      });
+      await page.goto('/#/activity');
+      await expect(page.locator(`.rp-dashboard-cell[data-height="${height}"] .rp-skeleton-cards`)).toBeAttached();
+      await settled(page);
+      const skeleton = await cells(page);
+      capabilities.resolve();
+      await expect(page.locator('.rp-content .rp-skeleton-cards')).toHaveCount(0);
+      await settled(page);
+      expectSameCells(skeleton, await cells(page));
+    });
+  }
+});

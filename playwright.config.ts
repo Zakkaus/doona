@@ -42,7 +42,8 @@ export default defineConfig({
               'segmented.spec.ts',
               'dashboard.spec.ts',
               'glass.spec.ts',
-              'wallpaper.spec.ts'
+              'wallpaper.spec.ts',
+              'page-skeletons.spec.ts'
             ],
             use: {...devices['Desktop Safari'], serviceWorkers: 'block'}
           },

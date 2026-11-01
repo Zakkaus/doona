@@ -2,28 +2,45 @@ import {createContext, Suspense, use, useLayoutEffect, useRef, type ComponentTyp
 import {useT, type Key} from '../i18n';
 import {cx} from './cx';
 import {useWaitAttr} from './Empty';
-import {sized, SkeletonStatus, TableSkeleton} from './Skeleton';
+import {sized, SkeletonCard, SkeletonStatus, TableSkeleton} from './Skeleton';
+// The sections' grids, which the startup Skeleton lays its dashboard cards out in as the dashboard does.
+import './styles/dashboard.css';
 
 // What a page draws, top to bottom, for its Skeleton while its code or first reads load: its tab row, with the tabs'
 // own labels; rows of M controls (or of a row's own `height`, such as a summary's), as many as the row has controls and
 // `end` of them at the end of the row; a `summary`, the status, its facts (the first with its help button's height) and a
 // badge in the row's own wrapping, with the page's actions beside them; a line of text, a fact strip (a `lead` name first, `caption` under its first
 // value), cards (in a column; `columns` to a row, as a count or a grid template; the page's own grid `class`; or a CardView's grid), a framed table
-// of rows under its header, blocks such as an editor, a page's `draw`ing of its own (the dashboard's saved cards), and a `column` of parts at the panel's gap, for a group the page lays out apart from the rest. Parts after the tab row are the tab panel's, at its narrower
+// of rows under its header, blocks such as an editor, dashboard `sections` of cards in their cells, a page's `draw`ing of its own (the dashboard's saved cards), and a `column` of parts at the panel's gap, for a group the page lays out apart from the rest. Parts after the tab row are the tab panel's, at its narrower
 // gap, as are all of a view's inside a tab panel (`panel`); cards with `gap: 'page'` are a page's own column. A part
-// whose height follows the data (`typical`; always a table or a block) draws a typical one and is held to its top
-// only. A route declares its own in the registry; a view inside a page passes its own.
+// whose height follows the data (`typical`; a table, a block, or the cards of a group named by index) draws a typical
+// one, held to its place and width but not its height. A route declares its own in the registry; a view inside a page passes its own.
 export type PagePart =
   | {tabs: readonly Key[]}
   | {toolbar: number; height?: number | readonly [number, number]; end?: number}
   | {summary: {state: number; facts: readonly number[]; badge: number; actions: readonly number[]}}
   | {line: 'body' | 'caption'}
   | {facts: number; lead?: true; caption?: true}
-  | {cards: ReadonlyArray<number | readonly [number, number]>; columns?: number | string; class?: string; grid?: true; gap?: 'page'; typical?: true}
+  | {
+      cards: ReadonlyArray<number | readonly [number, number]>;
+      columns?: number | string;
+      class?: string;
+      grid?: true;
+      gap?: 'page';
+      typical?: true | readonly number[];
+    }
+  | {sections: ReadonlyArray<SkeletonSection>}
   | {table: number}
   | {block: number}
   | {draw: ComponentType}
   | {column: readonly PagePart[]};
+// A dashboard section: its profile names the grid the dashboard's CSS lays its cards out in (dashboard.css). A card is
+// named for its module, which dashboard.css gives the height the loaded card takes at each width, and the attributes
+// its cell carries for that grid: its footprint and size, and `typical` when its height follows its data.
+export type SkeletonSection = {
+  profile: string;
+  cards: ReadonlyArray<readonly [card: string, cell?: {foot?: string; size?: string; typical?: true}]>;
+};
 export type PageShape = readonly PagePart[];
 
 // The current route's shape, which the shell provides around the page.
@@ -178,7 +195,19 @@ function DrawPart({part}: {part: PagePart}) {
       aria-hidden="true"
     >
       {part.cards.map((height, n) => (
-        <div key={n} className="rp-card" style={sized(height)} data-typical={part.typical} />
+        <div key={n} className="rp-card" style={sized(height)} data-typical={part.typical === true || part.typical?.includes(n) || undefined} />
+      ))}
+    </div>
+  ) : 'sections' in part ? (
+    <div className="rp-dashboard">
+      {part.sections.map(({profile, cards}) => (
+        <div key={profile} className="rp-dash-section" data-profile={profile}>
+          {cards.map(([card, cell], n) => (
+            <div key={n} className="rp-dashboard-cell" data-foot={cell?.foot} data-size={cell?.size}>
+              <SkeletonCard card={card} typical={cell?.typical} />
+            </div>
+          ))}
+        </div>
       ))}
     </div>
   ) : 'table' in part ? (
