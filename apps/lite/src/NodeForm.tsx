@@ -11,17 +11,24 @@ import {TextInput} from '@astryxdesign/core/TextInput';
 import {useState, type ReactNode} from 'react';
 import {useMessages} from './i18n';
 import {
+  advancedFields,
   congestionControls,
   emptyNode,
+  manualFields,
+  manualInvalid,
   nodeLink,
   obfsTypes,
   parseNodeLink,
   protocolName,
   protocols,
   securityOptions,
+  settle,
   shadowsocksMethods,
+  ssPlugins,
+  transports,
   usesTls,
   vmessMethods,
+  xhttpModes,
   type NodeDocument,
   type NodeFields,
   type Protocol
@@ -58,13 +65,14 @@ export default function NodeForm({
   const [advanced, setAdvanced] = useState(false);
   const f = state.fields;
   const update = (key: string, value: string) => {
-    const fields = {...f, [key]: value};
+    const fields = settle({...f, [key]: value});
     if (key === 'security' && value !== 'reality') for (const inactive of ['pbk', 'sid', 'spx']) fields[inactive] = '';
     if (key === 'security' && value === 'none') for (const inactive of ['sni', 'alpn', 'insecure', 'pinSHA256', 'ech_config', 'flow']) fields[inactive] = '';
     if (key === 'type') {
       if (!['ws', 'xhttp'].includes(value)) for (const inactive of ['path', 'transportHost']) fields[inactive] = '';
       if (value !== 'grpc') fields.serviceName = '';
       if (value !== 'xhttp') for (const inactive of ['mode', 'extra']) fields[inactive] = '';
+      if (value !== 'xhttp' && f.protocol !== 'tuic') fields.alpn = '';
     }
     if (key === 'mux') {
       if (value !== 'h2mux') fields.padding = '';
@@ -72,7 +80,9 @@ export default function NodeForm({
     }
     if (key === 'plugin' && value !== f.plugin) fields['plugin-opts'] = '';
     setState({...state, fields});
-    change(fields.host && fields.port && (fields.username || fields.password || fields.protocol === 'socks5') ? nodeLink(fields, state.document) : '');
+    const complete = fields.host && fields.port && (fields.username || fields.password || fields.protocol === 'socks5');
+    const incomplete = manualInvalid(fields).some(key => !['host', 'port', 'username', 'password'].includes(key));
+    change(complete && !incomplete ? nodeLink(fields, state.document) : '');
   };
   const pluginOptions = (f['plugin-opts'] ?? '').split(';').filter(Boolean);
   const pluginValue = (key: string) => pluginOptions.find(item => item.split('=')[0] === key)?.slice(key.length + 1) ?? '';
@@ -151,17 +161,19 @@ export default function NodeForm({
         isDisabled={disabled}
       />
     );
-  const flag = (key: string, label = key) =>
+  const flag = (key: string, label = key, on = '1') =>
     guide(
       key,
-      <CheckboxInput key={key} label={label} value={['1', 'true'].includes(f[key])} onChange={v => update(key, v ? '1' : '0')} isDisabled={disabled} />
+      <CheckboxInput
+        key={key}
+        label={label}
+        value={['1', 'true'].includes(f[key])}
+        onChange={v => update(key, v ? on : on === 'true' ? 'false' : '0')}
+        isDisabled={disabled}
+      />
     );
-  const number = (key: string) => {
-    const bounds = {
-      min: key === 'mtu' ? 1200 : ['concurrency', 'xudpConcurrency'].includes(key) ? -32768 : 0,
-      max: key === 'mtu' ? 65527 : key === 'min_idle_session' ? 65535 : ['concurrency', 'xudpConcurrency'].includes(key) ? 32767 : Number.MAX_SAFE_INTEGER,
-      step: key.includes('ReceiveWindow') ? 65536 : 1
-    };
+  const number = (key: string, [min, max]: [number, number]) => {
+    const bounds = {min, max, step: key.includes('ReceiveWindow') ? 65536 : 1};
     const change = (value: number) => update(key, `${value}${key.startsWith('idle_session_') ? (f[key]?.match(/[a-z]+$/i)?.[0] ?? 's') : ''}`);
     return guide(
       key,
@@ -180,6 +192,7 @@ export default function NodeForm({
     );
   };
   const security = securityOptions(f.protocol);
+  const flow = manualFields(f).find(({key}) => key === 'flow');
   return (
     <VStack gap={4}>
       <TextInput label={t.name} value={name} onChange={setName} isReadOnly={isNameReadOnly} isDisabled={disabled} />
@@ -228,7 +241,7 @@ export default function NodeForm({
                   {f.protocol === 'ss' && (
                     <>
                       {choice('method', [...new Set([f.method, ...shadowsocksMethods])], t.cipher)}
-                      {choice('plugin', [...new Set(['', 'v2ray-plugin', 'obfs-local', ...(f.plugin ? [f.plugin] : [])])])}
+                      {choice('plugin', [...new Set([...ssPlugins, ...(f.plugin ? [f.plugin] : [])])])}
                       {f.plugin && (
                         <>
                           {f.plugin === 'v2ray-plugin'
@@ -285,7 +298,7 @@ export default function NodeForm({
                   )}
                   {['vmess', 'vless', 'trojan'].includes(f.protocol) && (
                     <>
-                      {choice('type', ['tcp', 'ws', 'grpc', 'xhttp'], t.transport)}
+                      {choice('type', transports, t.transport)}
                       {['ws', 'xhttp'].includes(f.type) && (
                         <>
                           {text('transportHost', 'Host')}
@@ -293,7 +306,7 @@ export default function NodeForm({
                         </>
                       )}
                       {f.type === 'grpc' && text('serviceName')}
-                      {f.type === 'xhttp' && choice('mode', ['auto', 'packet-up', 'stream-up', 'stream-one'])}
+                      {f.type === 'xhttp' && choice('mode', xhttpModes)}
                     </>
                   )}
 
@@ -318,66 +331,13 @@ export default function NodeForm({
                   </Text>
                   {advanced && (
                     <Grid xstyle={editorLayout.members}>
-                      {usesTls(f) && (
-                        <>
-                          {text('alpn', 'ALPN')}
-                          {!state.document?.json && (
-                            <>
-                              {flag('insecure', t.skipVerify)}
-                              {text('pinSHA256')}
-                              {text('ech_config')}
-                            </>
-                          )}
-                        </>
-                      )}
-                      {f.protocol === 'ss' && f.plugin && text('plugin-opts')}
-                      {f.protocol === 'vless' && (
-                        <>
-                          {choice('flow', f.security === 'none' ? [''] : ['', 'xtls-rprx-vision'])}
-                          {choice('packetEncoding', ['auto', 'none', 'xudp', 'uot-v2'])}
-                          {choice('mux', ['off', 'h2mux', 'xray'])}
-                          {f.mux === 'h2mux' &&
-                            guide(
-                              'padding',
-                              <CheckboxInput
-                                label="padding"
-                                value={f.padding === 'true'}
-                                onChange={value => update('padding', String(value))}
-                                isDisabled={disabled}
-                              />
-                            )}
-                          {f.mux === 'xray' && (
-                            <>
-                              {number('concurrency')}
-                              {number('xudpConcurrency')}
-                              {choice('xudpProxyUDP443', ['reject', 'skip', 'allow'])}
-                            </>
-                          )}
-                        </>
-                      )}
-                      {f.protocol === 'hysteria2' && (
-                        <>
-                          {number('upmbps')}
-                          {number('downmbps')}
-                          {text('mport')}
-                          {number('mhop')}
-                        </>
-                      )}
-                      {['hysteria2', 'tuic', 'juicity'].includes(f.protocol) && number('mtu')}
-                      {['hysteria2', 'tuic'].includes(f.protocol) && (
-                        <>
-                          {number('initStreamReceiveWindow')}
-                          {number('initConnReceiveWindow')}
-                        </>
-                      )}
-                      {f.protocol === 'hysteria2' && flag('disablePathMTUDiscovery')}
-                      {f.protocol === 'anytls' && (
-                        <>
-                          {number('min_idle_session')}
-                          {number('idle_session_check_interval')}
-                          {number('idle_session_timeout')}
-                        </>
-                      )}
+                      {usesTls(f) && !state.document?.json && flag('insecure', t.skipVerify)}
+                      {flow && choice('flow', flow.options!)}
+                      {advancedFields(f)
+                        .filter(({key}) => !state.document?.json || !['pinSHA256', 'ech_config'].includes(key))
+                        .map(({key, options, flag: on, range}) =>
+                          options ? choice(key, options) : on ? flag(key, key, on) : range ? number(key, range) : text(key, key === 'alpn' ? 'ALPN' : key)
+                        )}
                     </Grid>
                   )}
                 </VStack>
