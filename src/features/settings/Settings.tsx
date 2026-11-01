@@ -100,6 +100,7 @@ export function Settings({query}: PageProps) {
   const mirrorHelpId = useId();
   const countryFlagsHelpId = useId();
   const sparklinesHelpId = useId();
+  const limitNoticeHelpId = useId();
   const tab = settingsTab(query);
   // Switching tabs replaces the address rather than adding a step: both tabs stay mounted, so a draft in either
   // survives the switch and there is nothing to ask about. It drops the card a link landed on, which would pick the tab.
@@ -309,6 +310,14 @@ export function Settings({query}: PageProps) {
           </Switch>
           <span id={sparklinesHelpId} className="rp-label">
             {t('settings.sparklinesHelp')}
+          </span>
+        </div>
+        <div className="rp-field" data-setting="limitNotice">
+          <Switch isSelected={ap.limitNotice} onChange={ap.pickLimitNotice} aria-describedby={limitNoticeHelpId}>
+            {t('settings.limitNotice')}
+          </Switch>
+          <span id={limitNoticeHelpId} className="rp-label">
+            {t('settings.limitNoticeHelp')}
           </span>
         </div>
         <div className="rp-field" data-setting="mirrored">

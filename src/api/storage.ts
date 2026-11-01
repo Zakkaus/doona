@@ -13,6 +13,7 @@ export const storageKeys = {
   countryFlags: 'doona-country-flags',
   lensPause: 'doona-lens-pause',
   sparklines: 'doona-sparklines',
+  limitNotice: 'doona-limit-notice',
   flagOverrides: 'doona-flag-overrides',
   toastPlacement: 'doona-toast-placement',
   startPage: 'doona-start-page',

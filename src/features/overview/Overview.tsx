@@ -28,6 +28,7 @@ import type {LimitHelp} from '../shared/limits';
 import {ReloadConfirm} from '../shared/ReloadConfirm';
 import {DaeCode} from '../../ui/DaeCode';
 import type {PageProps} from '../../shell/routes';
+import {href} from '../../shell/route';
 
 // After S2's ContextualHelp, with its label beside the icon: a popover with the cause, the settings that lift it and a link.
 function LimitHelpButton({help}: {help: LimitHelp}) {
@@ -56,6 +57,8 @@ function LimitHelpButton({help}: {help: LimitHelp}) {
 }
 // The attachments table's height, at most, which its Skeleton draws while the datapath loads; its rows set the height below it.
 const attachmentsHeight = 250;
+// The status card's count of these is a display preference; the card's link opens its switch.
+const limitNoticeSetting = href('settings', {card: 'appearance', field: 'limitNotice'});
 export function Overview({query}: PageProps) {
   const t = useT();
   const vm = useOverview(query);
@@ -212,7 +215,7 @@ export function Overview({query}: PageProps) {
         </Card>
       </div>
       {vm.limits.length > 0 && (
-        <Card title={t('ov.lim.title')} titleId={cardHeadings.limits}>
+        <Card title={t('ov.lim.title')} titleId={cardHeadings.limits} aside={<TextLink link={{href: limitNoticeSetting, text: t('ov.lim.noticeSetting')}} />}>
           <ul className="rp-limits">
             {vm.limits.map(group => (
               <li key={group.cause} className="rp-limit">

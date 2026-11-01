@@ -9,6 +9,7 @@ import {useT} from '../../i18n';
 import {Card, CardLink, ContextualHelp, Segmented, Light, ErrorMessage, Empty, Link, ChartWait, SkeletonBar, SkeletonGroup, ValueTile} from '../../ui/ui';
 import {WideCell} from '../../ui/DashboardTile';
 import {href} from '../../shell/route';
+import {SettingsContext} from '../../shell/preferences';
 import {AreaChart, FactStrip, Legend, Spark} from '../../ui/charts';
 import {ModeCards} from './ModeSwitch';
 import {useMode} from '../shared/useMode';
@@ -83,6 +84,7 @@ export function RuntimeAlert() {
 function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useActivity>[0] | 'memoryTile'; scale: number; stats: boolean}) {
   const t = useT();
   const vm = useActivity(kind === 'memoryTile' ? 'memory' : kind);
+  const limitNotice = useContext(SettingsContext)?.ap.limitNotice ?? true;
   const {p, locale, range, ranges, setRange, traffic, spark, sparklines, cpuSpark, chartRate, count, cpuText, memorySeries, memoryBytes} = vm;
   const big = vm.stale ? 'rp-big rp-muted' : 'rp-big';
   const alert = kind === 'status' && vm.error && <ErrorMessage error={vm.error} onRetry={vm.retry} />;
@@ -107,8 +109,8 @@ function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useAc
               <>
                 <Light tone={vm.status.tone}>{vm.status.text}</Light>
                 <div className="rp-control-tail">
-                  <Link appearance="button" quiet href={href('overview', vm.limited ? {card: 'limits'} : {})}>
-                    {vm.limited ?? t('act.viewDetails')}
+                  <Link appearance="button" quiet href={href('overview', limitNotice && vm.limited ? {card: 'limits'} : {})}>
+                    {(limitNotice && vm.limited) || t('act.viewDetails')}
                   </Link>
                 </div>
               </>
