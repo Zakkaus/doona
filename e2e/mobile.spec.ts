@@ -96,6 +96,8 @@ test('Back and Forward return a page to where it was left, while a link still op
   test.skip(isLive, 'The page must be taller than the viewport, which the demo’s connections make it');
   await page.goto('/#/activity');
   // A page still loading changes its height, which can pull the reading position back to the top before it is left.
+  // The startup frame has no bottom bar, so the bar showing means the shell has replaced it.
+  await expect(bar(page).getByRole('link', {name: 'Activity'})).toBeVisible();
   await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => (scrollTo(0, 400), scrollY))).toBe(400);
   await bar(page).getByRole('link', {name: 'Monitor'}).click();
@@ -430,7 +432,8 @@ test.describe('390px page links', () => {
   test('a press that moves before release still navigates and selects no text', async ({page}) => {
     const hub = hubs.find(item => item.pages.length > 1)!;
     await page.goto(`/#/${hub.pages[0]}`);
-    const link = page.locator('.rp-hubnav .rp-btn').nth(1);
+    // The startup Skeleton draws inert page links first; the press goes to the shell's own.
+    const link = page.locator('.rp-hubnav:not([inert]) .rp-btn').nth(1);
     await expect(link).toHaveAttribute('draggable', 'false');
     const at = (await link.boundingBox())!;
     await page.mouse.move(at.x + at.width / 2, at.y + at.height / 2);

@@ -1,6 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {hookHarness} from '../store/testHelpers';
-import {buildHash, historyPosition, href, parseHash, pickTab, restoreDraftRoute, tabQuery, updateRoute} from './route';
+import {buildHash, historyPosition, href, initialRoute, parseHash, pickTab, restoreDraftRoute, tabQuery, updateRoute} from './route';
 import type {RoutePath} from './routes';
 
 import {draftLabels, dropDrafts, useDraftGuard} from './draft';
@@ -92,6 +92,15 @@ describe('draft history restoration', () => {
 describe('hash routing', () => {
   it('builds a link with encoded and omitted parameters', () => {
     expect(href('rules', {tab: 'list', rule: 'a & b', unused: null})).toBe('#/rules?tab=list&rule=a+%26+b');
+  });
+
+  it.each([
+    ['a bare address opens the saved start page', 'mock', '', 'rules', {route: 'rules', query: ''}],
+    ['an address that names a page wins', 'mock', '#/dns?tab=cache', 'rules', {route: 'dns', query: 'tab=cache'}],
+    ['a first run opens Settings', null, '', 'rules', {route: 'settings', query: ''}],
+    ['a first run keeps an address that names a page', null, '#/rules', 'dns', {route: 'rules', query: ''}]
+  ])('opens %s', (_name, api, hash, startPage, expected) => {
+    expect(initialRoute(api, hash, startPage as RoutePath)).toEqual(expected);
   });
 
   it('picks an available tab and falls back from stale links', () => {

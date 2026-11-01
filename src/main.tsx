@@ -7,6 +7,8 @@ import {detectHostedBackend} from './api/profiles';
 import {pruneRings} from './store/rings';
 import {expectsAccess, initializeApi, startedOnMock} from './api';
 import {preloadActivity} from './shell/registry';
+import {initialRoute} from './shell/route';
+import {readSettings} from './shell/preferences';
 import {Button, Empty, ErrorMessage, PageSkeleton, toast} from './ui/ui';
 import {activated, announceBuild} from './shell/newBuild';
 import {DEFAULT_LANG, FONT, LangContext, LOCALE, loadLanguage, loadedLang, pageDirection, readLang, translate, type Lang} from './i18n';
@@ -44,6 +46,11 @@ const start = () =>
     return initializeApi();
   }));
 let language: Promise<Lang> | undefined;
+// The page the shell is about to open, which the startup frame draws the shape of.
+function startRoute() {
+  const {api, startPage} = readSettings();
+  return initialRoute(api, location.hash, startPage).route;
+}
 function Startup() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -85,7 +92,7 @@ function Startup() {
   const [problem, retry] = startupText[shown];
   return (
     <LangContext.Provider value={shown}>
-      <StartupFrame>
+      <StartupFrame route={lang ? startRoute() : undefined}>
         {unreadable ? (
           <Empty role="alert">
             <p>{problem}</p>

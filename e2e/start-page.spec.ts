@@ -25,6 +25,28 @@ test('a bare URL opens the chosen nav page at its default view; explicit routes 
   await expect(page.getByRole('tab', {name: 'Latency', exact: true})).toHaveAttribute('aria-selected', 'true');
 });
 
+test.describe('startup frame', () => {
+  test.use({storage: {'doona-start-page': 'rules'}, serviceWorkers: 'block'});
+
+  test('draws the saved start page while the backend answers, and an address that names a page wins', async ({page}) => {
+    await mockBackend(page);
+    let release!: () => void;
+    const held = new Promise<void>(resolve => (release = resolve));
+    await page.route('**/api/v1/capabilities', async hold => {
+      await held;
+      await hold.fallback();
+    });
+    await page.goto('/');
+    await expect(page.locator('.rp-content .rp-head h1')).toHaveText('Rules');
+    await expect(page.locator('.rp-content .rp-page-skeleton .rp-tab', {hasText: 'Routing rules'})).toBeAttached();
+    await expect(page.locator('.rp-content .rp-dash-section')).toHaveCount(0);
+    await page.goto('/#/dns');
+    await expect(page.locator('.rp-content .rp-head h1')).toHaveText('DNS');
+    release();
+    await expect(page.locator('nav.rp-side .rp-nav[href="#/dns"]')).toHaveAttribute('aria-current', 'page');
+  });
+});
+
 test('first-run setup opens Settings and connects to the currently chosen page', async ({page}) => {
   await page.goto('/');
   await expect(page).toHaveURL(/#\/settings$/);
