@@ -59,6 +59,10 @@ h3.rp-label {
   gap: var(--rp-space-4);
   padding: var(--rp-space-3) 0;
 }
+/* A form's disclosure spaces its fields as the dialog's list does. */
+.rp-disclosure[data-compact] > .rp-disclosure-panel > .rp-disclosure-content {
+  gap: var(--rp-space-2);
+}
 .rp-truncate {
   display: inline-block;
   max-width: 100%;
