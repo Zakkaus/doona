@@ -17,7 +17,7 @@ import type {ConfigSource, Node, Provider} from '../../api/model';
 import {toast, toastFailure, type Problem} from '../../ui/ui';
 import {editProblem, useMainSourceEdit} from '../../store/mainSource';
 import {isWritableName, groupsNamingTag, readGroupEntries} from '../../dae/groups';
-import {isBareName, quote} from '../../dae/text';
+import {isBareName, isQuotable, quote} from '../../dae/text';
 import {agentProblem} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
 import {readNodeEntries, writeNodeEntry, type NodeEntry} from '../../dae/nodes';
@@ -61,6 +61,7 @@ import {diagnosticMessage, oneLine} from '../../i18n/backend';
 import {nodesTabs} from './nav';
 import type {SubscriptionDraft, SubscriptionFieldSet} from './SubscriptionFields';
 import {parseNodeLinks} from './batch';
+import {emptyNode, isProtocol, manualLink, type NodeFields} from '../../dae/nodeForm';
 
 const blank: ProviderForm = {name: '', value: '', interval: '', agent: '', cache: null, route: ''};
 
@@ -83,11 +84,16 @@ export function useNodesPage({go, query}: PageProps) {
   const t = useT();
   const [dialog, setDialog] = useState<NodeDialog | null>(null);
   const [form, setForm] = useState<ProviderForm>(blank);
+  // The add dialog takes a pasted link or the fields of a node; each tab keeps its input, and the link is what is added.
+  const [addMode, setAddMode] = useState<'link' | 'manual'>('link');
+  const [draft, setDraft] = useState<NodeFields>(emptyNode);
+  const byFields = dialog?.kind === 'node' && addMode === 'manual';
+  const nodeValue = byFields ? manualLink(draft) : form.value;
   const [headers, setHeaders] = useState<XhttpFields['headers'] | null>(null);
-  const xhttp = useMemo(() => readXhttp(form.value), [form.value]);
+  const xhttp = useMemo(() => readXhttp(nodeValue), [nodeValue]);
   const headerRows = headers ?? xhttp?.headers ?? [];
   const headerDuplicates = duplicateXhttpHeaders(headerRows);
-  const headerError = headerDuplicates.size ? t('nodes.xhttp.headerDuplicate') : null;
+  const headerError = !byFields && headerDuplicates.size ? t('nodes.xhttp.headerDuplicate') : null;
   const headerEdited = headers !== null && JSON.stringify(headers) !== JSON.stringify(xhttp?.headers ?? []);
   const session = useDialogSession();
   const [batchProgress, setBatchProgress] = useState<string | null>(null);
@@ -107,7 +113,7 @@ export function useNodesPage({go, query}: PageProps) {
     ? Object.values(changes).some(Boolean)
     : dialog?.kind === 'editNode'
       ? form.name !== dialog.entry.name || form.value !== dialog.entry.link
-      : !!(form.name || form.value);
+      : !!(form.name || form.value) || JSON.stringify(draft) !== JSON.stringify(emptyNode(draft.protocol));
   const guard = useDraftGuard(
     !!dialog && (edited || headerEdited),
     () => {
@@ -122,6 +128,8 @@ export function useNodesPage({go, query}: PageProps) {
       setForm(blank);
       setBatchErrors([]);
       setJoinPick([]);
+      setAddMode('link');
+      setDraft(emptyNode());
       setBatchProgress(null);
       setRefusedName(null);
       setRefusedLink(null);
@@ -162,14 +170,14 @@ export function useNodesPage({go, query}: PageProps) {
   const parsed =
     dialog?.kind === 'node' &&
     parseNodeLinks(
-      form.value,
+      nodeValue,
       (nodeList ?? []).map(node => node.name),
       t,
       engineOf(version).nodeLinkSchemes
     );
   const batch = parsed && parsed.multiple ? parsed : null;
   // A single link is named like a batch row: its #fragment, else its host.
-  const newName = parsed && !batch ? (parsed.rows[0]?.name ?? '') : '';
+  const newName = byFields ? draft.name.trim() : parsed && !batch ? (parsed.rows[0]?.name ?? '') : '';
   const sources = useMemo(() => config.data?.sources ?? [], [config.data]);
   const isComplete = useCompleteness(sources);
   const declared = useMemo(() => declaredSubscriptions(sources), [sources]);
@@ -414,7 +422,7 @@ export function useNodesPage({go, query}: PageProps) {
         }
         return;
       } else if (dialog.kind === 'node') {
-        const created = await manage.addNode({name: newName, link: form.value.trim()});
+        const created = await manage.addNode({name: newName, link: nodeValue.trim()});
         if (!created) return;
         const joined = await joinPickedGroups([created.name]);
         if (joined === 'ok') toast('positive', t('nodes.addedJoined', {name: created.name, groups: formatList(lang, joinPicked)}));
@@ -517,7 +525,7 @@ export function useNodesPage({go, query}: PageProps) {
       }
     } catch (error) {
       if (isCurrent() && dialog.kind === 'node' && error instanceof ApiError && error.code === 'state_conflict') setRefusedName(newName);
-      else if (isCurrent() && dialog.kind === 'node' && error instanceof ApiError && error.code === 'unsupported_value') setRefusedLink(form.value.trim());
+      else if (isCurrent() && dialog.kind === 'node' && error instanceof ApiError && error.code === 'unsupported_value') setRefusedLink(nodeValue.trim());
       else refuse(errorText(error, t), errorText(error, t, false), error);
     } finally {
       submitting.current = null;
@@ -557,13 +565,14 @@ export function useNodesPage({go, query}: PageProps) {
   const nodeState = dialog?.kind === 'editNode' ? nodeEditState(sources, dialog.source, dialog.entry, nodeList ?? [], form, t) : null;
   const nodeNameError =
     nodeState?.nameError ??
-    (dialog?.kind === 'node' && newName && (refusedName === newName || nodeList?.some(node => node.name === newName)) ? t('nodes.nameTaken') : null);
+    (dialog?.kind === 'node' && newName && (refusedName === newName || nodeList?.some(node => node.name === newName)) ? t('nodes.nameTaken') : null) ??
+    (byFields && !isQuotable(newName) ? t('config.unquotable') : null);
   const linkError = batch
     ? batch.error
     : dialog?.kind === 'node'
-      ? refusedLink === form.value.trim()
+      ? refusedLink === nodeValue.trim()
         ? t('nodes.linkInvalid')
-        : nodeLinkError(form.value, t, engineOf(version).nodeLinkSchemes)
+        : nodeLinkError(nodeValue, t, engineOf(version).nodeLinkSchemes)
       : (nodeState?.linkError ?? null);
   const formValid = batch
     ? !batch.error && batch.rows.some(row => !row.error)
@@ -574,7 +583,7 @@ export function useNodesPage({go, query}: PageProps) {
         : dialog?.kind === 'provider'
           ? isBareName(form.name.trim()) && !!form.value.trim() && subscriptionUrlError(form.value, t) === null && !agentError && intervalSeconds !== null
           : dialog?.kind === 'node'
-            ? newName !== '' && !!form.value.trim() && nodeFormReason('node', newName, form.value, t) === null && !nodeNameError && !linkError && !headerError
+            ? newName !== '' && !!nodeValue.trim() && nodeFormReason('node', newName, nodeValue, t) === null && !nodeNameError && !linkError && !headerError
             : dialog?.kind === 'removeNodes'
               ? removeNodes.length > 0
               : true;
@@ -692,6 +701,21 @@ export function useNodesPage({go, query}: PageProps) {
       setBatchErrors([]);
       setForm(previous => ({...previous, value}));
     },
+    addMode,
+    setAddMode: (next: typeof addMode) => {
+      if (submitting.current !== dialog) setAddMode(next);
+    },
+    draft,
+    nodeValue,
+    setDraftField: (key: string, value: string) => {
+      // Another protocol keeps the name and address; its credentials and options start from its own defaults.
+      if (submitting.current === dialog) return;
+      setDraft(previous =>
+        key === 'protocol'
+          ? {...emptyNode(isProtocol(value) ? value : undefined), name: previous.name, host: previous.host, port: previous.port}
+          : {...previous, [key]: value}
+      );
+    },
     xhttp: !batch && xhttp && {...xhttp, headers: headerRows},
     headerDuplicates,
     setXhttp: (change: XhttpChange) => {
@@ -714,9 +738,9 @@ export function useNodesPage({go, query}: PageProps) {
             subscriptionEdit.reason
           : (nodeNameError ??
             linkError ??
-            (dialog?.kind === 'node' && !form.value.trim()
-              ? t('nodes.linkInvalid')
-              : nodeFormReason(dialog?.kind, dialog?.kind === 'node' ? newName : form.name, form.value, t)) ??
+            (dialog?.kind === 'node' && !nodeValue.trim()
+              ? t(byFields ? 'nodes.manual.incomplete' : 'nodes.linkInvalid')
+              : nodeFormReason(dialog?.kind, dialog?.kind === 'node' ? newName : form.name, dialog?.kind === 'node' ? nodeValue : form.value, t)) ??
             headerError ??
             agentError ??
             intervalError),

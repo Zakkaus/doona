@@ -10,7 +10,22 @@ import {HStack, VStack} from '@astryxdesign/core/Stack';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import {useState, type ReactNode} from 'react';
 import {useMessages} from './i18n';
-import {emptyNode, nodeLink, parseNodeLink, protocols, type NodeDocument, type NodeFields, type Protocol} from '../../../src/dae/nodeForm';
+import {
+  congestionControls,
+  emptyNode,
+  nodeLink,
+  obfsTypes,
+  parseNodeLink,
+  protocolName,
+  protocols,
+  securityOptions,
+  shadowsocksMethods,
+  usesTls,
+  vmessMethods,
+  type NodeDocument,
+  type NodeFields,
+  type Protocol
+} from '../../../src/dae/nodeForm';
 import {editorLayout} from './ui/editorLayout';
 import {Crossfade} from './ui/motion';
 
@@ -164,25 +179,14 @@ export default function NodeForm({
       />
     );
   };
+  const security = securityOptions(f.protocol);
   return (
     <VStack gap={4}>
       <TextInput label={t.name} value={name} onChange={setName} isReadOnly={isNameReadOnly} isDisabled={disabled} />
       <Selector
         label={t.protocol}
         value={f.protocol}
-        options={protocols.map(value => ({
-          value,
-          label:
-            value === 'ss'
-              ? 'Shadowsocks'
-              : value === 'hysteria2'
-                ? 'Hysteria2'
-                : value === 'anytls'
-                  ? 'AnyTLS'
-                  : value === 'juicity'
-                    ? 'Juicity'
-                    : value.toUpperCase()
-        }))}
+        options={protocols.map(value => ({value, label: protocolName(value)}))}
         onChange={value => {
           setState({fields: emptyNode(value as Protocol)});
           change('');
@@ -223,21 +227,7 @@ export default function NodeForm({
                 <Grid xstyle={editorLayout.members}>
                   {f.protocol === 'ss' && (
                     <>
-                      {choice(
-                        'method',
-                        [
-                          ...new Set([
-                            f.method,
-                            'aes-128-gcm',
-                            'aes-256-gcm',
-                            'chacha20-ietf-poly1305',
-                            '2022-blake3-aes-128-gcm',
-                            '2022-blake3-aes-256-gcm',
-                            '2022-blake3-chacha20-poly1305'
-                          ])
-                        ],
-                        t.cipher
-                      )}
+                      {choice('method', [...new Set([f.method, ...shadowsocksMethods])], t.cipher)}
                       {choice('plugin', [...new Set(['', 'v2ray-plugin', 'obfs-local', ...(f.plugin ? [f.plugin] : [])])])}
                       {f.plugin && (
                         <>
@@ -283,16 +273,9 @@ export default function NodeForm({
                       )}
                     </>
                   )}
-                  {f.protocol === 'vmess' && choice('method', ['auto', 'aes-128-gcm'], t.cipher)}
-                  {['vmess', 'vless', 'trojan'].includes(f.protocol) &&
-                    choice(
-                      'security',
-                      f.protocol === 'trojan' ? ['tls', 'reality'] : f.protocol === 'vless' ? ['none', 'tls', 'reality'] : ['none', 'tls'],
-                      t.security
-                    )}
-                  {!['ss', 'socks5'].includes(f.protocol) &&
-                    (f.security !== 'none' || ['tuic', 'juicity', 'hysteria2', 'anytls'].includes(f.protocol)) &&
-                    text('sni', 'SNI')}
+                  {f.protocol === 'vmess' && choice('method', vmessMethods, t.cipher)}
+                  {security && choice('security', security, t.security)}
+                  {usesTls(f) && text('sni', 'SNI')}
                   {f.security === 'reality' && (
                     <>
                       {text('pbk', t.publicKey)}
@@ -316,12 +299,12 @@ export default function NodeForm({
 
                   {f.protocol === 'hysteria2' && (
                     <>
-                      {choice('obfs', ['', 'salamander'])}
+                      {choice('obfs', obfsTypes)}
                       {f.obfs && text('obfs-password')}
                     </>
                   )}
 
-                  {f.protocol === 'tuic' && choice('congestion_control', ['cubic', 'bbr', 'new_reno'])}
+                  {f.protocol === 'tuic' && choice('congestion_control', congestionControls)}
                 </Grid>
               </VStack>
             </Card>
@@ -335,7 +318,7 @@ export default function NodeForm({
                   </Text>
                   {advanced && (
                     <Grid xstyle={editorLayout.members}>
-                      {!['ss', 'socks5'].includes(f.protocol) && (f.security !== 'none' || ['tuic', 'juicity', 'hysteria2', 'anytls'].includes(f.protocol)) && (
+                      {usesTls(f) && (
                         <>
                           {text('alpn', 'ALPN')}
                           {!state.document?.json && (
