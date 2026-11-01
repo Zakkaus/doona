@@ -107,7 +107,7 @@ function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useAc
               <>
                 <Light tone={vm.status.tone}>{vm.status.text}</Light>
                 <div className="rp-control-tail">
-                  <Link appearance="button" quiet href={href('overview')}>
+                  <Link appearance="button" quiet href={href('overview', vm.limited ? {card: 'limits'} : {})}>
                     {vm.limited ?? t('act.viewDetails')}
                   </Link>
                 </div>

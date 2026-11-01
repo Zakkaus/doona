@@ -12,6 +12,7 @@ import {within} from '../../shell/route';
 import {offered} from '../../api/capabilities';
 import {openGroup} from './group/openGroup';
 import {useNearViewport} from '../../ui/ui';
+import {useLanding} from '../../ui/landing';
 import {useGroupDialog} from './group/useGroupDialog';
 import {quoteName, isWritableName} from '../../dae/groups';
 import {useT} from '../../i18n';
@@ -115,37 +116,15 @@ export function usePolicies({go, query}: PageProps) {
     if (kinds.kind !== requested) go('policies', within(query, {kind: null}), {replace: true});
   }, [kinds.kind, requested, go, query]);
   const ready = !!groups.data && (!focus || cards.some(card => card.id === focus));
-  // Cards above the linked one may still settle as their details mount, so the target is followed briefly,
-  // once per link, and never after the user starts moving the page themselves.
-  useEffect(() => {
-    const target = focus && ready ? document.getElementById('group-' + focus) : null;
-    if (!target) return;
-    const scroll = () => {
-      target.scrollIntoView({block: 'start'});
-      target.querySelector<HTMLElement>('h2')?.focus({preventScroll: true});
-    };
-    scroll();
-    const observer = new ResizeObserver(scroll);
-    // A loaded heading can replace its placeholder without changing the card's size.
-    const content = new MutationObserver(scroll);
-    content.observe(target, {childList: true, subtree: true});
-    if (target.parentElement?.parentElement) content.observe(target.parentElement.parentElement, {attributes: true, attributeFilter: ['data-wait']});
-    observer.observe(target);
-    for (const card of target.parentElement?.children ?? []) {
-      if (card === target) break;
-      observer.observe(card);
-    }
-    const inputs = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const;
-    const stop = () => {
-      clearTimeout(settle);
-      observer.disconnect();
-      content.disconnect();
-      for (const type of inputs) removeEventListener(type, stop, true);
-    };
-    const settle = setTimeout(stop, 3000);
-    for (const type of inputs) addEventListener(type, stop, {capture: true, passive: true});
-    return stop;
-  }, [focus, ready]);
+  // Cards above the linked one may still settle as their details mount, so the landing follows it.
+  useLanding(
+    focus,
+    () => {
+      const card = document.getElementById('group-' + focus);
+      return card && {target: card, focus: card.querySelector<HTMLElement>('h2')};
+    },
+    ready
+  );
   const {refetch: refreshGroups} = groups;
   const {refetch: refreshNodes} = nodes;
   const reload = useCallback(() => {

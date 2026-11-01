@@ -19,7 +19,8 @@ export function ProbeSettingsCard() {
   const resources = caps.data?.resources;
   const choices = probeChoices(caps.data, 'node');
   const versions = resources?.probes.ip_versions ?? [];
-  const config = offered(resources, 'config', {whileLoading: false}) && engineOf(version).globalSettings ? href('config', {tab: 'global'}) : null;
+  const config =
+    offered(resources, 'config', {whileLoading: false}) && engineOf(version).globalSettings ? href('config', {tab: 'global', field: 'tcp_check_url'}) : null;
   return (
     <Card level={2} title={t(card.titleKey)} titleId={card.headingId}>
       {!resources ? (

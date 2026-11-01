@@ -258,7 +258,7 @@ test.describe('status details link', () => {
       expect(line.end).toBeLessThanOrEqual(1);
     }
     await links.click();
-    await expect(page).toHaveURL(/#\/overview$/);
+    await expect(page).toHaveURL(/#\/overview\?card=limits$/);
   });
 
   test('no features off shows only View details', async ({page}) => {

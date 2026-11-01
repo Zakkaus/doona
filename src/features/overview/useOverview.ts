@@ -1,7 +1,8 @@
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useMemo, useState} from 'react';
 import {useCapabilities, useDatapath, useRuntime, useRuntimeMemory, useRuntimeSettings, useVersion} from '../../store';
 import {useT, useLang, LOCALE} from '../../i18n';
 import {downloadFile, exportName} from '../../ui/ui';
+import {useLanding} from '../../ui/landing';
 import {overviewExport, overviewView} from './view';
 import {useLifecycle} from '../shared/useLifecycle';
 import {offered} from '../../api/capabilities';
@@ -42,30 +43,15 @@ export function useOverview(query = '') {
       ),
     [data, limits, capabilities.loading, runtime.loading, version.loading, memory.loading, datapath.loading, locale, t, lang]
   );
-  // The cards, and the status row once the runtime is read, appear when their data arrives, so the scroll waits for them.
-  const hasLimits = limits.length > 0;
-  const hasDatapath = !!datapath.data;
-  const loading = capabilities.loading || runtime.loading || version.loading || memory.loading || datapath.loading || settings.loading;
-  const focusedCard = useRef<string | null>(null);
+  // The cards, and the status row once the runtime is read, appear when their data arrives, so the landing waits for
+  // them and follows a block that replaces its placeholder.
   const card = new URLSearchParams(query).get('card');
-  useEffect(() => {
-    focusedCard.current = null;
-  }, [card]);
-  useEffect(() => {
-    if (card === 'status' || (card === 'limits' && hasLimits) || (card === 'datapath' && hasDatapath)) {
-      const heading = document.getElementById(cardHeadings[card]);
-      const target = heading?.closest('section') ?? heading;
-      if (target) {
-        if (focusedCard.current !== card) {
-          focusedCard.current = card;
-          target.tabIndex = -1;
-          target.focus();
-        }
-        // Initial reads can move the card; stop following it once focus leaves.
-        if (document.activeElement === target) target.scrollIntoView({block: card === 'status' ? 'center' : 'start'});
-      }
-    }
-  }, [card, hasLimits, hasDatapath, loading, view.waiting]);
+  const headingId = card ? (cardHeadings as Record<string, string | undefined>)[card] : undefined;
+  useLanding(headingId, () => {
+    const heading = headingId ? document.getElementById(headingId) : null;
+    const target = heading?.closest('section') ?? heading;
+    return target && {target};
+  });
   return {
     ...view,
     errors: {capabilities: capabilities.error, runtime: runtime.error, version: version.error, memory: memory.error, datapath: datapath.error},
