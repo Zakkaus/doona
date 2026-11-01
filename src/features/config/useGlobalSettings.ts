@@ -14,6 +14,7 @@ import {within} from '../../shell/route';
 import type {PageProps} from '../../shell/routes';
 import {useT} from '../../i18n';
 import {toast} from '../../ui/ui';
+import {fieldLanding, useLanding} from '../../ui/landing';
 
 // The widest integer a field takes; a hint naming it would only say the value is a whole number.
 const u64 = '18446744073709551615';
@@ -150,15 +151,11 @@ export function useGlobalSettings({query, go}: PageProps) {
     setDraft(null);
     toast('positive', t('config.globalSaved'));
   };
-  useEffect(() => {
-    const field = params.get('field');
-    if (params.get('tab') !== 'global' || !field) return;
-    const element = document
-      .getElementById('config-global-form')
-      ?.querySelector<HTMLElement>(`[data-setting="${CSS.escape(field)}"] input, [data-setting="${CSS.escape(field)}"] button`);
-    element?.focus();
-    element?.scrollIntoView({block: 'center'});
-  }, [params, source?.id, schema, writable]);
+  const field = params.get('tab') === 'global' ? params.get('field') : null;
+  useLanding(field, () => {
+    const form = document.getElementById('config-global-form');
+    return form && field ? fieldLanding(form, field) : null;
+  });
   return {
     available: available && !!schema,
     // The first config read, before any source is known.

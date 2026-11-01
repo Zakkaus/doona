@@ -307,7 +307,7 @@ test.describe('with the base profile', () => {
     const details = page.locator('[data-instance="status"]').getByRole('link');
     await expect(details).toHaveCount(1);
     await details.click();
-    await expect(page).toHaveURL(/#\/overview$/);
+    await expect(page).toHaveURL(/#\/overview\?card=limits$/);
     await expect(page.getByRole('heading', {name: 'System status', exact: true})).toBeVisible();
   });
 

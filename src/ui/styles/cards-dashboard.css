@@ -704,9 +704,14 @@
   color: var(--rp-positive-text);
 }
 
-.rp-card[data-highlighted] {
+/* Where a link landed (src/ui/landing.ts): a card, the row of a field, whose wrapper may only pass its children on, or a
+   row of the page outside any card. */
+:is(.rp-card, [data-setting], [data-setting] > *, .rp-page > .rp-between)[data-highlighted] {
   outline: 2px solid var(--rp-accent);
   outline-offset: 2px;
+}
+:is([data-setting], [data-setting] > *, .rp-page > .rp-between)[data-highlighted]:not(.rp-card) {
+  border-radius: var(--rp-r-md);
 }
 
 /* S2 CardView at size M, regular density: every card is 256px wide, inside the size's 200-280px range and wide enough

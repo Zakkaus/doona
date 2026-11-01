@@ -8,6 +8,7 @@ import {DEMO_API, isDemoApi, normalizeApi, readProfiles, suggestedBackendUrl, wr
 import {dropOrphanSession} from '../../api/session';
 import {storageKeys} from '../../api/storage';
 import {toast} from '../../ui/ui';
+import {fieldLanding, useLanding} from '../../ui/landing';
 import {readSettings} from '../../shell/preferences';
 import {useDraftGuard} from '../../shell/draft';
 import {parseHash, replaceAddress, replaceRoute} from '../../shell/route';
@@ -67,47 +68,17 @@ export function useBackendForm(query: string, startPage: RoutePath = defaultRout
   }, [query]);
   const card = new URLSearchParams(query).get('card');
   const field = new URLSearchParams(query).get('field');
-  // `field` focuses the control inside the card's `data-setting="{field}"` (settingsFields in nav.ts). A control that
-  // renders once its data arrives is waited for a while with the card focused; a hidden or disabled one leaves it there.
-  // A card on a tab opened for the first time mounts a render later, so it is waited for the same way.
-  // A listbox keeps no tab stop but its focused option, so its selected option is the one to land on.
-  useEffect(() => {
-    if (!card) return;
-    let section: HTMLElement | null = null;
-    const land = (root: HTMLElement) => {
-      const control = field
-        ? Array.from(
-            root.querySelectorAll<HTMLElement>(`[data-setting="${CSS.escape(field)}"] :is(input, button, textarea, [role=option][aria-selected=true])`)
-          ).find(
-            element => (element.tabIndex >= 0 || element.matches('[role=option]')) && !element.matches(':disabled') && !element.closest('[aria-hidden="true"]')
-          )
-        : undefined;
-      control?.focus({preventScroll: true});
-      control?.scrollIntoView({block: 'center'});
-      return !!control;
-    };
-    // Whether there is nothing left to wait for.
-    const settle = () => {
-      if (section) return land(section);
-      section = document.getElementById(cardHeadingId(card))?.closest('section') ?? null;
-      if (!section) return false;
-      if (land(section)) return true;
-      section.tabIndex = -1;
-      section.focus();
-      section.scrollIntoView({block: 'start'});
-      return !field;
-    };
-    if (settle()) return;
-    const observer = new MutationObserver(() => {
-      if (settle()) observer.disconnect();
-    });
-    observer.observe(document.body, {childList: true, subtree: true});
-    const stop = setTimeout(() => observer.disconnect(), 5000);
-    return () => {
-      observer.disconnect();
-      clearTimeout(stop);
-    };
-  }, [card, field]);
+  // `field` lands on the control inside the card's `data-setting="{field}"` (settingsFields in nav.ts). A control that
+  // renders once its data arrives is waited for with the card marked; a hidden or disabled one leaves it there. A card
+  // on a tab opened for the first time mounts a render later, so it is waited for the same way.
+  // A field whose control is disabled leaves focus on the card's heading.
+  useLanding(card && `${card}\n${field ?? ''}`, () => {
+    const heading = card ? document.getElementById(cardHeadingId(card)) : null;
+    const section = heading?.closest('section');
+    if (!section) return null;
+    const found = field ? fieldLanding(section, field) : null;
+    return found ? {...found, focus: found.focus ?? heading} : {target: section, provisional: !!field};
+  });
   const params = new URLSearchParams(query);
   const loginProfile = params.get('profile');
   const [changedLogin, setChangedLogin] = useState(false);

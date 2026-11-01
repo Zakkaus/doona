@@ -22,14 +22,14 @@ const resourcePages: Record<keyof typeof resourceLabels, string> = {
   dns_log: href('dns', {tab: 'log'}),
   events: href('events'),
   probes: href('nodes', {tab: 'latency'}),
-  traffic_history: href('activity'),
-  memory_history: href('activity'),
-  runtime_outbounds: href('activity'),
+  traffic_history: href('activity', {card: 'history'}),
+  memory_history: href('activity', {card: 'memory'}),
+  runtime_outbounds: href('activity', {card: 'outbounds'}),
   logs: href('logs'),
   providers: href('nodes'),
   rules: href('rules', {tab: 'list'}),
   config: href('config'),
-  config_validate: href('config', {tab: 'source', panel: 'diagnostics'}),
+  config_validate: href('config', {tab: 'validate'}),
   runtime_settings: href('settings', {card: 'runtime'}),
   geodata: href('settings', {card: 'geodata'})
 };

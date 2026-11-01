@@ -18,7 +18,6 @@ import {
   type ReactNode
 } from 'react';
 import {useT} from '../../i18n';
-import {useLandingHighlight} from '../../ui/hooks';
 import {
   ActionHelp,
   Badge,
@@ -281,10 +280,9 @@ const PolicyCard = memo(function PolicyCard({domId, ...props}: PolicyCardProps) 
   // A card removed before its details mount does not hold the list.
   useLayoutEffect(() => () => gate.release(id), [gate, id]);
   const {focused} = props;
-  const highlighted = useLandingHighlight(focused);
   const {ref, active, visible, expand} = usePolicyVisibility(focused, hold);
   return (
-    <Card ref={ref} id={domId} aria-label={props.name} tabIndex={-1} isHighlighted={highlighted}>
+    <Card ref={ref} id={domId} aria-label={props.name} tabIndex={-1}>
       {active ? (
         <PolicyDetail {...props} paused={!visible} />
       ) : (

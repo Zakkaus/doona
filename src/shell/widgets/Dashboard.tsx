@@ -10,7 +10,7 @@ import {useDashboardLayout, saveDashboard} from './dashboardSettings';
 import {dashboardItems, mapWidgets, tileOf, type DashboardLayout} from './dashboardLayout';
 import {instanceId, registry, replaceWidget, type Widget} from './layout';
 import {GettingStarted, RuntimeAlert, useGettingStarted} from '../../features/activity/widgets';
-import {ModeJump} from './ModeJump';
+import {CardJump} from './CardJump';
 import {WidgetCard} from './WidgetCard';
 import '../../ui/styles/dashboard.css';
 import {savedCards} from './DashboardSkeleton';
@@ -22,6 +22,7 @@ export function Activity({query}: PageProps) {
   const layout = useDashboardLayout();
   const [draft, setDraft] = useState<DashboardLayout | null>(null);
   const capabilities = useCapabilities();
+  const card = new URLSearchParams(query).get('card');
   const editing = draft !== null;
   const close = () => setDraft(null);
   if (!capabilities.data && capabilities.error) return null;
@@ -41,7 +42,7 @@ export function Activity({query}: PageProps) {
           <Button onPress={() => setDraft(layout)}>{t('dashboard.edit')}</Button>
         )}
       </PageActions>
-      {new URLSearchParams(query).get('card') === 'mode' && <ModeJump layout={layout} />}
+      {card && <CardJump card={card} layout={layout} />}
       <GettingStarted model={setup} />
       {!dashboardItems(layout).some(item => item.id === 'status') && dashboardItems(layout).some(item => registry[item.id].resource === 'runtime') && (
         <RuntimeAlert />

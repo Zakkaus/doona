@@ -17,6 +17,7 @@ it.each([0, 1, 7])('status offers one overview link with %i features off', count
   );
   const links = [...markup.matchAll(/<a\b[^>]*>(.*?)<\/a>/gs)];
   expect(links).toHaveLength(1);
-  expect(links[0][0]).toContain('href="#/overview"');
+  // Counting the features that are off links to the card that lists them.
+  expect(links[0][0]).toContain(count ? 'href="#/overview?card=limits"' : 'href="#/overview"');
   expect(links[0][1]).toBe(state.limited ?? translate('en', 'act.viewDetails'));
 });

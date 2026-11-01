@@ -659,7 +659,7 @@ test('latency probes have their own card, persist and shape node and group probe
   await expect(card.getByRole('button', {name: /Measurement/})).toContainText('Cold (new connection)');
   await expect(card.getByRole('button', {name: /Group probes/})).toContainText('Every leaf node');
   await card.getByRole('link', {name: 'Edit health checks in Configuration', exact: true}).click();
-  await expect(page).toHaveURL(/#\/config\?tab=global$/);
+  await expect(page).toHaveURL(/#\/config\?tab=global&field=tcp_check_url$/);
   const probes = () => requests.filter(request => request.method() === 'POST' && request.url().endsWith('/probes')).map(request => request.postDataJSON());
   await page.goto('/#/nodes?provider=inline');
   await page.getByRole('button', {name: 'Test hk-01', exact: true}).click();
