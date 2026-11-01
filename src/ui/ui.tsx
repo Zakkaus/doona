@@ -36,7 +36,7 @@ export {cachedRows} from './tableHooks';
 export {TimeCell} from './TimeCell';
 export {CardView, CardViewItem} from './CardView';
 export {PageSkeleton, PageShapeContext, type PageShape} from './PageSkeleton';
-export {Empty, Loading, ChartWait} from './Empty';
+export {Empty, Loading, ChartWait, WaitScope} from './Empty';
 export {Skeleton, SkeletonBody, SkeletonBar, SkeletonCard, SkeletonGroup} from './Skeleton';
 export {ErrorMessage, InlineAlert, ProblemAlert, type Problem} from './Alert';
 export {toast, closeToast, toastFailure, toastErrorDetail, Toasts, type ToastPlacement} from './Toast';

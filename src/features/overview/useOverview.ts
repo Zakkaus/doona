@@ -31,7 +31,18 @@ export function useOverview(query = '') {
     () => (capabilities.data ? backendLimits(capabilities.data, version.data, t, lang, settings.data?.recording) : []),
     [capabilities.data, version.data, t, lang, settings.data?.recording]
   );
-  // The cards appear once their data arrives, so the scroll waits for them.
+  const view = useMemo(
+    () =>
+      overviewView(
+        {...data, limits},
+        {capabilities: capabilities.loading, runtime: runtime.loading, version: version.loading, memory: memory.loading, datapath: datapath.loading},
+        locale,
+        t,
+        lang
+      ),
+    [data, limits, capabilities.loading, runtime.loading, version.loading, memory.loading, datapath.loading, locale, t, lang]
+  );
+  // The cards, and the status row once the runtime is read, appear when their data arrives, so the scroll waits for them.
   const hasLimits = limits.length > 0;
   const hasDatapath = !!datapath.data;
   const loading = capabilities.loading || runtime.loading || version.loading || memory.loading || datapath.loading || settings.loading;
@@ -54,18 +65,7 @@ export function useOverview(query = '') {
         if (document.activeElement === target) target.scrollIntoView({block: card === 'status' ? 'center' : 'start'});
       }
     }
-  }, [card, hasLimits, hasDatapath, loading]);
-  const view = useMemo(
-    () =>
-      overviewView(
-        {...data, limits},
-        {capabilities: capabilities.loading, runtime: runtime.loading, version: version.loading, memory: memory.loading, datapath: datapath.loading},
-        locale,
-        t,
-        lang
-      ),
-    [data, limits, capabilities.loading, runtime.loading, version.loading, memory.loading, datapath.loading, locale, t, lang]
-  );
+  }, [card, hasLimits, hasDatapath, loading, view.waiting]);
   return {
     ...view,
     errors: {capabilities: capabilities.error, runtime: runtime.error, version: version.error, memory: memory.error, datapath: datapath.error},

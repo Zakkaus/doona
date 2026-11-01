@@ -175,6 +175,8 @@ export function overviewView(
   const count = (value: number | null) => (value === null ? '—' : formatNumber(value, locale));
   const section = (present: boolean, busy: boolean) => (present ? ('ready' as const) : busy ? ('loading' as const) : ('unavailable' as const));
   return {
+    // The status row has nothing to show until the runtime is read.
+    waiting: !runtime && (loading.capabilities || loading.runtime),
     status: engineStatus(state, datapath?.state, t(loading.capabilities || loading.runtime ? 'ov.loading' : 'ov.unknown'), t),
     strip: [
       {label: t('ov.config'), value: shortId(revision), full: revision, help: {title: t('ov.config'), text: t('config.revisionHelp')}},

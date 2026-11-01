@@ -182,6 +182,7 @@ export function Connections(props: PageProps) {
         truncated={vm.truncated}
         uncounted={vm.trafficUncounted}
         onSelect={vm.openInList}
+        loading={vm.loading}
       />
     )
   };

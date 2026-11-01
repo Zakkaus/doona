@@ -54,6 +54,8 @@ type Dialog = Omit<Pending, 'plain' | 'withDns'> &
 export type RuleTemplatesModel = TemplatesView & {
   // Whether the routing list offers the simple view: it reads the rules from the configuration text.
   available: boolean;
+  // Whether the configuration that decides it is still being read.
+  pending: boolean;
   mode: RuleViewMode;
   setMode: (mode: string) => void;
   // The file a template would be written to.
@@ -150,6 +152,7 @@ export function useRuleTemplates({go, query}: PageProps): RuleTemplatesModel {
     ...options,
     setOption: (option, enabled) => setPickedOptions(current => ({...current, [option]: enabled})),
     available: readable && engine.daeText && !!config.data,
+    pending: readable && engine.daeText && config.loading && !config.data,
     mode: ruleViewMode(query),
     setMode,
     file: target.source && fileName(target.source),

@@ -1,4 +1,5 @@
-import {Card, ErrorMessage} from '../../ui/ui';
+import {Card, ErrorMessage, PageSkeleton} from '../../ui/ui';
+import {trafficSkeleton} from './skeleton';
 import {memo, useCallback, useMemo} from 'react';
 import {formatNumber, LOCALE, useLang, useT} from '../../i18n';
 import type {Connection} from '../../api/model';
@@ -22,7 +23,8 @@ export const Traffic = memo(function Traffic({
   retryLatency,
   truncated,
   uncounted,
-  onSelect
+  onSelect,
+  loading
 }: {
   records: Connection[];
   // Every outbound in the snapshot, including connections without byte totals, for the series colours.
@@ -35,6 +37,8 @@ export const Traffic = memo(function Traffic({
   // The backend leaves out the direct connections the kernel forwards on its own.
   uncounted: boolean;
   onSelect: (id: string) => void;
+  // The first snapshot has not arrived.
+  loading: boolean;
 }) {
   const t = useT();
   const p = usePalette();
@@ -72,6 +76,7 @@ export const Traffic = memo(function Traffic({
         {label: t('ui.upload'), value: bytes(view.heaviest.up), icon: <Upload />, tint: 'c4'}
       ]
     : [];
+  if (loading) return <PageSkeleton panel shape={trafficSkeleton} />;
   const sample = view.unknown ? t('conn.chart.sampleUnknown', {n: records.length, unknown: view.unknown}) : t('conn.chart.sample', {n: records.length});
   return (
     <div className="rp-chart-page">

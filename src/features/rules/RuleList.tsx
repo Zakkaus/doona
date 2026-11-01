@@ -13,6 +13,7 @@ import {
   HelpRow,
   DataTable,
   Light,
+  PageSkeleton,
   Segmented,
   ErrorMessage,
   InlineAlert,
@@ -26,6 +27,7 @@ import FileText from '../../ui/icons/FileText';
 import {Coverage} from '../shared/Coverage';
 import {BackendText} from '../shared/BackendText';
 import type {PageProps} from '../../shell/routes';
+import {ruleListSkeleton} from './skeleton';
 import {useRuleList, type DictionaryModel, type RuleListModel as Model} from './useRuleList';
 import {useRuleTemplates} from './useRuleTemplates';
 import {RuleTemplates} from './RuleTemplates';
@@ -41,6 +43,7 @@ export function RuleList(props: PageProps) {
   const serviceDialog = <ServiceRulesDialog model={services} />;
   const view = useRuleList(props, templates.available && templates.mode === 'simple');
   const dictionary = view.kind === 'dictionary';
+  if (templates.pending) return <PageSkeleton panel shape={ruleListSkeleton} />;
   if (!templates.available)
     return (
       <>

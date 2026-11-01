@@ -39,9 +39,9 @@ import {
   LinkTag,
   TextTooltip,
   MoreMenu,
-  Toolbar,
-  type PageShape
+  Toolbar
 } from '../../ui/ui';
+import {policyCards} from './skeleton';
 import Lock from '../../ui/icons/Lock';
 import {NodeName} from '../../ui/NodeName';
 import {NodeText} from './group/NodeText';
@@ -57,6 +57,8 @@ import type {MainSourceEdit} from '../../store/mainSource';
 import type {OutboundCatalogue} from '../shared/groupText';
 import {isWritableName, quoteName} from '../../dae/groups';
 
+// The kind filter's width, drawn as a bar while the groups it counts load, so the toolbar wraps on a phone as it will.
+const kindsWidth = 260;
 // The loaded tile's and scroll panel's heights (`.rp-node`, `.rp-nodegrid` in nodes.css).
 const nodeTileHeight = 56;
 const nodeGridHeight = 376;
@@ -97,7 +99,6 @@ function PolicyWait({heading, members, label, collapsed}: {heading: ReactNode; m
 // not carry, so no placeholder can know the loaded card's height; the list is laid out hidden behind generic Skeleton
 // cards instead, and shown once. Cards reached later by scrolling open off screen behind a placeholder.
 // Generic group cards: an open manual group's, then automatic groups folded to their summary.
-const policyCards: PageShape = [{cards: [674, 110, 110, 110]}];
 type FirstShowGate = {hold: (id: string) => void; release: (id: string) => void};
 const FirstShow = createContext<FirstShowGate>({hold() {}, release() {}});
 function PolicyList({loading, children}: {loading: boolean; children: ReactNode}) {
@@ -390,7 +391,11 @@ export function Policies(props: PageProps) {
     <div className="rp-page">
       <ActionHelp reason={m.createDisabled ? m.create.tip : null}>
         <Toolbar page>
-          {m.showKinds && <Segmented label={m.kindLabel} value={m.kind} onChange={m.setKind} items={m.kindItems} />}
+          {m.showKinds ? (
+            <Segmented label={m.kindLabel} value={m.kind} onChange={m.setKind} items={m.kindItems} />
+          ) : (
+            m.loading && <SkeletonBar width={kindsWidth} />
+          )}
           <span className="rp-grow" />
           <Button secondary isDisabled={m.createDisabled} onPress={() => m.create.show()}>
             <AddCircle />

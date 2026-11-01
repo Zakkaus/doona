@@ -80,10 +80,10 @@ function DnsAnalysis({
   const standIn = (shape: 'block' | 'bars') =>
     loading ? (
       shape === 'bars' ? (
-        <SkeletonBody shape="bars" count={8} />
+        <SkeletonBody shape="bars" count={7} typical />
       ) : (
-        <ChartWait holds="tall">
-          <SkeletonBody shape="block" />
+        <ChartWait holds="swarm">
+          <SkeletonBody shape="block" typical />
         </ChartWait>
       )
     ) : (
@@ -191,7 +191,7 @@ function CacheCard({listed, href}: {listed: boolean; href: string | null}) {
       ) : vm.state === 'error' ? (
         <ErrorMessage error={vm.error} onRetry={vm.retry} />
       ) : !vm.card ? (
-        <SkeletonBody shape="rows" />
+        <SkeletonBody shape="rows" typical />
       ) : (
         <>
           {vm.card.usage && (

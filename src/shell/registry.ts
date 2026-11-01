@@ -7,6 +7,8 @@ import type {PageShape} from '../ui/PageSkeleton';
 import {policyCards} from '../features/policies/skeleton';
 import {trafficSkeleton} from '../features/connections/skeleton';
 import {configSkeleton} from '../features/config/skeleton';
+import {overviewSkeleton} from '../features/overview/skeleton';
+import {ruleListSkeleton} from '../features/rules/skeleton';
 import type {Capabilities} from '../api/model';
 import type {PageProps, RoutePath} from './routes';
 import {searchDialog} from './search/load';
@@ -60,17 +62,25 @@ const definitions = {
     shortcut: 'a',
     nav: {titleKey: 'nav.activity', Icon: SpeedFast},
     ...activity,
-    // The dashboard draws its saved cards with their Skeletons while capabilities load; this stands in for its code.
+    // The default layout's five sections, at the heights their cards take on a wide screen and on a phone; the page draws
+    // the saved layout's own (DashboardSkeleton) once its code is in. The last holds the node list, which follows its data.
     early: true,
     skeleton: [
-      {cards: [94, 94, 94], columns: 3},
-      {cards: [110, 110, 110, 110, 110], columns: 5},
-      {cards: [226, 226], columns: '2fr 1fr'}
+      {
+        cards: [
+          [66, 234],
+          [146, 438],
+          [342, 248],
+          [260, 770]
+        ],
+        gap: 'page'
+      },
+      {cards: [[692, 1052]], gap: 'page', typical: true}
     ],
     requires: {}
   },
   overview: {
-    skeleton: [{toolbar: 3}, {cards: [410, 410, 410], columns: 3}, {cards: [497, 497], columns: '2fr 1fr'}],
+    skeleton: overviewSkeleton,
     shortcut: 'o',
     nav: {titleKey: 'nav.overview', hintKey: 'hint.overview', Icon: Home},
     ...lazyPage(withCatalogue('rest', () => import('../features/overview/Overview').then(m => ({default: m.Overview})))),
@@ -94,8 +104,20 @@ const definitions = {
     skeleton: [
       {tabs: ['dns.tab.stats', 'dns.log', 'ui.cache', 'dns.query']},
       {facts: 4},
-      {cards: [451, 451], columns: '2fr 1fr'},
-      {cards: [330, 330], columns: '2fr 1fr'}
+      {
+        cards: [
+          [451, 498],
+          [451, 451]
+        ],
+        columns: '2fr 1fr'
+      },
+      {
+        cards: [
+          [330, 334],
+          [330, 290]
+        ],
+        columns: '2fr 1fr'
+      }
     ],
     shortcut: 'd',
     nav: {titleKey: 'nav.dns', hintKey: 'hint.dns', Icon: GlobeGrid},
@@ -110,7 +132,7 @@ const definitions = {
     requires: {resources: ['groups', 'config']}
   },
   rules: {
-    skeleton: [{tabs: ['rule.listTitle', 'rule.dnsTitle', 'rule.trace']}, {toolbar: 3, end: 2, height: [32, 84]}, {cards: [[748, 864]], typical: true}],
+    skeleton: [{tabs: ['rule.listTitle', 'rule.dnsTitle', 'rule.trace']}, ...ruleListSkeleton],
     shortcut: 'r',
     nav: {titleKey: 'nav.rules', hintKey: 'hint.rules', Icon: ListBulleted},
     ...lazyPage(withCatalogue('rest', () => import('../features/rules/Rules').then(m => ({default: m.Rules})))),
@@ -119,10 +141,10 @@ const definitions = {
   nodes: {
     skeleton: [
       {tabs: ['nodes.tab.list', 'act.latency']},
-      {toolbar: 2},
+      {toolbar: 2, height: [32, 72]},
       {cards: [224], grid: true, typical: true},
       {line: 'caption'},
-      {toolbar: 4},
+      {toolbar: 4, height: [32, 132]},
       {table: 12}
     ],
     shortcut: 'n',
