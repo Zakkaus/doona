@@ -210,7 +210,10 @@ describe('an unknown engine', () => {
 });
 
 it('limits known honk share-link schemes without guessing for other engines', () => {
-  expect(honk.nodeLinkSchemes).toContain('vless');
+  // The schemes honk's share-link parser names in its unknown-protocol error.
+  expect(new Set(honk.nodeLinkSchemes)).toEqual(
+    new Set(['socks5', 'socks4', 'socks4a', 'ss', 'trojan', 'anytls', 'vmess', 'vless', 'hysteria2', 'hysteria', 'hy2', 'tuic', 'juicity'])
+  );
   expect(honk.nodeLinkSchemes).not.toContain('garbage');
   expect(other.nodeLinkSchemes).toBeNull();
 });
