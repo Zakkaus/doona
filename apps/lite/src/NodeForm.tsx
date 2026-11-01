@@ -10,7 +10,7 @@ import {HStack, VStack} from '@astryxdesign/core/Stack';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import {useState, type ReactNode} from 'react';
 import {useMessages} from './i18n';
-import {emptyNode, nodeLink, parseNodeLink, protocols, type NodeDocument, type NodeFields, type Protocol} from './nodeForm';
+import {emptyNode, nodeLink, parseNodeLink, protocols, type NodeDocument, type NodeFields, type Protocol} from '../../../src/dae/nodeForm';
 import {editorLayout} from './ui/editorLayout';
 import {Crossfade} from './ui/motion';
 
