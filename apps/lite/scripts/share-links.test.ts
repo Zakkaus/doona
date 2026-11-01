@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {emptyNode, nodeLink, parseNodeLink, protocols} from '../src/nodeForm';
+import {emptyNode, nodeLink, parseNodeLink, protocols} from '../../../src/dae/nodeForm';
 const uuid = 'b831381d-6324-4d53-ad4f-8cda48b30811';
 const b64 = (s: string) => Buffer.from(s).toString('base64url');
 // Accepted vectors from honk-config/tests/share_link.rs at 40b11281b, plus edit invariants.
