@@ -15,7 +15,9 @@ import type {PageProps} from '../../shell/routes';
 import {replaceRoute} from '../../shell/route';
 import {
   editableSource,
-  joinableGroups,
+  holdsEveryNode,
+  joinableOwners,
+  joinNodesToGroups,
   subscriptionPlace,
   subscriptionActionKind,
   nodeEditState,
@@ -79,6 +81,7 @@ export function useNodesPage({go, query}: PageProps) {
   const session = useDialogSession();
   const [batchProgress, setBatchProgress] = useState<string | null>(null);
   const [batchErrors, setBatchErrors] = useState<string[]>([]);
+  const [joinPick, setJoinPick] = useState<string[]>([]);
   const submitting = useRef<NodeDialog | null>(null);
   const [pendingDialog, setPendingDialog] = useState<NodeDialog | null>(null);
   // Why the last submit did not land; `id` changes with each refusal so the alert takes focus again.
@@ -107,6 +110,7 @@ export function useNodesPage({go, query}: PageProps) {
       session.next();
       setForm(blank);
       setBatchErrors([]);
+      setJoinPick([]);
       setBatchProgress(null);
       setRefusedName(null);
       setRefusedLink(null);
@@ -198,7 +202,11 @@ export function useNodesPage({go, query}: PageProps) {
     [authored, providers.data, daeText, source.writable, isComplete, open]
   );
   // Every source on this page is written through the one shared editor, so its busy flag covers each declaring source.
-  const joinable = useMemo(() => joinableGroups(sources, isComplete, () => source.busy), [sources, isComplete, source.busy]);
+  const joinOwners = useMemo(() => joinableOwners(sources, isComplete, () => source.busy), [sources, isComplete, source.busy]);
+  const joinable = useMemo(() => joinOwners.map(owner => owner.entry), [joinOwners]);
+  // The add dialog offers the groups a new node can join, minus any that hold every node already.
+  const joinChoices = useMemo(() => joinable.filter(entry => !holdsEveryNode(entry)).map(entry => ({id: entry.name, label: entry.name})), [joinable]);
+  const joinPicked = joinPick.filter(name => joinChoices.some(choice => choice.id === name));
   const nodeInInclude = useCallback((node: Node) => declaredInInclude(authored.filter(item => item.entry.name === node.name)), [authored]);
   const providerInInclude = useCallback((item: ProviderRow) => declaredInInclude(item.sourceTag ? (declared.get(item.sourceTag) ?? []) : []), [declared]);
   const removableNodes = useMemo(() => {
@@ -270,6 +278,25 @@ export function useNodesPage({go, query}: PageProps) {
     [go, t]
   );
   const addNode = useCallback(() => open({kind: 'node'}), [open]);
+  // Joins the added nodes to the picked groups, one write per declaring source; the nodes stay added when it fails.
+  const joinPickedGroups = async (names: string[]): Promise<'none' | 'ok' | 'failed'> => {
+    if (!joinPicked.length || !names.length) return 'none';
+    const byOrigin = new Map<string, {origin: ConfigSource; groups: string[]}>();
+    for (const {entry, origin} of joinOwners) {
+      if (joinPicked.includes(entry.name)) byOrigin.set(origin.id, {origin, groups: [...(byOrigin.get(origin.id)?.groups ?? []), entry.name]});
+    }
+    let failed = [...byOrigin.values()].reduce((n, item) => n + item.groups.length, 0) !== joinPicked.length;
+    let detail: string | undefined;
+    for (const {origin, groups} of byOrigin.values()) {
+      const result = await apply(text => joinNodesToGroups(text, groups, names), origin);
+      if (result.kind === 'ok') continue;
+      failed = true;
+      detail ??= editProblem(result, t)?.text;
+    }
+    if (!failed) return 'ok';
+    toast('negative', t('nodes.joinFailed'), {detail});
+    return 'failed';
+  };
   const newGroup = useCallback(
     (node: Node) => {
       if (!isWritableName(node.name)) {
@@ -336,20 +363,21 @@ export function useNodesPage({go, query}: PageProps) {
         const remaining = new Map(batch.rows.map(row => [row.id, row.link]));
         const valid = batch.rows.filter(row => !row.error);
         const errors: string[] = [];
-        let added = 0;
+        const addedNames: string[] = [];
         for (const [index, row] of valid.entries()) {
           if (!isCurrent()) break;
           setBatchProgress(t('nodes.addingBatch', {n: index + 1, total: valid.length}));
           try {
             if (!(await manage.addNode({name: row.name, link: row.link}))) break;
-            added++;
+            addedNames.push(row.name);
             remaining.delete(row.id);
           } catch (error) {
             errors.push(`${row.name}: ${errorText(error, t)}`);
           }
         }
         const failed = errors.length + batch.rows.filter(row => row.error).length;
-        toast(failed ? 'warning' : 'positive', t('nodes.batchAdded', {n: added, failed}));
+        toast(failed ? 'warning' : 'positive', t('nodes.batchAdded', {n: addedNames.length, failed}));
+        await joinPickedGroups(addedNames);
         if (isCurrent()) {
           setForm(previous => ({
             ...previous,
@@ -366,7 +394,9 @@ export function useNodesPage({go, query}: PageProps) {
       } else if (dialog.kind === 'node') {
         const created = await manage.addNode({name: form.name.trim(), link: form.value.trim()});
         if (!created) return;
-        toast('positive', t('nodes.added', {name: created.name}));
+        const joined = await joinPickedGroups([created.name]);
+        if (joined === 'ok') toast('positive', t('nodes.addedJoined', {name: created.name, groups: formatList(lang, joinPicked)}));
+        else if (joined === 'none') toast('positive', t('nodes.added', {name: created.name}));
       } else if (dialog.kind === 'editNode') {
         const current = sources.find(item => item.id === dialog.source.id);
         if (!current || !current.writable || isComplete(current) !== true) {
@@ -632,6 +662,11 @@ export function useNodesPage({go, query}: PageProps) {
     form,
     batch,
     batchErrors,
+    joinChoices,
+    joinPicked,
+    setJoinPicked: (next: string[]) => {
+      if (submitting.current !== dialog) setJoinPick(next);
+    },
     removeNodes,
     setForm: (next: typeof form) => {
       if (submitting.current !== dialog) setForm(next);

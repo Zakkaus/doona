@@ -985,6 +985,7 @@
   "nodes.addProviderHelp": "The name becomes the tag in the subscription section; the engine fetches the URL, which is never returned.",
   "nodes.addToGroup": "Add to group",
   "nodes.added": "{name} added",
+  "nodes.addedJoined": "{name} added to {groups}",
   "nodes.addedRefreshFailed": "{name} was written to the configuration, but could not be updated",
   "nodes.addedRefreshed": {
     "one": "{name} added and updated, {n} node",
@@ -1033,6 +1034,7 @@
   "nodes.intervalInvalid": "Enter a non-negative whole number",
   "nodes.intervalTooLarge": "The interval exceeds JavaScript’s safe integer range",
   "nodes.intervalUnit": "Unit",
+  "nodes.joinFailed": "Added, but joining the selected groups failed. Use Add to group on the node row to retry.",
   "nodes.kind.builtin": "Built-in",
   "nodes.kind.file": "File",
   "nodes.kind.inline": "In configuration",

@@ -20,10 +20,12 @@ import {
   providerChanges,
   renameReferences,
   selectedProvider,
-  joinableGroups
+  joinableGroups,
+  joinNodesToGroups
 } from './view';
 import {translate, type Translator} from '../../i18n';
 import {readNodeEntries} from '../../dae/nodes';
+import {readGroupEntries} from '../../dae/groups';
 import {createMockApi} from '../../../mock';
 import {nodeFixtures} from '../../../mock/fixtures';
 import {formatBytes} from '../../i18n/format';
@@ -621,4 +623,49 @@ it.each([
   const entry = readSubscriptionEntries("subscription {\n  harbor: 'https://example.org/sub'\n}")[0];
   const form = {name: entry.tag, value: entry.url, interval: '', agent: '', cache: null, route: '', ...change};
   expect(providerChanges(form, entry, defaultCache)[field]).toBe(edited);
+});
+
+describe('joining added nodes to groups', () => {
+  const text = [
+    'group {',
+    '    hk {',
+    '        filter: name(a)',
+    '        filter: subtag(sub)',
+    '        policy: min',
+    '    }',
+    '    jp {',
+    "        filter: name('b c')",
+    '        policy: min',
+    '    }',
+    '    all {',
+    '        policy: min',
+    '    }',
+    '    most {',
+    '        filter: !name(direct, block)',
+    '        policy: min',
+    '    }',
+    '}',
+    ''
+  ].join('\n');
+  const filtersAfter = (groups: string[], names: string[]) => {
+    const out = joinNodesToGroups(text, groups, names);
+    return out && Object.fromEntries(readGroupEntries(out).map(entry => [entry.name, entry.filters]));
+  };
+  it.each([
+    ['one group, one node', ['hk'], ['x'], {hk: ['name(a, x)', 'subtag(sub)']}],
+    ['two groups, two nodes', ['hk', 'jp'], ['x', 'y z'], {hk: ["name(a, x, 'y z')", 'subtag(sub)'], jp: ["name('b c', 'x', 'y z')"]}],
+    ['a node already listed', ['hk'], ['a'], {hk: ['name(a)', 'subtag(sub)']}],
+    ['a group that holds every node', ['all', 'most'], ['x'], {all: [], most: ['!name(direct, block)']}]
+  ])('%s', (_, groups, names, expected) => {
+    expect(filtersAfter(groups, names)).toMatchObject(expected);
+  });
+  it('leaves the other groups as written', () => {
+    expect(filtersAfter(['hk'], ['x'])).toMatchObject({jp: ["name('b c')"], all: []});
+  });
+  it.each([
+    ['a missing group', ['gone'], ['x']],
+    ['a name that cannot be written', ['hk'], ['a\nb']]
+  ])('refuses %s', (_, groups, names) => {
+    expect(joinNodesToGroups(text, groups, names)).toBeNull();
+  });
 });
