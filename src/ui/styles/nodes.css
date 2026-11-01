@@ -36,6 +36,10 @@ button.rp-node {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+/* The link the manual tab built has no spaces to break at. */
+.rp-node-link {
+  overflow-wrap: anywhere;
+}
 .rp-node .ms {
   flex: none;
   font-weight: 700;

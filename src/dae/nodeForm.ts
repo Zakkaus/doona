@@ -1,5 +1,8 @@
 export const protocols = ['vmess', 'vless', 'hysteria2', 'ss', 'trojan', 'tuic', 'anytls', 'socks5', 'juicity'] as const;
 export type Protocol = (typeof protocols)[number];
+export const isProtocol = (value: string): value is Protocol => (protocols as readonly string[]).includes(value);
+const protocolNames: Partial<Record<Protocol, string>> = {ss: 'Shadowsocks', hysteria2: 'Hysteria2', anytls: 'AnyTLS', juicity: 'Juicity'};
+export const protocolName = (protocol: Protocol) => protocolNames[protocol] ?? protocol.toUpperCase();
 export type NodeFields = Record<string, string> & {protocol: Protocol; host: string; port: string; username: string; password: string; name: string};
 export type NodeDocument = {original: string; initial: NodeFields; query: string; json?: Record<string, unknown>; tail: string};
 const decode64 = (value: string) =>
@@ -235,4 +238,78 @@ export function nodeLink(fields: NodeFields, document?: NodeDocument): string {
       ? encode64(`${fields.method === 'auto' ? 'auto:' : ''}${fields.username}@${host}:${fields.port}`)
       : `${auth ? `${auth}@` : ''}${host}:${fields.port}`;
   return `${fields.protocol}://${authority}${params.size ? `?${params}` : ''}${fields.name ? `#${enc(fields.name)}` : ''}${same ? (document?.tail ?? '') : ''}`;
+}
+type ManualField = {key: string; options?: string[]; flag?: boolean; required?: boolean};
+const uuidProtocols = ['vmess', 'vless', 'tuic', 'juicity'];
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const shadowsocksMethods = [
+  'aes-128-gcm',
+  'aes-256-gcm',
+  'chacha20-ietf-poly1305',
+  '2022-blake3-aes-128-gcm',
+  '2022-blake3-aes-256-gcm',
+  '2022-blake3-chacha20-poly1305'
+];
+export const vmessMethods = ['auto', 'aes-128-gcm'];
+export const congestionControls = ['cubic', 'bbr', 'new_reno'];
+export const obfsTypes = ['', 'salamander'];
+// The security choices of a protocol, or undefined where it has none.
+export const securityOptions = (protocol: Protocol) =>
+  protocol === 'trojan' ? ['tls', 'reality'] : protocol === 'vless' ? ['none', 'tls', 'reality'] : protocol === 'vmess' ? ['none', 'tls'] : undefined;
+// Whether the node carries a TLS handshake, so the form asks for its SNI.
+export const usesTls = (f: NodeFields) =>
+  !['ss', 'socks5'].includes(f.protocol) && (f.security !== 'none' || ['tuic', 'juicity', 'hysteria2', 'anytls'].includes(f.protocol));
+// The fields the form shows after the server address and port, for the node as filled in so far: which credentials,
+// cipher, security, TLS, transport and protocol options apply to this protocol and choice. Lite's form reads the same lists.
+export function manualFields(f: NodeFields): ManualField[] {
+  const p = f.protocol;
+  const fields: ManualField[] = [];
+  const add = (key: string, more: Omit<ManualField, 'key'> = {}) => fields.push({key, ...more});
+  if (['vmess', 'vless', 'tuic', 'juicity', 'socks5'].includes(p)) add('username', {required: p !== 'socks5'});
+  if (!['vmess', 'vless'].includes(p)) add('password', {required: p !== 'socks5'});
+  if (p === 'ss') add('method', {options: shadowsocksMethods});
+  if (p === 'vmess') add('method', {options: vmessMethods});
+  const security = securityOptions(p);
+  if (security) add('security', {options: security});
+  if (p === 'vless' && f.security !== 'none') add('flow', {options: ['', 'xtls-rprx-vision']});
+  if (usesTls(f)) {
+    add('sni');
+    add('insecure', {flag: true});
+  }
+  if (f.security === 'reality') {
+    add('pbk');
+    add('sid');
+  }
+  if (['vmess', 'vless', 'trojan'].includes(p)) {
+    add('type', {options: ['tcp', 'ws', 'grpc']});
+    if (f.type === 'ws') {
+      add('transportHost');
+      add('path');
+    }
+    if (f.type === 'grpc') add('serviceName');
+  }
+  if (p === 'hysteria2') {
+    add('obfs', {options: obfsTypes});
+    if (f.obfs) add('obfs-password');
+  }
+  if (p === 'tuic') add('congestion_control', {options: congestionControls});
+  return fields;
+}
+// The keys of the server address, port and shown fields that are missing or malformed; the name is the caller's.
+export function manualInvalid(f: NodeFields): string[] {
+  const port = Number(f.port);
+  return [
+    ...(/^[^\s/?#@\\]+$/.test(f.host) ? [] : ['host']),
+    ...(Number.isInteger(port) && port >= 1 && port <= 65535 ? [] : ['port']),
+    ...manualFields(f)
+      .filter(({key, required}) => (required && !f[key]) || (key === 'username' && uuidProtocols.includes(f.protocol) && f[key] && !uuidPattern.test(f[key])))
+      .map(field => field.key)
+  ];
+}
+// The link of the fields manualFields shows, or '' while one is invalid; a field the form hides now is left out however it was filled.
+export function manualLink(f: NodeFields): string {
+  if (manualInvalid(f).length) return '';
+  const fields: NodeFields = {...emptyNode(f.protocol), name: f.name, host: f.host, port: f.port};
+  for (const {key} of manualFields(f)) fields[key] = f[key];
+  return nodeLink(fields);
 }

@@ -174,6 +174,61 @@ it('explains empty add forms and shows an edited unsupported link on its field',
   expect(read()).toMatchObject({formValid: false, formReason: 'Enter a name'});
 });
 
+const fillManual = (fields: Record<string, string>) => Object.entries(fields).forEach(([key, value]) => read().setDraftField(key, value));
+const trojan = {protocol: 'trojan', name: 'manual', host: 'example.com', port: '443', password: 'pw'};
+
+it('adds a node from the manual fields under its typed name, each tab keeping its own input', async () => {
+  store.addNode = vi.fn().mockResolvedValue({id: 'n1', name: 'manual'});
+  read().addNode!();
+  read().setNodeLink('vless://one#pasted');
+  read().setAddMode('manual');
+  expect(read()).toMatchObject({formValid: false, formReason: 'Fill in the required fields.'});
+  fillManual(trojan);
+  expect(read()).toMatchObject({formValid: true, newName: 'manual', nodeValue: 'trojan://pw@example.com:443?security=tls&type=tcp#manual'});
+  read().setAddMode('link');
+  expect(read()).toMatchObject({newName: 'pasted', formValid: true});
+  expect(read().form.value).toBe('vless://one#pasted');
+  read().setAddMode('manual');
+  const close = vi.fn();
+  await read().submit(close);
+  expect(store.addNode).toHaveBeenCalledExactlyOnceWith({name: 'manual', link: 'trojan://pw@example.com:443?security=tls&type=tcp#manual'});
+  expect(close).toHaveBeenCalledOnce();
+  expect(toast).toHaveBeenCalledWith('positive', 'manual added');
+});
+
+it('refuses a manual name that is empty, taken or cannot be written, and starts both tabs empty when reopened', () => {
+  store.nodes = [{id: 'n1', name: 'taken'} as Node];
+  read().addNode!();
+  read().setAddMode('manual');
+  fillManual({...trojan, name: ''});
+  expect(read()).toMatchObject({formValid: false, formReason: 'Enter a name'});
+  for (const [name, error] of [
+    ['taken', 'A node already uses this name.'],
+    ['two\nlines', expect.any(String)]
+  ] as const) {
+    read().setDraftField('name', name);
+    expect(read()).toMatchObject({formValid: false, nodeNameError: error});
+  }
+  read().setDialog(null);
+  read().addNode!();
+  expect(read()).toMatchObject({addMode: 'link', draft: {protocol: 'vless', name: '', host: ''}, nodeValue: ''});
+});
+
+it('builds the manual link from the fields shown, and keeps the name and address when the protocol changes', () => {
+  read().addNode!();
+  read().setAddMode('manual');
+  fillManual({...trojan, type: 'ws', path: '/ws'});
+  expect(read().nodeValue).toBe('trojan://pw@example.com:443?security=tls&type=ws&path=%2Fws#manual');
+  read().setDraftField('type', 'tcp');
+  expect(read().nodeValue).toBe('trojan://pw@example.com:443?security=tls&type=tcp#manual');
+  read().setDraftField('protocol', 'tuic');
+  expect(read()).toMatchObject({draft: {protocol: 'tuic', name: 'manual', host: 'example.com', password: ''}, nodeValue: ''});
+  fillManual({username: 'b831381d-6324-4d53-ad4f-8cda48b30811', password: 'pw'});
+  expect(read().nodeValue).toBe('tuic://b831381d-6324-4d53-ad4f-8cda48b30811:pw@example.com:443#manual');
+  read().setDraftField('username', 'not-a-uuid');
+  expect(read().nodeValue).toBe('');
+});
+
 it('puts a duplicate-name refusal on the link field and clears it after the derived name changes', async () => {
   const {ApiError} = await import('../../api/error');
   store.addNode = async () => {

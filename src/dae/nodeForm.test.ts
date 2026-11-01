@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {emptyNode, nodeLink, parseNodeLink, protocols, type Protocol} from './nodeForm';
+import {manualFields, manualInvalid, manualLink, emptyNode, nodeLink, parseNodeLink, protocols, type Protocol} from './nodeForm';
 
 const uuid = 'b831381d-6324-4d53-ad4f-8cda48b30811';
 const node = (protocol: Protocol, over: Record<string, string>) => ({...emptyNode(protocol), host: 'example.com', name: 'hk-01', ...over});
@@ -89,5 +89,56 @@ describe('nodeLink', () => {
     expect(query.get('security')).toBe(security === 'tls' ? 'tls' : null);
     expect(atob(link.slice(8).split('?')[0])).toBe(`${method === 'auto' ? 'auto:' : ''}${uuid}@example.com:443`);
     expect(parseNodeLink(link).fields).toMatchObject({method, security, username: uuid});
+  });
+});
+
+// The fields the standard form shows per protocol and choice, in order, after the server address and port.
+const shown: [string, Protocol, Record<string, string>, string][] = [
+  ['socks5', 'socks5', {}, 'username password'],
+  ['ss', 'ss', {}, 'password method'],
+  ['trojan', 'trojan', {}, 'password security sni insecure type'],
+  ['trojan ws', 'trojan', {type: 'ws'}, 'password security sni insecure type transportHost path'],
+  ['trojan grpc', 'trojan', {type: 'grpc'}, 'password security sni insecure type serviceName'],
+  ['trojan reality', 'trojan', {security: 'reality'}, 'password security sni insecure pbk sid type'],
+  ['vless', 'vless', {}, 'username security flow sni insecure type'],
+  ['vless without security', 'vless', {security: 'none'}, 'username security type'],
+  ['vmess', 'vmess', {}, 'username method security type'],
+  ['vmess tls', 'vmess', {security: 'tls'}, 'username method security sni insecure type'],
+  ['hysteria2', 'hysteria2', {}, 'password sni insecure obfs'],
+  ['hysteria2 obfs', 'hysteria2', {obfs: 'salamander'}, 'password sni insecure obfs obfs-password'],
+  ['tuic', 'tuic', {}, 'username password sni insecure congestion_control'],
+  ['anytls', 'anytls', {}, 'password sni insecure'],
+  ['juicity', 'juicity', {}, 'username password sni insecure']
+];
+
+describe('manualFields', () => {
+  it.each(shown)('lists the %s fields', (_, protocol, over, keys) => {
+    expect(manualFields(node(protocol, over)).map(field => field.key)).toEqual(keys.split(' '));
+  });
+
+  it('shows nothing honk ignores, and no protocol outside the form', () => {
+    const keys = new Set(protocols.flatMap(protocol => manualFields(node(protocol, {})).map(field => field.key)));
+    expect(keys).not.toContain('alpn');
+    expect(keys).not.toContain('fp');
+    expect(protocols).not.toContain('http');
+  });
+});
+
+describe('manualInvalid and manualLink', () => {
+  it('names the missing or malformed fields', () => {
+    expect(manualInvalid({...emptyNode('vless'), host: '', port: '70000', username: 'x'})).toEqual(['host', 'port', 'username']);
+    expect(manualInvalid(node('trojan', {}))).toEqual(['password']);
+    expect(manualInvalid(node('socks5', {}))).toEqual([]);
+  });
+
+  it('gives no link until the fields are valid', () => {
+    expect(manualLink(node('trojan', {}))).toBe('');
+    expect(manualLink(node('trojan', {password: 'pw', sni: 'example.com'}))).toBe('trojan://pw@example.com:443?security=tls&type=tcp&sni=example.com#hk-01');
+  });
+
+  it('leaves out a field the form hides, however it was filled before', () => {
+    const filled = {password: 'pw', type: 'tcp', path: '/ws', serviceName: 'svc', pbk: 'AAAA', obfs: 'salamander'};
+    expect(manualLink(node('trojan', filled))).toBe('trojan://pw@example.com:443?security=tls&type=tcp#hk-01');
+    expect(manualLink(node('trojan', {...filled, type: 'grpc'}))).toBe('trojan://pw@example.com:443?security=tls&type=grpc&serviceName=svc#hk-01');
   });
 });
