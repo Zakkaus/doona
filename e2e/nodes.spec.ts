@@ -90,7 +90,7 @@ test('a share link becomes an inline node and can be removed again', async ({pag
   const table = page.locator('.rp-table').first();
   const list = rows(table);
   await expect(list).toHaveCount(5);
-  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  await page.getByRole('button', {name: 'Add node', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Node link').fill('foo://nope');
   // The link is refused at its field, before anything is sent, and Add stays off until it is fixed.
@@ -129,7 +129,7 @@ for (const transport of ['xhttp', 'splithttp'])
     };
     const link = `vless://00000000-0000-4000-8000-000000000001@example.com:443?security=tls&type=${transport}&path=%2Fx%252Fy&extra=%7B%22headers%22%3A%7B%22X-Test%22%3A%22a%2Bb%22%7D%7D#edge`;
     await page.goto('/#/nodes?provider=inline');
-    await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+    await page.getByRole('button', {name: 'Add node', exact: true}).click();
     const add = page.getByRole('dialog');
     await add.getByLabel('Node link', {exact: true}).fill(`  ${link}  `);
     await add.getByRole('button', {name: 'Add', exact: true}).click();
@@ -162,7 +162,7 @@ test('a link longer than 8192 characters is blocked on create but saved exactly 
   const link = `vless://demo@hk-01.example.net:443?security=tls&path=${'x'.repeat(8193)}#hk-01`;
   const tooLong = translate('en', 'nodes.linkTooLong', {n: 8192});
   await page.goto('/#/nodes?provider=inline');
-  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  await page.getByRole('button', {name: 'Add node', exact: true}).click();
   const add = page.getByRole('dialog');
   await add.getByLabel('Node link', {exact: true}).fill(link);
   await expect(add.getByRole('button', {name: 'Add', exact: true})).toBeDisabled();
@@ -189,7 +189,7 @@ test('XHTTP fields rewrite only their part of the link that is added', async ({p
   handlers['POST nodes'] = request => api.createNode(request.postDataJSON());
   const link = 'vless://00000000-0000-4000-8000-000000000001@example.com:443?security=tls&type=xhttp&path=%2Fx%252Fy&alpn=h2#edge';
   await page.goto('/#/nodes?provider=inline');
-  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  await page.getByRole('button', {name: 'Add node', exact: true}).click();
   const add = page.getByRole('dialog');
   await add.getByLabel('Node link', {exact: true}).fill(link);
   await add.getByRole('button', {name: 'XHTTP options'}).click();
@@ -213,7 +213,7 @@ test('XHTTP header rows trim names, block case-insensitive duplicates and preser
   handlers['POST nodes'] = request => api.createNode(request.postDataJSON());
   const link = 'vless://00000000-0000-4000-8000-000000000001@example.com:443?security=tls&type=xhttp#edge';
   await page.goto('/#/nodes?provider=inline');
-  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  await page.getByRole('button', {name: 'Add node', exact: true}).click();
   const add = page.getByRole('dialog');
   await add.getByLabel('Node link', {exact: true}).fill(link);
   await add.getByRole('button', {name: 'XHTTP options'}).click();
@@ -470,7 +470,7 @@ test('a subscription URL without a scheme gets https:// and an unusable value is
 
 test('a node link that cannot be read is explained at its field', async ({page}) => {
   await page.goto('/#/nodes?provider=inline');
-  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  await page.getByRole('button', {name: 'Add node', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await expect(
     dialog.locator('.rp-field-error', {hasText: 'The node link must be a protocol://… link, such as ss://, vmess://, vless://, trojan:// or hysteria2://'})
@@ -1057,7 +1057,7 @@ test('while a cancelled removal is still pending, no other node dialog can submi
   await removing;
   await confirmation.getByRole('button', {name: 'Cancel', exact: true}).click();
   await expect(confirmation).toHaveCount(0);
-  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  await page.getByRole('button', {name: 'Add node', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Node link').fill('vless://uuid@example.com:443?security=tls#hk-03');
   const add = dialog.getByRole('button', {name: 'Add', exact: true});
@@ -1526,7 +1526,7 @@ test('a node write conflict names its cause, and only a delete without groups re
   await confirmation.getByRole('button', {name: `Remove ${other.name}`, exact: true}).click();
   await expect(confirmation.getByRole('alert')).toContainText('The configuration changed or another write was still in progress');
   await confirmation.getByRole('button', {name: 'Cancel', exact: true}).click();
-  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  await page.getByRole('button', {name: 'Add node', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Node link').fill('vless://uuid@example.com:443?security=tls#dup');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
@@ -1834,7 +1834,7 @@ test('with no subscription and no node the page says so and offers Add subscript
   await expect(page.locator('.rp-table')).toHaveCount(0);
   await expect(page.getByRole('searchbox', {name: 'Search nodes'})).toHaveCount(0);
   await expect(page.getByRole('columnheader')).toHaveCount(0);
-  await expect(empty.getByRole('button', {name: 'Paste node link', exact: true})).toBeVisible();
+  await expect(empty.getByRole('button', {name: 'Add node', exact: true})).toBeVisible();
   await empty.getByRole('button', {name: 'Add subscription', exact: true}).click();
   await expect(page.getByRole('dialog', {name: 'Add subscription'})).toBeVisible();
 });
@@ -2182,7 +2182,7 @@ test('pastes several node links and keeps a failed line for retry on a phone', a
     return api.createNode(body);
   };
   await page.goto('/#/nodes?provider=inline');
-  await page.getByRole('button', {name: 'Paste node link', exact: true}).click();
+  await page.getByRole('button', {name: 'Add node', exact: true}).click();
   const dialog = page.getByRole('dialog');
   const input = dialog.getByLabel('Node link', {exact: true});
   await input.fill('wrong://host');
