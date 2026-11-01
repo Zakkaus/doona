@@ -34,11 +34,18 @@ export function InlineAlert({
 
 // A form's refusal or unconfirmed outcome: a neutral one is information, not an error. The caller keys it by `id`,
 // which moves focus to it again.
-export type Problem = {id: number; text: string; kind?: 'neutral' | 'negative'};
-export function ProblemAlert({problem}: {problem: Problem}) {
+// `lines` are the refused lines of a configuration, shown under the text; `children` follow them.
+export type Problem = {id: number; text: string; kind?: 'neutral' | 'negative'; lines?: string[]; backend?: string[]};
+export function ProblemAlert({problem, children}: {problem: Problem; children?: ReactNode}) {
   return (
     <InlineAlert tone={problem.kind === 'neutral' ? 'informative' : 'negative'} takeFocus>
       {problem.text}
+      {problem.lines?.map((line, index) => (
+        <span key={index} className="rp-alert-detail">
+          {line}
+        </span>
+      ))}
+      {children}
     </InlineAlert>
   );
 }

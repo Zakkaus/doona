@@ -1,5 +1,6 @@
 import type {Locator, Page} from '@playwright/test';
 import {expect, expectVirtualOptions, expectLoadFailures, mockBackend, test, moreAction, moreItem, scrollIntoList, editorText} from './fixtures';
+import {ApiError} from '../src/api/error';
 import {readGroupEntries, writeGroupEntry, type GroupEntryUpdate} from '../src/dae/groups';
 
 test('policies select a member, pin one network, release and test the group', async ({page}) => {
@@ -431,6 +432,34 @@ test('a group is switched to the score policy in its edit dialog', async ({page}
   await page.getByRole('region', {name: 'gaming', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
   dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
   await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('Score');
+});
+
+test('a group edit the backend refuses names the line and the reason inside the dialog', async ({page}) => {
+  const {handlers} = await mockBackend(page);
+  const refused = {
+    level: 'error',
+    source_id: 'src-main',
+    line: 12,
+    column: 5,
+    span: null,
+    code: 'unsupported_value',
+    message: "filter: name(regex: '🇭🇰|港'): bad term"
+  };
+  handlers['PUT config/sources/src-main'] = async () => {
+    throw new ApiError(422, 'validation_failed', 'Configuration validation failed', 'req-656', {diagnostics: [refused]});
+  };
+  await page.setViewportSize({width: 1440, height: 1000});
+  await page.goto('/#/policies');
+  await page.getByRole('region', {name: 'gaming', exact: true}).scrollIntoViewIfNeeded();
+  await page.getByRole('region', {name: 'gaming', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Edit group gaming'});
+  await dialog.getByRole('button', {name: /Selection policy/}).click();
+  await page.getByRole('option', {name: /^Score/}).click();
+  await dialog.getByRole('button', {name: 'Apply', exact: true}).click();
+  const alert = dialog.getByRole('alert');
+  await expect(alert).toContainText('Validation found 1 error; nothing written');
+  await expect(alert).toContainText("config.dae line 12: Unsupported value: filter: name(regex: '🇭🇰|港'): bad term");
+  await expect(dialog).toBeVisible();
 });
 
 test('the edit dialog makes a node the final outbound and None clears it', async ({page}) => {

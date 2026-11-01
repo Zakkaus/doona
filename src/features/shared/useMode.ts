@@ -1,7 +1,8 @@
 import {useMemo} from 'react';
 import {useCapabilities, useGroups, useVersion} from '../../store';
 import {useConfig} from '../../store/config';
-import {editProblem, useMainSourceEdit} from '../../store/mainSource';
+import {useMainSourceEdit} from '../../store/mainSource';
+import {editProblem, editToast} from './pending';
 import {useT} from '../../i18n';
 import {toast} from '../../ui/ui';
 import {useAction} from '../../store/action';
@@ -46,8 +47,8 @@ export function useMode() {
         toast('negative', t(result.error.key), {detail: result.error.detail ?? undefined, error: result.error});
         return;
       }
-      const problem = editProblem(result, t);
-      if (problem) toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId, error: problem.error});
+      const problem = editProblem(result, config.data?.sources ?? [], t);
+      if (problem) toast(...editToast(problem));
     });
   return {
     ...view,

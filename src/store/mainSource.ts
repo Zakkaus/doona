@@ -1,9 +1,8 @@
 import {useCallback, useMemo} from 'react';
 import {useCapabilities} from './runtime';
 import {useConfig, useConfigEditor, useSourceComplete, type ConfigTransform} from './config';
-import type {ConfigSource} from '../api/model';
-import {LocalError, failureNotice, type Notice} from '../api/error';
-import type {Translator} from '../i18n';
+import type {ConfigDiagnostic, ConfigSource} from '../api/model';
+import {LocalError} from '../api/error';
 import {offered} from '../api/capabilities';
 
 // Apply small main-source edits through shared preparation, optional full validation, If-Match write, and reload.
@@ -17,16 +16,8 @@ export type MainSourceEdit = {
   // Never rejects: a dialog shows the outcome inline, a background edit as a toast.
   apply: (transform: ConfigTransform, origin?: ConfigSource) => Promise<EditResult>;
 };
-export type EditResult = {kind: 'ok'} | {kind: 'invalid'; errors: number} | {kind: 'cancelled'} | {kind: 'failed'; error: unknown};
-
-// What to tell the person about an edit that did not land; null when it was written or cancelled. An unknown
-// operation outcome is not a failure, so it reads neutrally.
-export const editProblem = (result: EditResult, t: Translator): Notice | null =>
-  result.kind === 'invalid'
-    ? {kind: 'negative', text: t('ui.writeInvalid', {n: result.errors})}
-    : result.kind === 'failed'
-      ? failureNotice(result.error, t, t('ui.writeFailed'))
-      : null;
+// `invalid` keeps the diagnostics of the preflight, so the edit can say which lines were refused, as a refused write does.
+export type EditResult = {kind: 'ok'} | {kind: 'invalid'; diagnostics: ConfigDiagnostic[]} | {kind: 'cancelled'} | {kind: 'failed'; error: unknown};
 
 // `checking`: the main source is there and its completeness is still being checked, as after each write.
 export function useMainSourceEdit(): MainSourceEdit & {checking: boolean} {
@@ -54,7 +45,7 @@ export function useMainSourceEdit(): MainSourceEdit & {checking: boolean} {
         try {
           const result = await apply(origin, transform);
           if (!result) return {kind: 'cancelled'};
-          if (result.diagnostics) return {kind: 'invalid', errors: result.diagnostics.filter(d => d.level === 'error').length};
+          if (result.diagnostics) return {kind: 'invalid', diagnostics: result.diagnostics};
           return {kind: 'ok'};
         } catch (failure) {
           return {kind: 'failed', error: failure};

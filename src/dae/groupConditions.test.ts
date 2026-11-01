@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {compileFilters} from './groupFilters';
+import {writeGroupEntry} from './groups';
 import {
   conditionValues,
   groupFilterDraft,
@@ -73,4 +74,42 @@ it('keeps mixed argument OR inside its negated AND condition', () => {
     'hk-01',
     'AUS 01'
   ]);
+});
+
+describe('country-flag emoji and CJK terms', () => {
+  const regex = '🇭🇰|HK|hk|港|HongKong|🇺🇸|US|美国|美|United States';
+  const nodes = ['🇭🇰 HK-01', '🇺🇸 US 美国', 'United States 02', 'JP 日本'];
+  const admitted = (filter: string) => nodes.filter(name => compileFilters([filter])({name, subscription_tag: null}));
+
+  it('writes the values byte for byte through every row shape', () => {
+    const row = (kind: 'nameRegex' | 'nameKeyword', value: string) => ({id: 1, kind, value, negate: false});
+    expect(serializeGroupConditions([row('nameRegex', regex)])).toBe(`name(regex: '${regex}')`);
+    expect(serializeGroupConditions([row('nameRegex', conditionValues([regex, '(?i)jp|日本']))])).toBe(`name(regex: '${regex}', regex: '(?i)jp|日本')`);
+    expect(serializeGroupConditions([row('nameKeyword', '🇭🇰, HK, 港')])).toBe(`name(keyword: '🇭🇰', keyword: 'HK', keyword: '港')`);
+    expect(serializeGroupConditions([{...row('nameRegex', regex), alternatives: [{id: 2, kind: 'nameKeyword', value: 'US, 美国'}]}])).toBe(
+      `name(regex: '${regex}', keyword: 'US', keyword: '美国')`
+    );
+  });
+
+  it('reads the written filter back as the same row and keeps it untouched', () => {
+    const source = `name(regex: '${regex}')`;
+    const draft = groupFilterDraft(source);
+    expect(draft.rows).toMatchObject([{kind: 'nameRegex', value: regex, negate: false}]);
+    expect(groupFilterText(draft)).toBe(source);
+    expect(serializeGroupConditions(draft.rows!)).toBe(source);
+  });
+
+  it('keeps every code point of the text sent to the backend', () => {
+    const text = writeGroupEntry("group {\n  proxy {\n    filter: name(keyword: 'old')\n    policy: min_moving_avg\n  }\n}\n", 'proxy', {
+      filters: [`name(regex: '${regex}')`],
+      policy: 'min_moving_avg'
+    });
+    expect(text).toContain(`filter: name(regex: '${regex}')`);
+    expect(new TextDecoder().decode(new TextEncoder().encode(JSON.parse(JSON.stringify({content: text})).content))).toBe(text);
+  });
+
+  it('previews the nodes the filter selects', () => {
+    expect(admitted(`name(regex: '${regex}')`)).toEqual(['🇭🇰 HK-01', '🇺🇸 US 美国', 'United States 02']);
+    expect(admitted(`name(keyword: '🇭🇰', keyword: '日本')`)).toEqual(['🇭🇰 HK-01', 'JP 日本']);
+  });
 });

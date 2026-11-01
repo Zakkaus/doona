@@ -292,7 +292,8 @@ export const requestIdOf = (error: unknown): string | undefined =>
 // left the change active or its outcome unknown. A write that landed but could not be read back is not a failure of the
 // write: it is told neutrally, and the failed read keeps its own error and Retry.
 // `error` is the failure it reports, for a toast to record and offer to copy; an invalid edit has none.
-export type Notice = {kind: 'neutral' | 'negative'; text: string; detail?: string; requestId?: string; error?: unknown};
+// `lines` are the refused lines of a configuration, each with its file and line, and `backend` the backend's words they leave out.
+export type Notice = {kind: 'neutral' | 'negative'; text: string; detail?: string; lines?: string[]; backend?: string[]; requestId?: string; error?: unknown};
 const ownSummary = new Set<Key>([
   'ui.writtenNotApplied',
   'ui.activationDegraded',

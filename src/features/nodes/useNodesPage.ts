@@ -15,7 +15,8 @@ import {
 import {useCompleteness, useConfig} from '../../store/config';
 import type {ConfigSource, Node, Provider} from '../../api/model';
 import {toast, toastFailure, type Problem} from '../../ui/ui';
-import {editProblem, useMainSourceEdit} from '../../store/mainSource';
+import {useMainSourceEdit} from '../../store/mainSource';
+import {editProblem, editToast} from '../shared/pending';
 import {isWritableName, groupsNamingTag, readGroupEntries} from '../../dae/groups';
 import {isBareName, isQuotable, quote} from '../../dae/text';
 import {agentProblem} from '../../dae/subscriptions';
@@ -321,7 +322,8 @@ export function useNodesPage({go, query}: PageProps) {
       const result = await apply(text => joinNodesToGroups(text, groups, names), origin);
       if (result.kind === 'ok') continue;
       failed = true;
-      detail ??= editProblem(result, t)?.text;
+      const problem = editProblem(result, sources, t);
+      detail ??= problem?.lines?.length ? problem.lines.join('\n') : problem?.text;
     }
     if (!failed) return 'ok';
     toast('negative', t('nodes.joinFailed'), {detail});
@@ -354,11 +356,11 @@ export function useNodesPage({go, query}: PageProps) {
     const isCurrent = session.start();
     const at = shown.current;
     // A refusal after the dialog closed has nowhere inline to go.
-    const refuse = (text: string, toastText = text, error?: unknown, kind: Notice['kind'] = 'negative') => {
-      if (isCurrent()) setProblem(prev => ({id: (prev?.id ?? 0) + 1, text, kind}));
-      else toast(kind, toastText, {requestId: error === undefined ? undefined : requestIdOf(error), error});
+    const refuse = (text: string, toastText = text, error?: unknown, kind: Notice['kind'] = 'negative', refused?: Pick<Notice, 'lines' | 'backend'>) => {
+      if (isCurrent()) setProblem(prev => ({id: (prev?.id ?? 0) + 1, text, kind, lines: refused?.lines, backend: refused?.backend}));
+      else toast(...editToast({kind, text: toastText, lines: refused?.lines, requestId: error === undefined ? undefined : requestIdOf(error), error}));
     };
-    const refuseNotice = (problem: Notice) => refuse(noticeText(problem, t), noticeText(problem, t, false), problem.error, problem.kind);
+    const refuseNotice = (problem: Notice) => refuse(noticeText(problem, t), noticeText(problem, t, false), problem.error, problem.kind, problem);
     try {
       if (dialog.kind === 'provider') {
         // The backend's label for a subscription may be opaque; the toast names it as the user did.
@@ -451,7 +453,7 @@ export function useNodesPage({go, query}: PageProps) {
           }
           return writeNodeEntry(text, dialog.entry, {name: form.name.trim(), link});
         }, current);
-        const problem = editProblem(result, t);
+        const problem = editProblem(result, sources, t);
         if (problem) refuseNotice(problem);
         if (result.kind !== 'ok') return;
         reload();
@@ -467,7 +469,7 @@ export function useNodesPage({go, query}: PageProps) {
           return;
         }
         const result = await apply(subscriptionEdit.write, subscriptionEdit.source);
-        const problem = editProblem(result, t);
+        const problem = editProblem(result, sources, t);
         if (problem) refuseNotice(problem);
         if (result.kind !== 'ok') return;
         refetchProviders();

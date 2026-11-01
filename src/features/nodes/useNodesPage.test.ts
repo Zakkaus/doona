@@ -426,3 +426,31 @@ it('keeps the node and says so when joining the groups fails', async () => {
   expect(close).toHaveBeenCalledTimes(1);
   expect(vi.mocked(toast)).toHaveBeenCalledWith('negative', expect.stringContaining('joining the selected groups failed'), expect.anything());
 });
+
+it('names the refused lines in the toast when joining the groups is refused', async () => {
+  store.sources = [
+    {
+      id: 'main',
+      kind: 'main',
+      path: '/etc/dae/config.dae',
+      writable: true,
+      content_sha256: 'x',
+      content: 'group {\n    mine {\n        filter: name(a)\n    }\n}\n'
+    } as ConfigSource
+  ];
+  store.addNode = async () => {
+    store.fresh = store.sources;
+    return {id: 'n1', name: 'first'} as Node;
+  };
+  store.apply.mockResolvedValue({
+    kind: 'invalid',
+    diagnostics: [{level: 'error', source_id: 'main', line: 3, column: 9, span: null, code: 'unsupported_value', message: 'filter: bad term'}]
+  });
+  read().addNode!();
+  read().setNodeLink('vless://one#first');
+  read().setJoinPicked(['mine']);
+  await read().submit(vi.fn());
+  expect(vi.mocked(toast)).toHaveBeenCalledWith('negative', expect.stringContaining('joining the selected groups failed'), {
+    detail: 'config.dae line 3: Unsupported value: filter: bad term'
+  });
+});

@@ -1,9 +1,10 @@
 import type {ConfigDiagnostic, ConfigSource} from '../../api/model';
-import {ApiError, failureNotice, noticeText} from '../../api/error';
+import {ApiError, failureNotice, noticeText, requestIdOf, type Notice} from '../../api/error';
 import {oneLine} from '../../i18n/backend';
 import {backendWords, explainDiagnostic} from './offlineDependency';
 import type {Translator} from '../../i18n';
 import type {PendingFailure, PendingRule} from '../../store';
+import type {EditResult} from '../../store/mainSource';
 import {scanConfig} from '../../dae/text';
 import {fileName, restartRequired} from '../../dae/sources';
 import {dnsListEnd, dnsRuleAnchor, ruleAnchor, ruleLine, type RuleAnchor} from '../../dae/ruleText';
@@ -91,6 +92,22 @@ export function ruleFailure(error: unknown, diagnostics: ConfigDiagnostic[] | nu
     ...(backend.length ? {backend} : {})
   };
 }
+
+// What to tell the person about an edit that did not land; null when it was written or cancelled. A refusal that names
+// lines, from the preflight or from the write, lists them as the rules panel does; any other failure reads as its
+// error does. An unknown operation outcome is not a failure, so it reads neutrally.
+export function editProblem(result: EditResult, sources: ConfigSource[], t: Translator): Notice | null {
+  if (result.kind === 'ok' || result.kind === 'cancelled') return null;
+  const error = result.kind === 'failed' ? result.error : null;
+  const diagnostics = result.kind === 'invalid' ? result.diagnostics : refusalDetails(error)?.diagnostics;
+  if (!diagnostics?.length && result.kind === 'failed') return failureNotice(result.error, t, t('ui.writeFailed'));
+  const {text, lines, backend} = ruleFailure(error, diagnostics ?? [], sources, t);
+  return {kind: 'negative', text, lines, ...(backend ? {backend} : {}), ...(error ? {requestId: requestIdOf(error), error} : {})};
+}
+
+// The toast for an edit that did not land: its summary, with the refused lines as the detail.
+export const editToast = ({kind, text, detail, lines, requestId, error}: Notice) =>
+  [kind, text, {detail: lines?.length ? lines.join('\n') : detail, requestId, error}] as const;
 
 // The held rules of one list as that list shows them, or null when it holds none. An apply writes every held rule, so
 // the rules other lists hold are counted too.
