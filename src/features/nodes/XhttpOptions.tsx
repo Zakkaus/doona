@@ -23,7 +23,7 @@ export function XhttpOptions({
     set({headers: next.filter(([rowName, rowValue]) => rowName || rowValue)});
   };
   return (
-    <Disclosure title={t('nodes.xhttp.title')} flush>
+    <Disclosure title={t('nodes.xhttp.title')} flush compact>
       <span className="rp-label">{t('nodes.xhttp.help')}</span>
       <LabeledSelect
         label={t('nodes.xhttp.mode')}
@@ -62,29 +62,27 @@ export function XhttpOptions({
           />
         </Toolbar>
       ))}
-      <Toolbar className="top">
-        <TextField
-          isDisabled={isDisabled}
-          label={t('nodes.xhttp.padding')}
-          value={fields.xPaddingBytes}
-          placeholder="100-1000"
-          onChange={xPaddingBytes => set({xPaddingBytes})}
-        />
-        <TextField
-          isDisabled={isDisabled}
-          label={t('nodes.xhttp.postBytes')}
-          value={fields.scMaxEachPostBytes}
-          placeholder="1000000"
-          onChange={scMaxEachPostBytes => set({scMaxEachPostBytes})}
-        />
-        <TextField
-          isDisabled={isDisabled}
-          label={t('nodes.xhttp.postInterval')}
-          value={fields.scMinPostsIntervalMs}
-          placeholder="30"
-          onChange={scMinPostsIntervalMs => set({scMinPostsIntervalMs})}
-        />
-      </Toolbar>
+      <TextField
+        isDisabled={isDisabled}
+        label={t('nodes.xhttp.padding')}
+        value={fields.xPaddingBytes}
+        placeholder="100-1000"
+        onChange={xPaddingBytes => set({xPaddingBytes})}
+      />
+      <TextField
+        isDisabled={isDisabled}
+        label={t('nodes.xhttp.postBytes')}
+        value={fields.scMaxEachPostBytes}
+        placeholder="1000000"
+        onChange={scMaxEachPostBytes => set({scMaxEachPostBytes})}
+      />
+      <TextField
+        isDisabled={isDisabled}
+        label={t('nodes.xhttp.postInterval')}
+        value={fields.scMinPostsIntervalMs}
+        placeholder="30"
+        onChange={scMinPostsIntervalMs => set({scMinPostsIntervalMs})}
+      />
       <Switch isSelected={fields.noGRPCHeader} isDisabled={isDisabled} onChange={noGRPCHeader => set({noGRPCHeader})}>
         {t('nodes.xhttp.noGrpcHeader')}
       </Switch>
