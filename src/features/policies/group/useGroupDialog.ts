@@ -29,7 +29,8 @@ import {
 import {nameText, readGroupEntries, writeGroupEntry, type GroupEntry, type GroupEntryUpdate} from '../../../dae/groups';
 import {href} from '../../../shell/route';
 import {unquote} from '../../../dae/text';
-import {editProblem, type MainSourceEdit} from '../../../store/mainSource';
+import type {MainSourceEdit} from '../../../store/mainSource';
+import {editProblem, editToast} from '../../shared/pending';
 import type {ConfigSource, Group, Node} from '../../../api/model';
 import {toast, type Problem} from '../../../ui/ui';
 import {useDialogSession, useDraftGuard} from '../../../shell/draft';
@@ -238,7 +239,8 @@ export function useGroupDialog(input: Input): GroupDialogView {
   const nameProblem = creating && draft ? groupNameError(draft.name.trim(), input.taken, t) : null;
   const session = useDialogSession();
   const [problem, setProblem] = useState<GroupDialogView['problem']>(null);
-  const refuse = (text: string, kind?: Problem['kind']) => setProblem(prev => ({id: (prev?.id ?? 0) + 1, text, kind}));
+  const refuse = (text: string, kind?: Problem['kind'], refused?: Pick<Problem, 'lines' | 'backend'>) =>
+    setProblem(prev => ({id: (prev?.id ?? 0) + 1, text, kind, lines: refused?.lines, backend: refused?.backend}));
   const dirty =
     !!draft &&
     ((creating && !!draft.name) ||
@@ -314,13 +316,13 @@ export function useGroupDialog(input: Input): GroupDialogView {
           if (creating && input.onCreated) input.onCreated(group);
           toast('positive', t('policy.updated', {name: group}));
         }
-        const problem = editProblem(result, t);
+        const problem = editProblem(result, config.data?.sources ?? [], t);
         // A refusal after the dialog closed has nowhere inline to go.
         if (problem) {
           if (open) {
-            refuse(noticeText(problem, t), problem.kind);
+            refuse(noticeText(problem, t), problem.kind, problem);
             setDraft(prev => (prev ? {...prev, refused: true} : prev));
-          } else toast(problem.kind, problem.text, {detail: problem.detail, requestId: problem.requestId, error: problem.error});
+          } else toast(...editToast(problem));
         }
       })
       .finally(() => {

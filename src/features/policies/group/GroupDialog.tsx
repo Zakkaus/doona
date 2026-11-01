@@ -19,6 +19,7 @@ import {LabeledSelect} from '../../../ui/Picker';
 import {SearchSelect} from '../../../ui/SearchSelect';
 import type {GroupDialogView} from './useGroupDialog';
 import {policyChoices} from '../../shared/policyText';
+import {BackendText} from '../../shared/BackendText';
 import {FilterSummary} from './FilterSummary';
 type PolicyDetails = {
   fields: KvItem[];
@@ -105,7 +106,11 @@ export function GroupDialog({model: m, details}: {model: GroupDialogView; detail
                 />
               )}
               {m.removed && <InlineAlert tone="notice">{m.removed}</InlineAlert>}
-              {m.problem && <ProblemAlert key={m.problem.id} problem={m.problem} />}
+              {m.problem && (
+                <ProblemAlert key={m.problem.id} problem={m.problem}>
+                  <BackendText texts={m.problem.backend} />
+                </ProblemAlert>
+              )}
               <LabeledSelect label={t('group.policy')} value={policy.selected} onChange={m.setPolicy} items={policy.items} isDisabled={m.busy} />
               <IncludesEditor model={m} />
               {m.routes.map(field => (

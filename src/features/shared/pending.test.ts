@@ -1,10 +1,10 @@
-import {expect, it} from 'vitest';
+import {describe, expect, it} from 'vitest';
 import {createMockApi} from '../../../mock';
 import {ApiError, LocalError} from '../../api/error';
 import {translate, type Translator} from '../../i18n';
 import type {ConfigSource} from '../../api/model';
 import type {PendingRule} from '../../store';
-import {byFile, failureToast, insertRules, partialFailure, pendingView, refusalDetails, ruleFailure} from './pending';
+import {byFile, editProblem, editToast, failureToast, insertRules, partialFailure, pendingView, refusalDetails, ruleFailure} from './pending';
 const t: Translator = (key, params, pluralParam, precision) => translate('en', key, params, pluralParam, precision);
 
 async function held() {
@@ -187,4 +187,62 @@ it.each([
   // Rules still held make a partial apply a failure; with none left it keeps the last file's kind.
   expect(failureToast(partialFailure(failure, 1, 1, t))[0]).toBe('negative');
   expect(failureToast(partialFailure(failure, 1, 0, t))[0]).toBe(kind);
+});
+
+describe('the problem of an edit that did not land', () => {
+  const line = {level: 'error' as const, source_id: 'src-main', line: 7, column: 3, span: null, code: 'unsupported_value', message: 'filter: bad term'};
+  const warning = {...line, level: 'warning' as const, line: 9, code: 'unused', message: 'unused'};
+  const refused = (details: unknown) => new ApiError(422, 'validation_failed', 'Configuration validation failed', 'req-9', details);
+
+  it('lists the lines a preflight or a write refused, with the same summary and lines as the rules panel', async () => {
+    const {sources} = await createMockApi().config();
+    const lines = ['config.dae line 7: Unsupported value: filter: bad term', 'config.dae line 9: Backend message: unused'];
+    const invalid = editProblem({kind: 'invalid', diagnostics: [line, warning]}, sources, t);
+    expect(invalid).toEqual({kind: 'negative', text: 'Validation found 1 error; nothing written', lines});
+    const write = refused({diagnostics: [line, warning]});
+    expect(editProblem({kind: 'failed', error: write}, sources, t)).toEqual({
+      kind: 'negative',
+      text: 'Validation found 1 error; nothing written',
+      lines,
+      requestId: 'req-9',
+      error: write
+    });
+  });
+
+  it.each([
+    ['422 without details', refused(null)],
+    ['422 with no lines', refused({diagnostics: []})],
+    ['network failure', new Error('offline')]
+  ])('reads a %s as the failure itself', async (_, error) => {
+    const {sources} = await createMockApi().config();
+    const problem = editProblem({kind: 'failed', error}, sources, t);
+    expect(problem).toMatchObject({kind: 'negative', text: 'Could not write the configuration'});
+    expect(problem).not.toHaveProperty('lines');
+    expect(problem?.detail).toBeTruthy();
+  });
+
+  it('keeps the neutral and own summaries of the failures that are not refusals, and says nothing for a write or a cancel', async () => {
+    const {sources} = await createMockApi().config();
+    // An unknown outcome is not a failure, so it gets neither the failure summary nor the failure tone.
+    expect(editProblem({kind: 'failed', error: new LocalError('ui.operationUnknown')}, sources, t)).toMatchObject({
+      kind: 'neutral',
+      text: t('ui.operationUnknown')
+    });
+    // A file written but not applied is not a failed write, so it does not get the write-failure summary.
+    expect(editProblem({kind: 'failed', error: new LocalError('ui.writtenNotApplied')}, sources, t)).toMatchObject({
+      kind: 'negative',
+      text: t('ui.writtenNotApplied')
+    });
+    expect(editProblem({kind: 'ok'}, sources, t)).toBeNull();
+    expect(editProblem({kind: 'cancelled'}, sources, t)).toBeNull();
+  });
+
+  it('offers the lines as the detail of a toast, and the failure otherwise', () => {
+    expect(editToast({kind: 'negative', text: 'Refused', lines: ['a line 1: x', 'b line 2: y'], requestId: 'r'})).toEqual([
+      'negative',
+      'Refused',
+      {detail: 'a line 1: x\nb line 2: y', requestId: 'r', error: undefined}
+    ]);
+    expect(editToast({kind: 'negative', text: 'Could not write', detail: 'offline'})[2].detail).toBe('offline');
+  });
 });

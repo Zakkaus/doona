@@ -136,7 +136,9 @@
 .rp-toast .summary {
   font-weight: 600;
 }
+/* A detail of several lines, as a refused edit lists them, keeps its line breaks. */
 .rp-toast .detail {
+  white-space: pre-line;
   margin-block-start: 2px;
   font-size: var(--rp-text-sm);
   line-height: 18px;

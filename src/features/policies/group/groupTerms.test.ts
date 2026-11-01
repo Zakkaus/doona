@@ -1,4 +1,5 @@
 import {expect, it, vi} from 'vitest';
+import {ApiError} from '../../../api/error';
 import {newGroupCondition, type GroupConditionKind, type GroupConditionRow} from '../../../dae/groupConditions';
 import {addAlternative, changeTerm, conditionTerms, kindChoices, removeAlternative} from './groupTerms';
 
@@ -63,7 +64,8 @@ import {useGroupDialog} from './useGroupDialog';
 import {translate, type Translator} from '../../../i18n';
 vi.mock('react', async original => ({...(await original<typeof import('react')>()), ...hookHarness.hooks}));
 vi.mock('../../../store', () => ({useCapabilities: () => ({data: undefined}), useNodes: () => ({data: []}), useProviders: () => ({data: undefined})}));
-vi.mock('../../../store/config', () => ({useConfig: () => ({data: undefined})}));
+const config = vi.hoisted(() => ({data: undefined as {sources: unknown[]} | undefined}));
+vi.mock('../../../store/config', () => ({useConfig: () => ({data: config.data})}));
 vi.mock('../../../shell/draft', () => ({useDraftGuard: () => ({clear: vi.fn()}), useDialogSession: () => ({next: vi.fn(), start: () => () => true})}));
 vi.mock('../../../i18n', async original => ({
   ...(await original<typeof import('../../../i18n')>()),
@@ -95,4 +97,46 @@ it('asks before dismissing a new group draft and keeps it when discard is cancel
   read().show();
   read().save(vi.fn());
   expect(read().name!.error).toBe('Enter a name');
+});
+
+it.each([
+  [
+    'a preflight that found a line',
+    {
+      kind: 'invalid' as const,
+      diagnostics: [{level: 'error', source_id: 'src-main', line: 12, column: 5, span: null, code: 'unsupported_value', message: 'filter: bad term'}]
+    }
+  ],
+  [
+    'a write the backend refused with a line',
+    {
+      kind: 'failed' as const,
+      error: new ApiError(422, 'validation_failed', 'Configuration validation failed', 'req-1', {
+        diagnostics: [{level: 'error', source_id: 'src-main', line: 12, column: 5, span: null, code: 'unsupported_value', message: 'filter: bad term'}]
+      })
+    }
+  ]
+])('shows the refused line under the notice for %s', async (_, result) => {
+  hookHarness.reset();
+  config.data = {sources: [{id: 'src-main', kind: 'main', path: '/etc/dae/config.dae', content: ''}]};
+  const read = () =>
+    hookHarness.render(() =>
+      useGroupDialog({
+        mode: 'create',
+        source: {main: null, writable: true, busy: false, apply: vi.fn().mockResolvedValue(result)},
+        taken: new Set(),
+        outbounds: {groups: [], nodes: [], links: new Map()},
+        nodes: []
+      })
+    );
+  read().show();
+  read().name!.change('work');
+  read().save(vi.fn());
+  await vi.waitFor(() => expect(read().problem).not.toBeNull());
+  expect(read().problem).toMatchObject({
+    text: 'Validation found 1 error; nothing written',
+    kind: 'negative',
+    lines: ['config.dae line 12: Unsupported value: filter: bad term']
+  });
+  config.data = undefined;
 });

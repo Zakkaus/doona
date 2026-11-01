@@ -20,6 +20,7 @@ import {
 import {TextArea} from '../../ui/TextArea';
 import {DataTable} from '../../ui/Table';
 import {SearchMultiSelect} from '../../ui/SearchMultiSelect';
+import {BackendText} from '../shared/BackendText';
 import {NodeLatency} from './Latency';
 import type {PageProps} from '../../shell/routes';
 import {ProviderCards} from './ProviderCards';
@@ -223,7 +224,11 @@ export function Nodes(props: PageProps) {
           </>
         )}
       >
-        {problem && <ProblemAlert key={problem.id} problem={problem} />}
+        {problem && (
+          <ProblemAlert key={problem.id} problem={problem}>
+            <BackendText texts={problem.backend} />
+          </ProblemAlert>
+        )}
         {(dialog?.kind === 'provider' || dialog?.kind === 'editProvider') && (
           <Form id={dialogForm} className="rp-list" onSubmit={send}>
             <span className="rp-label">{t(dialog.kind === 'provider' ? 'nodes.addProviderHelp' : 'nodes.editProviderHelp')}</span>
