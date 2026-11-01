@@ -19,6 +19,7 @@ import {
 } from '../../ui/ui';
 import {TextArea} from '../../ui/TextArea';
 import {DataTable} from '../../ui/Table';
+import {SearchMultiSelect} from '../../ui/SearchMultiSelect';
 import {NodeLatency} from './Latency';
 import type {PageProps} from '../../shell/routes';
 import {ProviderCards} from './ProviderCards';
@@ -50,6 +51,9 @@ export function Nodes(props: PageProps) {
     setForm,
     removeNodes,
     setNodeLink,
+    joinChoices,
+    joinPicked,
+    setJoinPicked,
     xhttp,
     headerDuplicates,
     setXhttp,
@@ -206,6 +210,17 @@ export function Nodes(props: PageProps) {
               placeholder="vless://…"
               onChange={setNodeLink}
             />
+            {dialog.kind === 'node' && joinChoices.length > 0 && (
+              <SearchMultiSelect
+                label={t('nodes.addToGroup')}
+                searchLabel={t('group.searchGroups')}
+                summary={joinPicked.length ? t('group.selected', {n: joinPicked.length}) : t('ui.none')}
+                items={joinChoices}
+                value={joinPicked}
+                onChange={setJoinPicked}
+                isDisabled={pending}
+              />
+            )}
             {batch && (
               <>
                 <span className="rp-label">{t('nodes.batchExcluded', {n: batch.rows.filter(row => row.error).length})}</span>

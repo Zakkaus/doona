@@ -321,6 +321,7 @@ function editExact(text: string, group: string, call: ExactCall, add: string[], 
   return writeGroupEntry(text, group, {filters, policy: entry?.policy ?? null});
 }
 export const addSubtagsToGroup = (text: string, group: string, tags: string[]) => editExact(text, group, 'subtag', tags, []);
+export const addNodesToGroup = (text: string, group: string, names: string[]) => editExact(text, group, 'name', names, []);
 export const removeSubtagsFromGroup = (text: string, group: string, tags: string[]) => editExact(text, group, 'subtag', [], tags);
 
 export function splitTop(text: string, separator: string): string[] {
