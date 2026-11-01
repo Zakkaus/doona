@@ -8,7 +8,8 @@ import {refetchAll, useCapabilities} from '../store';
 import {SettingsContext, type Settings} from './preferences';
 import {Shortcuts} from './Shortcuts';
 import {SideNav} from './SideNav';
-import {HubBar, HubPages} from './HubBar';
+import {HubBar} from './HubBar';
+import {PageHead} from './PageHead';
 import {TopBar} from './TopBar';
 import {AboutContext, type ShellModel} from './useShell';
 import {useShellFrame} from './useShellController';
@@ -97,16 +98,7 @@ function Layout({lang, pickLang, ap, route, query, go, openSearch, mac, view}: F
       <SideNav route={route} groups={view.groups} busy={view.busy} backend={view.backend} honk={view.honk} />
       <main className="rp-main">
         <div className="rp-content">
-          <div className="rp-head">
-            <div className="rp-page-heading">
-              <div className="rp-title">
-                <h1 className="rp-h1">{view.current.title}</h1>
-                {view.current.hint && <span className="rp-hint">{view.current.hint}</span>}
-              </div>
-              <div ref={setActions} className="rp-page-actions" />
-            </div>
-            {hub && <HubPages key={hub.id} hub={hub} />}
-          </div>
+          <PageHead title={view.current.title} hint={view.current.hint} hub={hub} actions={setActions} />
           <ErrorMessage error={view.error} onRetry={view.refresh} />
           <RefusalWait />
           <PageActionsTarget value={actions}>

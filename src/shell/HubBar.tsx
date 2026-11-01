@@ -2,7 +2,6 @@ import {useEffect, useState} from 'react';
 import {useT} from '../i18n';
 import {storageKeys} from '../api/storage';
 import {Link} from '../ui/ui';
-import {PageLinks} from '../ui/PageLinks';
 import type {NavGroup} from './view';
 
 const key = storageKeys.hubPages;
@@ -47,14 +46,5 @@ export function HubBar({groups}: {groups: NavGroup[]}) {
         );
       })}
     </nav>
-  );
-}
-
-// The open hub's pages stay whole when they wrap on a narrow screen.
-export function HubPages({hub}: {hub: NavGroup}) {
-  return (
-    <div className="rp-hubnav">
-      <PageLinks label={hub.label} items={hub.items} />
-    </div>
   );
 }

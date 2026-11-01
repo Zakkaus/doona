@@ -68,20 +68,14 @@ export type ShellView = {
 // A 401 on any read means the credential no longer works, whatever discovery last reported; sign-in comes first.
 export const accessError = (discovery: Error | null, refusal: Error | null) => refusal ?? discovery;
 
-export function shellView(
-  settings: Settings,
-  route: string,
-  capabilities: Capabilities | undefined,
-  capabilityError: Error | null,
-  version: Version | undefined,
-  versionError: Error | null,
-  t: Translator
-): ShellView {
-  const profile = settings.profiles.find(item => item.id === settings.activeId);
-  const feature = features.find(item => item.path === route) ?? features.find(item => item.path === defaultRoute)!;
-  const config = configOf(version);
-  const offered = (path: string) => navAvailable(path, capabilities, config);
-  const groups = hubs.map(hub => ({
+// A page's title and the question under it.
+export function headingOf(feature: (typeof features)[number], t: Translator) {
+  return {title: t(feature.nav?.titleKey ?? 'nav.activity'), hint: feature.nav?.hintKey ? t(feature.nav.hintKey) : undefined};
+}
+
+// The side navigation's hubs with their pages, the current page marked, and what the backend does not offer greyed out.
+export function navGroups(route: string, t: Translator, offered: (path: string) => boolean): NavGroup[] {
+  return hubs.map(hub => ({
     id: hub.id,
     label: t(hub.titleKey),
     items: hub.pages.flatMap(path => {
@@ -102,6 +96,22 @@ export function shellView(
         : [];
     })
   }));
+}
+
+export function shellView(
+  settings: Settings,
+  route: string,
+  capabilities: Capabilities | undefined,
+  capabilityError: Error | null,
+  version: Version | undefined,
+  versionError: Error | null,
+  t: Translator
+): ShellView {
+  const profile = settings.profiles.find(item => item.id === settings.activeId);
+  const feature = features.find(item => item.path === route) ?? features.find(item => item.path === defaultRoute)!;
+  const config = configOf(version);
+  const offered = (path: string) => navAvailable(path, capabilities, config);
+  const groups = navGroups(route, t, offered);
   const refused = (error: Error | null) => error instanceof ApiError && (error.status === 401 || error.status === 403);
   // Capabilities that answer 404 even with the saved credential come from a backend without the native API.
   const missingApi = capabilityError instanceof ApiError && capabilityError.status === 404;
@@ -138,8 +148,7 @@ export function shellView(
     groups,
     current: {
       id: feature.id,
-      title: t(feature.nav?.titleKey ?? 'nav.activity'),
-      hint: feature.nav?.hintKey ? t(feature.nav.hintKey) : undefined,
+      ...headingOf(feature, t),
       Page: feature.Page,
       skeleton: feature.skeleton
     },

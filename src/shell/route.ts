@@ -84,13 +84,16 @@ export function historyPosition(fallback = 0): number {
   return typeof value === 'number' ? value : fallback;
 }
 
+// Where the address opens: Settings for a first run, an address that names a page as it is, else the saved start page.
+export function initialRoute(api: string | null, hash: string, startPage: RoutePath = defaultRoute): Route {
+  if (shouldOpenSettings(api, hash)) return {route: 'settings', query: ''};
+  return hasRoute(hash) ? parseHash(hash) : {route: startPage, query: ''};
+}
+
 function currentHash(api: string | null, startPage: RoutePath = defaultRoute): string {
-  if (shouldOpenSettings(api, location.hash)) history.replaceState(history.state, '', buildHash('settings'));
-  else {
-    const {route, query} = hasRoute(location.hash) ? parseHash(location.hash) : {route: startPage, query: ''};
-    const canonical = buildHash(route, query);
-    if (location.hash !== canonical) history.replaceState(history.state, '', canonical);
-  }
+  const {route, query} = initialRoute(api, location.hash, startPage);
+  const canonical = buildHash(route, query);
+  if (location.hash !== canonical) history.replaceState(history.state, '', canonical);
   return location.hash;
 }
 
