@@ -88,7 +88,7 @@ export function RuntimeSettingsCard() {
                   ))}
                   {/* The recording note follows the settings; the flow note is known already. */}
                   <span className="rp-label">
-                    <SkeletonBar line="caption" />
+                    <SkeletonBar line="caption" height={[16, 32]} />
                   </span>
                   {m.flowNote && <span className="rp-label">{m.flowNote}</span>}
                 </Toolbar>

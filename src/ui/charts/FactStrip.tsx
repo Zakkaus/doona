@@ -22,7 +22,7 @@ export type ChartFact = {
 // start, and a hover, keyboard focus or tap shows it whole. `loading`: the first values are on their way, and each is
 // drawn as a Skeleton bar in its place under its label, with a caption's bar where the fact has one.
 export function FactStrip({facts, lead, loading}: {facts: ChartFact[]; lead?: boolean; loading?: boolean}) {
-  const wait = useWaitAttr();
+  const wait = useWaitAttr(!!loading);
   if (!facts.length) return null;
   return (
     <dl

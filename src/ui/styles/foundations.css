@@ -243,13 +243,22 @@
   .rp-skeleton-group,
   .rp-skeleton-cover,
   .rp-facts
+) {
+  transition: opacity var(--rp-duration) var(--rp-ease);
+}
+:is(
+  .rp-empty[role='status'],
+  .rp-table-skeleton,
+  .rp-skeleton,
+  .rp-skeleton-body,
+  .rp-skeleton-cards,
+  .rp-page-skeleton,
+  .rp-skeleton-group,
+  .rp-skeleton-cover,
+  .rp-facts
 )[data-wait] {
   visibility: hidden;
-}
-:is(.rp-empty[role='status'], .rp-table-skeleton, .rp-skeleton, .rp-skeleton-body, .rp-skeleton-cards, .rp-page-skeleton, .rp-facts:has([role='status'])):not(
-  [data-wait]
-) {
-  animation: rp-fade-in var(--rp-duration) var(--rp-ease);
+  opacity: 0;
 }
 html,
 body {

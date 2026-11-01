@@ -25,7 +25,8 @@ export function useLogs({go}: Pick<PageProps, 'go'>) {
   const targetFilter = useDebounced(filtersTarget ? target.trim() : '');
   const level = logLevel(requestedLevel, resource?.levels);
   const feed = useLogFeed({level, target: targetFilter, paused});
-  const settings = useRuntimeSettings(capabilities.data?.resources.runtime_settings.available ?? false).data;
+  const runtime = useRuntimeSettings(capabilities.data?.resources.runtime_settings.available ?? false);
+  const settings = runtime.data;
   const recorded = settings?.log?.level;
   const view = useMemo(
     () => logView(feed.records, resource?.levels ?? [], version.data?.engine.name, locale, t, feed.gaps, recorded),
@@ -33,6 +34,8 @@ export function useLogs({go}: Pick<PageProps, 'go'>) {
   );
   return {
     ...view,
+    // The recorded level is a read of its own, and its line shows once it arrives.
+    recordedPending: runtime.loading && !settings,
     empty: logEmpty(settings?.recording?.logs, !!targetFilter, t),
     status: logStatus(feed.connected, !!feed.error, paused, feed.pending, LOG_FEED_LIMIT, t),
     // The records the list shows, and the levels the backend offers, for the activity heatmap.

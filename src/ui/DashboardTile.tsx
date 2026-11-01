@@ -12,8 +12,8 @@ export function usePacking(ref: RefObject<HTMLElement | null>) {
 
 // A dashboard card's cell. Its data attributes are the section's whole layout input, so the editor's cells, which
 // carry the same attributes, keep every box the page has. `width` is a fraction the reader chose, absent for the
-// profile's footprint; `height` is the card's height step.
-export type TileProps = {id: string; module: string; size: string; foot?: string; width?: string; height?: string};
+// profile's footprint; `height` is the card's height step. A cell with no `module` is a Skeleton's, which names no card.
+export type TileProps = {id: string; module?: string; size: string; foot?: string; width?: string; height?: string};
 export const tileAttributes = ({id, module, size, foot, width, height}: TileProps) => ({
   'data-instance': id,
   'data-module': module,

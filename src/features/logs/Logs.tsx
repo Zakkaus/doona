@@ -10,6 +10,8 @@ import {
   Kv,
   LabeledSelect,
   Light,
+  SkeletonBar,
+  SkeletonGroup,
   Switch,
   TextField,
   TextTooltip,
@@ -128,7 +130,17 @@ export function Logs({go}: PageProps) {
             ]}
           />
         </Toolbar>
-        {vm.recordedText && <span className="rp-label">{vm.recordedText}</span>}
+        {vm.recordedText ? (
+          <span className="rp-label">{vm.recordedText}</span>
+        ) : (
+          vm.recordedPending && (
+            <SkeletonGroup>
+              <span className="rp-label">
+                <SkeletonBar line="caption" />
+              </span>
+            </SkeletonGroup>
+          )
+        )}
       </div>
       <ErrorMessage error={vm.error} onRetry={vm.retry} />
       <LogActivity records={vm.records} offered={vm.offered} minimum={vm.level} setMinimum={vm.setLevel} waiting={vm.loading} />

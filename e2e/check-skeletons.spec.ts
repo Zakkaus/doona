@@ -11,6 +11,10 @@ const boxes = (page: import('@playwright/test').Page, selector: string) =>
     selector
   );
 
+// The delay before a Skeleton shows (src/ui/waitClock.ts) and the slack the measure allows around it.
+const SHOW_AFTER = 150;
+const FRAME = 20;
+
 test('the global settings draw their fields as a skeleton with one status until the config is read', async ({page}) => {
   test.skip(isLive, 'holds the mock backend');
   await mockBackend(page);
@@ -43,11 +47,18 @@ test('the global settings draw their fields as a skeleton with one status until 
 test('the logs chart hold shows after the delay, reads no status of its own and keeps the loaded height', async ({page}) => {
   const {api} = await mockBackend(page);
   const runtime = await api.runtime();
-  // What the cover's visibility is when it is first seen, before any timer has run.
+  // What the cover's visibility is when it is first seen, before any timer has run, and how long after the first
+  // Skeleton of the load that was: the delay runs from that one, so the cover is hidden only while it is under 150ms.
   await page.addInitScript(() => {
+    let first = 0;
     new MutationObserver(() => {
+      const now = performance.now();
+      if (!first && document.querySelector('.rp-page-skeleton')) first = now;
       const cover = document.querySelector('.rp-skeleton-cover');
-      if (cover && !document.documentElement.dataset.cover) document.documentElement.dataset.cover = getComputedStyle(cover).visibility;
+      if (cover && !document.documentElement.dataset.cover) {
+        document.documentElement.dataset.cover = getComputedStyle(cover).visibility;
+        document.documentElement.dataset.coverAfter = String(Math.round(now - first));
+      }
     }).observe(document, {childList: true, subtree: true});
   });
   let release = () => {};
@@ -62,7 +73,13 @@ test('the logs chart hold shows after the delay, reads no status of its own and 
   await page.goto('/#/logs');
   const cover = page.locator('.rp-chart-hold .rp-skeleton-cover').first();
   await expect(cover).toBeVisible();
-  await expect(page.locator('html')).toHaveAttribute('data-cover', 'hidden');
+  const html = page.locator('html');
+  await expect(html).toHaveAttribute('data-cover-after', /^\d+$/);
+  const shownAfter = Number(await html.getAttribute('data-cover-after'));
+  // The cover joins the wait the page's Skeleton began, so it is hidden until that has run its delay. Within a frame of
+  // the delay either is right, since the wait begins a commit after the Skeleton is first seen.
+  const expected = shownAfter < SHOW_AFTER - FRAME ? 'hidden' : shownAfter > SHOW_AFTER + FRAME ? 'visible' : undefined;
+  if (expected) await expect(html).toHaveAttribute('data-cover', expected);
   await expect(page.locator('.rp-chart-page').getByRole('status')).toHaveCount(0);
   await expect(page.locator('.rp-content').getByRole('status')).toHaveCount(1);
   const before = await boxes(page, '.rp-chart-page');

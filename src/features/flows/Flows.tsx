@@ -80,7 +80,7 @@ function RoutingMap(props: PageProps) {
         }
       >
         {/* The tree's height follows the flows it draws, so its Skeleton is a block of a typical tree's. */}
-        {view.state === 'loading' && <SkeletonBody shape="block" height={480} />}
+        {view.state === 'loading' && <SkeletonBody shape="block" height={480} typical />}
         {view.state === 'empty' && <Empty>{t('flow.mapEmpty')}</Empty>}
         {view.state === 'ready' && (
           <>
