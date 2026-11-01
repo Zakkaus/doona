@@ -59,7 +59,7 @@ import {href, pickTab, tabQuery, within} from '../../shell/route';
 import {noNodeSources} from '../../api/selectors';
 import {offered} from '../../api/capabilities';
 import {diagnosticMessage, oneLine} from '../../i18n/backend';
-import {nodesTabs} from './nav';
+import {nodesTabs} from './tabs';
 import type {SubscriptionDraft, SubscriptionFieldSet} from './SubscriptionFields';
 import {parseNodeLinks} from './batch';
 import {emptyNode, isProtocol, manualLink, settle, type NodeFields} from '../../dae/nodeForm';

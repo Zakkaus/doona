@@ -1,17 +1,10 @@
 import type {Capabilities} from '../../api/model';
 import {offered} from '../../api/capabilities';
-import type {Key} from '../../i18n';
+import {nodesTabs} from './tabs';
 import type {SearchTarget} from '../../shell/routes';
 
-type NodeTab = 'list' | 'latency';
-// Latency is measured per node, so a backend that lists providers but no nodes gets the list alone, without tabs.
-export function nodesTabs(resources: Capabilities['resources'] | undefined): Array<{id: NodeTab; titleKey: Key}> {
-  if (!offered(resources, 'nodes', {whileLoading: true})) return [];
-  return [
-    {id: 'list', titleKey: 'nodes.tab.list'},
-    {id: 'latency', titleKey: 'act.latency'}
-  ];
-}
+// The tabs are read apart from the search targets, so the startup Skeleton does not load these.
+export {nodesTabs};
 
 // Where node sources are added and edited, for search: subscriptions on the sources list, share links and renames on
 // the node list.

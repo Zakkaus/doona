@@ -31,7 +31,8 @@ import {About} from '../../shell/About';
 import {openShortcuts} from '../../shell/shortcuts';
 import type {PageProps, RoutePath} from '../../shell/routes';
 import {replaceRoute, within} from '../../shell/route';
-import {cardTab, settingsCard, settingsCards, settingsTab, settingsTabs, type SettingsCardId} from './nav';
+import {cardTab, settingsCard, settingsCards, settingsTab, type SettingsCardId} from './nav';
+import {settingsTabs, settingsTabTitle} from './tabs';
 
 // A Glass palette applies once its stylesheet loads, so pointing at or focusing one of its boxes starts the load.
 const glassIntent = (event: React.SyntheticEvent) => {
@@ -355,7 +356,7 @@ export function Settings({query}: PageProps) {
         label={t('nav.settings')}
         items={settingsTabs.map(id => ({
           id,
-          label: t(id === 'general' ? 'settings.general' : 'settings.appearance'),
+          label: t(settingsTabTitle[id]),
           content: settingsCards.filter(card => cardTab(card.id) === id).map(card => <Fragment key={card.id}>{content[card.id]}</Fragment>)
         }))}
         value={tab}

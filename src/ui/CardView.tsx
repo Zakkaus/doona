@@ -44,7 +44,7 @@ export function CardView<T extends {id: string}>({
         const id = [...keys][0];
         if (id != null) onSelect(String(id));
       }}
-      renderEmptyState={() => (loading ? <SkeletonBody shape="cards" count={3} height={cardHeight} grid /> : <Empty>{empty ?? t('ui.empty')}</Empty>)}
+      renderEmptyState={() => (loading ? <SkeletonBody shape="cards" count={3} height={cardHeight} grid typical /> : <Empty>{empty ?? t('ui.empty')}</Empty>)}
     >
       {children}
     </GridList>

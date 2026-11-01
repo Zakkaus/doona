@@ -1,28 +1,39 @@
-import {createContext, use, useLayoutEffect, useRef} from 'react';
+import {createContext, Suspense, use, useLayoutEffect, useRef, type ComponentType} from 'react';
+import {useT, type Key} from '../i18n';
 import {cx} from './cx';
 import {useWaitAttr} from './Empty';
-import {SkeletonStatus, TableSkeleton} from './Skeleton';
+import {sized, SkeletonStatus, TableSkeleton} from './Skeleton';
 
-// What a page draws, top to bottom, for its Skeleton while its code or first reads load: its tab row, rows of M
-// controls (or of a row's own `height`, such as a summary's), a line of text, a fact strip, cards (in a column; `columns` to a row, as a count or a grid template; or a
-// CardView's grid), table rows under a header, and blocks such as an editor. Parts after the tab row are the tab
-// panel's, at its narrower gap, as are all of a view's inside a tab panel (`panel`); cards with `gap: 'page'` are a
-// page's own column. A route declares its own in the registry; a view inside a page passes its own.
+// What a page draws, top to bottom, for its Skeleton while its code or first reads load: its tab row, with the tabs'
+// own labels; rows of M controls (or of a row's own `height`, such as a summary's), as many as the row has controls and
+// `end` of them at the end of the row; a `summary`, the status, its facts (the first with its help button's height) and a
+// badge in the row's own wrapping, with the page's actions beside them; a line of text, a fact strip (a `lead` name first, `caption` under its first
+// value), cards (in a column; `columns` to a row, as a count or a grid template; the page's own grid `class`; or a CardView's grid), a framed table
+// of rows under its header, blocks such as an editor, a page's `draw`ing of its own (the dashboard's saved cards), and a `column` of parts at the panel's gap, for a group the page lays out apart from the rest. Parts after the tab row are the tab panel's, at its narrower
+// gap, as are all of a view's inside a tab panel (`panel`); cards with `gap: 'page'` are a page's own column. A part
+// whose height follows the data (`typical`; always a table or a block) draws a typical one and is held to its top
+// only. A route declares its own in the registry; a view inside a page passes its own.
 export type PagePart =
-  | {tabs: number}
-  | {toolbar: number; height?: number}
-  | {line: true}
-  | {facts: number}
-  | {cards: readonly number[]; columns?: number | string; grid?: true; gap?: 'page'}
+  | {tabs: readonly Key[]}
+  | {toolbar: number; height?: number | readonly [number, number]; end?: number}
+  | {summary: {state: number; facts: readonly number[]; badge: number; actions: readonly number[]}}
+  | {line: 'body' | 'caption'}
+  | {facts: number; lead?: true; caption?: true}
+  | {cards: ReadonlyArray<number | readonly [number, number]>; columns?: number | string; class?: string; grid?: true; gap?: 'page'; typical?: true}
   | {table: number}
-  | {block: number};
+  | {block: number}
+  | {draw: ComponentType}
+  | {column: readonly PagePart[]};
 export type PageShape = readonly PagePart[];
 
 // The current route's shape, which the shell provides around the page.
-export const PageShapeContext = createContext<PageShape>([{cards: [260, 260]}]);
+export const PageShapeContext = createContext<PageShape>([{cards: [260, 260], typical: true}]);
 
 // Control widths that vary along a row, so a toolbar does not read as a row of equal bars.
 const controls = [128, 96, 112, 144, 88, 104];
+// A table's frame, its header band and its rows, as the table the page draws takes them.
+const TABLE_HEAD = 40;
+const TABLE_ROW = 40;
 const tableCols = [{minWidth: 240, isRowHeader: true}, {minWidth: 140}, {minWidth: 120}, {minWidth: 96}];
 
 // A page's Skeleton in its own parts and gaps, so the page replaces it moving as little as possible. The page heading
@@ -36,11 +47,17 @@ export function PageSkeleton({shape, panel}: {shape?: PageShape; panel?: boolean
     <div ref={hold} className={cx('rp-page-skeleton', panel && 'panel')} data-wait={wait}>
       <SkeletonStatus />
       {tabs < 0 ? (
-        parts.map(drawPart)
+        drawn(parts)
       ) : (
         <>
-          {parts.slice(0, tabs).map(drawPart)}
-          <div className="rp-page-skeleton panel">{parts.slice(tabs).map(drawPart)}</div>
+          {parts.slice(0, tabs).map((part, i) => (
+            <DrawPart key={i} part={part} />
+          ))}
+          <div className="rp-page-skeleton panel">
+            {parts.slice(tabs).map((part, i) => (
+              <DrawPart key={i} part={part} />
+            ))}
+          </div>
         </>
       )}
     </div>
@@ -82,23 +99,55 @@ export function holdColumn(column: HTMLElement, height: number) {
     })
   );
 }
-function drawPart(part: PagePart, i: number) {
+const drawn = (parts: readonly PagePart[]) => parts.map((part, i) => <DrawPart key={i} part={part} />);
+function DrawPart({part}: {part: PagePart}) {
+  const t = useT();
   return 'tabs' in part ? (
-    <div key={i} className="rp-skeleton-controls" inert aria-hidden="true">
-      <span className="rp-skeleton-text" style={{width: part.tabs * 80}} />
+    <div className="rp-tabbar" data-page-tabrow inert aria-hidden="true">
+      <div className="rp-tablist">
+        {part.tabs.map(key => (
+          <span key={key} className="rp-tab">
+            {t(key)}
+          </span>
+        ))}
+      </div>
     </div>
   ) : 'toolbar' in part ? (
-    <div key={i} className="rp-skeleton-controls" style={part.height ? {height: part.height} : undefined} inert aria-hidden="true">
+    <div className="rp-skeleton-controls" style={part.height ? sized(part.height) : undefined} inert aria-hidden="true">
       {Array.from({length: part.toolbar}, (_, n) => (
-        <span key={n} className="rp-skeleton-text" style={{width: controls[n % 6]}} />
+        <span key={n} className={cx('rp-skeleton-text', n === part.toolbar - (part.end ?? 0) && 'end')} style={{width: controls[n % 6]}} />
       ))}
     </div>
+  ) : 'summary' in part ? (
+    <div className="rp-between rp-skeleton-summary" inert aria-hidden="true">
+      <div className="rp-cluster">
+        <span className="rp-skeleton-text" style={{width: part.summary.state, height: 20}} />
+        <div className="rp-kv inline row">
+          {part.summary.facts.map((width, n) => (
+            <div key={n}>
+              <span className="rp-skeleton-text" style={{width, height: n ? 20 : 24}} />
+            </div>
+          ))}
+        </div>
+        <span className="rp-skeleton-text" style={{width: part.summary.badge, height: 20}} />
+      </div>
+      <div className="rp-cluster">
+        {part.summary.actions.map((width, n) => (
+          <span key={n} className="rp-skeleton-text" style={{width}} />
+        ))}
+      </div>
+    </div>
   ) : 'line' in part ? (
-    <div key={i} className="rp-skeleton-row line" inert aria-hidden="true">
+    <div className="rp-skeleton-row line" style={{height: `var(--rp-line-${part.line})`}} inert aria-hidden="true">
       <span className="rp-skeleton-text" />
     </div>
   ) : 'facts' in part ? (
-    <div key={i} className="rp-strip rp-facts" style={{['--facts' as string]: part.facts}} inert aria-hidden="true">
+    <div
+      className={cx('rp-strip rp-facts', part.lead && 'rp-facts-lead')}
+      style={{['--facts' as string]: part.facts, ['--facts-rest' as string]: part.facts - 1}}
+      inert
+      aria-hidden="true"
+    >
       {Array.from({length: part.facts}, (_, n) => (
         <div key={n} className="rp-card">
           <span className="rp-tile-head">
@@ -108,14 +157,18 @@ function drawPart(part: PagePart, i: number) {
             <span className="rp-big">
               <span className="rp-skeleton-text" />
             </span>
+            {part.caption && !n && (
+              <span className="rp-fact-caption">
+                <span className="rp-skeleton-text" />
+              </span>
+            )}
           </span>
         </div>
       ))}
     </div>
   ) : 'cards' in part ? (
     <div
-      key={i}
-      className={cx('rp-skeleton-cards', part.grid && 'grid', part.columns !== undefined && 'columns', part.gap)}
+      className={cx('rp-skeleton-cards', part.class, part.grid && 'grid', part.columns !== undefined && 'columns', part.gap)}
       style={
         part.columns === undefined
           ? undefined
@@ -125,16 +178,23 @@ function drawPart(part: PagePart, i: number) {
       aria-hidden="true"
     >
       {part.cards.map((height, n) => (
-        <div key={n} className="rp-card" style={{height}} />
+        <div key={n} className="rp-card" style={sized(height)} data-typical={part.typical} />
       ))}
     </div>
   ) : 'table' in part ? (
-    <div key={i} inert aria-hidden="true">
+    <div className="rp-table" style={{height: TABLE_HEAD + part.table * TABLE_ROW}} data-typical inert aria-hidden="true">
+      <div className="rp-table-skeleton-head" />
       <TableSkeleton cols={tableCols} rows={part.table} quiet />
     </div>
-  ) : (
-    <div key={i} className="rp-skeleton-body block" style={{height: part.block}} inert aria-hidden="true">
+  ) : 'block' in part ? (
+    <div className="rp-skeleton-body block" style={{height: part.block}} data-typical inert aria-hidden="true">
       <span className="rp-skeleton-text" />
     </div>
+  ) : 'draw' in part ? (
+    <Suspense>
+      <part.draw />
+    </Suspense>
+  ) : (
+    <div className="rp-page-skeleton panel">{drawn(part.column)}</div>
   );
 }

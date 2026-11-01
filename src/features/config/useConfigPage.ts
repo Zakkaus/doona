@@ -102,7 +102,8 @@ export function useConfigPage({go, query}: PageProps) {
   const [choices, setChoices] = useState<ReadonlyMap<string, DiagnosticsChoice>>(noChoices);
   const [shownErrors, setShownErrors] = useState<number | null>(null);
   const tabErrors = shownErrors ?? counts.error;
-  const fallback = params.has('source') || mainSource?.content === undefined ? 'source' : 'modules';
+  // The Modules tab until the read says the configuration has no readable source, so the tab does not change on arrival.
+  const fallback = params.has('source') || (config.data && mainSource?.content === undefined) ? 'source' : 'modules';
   const tab = pickTab(
     params.get('tab') === 'validate' ? within(query, {tab: 'source'}) : query,
     tabs.map(item => item.id),

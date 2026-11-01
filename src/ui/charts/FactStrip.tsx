@@ -30,7 +30,6 @@ export function FactStrip({facts, lead, loading}: {facts: ChartFact[]; lead?: bo
       style={{['--facts' as string]: facts.length, ['--facts-rest' as string]: facts.length - 1}}
       data-wait={loading ? wait : undefined}
     >
-      {loading && <SkeletonStatus />}
       {facts.map((fact, i) => (
         <div key={fact.label} className={'rp-card' + (fact.tone ? ' ' + fact.tone : '') + (fact.valueRole === 'name' ? ' rp-fact-name' : '')}>
           <dt className={'rp-tile-head' + (fact.tint ? ' rp-tint-' + fact.tint : '')}>
@@ -40,6 +39,8 @@ export function FactStrip({facts, lead, loading}: {facts: ChartFact[]; lead?: bo
           <dd className="rp-tile-body">
             {loading ? (
               <>
+                {/* Inside the first tile, so the strip's own children are its tiles alone, as its layout counts them. */}
+                {!i && <SkeletonStatus />}
                 <span className="rp-big" inert aria-hidden="true">
                   <span className="rp-skeleton-text" />
                 </span>
