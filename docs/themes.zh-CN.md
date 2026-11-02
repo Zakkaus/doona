@@ -2,7 +2,7 @@
 
 [English](themes.md) / 简体中文 / [繁體中文](themes.zh-TW.md)
 
-标准版定义了 16 套配色，每套都有浅色与深色。配色、壁纸及透明度的选择方法见[外观设置](https://doona.daeuniverse.org/zh-CN/config-and-settings.html#修改外观)。
+标准版定义了 16 套配色，每套都有浅色与深色。配色、壁纸及透明度的选择方法见[外观设置](https://daeuniverse.org/zh-CN/doona/config-and-settings#appearance)。
 
 浅色与深色示例见[配色对比图](https://doona.daeuniverse.org/screenshots/palettes.webp)。
 

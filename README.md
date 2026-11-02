@@ -6,7 +6,7 @@
 
 **[daeuniverse](https://github.com/daeuniverse) 引擎的靜態 Web 介面：在瀏覽器中管理節點、群組、規則與組態。**
 
-**[線上示範](https://demo.daeuniverse.org/)** / **[Lite 示範（預覽版）](https://demo.daeuniverse.org/lite/)** / **[文件](https://doona.daeuniverse.org/zh-TW/)**
+**[線上示範](https://demo.daeuniverse.org/)** / **[Lite 示範（預覽版）](https://demo.daeuniverse.org/lite/)** / **[文件](https://daeuniverse.org/zh-TW/doona/)**
 
 繁體中文 / [简体中文](README.zh-CN.md) / [English](README.en.md)
 
@@ -82,7 +82,7 @@ doona 是用於監控代理流量、管理節點、群組、規則與組態的�
 
 在手機上瀏覽連線並調整外觀。
 
-可用功能取決於後端的能力與組態，詳見[功能要求](https://doona.daeuniverse.org/zh-TW/feature-requirements.html)。
+可用功能取決於後端的能力與組態，詳見[功能要求](https://daeuniverse.org/zh-TW/doona/feature-requirements)。
 
 ## 兩個版本
 
@@ -96,7 +96,7 @@ doona 是用於監控代理流量、管理節點、群組、規則與組態的�
 | 用途       | 用於日常管理的完整介面             | 體積更小的設定檔編輯器   |
 | 狀態       | 候選版本                           | 仍在測試的預覽版         |
 
-功能、後端要求及版本切換方式見[版本比較](https://doona.daeuniverse.org/zh-TW/editions.html)。
+功能、後端要求及版本切換方式見[版本比較](https://daeuniverse.org/zh-TW/doona/editions)。
 
 ![doona lite 節點頁面](https://doona.daeuniverse.org/images/lite-nodes-light.webp)
 
@@ -112,7 +112,7 @@ doona 是用於監控代理流量、管理節點、群組、規則與組態的�
 
 ## 安裝
 
-honk 的完整發布版本已內嵌 doona。依照[快速入門](https://doona.daeuniverse.org/zh-TW/quick-start.html)即可使用；文件也說明如何單獨安裝 doona。
+honk 的完整發布版本已內嵌 doona。依照[快速入門](https://daeuniverse.org/zh-TW/doona/quick-start)即可使用；文件也說明如何單獨安裝 doona。Debian、Ubuntu、Fedora 與 openSUSE 可從 daeuniverse 套件來源安裝：Debian 與 Ubuntu 用 `doona-web`，Fedora 與 openSUSE 用 `doona`，套件來源的設定見 [Debian](https://daeuniverse.org/zh-TW/guide/packages/debian)、[Fedora](https://daeuniverse.org/zh-TW/guide/packages/fedora) 與 [openSUSE](https://daeuniverse.org/zh-TW/guide/packages/opensuse)。發布封存檔與套件仍可從 GitHub Releases 取得。
 
 ## 後端協定
 
@@ -132,13 +132,13 @@ honk 負責代理流量；支援的協定、傳輸方式與限制見 [honk 節�
 - [字型](docs/fonts.md)
 - [國旗](docs/country-flags.md)
 - [更新記錄](CHANGELOG.md)
-- [文件站](https://doona.daeuniverse.org/zh-TW/)
+- [文件站](https://daeuniverse.org/zh-TW/doona/)
 
 ## 開發
 
-建置、測試與打包指令、原始碼配置與契約的固定提交，見[開發](https://doona.daeuniverse.org/zh-TW/development.html)一頁；送出 pull request 前先讀 [CONTRIBUTING.md](CONTRIBUTING.md)。
+建置、測試與打包指令、原始碼配置與契約的固定提交，見[開發](https://daeuniverse.org/zh-TW/doona/development)一頁；送出 pull request 前先讀 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-lite 的獨立相依套件安裝與建置指令見[開發](https://doona.daeuniverse.org/zh-TW/development.html#建置-doona-lite)一頁。
+lite 的獨立相依套件安裝與建置指令見[開發](https://daeuniverse.org/zh-TW/doona/development#doona-lite)一頁。
 
 ## 支援
 

@@ -4,7 +4,9 @@ English / [简体中文](install.zh-CN.md) / [繁體中文](install.zh-TW.md)
 
 doona is distributed as static web files. The current release is v0.1.0-rc.4; doona lite is a preview in testing.
 
-For installation, use the documentation site's [system requirements](https://doona.daeuniverse.org/en/requirements.html), [installation guide](https://doona.daeuniverse.org/en/install.html) and [doona lite guide](https://doona.daeuniverse.org/en/lite.html). Those pages cover backend setup, distribution-specific instructions and first sign-in. This page describes the files built by this repository. For where to download honk builds, see [Matching honk builds](#matching-honk-builds).
+For installation, use the documentation site's [system requirements](https://daeuniverse.org/doona/requirements), [installation guide](https://daeuniverse.org/doona/install) and [doona lite guide](https://daeuniverse.org/doona/lite). Those pages cover backend setup, distribution-specific instructions and first sign-in. This page describes the files built by this repository. For where to download honk builds, see [Matching honk builds](#matching-honk-builds).
+
+The daeuniverse package repository is the first choice on Debian, Ubuntu, Fedora and openSUSE: `doona-web` (with the optional `doona-web-fonts` and `doona-web-precompressed`) on Debian and Ubuntu, `doona` (with `doona-fonts` and `doona-precompressed`) on Fedora and openSUSE. Set up the repository as the [Debian](https://daeuniverse.org/guide/packages/debian), [Fedora](https://daeuniverse.org/guide/packages/fedora) or [openSUSE](https://daeuniverse.org/guide/packages/opensuse) guide describes. The release archives and packages below are the alternative.
 
 ## Release archives
 
@@ -53,4 +55,4 @@ Alpine also provides `doona-doc-<version>-r0.alpine.apk`, which contains the `NO
 | [install/openwrt/doona/Makefile](../install/openwrt/doona/Makefile)                                                             | OpenWrt package and add-ons                                                    |
 | [install/gentoo/net-proxy/doona/](../install/gentoo/net-proxy/doona/) and [install/nix/package.nix](../install/nix/package.nix) | Gentoo and Nix recipes                                                         |
 
-Packaging requires built output for both editions, even when only the standard archive is needed. See the [development guide](https://doona.daeuniverse.org/en/development.html) for dependency installation and build commands, and [install/README.md](../install/README.md) for package maintenance.
+Packaging requires built output for both editions, even when only the standard archive is needed. See the [development guide](https://daeuniverse.org/doona/development) for dependency installation and build commands, and [install/README.md](../install/README.md) for package maintenance.
