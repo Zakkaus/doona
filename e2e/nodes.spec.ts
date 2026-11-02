@@ -2008,6 +2008,8 @@ test('the interval jump edits the declaring include while the main file is read-
   await page.goto('/#/nodes?editSubscription=harbor&focus=interval');
   const dialog = page.getByRole('dialog', {name: 'Edit subscription harbor'});
   const interval = dialog.getByRole('button', {name: 'Auto-update'});
+  // The deep link opens the dialog once the providers and the config have loaded, which can take longer than the default wait on a busy runner.
+  await expect(dialog).toBeVisible({timeout: 15_000});
   await expect(interval).toBeFocused();
   await expect(page).not.toHaveURL(/editSubscription|focus=/);
   await page.keyboard.press('Enter');
