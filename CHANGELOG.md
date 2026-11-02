@@ -6,6 +6,53 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Entries live in [changes/](changes/) until release.
 
+## [0.1.0-rc.5] - 2026-11-02
+
+### Added
+
+- The Add node dialog can join the new nodes to groups in the same step. If joining fails, the nodes stay added and Add to group on the row remains. (#650)
+- The add node dialog has a Manual tab: choose a protocol (including AnyTLS and Juicity) and fill in the server, credentials, security and transport fields, and doona builds the share link, shows it for copying, and adds the node through the same path as a pasted link. (#652)
+- The add node dialog is now called Add node, since it takes a pasted link or manual fields. (#652)
+- VMess links with the aes-128-gcm cipher are built in the form honk reads; they were refused as an invalid configuration. (#652)
+- Pasted links are checked against the schemes honk reads: SOCKS4, SOCKS4a and Hysteria are accepted, and HTTP, HTTPS, SSR and Trojan-Go links, which honk refuses, are rejected up front. (#652)
+- Settings → Appearance has a switch that hides the count of off features on the Activity status card, which then shows View details; the choice is kept in this browser. (#658)
+- The Manual tab of the add node dialog offers the XHTTP transport for VMess, VLESS and Trojan, with its path, HTTP host and mode. (#654)
+- The Manual tab has an Advanced section with the options honk reads from a share link: ALPN for TUIC and XHTTP, pinSHA256, ECH config, the Shadowsocks plugin and its options, VLESS packet encoding and mux, the Hysteria2 bandwidth, port hopping, MTU and window settings, and the AnyTLS idle session settings. (#654)
+- The manual node fields no longer make a link that honk rejects: VLESS flow is offered only over TCP with TLS or REALITY, a REALITY public key is required, and ALPN shows only for TUIC and XHTTP. (#654)
+- Policy group member tiles name the subscription each node comes from, and the member filter matches that name. (#644)
+
+### Changed
+
+- Help links in both editions open the manual on daeuniverse.org/doona, in the interface language. (#662)
+- Lite shows About as the last section of Settings instead of in the backend menu. (#641)
+- Manual policy groups fold under the current member like automatic ones, and each group keeps the fold its reader left it in. (#647)
+- A folded group's summary names only the current member; the card's header already counts the available ones. (#647)
+- Tags take the height, inset and corner of S2's TagGroup at its default M, with no border, so they line up with the buttons and fields beside them. (#647)
+
+### Fixed
+
+- Dark Reader leaves doona alone: the page draws its own light and dark themes, and the extension had judged it light before the theme loaded and recoloured it. (#651)
+- Two fields in one dialog row, such as a server's address and port, a subscription interval and its unit, or a rule's outbound and position, now fill the row to the dialog's edge. A field with a fixed width keeps it; on a phone the row wraps with each field on its own line. (#653)
+- The XHTTP node options sit side by side where they pair up, and their fields are spaced as the rest of the add dialog is. (#653)
+- A refused group, node or mode edit now says which line of which file failed and why, as the rules panel does, instead of only that validation failed. (#657)
+- A link into a setting, a card or a policy group now scrolls to what it names, keeps it in view while the page above it loads, focuses it and outlines it for three seconds, also after a mouse click. The Activity status card sends you to the list of features that are off, the Overview's history and outbound counters to their Activity cards, the Probes card's health checks link to the check fields in Configuration, and Configuration validation to the diagnostics panel. (#659)
+- A press on a hub page link that moved a few pixels no longer starts dragging the link; the page opens and no label is selected. Links styled as buttons are not draggable, and button labels cannot be selected. (#649)
+- The current hub page keeps the quiet button's rounded corners when hovered. (#649)
+- A page's first-load skeleton now starts where the loaded page does: a direct load draws the page's heading and its own skeleton shape instead of a generic pair of cards, so nothing jumps when the page arrives. (#655)
+- Page tab rows load as the real segmented tab row with their labels instead of one bar. (#655)
+- Framed tables, fact strips, caption lines and right-aligned toolbars in a page skeleton follow the loaded page, and the connections, logs, DNS, flows and configuration first-read skeletons match their content's boxes. The configuration page no longer switches tabs when its first read arrives. (#655)
+- The Activity, status, nodes, policies, routing rules, DNS and settings skeletons now match their content on wide screens, tablets and phones: the dashboard draws the default layout's cards from startup, the status row wraps as the loaded one does, and a fact strip no longer takes an extra row while it loads. (#655)
+- A page's skeleton, once it shows, stays visible while startup, the page's code and its first reads follow one another, instead of disappearing and waiting another 150ms at each step; a page opened later, or a part that waits again, counts its own 150ms. (#655)
+- The startup screen draws the page the shell is about to open, the saved start page or Settings on a first run, and the page opens at the offset the startup skeleton was scrolled to only when it is the same page. (#655)
+- Service rules go above regional rules such as `geosite:gfw` and `geosite:cn`, and game services above an all-games rule, so those rules no longer catch the traffic first. (#642)
+- The service rules dialog shows the outbound of a service's existing rule instead of a checked box, and marks games that an all-games rule already sends to the chosen outbound. (#642)
+
+### Internal
+
+- doona releases no longer attach honk builds: honk's own releases embed doona, and the doona notes link the matching honk release. `tools/fetch-honk.mjs` and its tests are removed, and the install guide points to honk's releases. (#640)
+- The configuration export, import and revision routes, the restart command and the restart-only global settings come from the engine adapter, so the app and Lite no longer name honk outside `src/api/engines`. An engine doona does not know offers no configuration history, shows no restart command, and Lite offers it no global settings forms. (#646)
+- The suggested backend port is named as the native API's default port, and the retired API names that block sign-in are kept in one list. (#646)
+
 ## [0.1.0-rc.4] - 2026-10-30
 
 ### Added
@@ -996,7 +1043,8 @@ Entries live in [changes/](changes/) until release.
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
-[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.4...HEAD
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.5...HEAD
+[0.1.0-rc.5]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.4...v0.1.0-rc.5
 [0.1.0-rc.4]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.3...v0.1.0-rc.4
 [0.1.0-rc.3]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.2...v0.1.0-rc.3
 [0.1.0-rc.2]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.1...v0.1.0-rc.2
