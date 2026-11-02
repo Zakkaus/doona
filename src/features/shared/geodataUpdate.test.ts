@@ -47,15 +47,15 @@ it('offers nothing and names only empty loaded files while the needs or the back
 
 it('links the requirements of a refused geodata action and the update failures of a lasting one', () => {
   const t: Translator = (key, params) => translate('en', key, params);
-  const docs = 'https://doona.daeuniverse.org/en/';
+  const docs = 'https://daeuniverse.org/doona/';
   const failed = (code: string, stage?: string) => new LocalError('ui.operationFailed', null, code, stage ? {stage} : null);
   const cases: [error: unknown, action: 'geodata' | 'geodata_settings', href: string | undefined][] = [
-    [new ApiError(403, 'permission_denied', 'denied'), 'geodata', `${docs}feature-requirements.html#req-geodata-update`],
-    [new ApiError(501, 'capability_not_supported', 'no'), 'geodata', `${docs}feature-requirements.html#req-geodata-update`],
-    [new ApiError(403, 'permission_denied', 'denied'), 'geodata_settings', `${docs}feature-requirements.html#req-geodata-settings`],
-    [failed('asset_too_large'), 'geodata', `${docs}troubleshooting.html#geodata-update`],
-    [failed('geodata_update_failed', 'replacement_failed'), 'geodata', `${docs}troubleshooting.html#geodata-update`],
-    [failed('other', 'directory_sync_failed'), 'geodata', `${docs}troubleshooting.html#geodata-update`],
+    [new ApiError(403, 'permission_denied', 'denied'), 'geodata', `${docs}feature-requirements#req-geodata-update`],
+    [new ApiError(501, 'capability_not_supported', 'no'), 'geodata', `${docs}feature-requirements#req-geodata-update`],
+    [new ApiError(403, 'permission_denied', 'denied'), 'geodata_settings', `${docs}feature-requirements#req-geodata-settings`],
+    [failed('asset_too_large'), 'geodata', `${docs}troubleshooting#geodata-update`],
+    [failed('geodata_update_failed', 'replacement_failed'), 'geodata', `${docs}troubleshooting#geodata-update`],
+    [failed('other', 'directory_sync_failed'), 'geodata', `${docs}troubleshooting#geodata-update`],
     [failed('asset_too_large'), 'geodata_settings', undefined],
     [failed('download_timeout'), 'geodata', undefined],
     [new ApiError(500, 'internal', 'x'), 'geodata', undefined],

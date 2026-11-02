@@ -81,7 +81,11 @@ async function aboutPanel(p, locale) {
   await expect.poll(() => p.evaluate(() => document.activeElement?.tagName)).not.toBe('A');
   // The report button lives in the sidebar footer, not here.
   await expect(panel.getByRole('link')).toHaveCount(3);
-  const hrefs = [`https://doona.daeuniverse.org/${locale}/`, 'https://github.com/Zakkaus/doona', 'https://github.com/Zakkaus/doona/releases'];
+  const hrefs = [
+    `https://daeuniverse.org${locale === 'en' ? '' : `/${locale}`}/doona/`,
+    'https://github.com/Zakkaus/doona',
+    'https://github.com/Zakkaus/doona/releases'
+  ];
   for (const [index, href] of hrefs.entries()) {
     const link = panel.getByRole('link').nth(index);
     await expect(link).toHaveAttribute('href', href);

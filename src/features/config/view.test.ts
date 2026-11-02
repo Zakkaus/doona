@@ -421,7 +421,7 @@ it('explains writes that are off with the overview text, setting and docs link',
   const off = {...capabilities, resources: {...capabilities.resources, config: {...capabilities.resources.config, writable: false}}};
   const hint = limitHint('config', off, version, t, 'en')!;
   expect(hint.setting).toBe('experimental.native_api.config_write');
-  expect(hint.link.href).toContain('feature-requirements.html#req-config-edit');
+  expect(hint.link.href).toContain('doona/feature-requirements#req-config-edit');
   const badge = readOnlyBadge({kind: 'main', writable: false, content: ''}, false, true, honk, t, hint);
   expect(badge?.help).toEqual({title: t('config.readOnly'), text: [hint.text, hint.setting], link: hint.link});
   // An engine that gives no reason keeps the generic help.

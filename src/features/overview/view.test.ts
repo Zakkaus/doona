@@ -47,17 +47,17 @@ it('lists runtime degradations in their own words, an unknown code by the backen
 
 it('keeps the reason lost persistence gives and links where to restore it', () => {
   const since = runtime.observed_at;
-  const docs = 'https://doona.daeuniverse.org/en/';
+  const docs = 'https://daeuniverse.org/doona/';
   const cases = [
     [
       {code: 'persistence_unavailable', message: 'open state.db: permission denied', component: 'persistence', since},
       'open state.db: permission denied',
-      `${docs}troubleshooting.html#state-db`
+      `${docs}troubleshooting#state-db`
     ],
     [
       {code: 'state_cache_unavailable', message: 'cache', component: 'cache', since, details: {reason: 'disk full'}},
       'disk full',
-      `${docs}troubleshooting.html#state-db`
+      `${docs}troubleshooting#state-db`
     ]
   ] as const;
   for (const [entry, reason, href] of cases) {

@@ -5,7 +5,7 @@
 //   id      the stored value, and the name of the language's catalogue, src/i18n/locales/<id>.json
 //   name    the language's name in itself, as the menu shows it
 //   locale  the BCP 47 tag for Intl and <html lang>
-//   docs    the doona-docs language folder the docs links open; 'en' when the docs have no translation
+//   docs    the manual locale the docs links open (daeuniverse.org/doona); 'en' when the manual has no translation
 //   fonts   <name> of the src/fonts-<name>.css stylesheet that declares the language's ideograph faces, loaded with
 //           its catalogue, or null
 //   faces   the font families the body prefers, in order, before the system font; the first is warmed for menu glyphs.

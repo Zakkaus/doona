@@ -43,7 +43,7 @@ it('distinguishes connection errors from successful status', () => {
   expect(view.result?.link).toBeUndefined();
   expect(profileView([], null, t, 'en').result).toBeNull();
   expect(profileView([], {key: 'settings.cors', error: true, docs: 'sign-in'}, t, 'zh-TW').result?.link).toEqual({
-    href: 'https://doona.daeuniverse.org/zh-TW/troubleshooting.html#sign-in',
+    href: 'https://daeuniverse.org/zh-TW/doona/troubleshooting#sign-in',
     text: 'Sign-in and cross-origin failures',
     external: true
   });

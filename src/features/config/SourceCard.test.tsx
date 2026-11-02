@@ -83,7 +83,7 @@ it('tells a write refused for a restart: the settings, that nothing was written 
   for (const key of ['global.log_level', 'dns.bind']) expect(markup).toContain(`<code class="rp-code">${key}</code>`);
   expect(markup).toContain('rules.dae:3');
   expect(markup).toContain('systemctl restart honk-core');
-  expect(markup).toContain('install.html#reload-and-restart');
+  expect(markup).toContain('doona/install#reload-and-restart');
 });
 
 it('gives the editor the names to complete after the arrow', () => {
