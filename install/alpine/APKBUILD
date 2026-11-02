@@ -1,7 +1,7 @@
 # Contributor: Zakkaus <zakk@gentoozh.org>
 # Maintainer: Zakkaus <zakk@gentoozh.org>
 pkgname=doona
-pkgver=0.1.0_rc4
+pkgver=0.1.0_rc5
 pkgrel=0
 _pkgver=${pkgver/_beta/-beta.}
 _pkgver=${_pkgver/_rc/-rc.}
@@ -51,7 +51,7 @@ _precompressed() {
 }
 
 sha512sums="
-602dce2ee8d51a80d5b634567304dda037c826a96aa2ba3c0ea3a51ffb625a5bdaf5bc54c43a9717347d858f8247fd45bd28a7dd82da4b4e5dcd00c4e74dc5e4  doona-0.1.0-rc.4.tar.gz
-4b0205ab4c59e6e22ff7ed4b8494d5b257fec09dbff068ddfe3d021b6039aefd44d140261d1f85a5802c9ae9d24ff9ae9a0ad3d98d8b31d83c62be6e6330e18f  doona-fonts-0.1.0-rc.4.tar.gz
-f9afd40b3e52d520d48a1d3331f56b9f6cfc8a5531ae66a53fb100191217ca2e0904e8805c52905967a03aee164d45758f1317d1eb489d79a0f884f456a2351c  doona-precompressed-0.1.0-rc.4.tar.gz
+602dce2ee8d51a80d5b634567304dda037c826a96aa2ba3c0ea3a51ffb625a5bdaf5bc54c43a9717347d858f8247fd45bd28a7dd82da4b4e5dcd00c4e74dc5e4  doona-0.1.0-rc.5.tar.gz
+4b0205ab4c59e6e22ff7ed4b8494d5b257fec09dbff068ddfe3d021b6039aefd44d140261d1f85a5802c9ae9d24ff9ae9a0ad3d98d8b31d83c62be6e6330e18f  doona-fonts-0.1.0-rc.5.tar.gz
+f9afd40b3e52d520d48a1d3331f56b9f6cfc8a5531ae66a53fb100191217ca2e0904e8805c52905967a03aee164d45758f1317d1eb489d79a0f884f456a2351c  doona-precompressed-0.1.0-rc.5.tar.gz
 "
