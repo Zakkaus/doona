@@ -4,7 +4,7 @@ English / [简体中文](themes.zh-CN.md) / [繁體中文](themes.zh-TW.md)
 
 The standard edition defines 16 palettes, each pairing light and dark colors. For choosing a palette, wallpaper or transparency setting, see [appearance settings](https://daeuniverse.org/doona/config-and-settings#appearance).
 
-See the [palette comparison](https://doona.daeuniverse.org/screenshots/palettes.webp) for light and dark examples.
+See the [palette comparison](https://daeuniverse.org/doona/screenshots/palettes.webp) for light and dark examples.
 
 ## Source map
 

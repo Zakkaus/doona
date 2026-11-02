@@ -16,7 +16,7 @@
 
 doona is a static web UI for monitoring proxy traffic and managing nodes, groups, rules and configuration. It requires a running [honk](https://github.com/daeuniverse/honk) backend with the native API enabled; dae is not supported yet.
 
-![Activity dashboard with traffic charts and status cards](https://doona.daeuniverse.org/screenshots/en/activity-light.webp)
+![Activity dashboard with traffic charts and status cards](https://daeuniverse.org/doona/screenshots/en/activity-light.webp)
 
 ## Features
 
@@ -26,11 +26,11 @@ doona is a static web UI for monitoring proxy traffic and managing nodes, groups
 - Inspect connections, flow records and DNS queries.
 - Read backend logs and events.
 
-![Activity card width and height controls](https://doona.daeuniverse.org/screenshots/en/dashboard-settings.webp)
+![Activity card width and height controls](https://daeuniverse.org/doona/screenshots/en/dashboard-settings.webp)
 
 Adjust card sizes on the Activity dashboard.
 
-![The Flows map showing the traffic path through a selected rule or node](https://doona.daeuniverse.org/screenshots/en/routing.webp)
+![The Flows map showing the traffic path through a selected rule or node](https://daeuniverse.org/doona/screenshots/en/routing.webp)
 
 The Flows map; selecting a rule or node shows the traffic path through it.
 
@@ -40,7 +40,7 @@ The Flows map; selecting a rule or node shows the traffic path through it.
 - Test filtered nodes and sort by latency.
 - Refresh subscriptions and inspect probe results.
 
-![Node actions menu and probe results](https://doona.daeuniverse.org/screenshots/en/node-actions.webp)
+![Node actions menu and probe results](https://daeuniverse.org/doona/screenshots/en/node-actions.webp)
 
 Inspect a node’s probe results and add it to a group.
 
@@ -50,11 +50,11 @@ Inspect a node’s probe results and add it to a group.
 - Edit the rule list and apply routing templates.
 - Trace routing decisions with a process name and firewall mark.
 
-![Policy group editor](https://doona.daeuniverse.org/screenshots/en/group-editor.webp)
+![Policy group editor](https://daeuniverse.org/doona/screenshots/en/group-editor.webp)
 
 Edit a group’s filters and policy.
 
-![Rule list in advanced view](https://doona.daeuniverse.org/screenshots/en/rules-advanced.webp)
+![Rule list in advanced view](https://daeuniverse.org/doona/screenshots/en/rules-advanced.webp)
 
 Inspect the rule list in advanced view.
 
@@ -64,7 +64,7 @@ Inspect the rule list in advanced view.
 - Change global settings through a form.
 - Inspect revisions and export configuration.
 
-![Configuration editor with validation errors](https://doona.daeuniverse.org/screenshots/en/config-diagnostics.webp)
+![Configuration editor with validation errors](https://daeuniverse.org/doona/screenshots/en/config-diagnostics.webp)
 
 Locate validation errors in the source editor.
 
@@ -74,11 +74,11 @@ Locate validation errors in the source editor.
 - Use English, Simplified Chinese or Traditional Chinese.
 - Use page tabs, lists and menus on phones.
 
-![Palette comparison sheet](https://doona.daeuniverse.org/screenshots/palettes.webp)
+![Palette comparison sheet](https://daeuniverse.org/doona/screenshots/palettes.webp)
 
 Compare the available palettes.
 
-![Phone layouts with connections and appearance menus](https://doona.daeuniverse.org/screenshots/en/phone.webp)
+![Phone layouts with connections and appearance menus](https://daeuniverse.org/doona/screenshots/en/phone.webp)
 
 Browse connections and change appearance on a phone.
 
@@ -98,7 +98,7 @@ doona lite is a preview in testing in 0.1.0-rc.4; its pages and behaviour may ch
 
 See the [edition comparison](https://daeuniverse.org/doona/editions) for features, backend requirements and switching editions.
 
-![The doona lite Nodes page](https://doona.daeuniverse.org/images/lite-nodes-light.webp)
+![The doona lite Nodes page](https://daeuniverse.org/doona/images/lite-nodes-light.webp)
 
 ## Try the demo
 

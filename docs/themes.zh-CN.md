@@ -4,7 +4,7 @@
 
 标准版定义了 16 套配色，每套都有浅色与深色。配色、壁纸及透明度的选择方法见[外观设置](https://daeuniverse.org/zh-CN/doona/config-and-settings#appearance)。
 
-浅色与深色示例见[配色对比图](https://doona.daeuniverse.org/screenshots/palettes.webp)。
+浅色与深色示例见[配色对比图](https://daeuniverse.org/doona/screenshots/palettes.webp)。
 
 ## 源码索引
 
