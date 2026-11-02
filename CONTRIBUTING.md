@@ -26,7 +26,7 @@ Run the gates for the CI lane selected by `tools/ci-changes.mjs`, from the repos
 - `contract/`: the vendored native API contract that `pnpm gen:api` reads.
 - `public/`: app icons, logo, manifest and service-worker template. Noto fonts come from npm packages; see [Fonts](docs/fonts.md).
 - `install/`: packaging for Alpine, Gentoo, nfpm, Nix and OpenWrt.
-- `docs/`: font and country-flag documentation, and the duck artwork. README screenshots are published with the manual.
+- `docs/`: font and country-flag documentation, and the duck artwork. README screenshots are rendered by the documentation build in daeuniverse/repo-for-linux from the released doona and published at daeuniverse.org/doona/screenshots/.
 - `patches/`: pnpm patches to dependencies.
 - `LICENSES/`: license texts for REUSE.
 - `.github/`: CI workflows and the issue and pull request templates.

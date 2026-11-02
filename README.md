@@ -16,7 +16,7 @@
 
 doona 是用於監控代理流量、管理節點、群組、規則與組態的靜態 Web 介面。使用時需要正在運作且已啟用原生 API 的 [honk](https://github.com/daeuniverse/honk) 後端；目前不支援 dae。
 
-![顯示流量圖表與狀態卡片的活動頁](https://doona.daeuniverse.org/screenshots/zh-TW/activity-light.webp)
+![顯示流量圖表與狀態卡片的活動頁](https://daeuniverse.org/doona/screenshots/zh-TW/activity-light.webp)
 
 ## 功能
 
@@ -26,11 +26,11 @@ doona 是用於監控代理流量、管理節點、群組、規則與組態的�
 - 檢視連線、分流記錄與 DNS 查詢。
 - 檢視後端日誌與事件。
 
-![活動頁卡片的寬度與高度設定](https://doona.daeuniverse.org/screenshots/zh-TW/dashboard-settings.webp)
+![活動頁卡片的寬度與高度設定](https://daeuniverse.org/doona/screenshots/zh-TW/dashboard-settings.webp)
 
 在活動頁調整卡片尺寸。
 
-![分流頁地圖顯示經過所選規則或節點的流量路徑](https://doona.daeuniverse.org/screenshots/zh-TW/routing.webp)
+![分流頁地圖顯示經過所選規則或節點的流量路徑](https://daeuniverse.org/doona/screenshots/zh-TW/routing.webp)
 
 分流頁地圖；選取規則或節點可檢視經過它的流量路徑。
 
@@ -40,7 +40,7 @@ doona 是用於監控代理流量、管理節點、群組、規則與組態的�
 - 測試篩選後的節點，並依延遲排序。
 - 更新訂閱並檢視探測結果。
 
-![節點操作選單與探測結果](https://doona.daeuniverse.org/screenshots/zh-TW/node-actions.webp)
+![節點操作選單與探測結果](https://daeuniverse.org/doona/screenshots/zh-TW/node-actions.webp)
 
 檢視節點的探測結果，並將節點加入群組。
 
@@ -50,11 +50,11 @@ doona 是用於監控代理流量、管理節點、群組、規則與組態的�
 - 編輯規則清單並套用路由範本。
 - 填寫行程名稱與防火牆標記，追蹤路由決策。
 
-![策略群組編輯器](https://doona.daeuniverse.org/screenshots/zh-TW/group-editor.webp)
+![策略群組編輯器](https://daeuniverse.org/doona/screenshots/zh-TW/group-editor.webp)
 
 編輯群組的篩選條件與策略。
 
-![進階檢視中的規則清單](https://doona.daeuniverse.org/screenshots/zh-TW/rules-advanced.webp)
+![進階檢視中的規則清單](https://daeuniverse.org/doona/screenshots/zh-TW/rules-advanced.webp)
 
 在進階檢視中檢視規則清單。
 
@@ -64,7 +64,7 @@ doona 是用於監控代理流量、管理節點、群組、規則與組態的�
 - 透過表單修改全域設定。
 - 檢視修訂並匯出組態。
 
-![顯示驗證錯誤的設定檔編輯器](https://doona.daeuniverse.org/screenshots/zh-TW/config-diagnostics.webp)
+![顯示驗證錯誤的設定檔編輯器](https://daeuniverse.org/doona/screenshots/zh-TW/config-diagnostics.webp)
 
 在設定檔編輯器中定位驗證錯誤。
 
@@ -74,11 +74,11 @@ doona 是用於監控代理流量、管理節點、群組、規則與組態的�
 - 使用英語、簡體中文或繁體中文。
 - 在手機上使用頁面分頁、清單與選單。
 
-![可用配色比較圖](https://doona.daeuniverse.org/screenshots/palettes.webp)
+![可用配色比較圖](https://daeuniverse.org/doona/screenshots/palettes.webp)
 
 比較可用的配色。
 
-![手機上的連線清單與外觀選單](https://doona.daeuniverse.org/screenshots/zh-TW/phone.webp)
+![手機上的連線清單與外觀選單](https://daeuniverse.org/doona/screenshots/zh-TW/phone.webp)
 
 在手機上瀏覽連線並調整外觀。
 
@@ -98,7 +98,7 @@ doona 是用於監控代理流量、管理節點、群組、規則與組態的�
 
 功能、後端要求及版本切換方式見[版本比較](https://daeuniverse.org/zh-TW/doona/editions)。
 
-![doona lite 節點頁面](https://doona.daeuniverse.org/images/lite-nodes-light.webp)
+![doona lite 節點頁面](https://daeuniverse.org/doona/images/lite-nodes-light.webp)
 
 ## 體驗示範版
 
