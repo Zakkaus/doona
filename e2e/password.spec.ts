@@ -60,9 +60,9 @@ test('a released honk without the native API shows the requirement instead of a 
   await expect(form.getByLabel('Token', {exact: true})).toHaveCount(0);
   await expect(form.getByRole('link', {name: 'Native API requirements'})).toHaveAttribute(
     'href',
-    'https://doona.daeuniverse.org/en/troubleshooting.html#no-native-api'
+    'https://daeuniverse.org/doona/troubleshooting#no-native-api'
   );
-  await expect(form.getByRole('link', {name: 'Guide'})).toHaveAttribute('href', 'https://doona.daeuniverse.org/en/');
+  await expect(form.getByRole('link', {name: 'Guide'})).toHaveAttribute('href', 'https://daeuniverse.org/doona/');
 });
 
 test('a first visit creates the administrator and continues with its session', async ({page}) => {

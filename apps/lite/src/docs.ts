@@ -1,10 +1,10 @@
-import anchors from '../../../src/features/shared/docsAnchors.json';
+import {manualHref, type DocsAnchor} from '../../../src/features/shared/manualUrl';
 import type {Locale} from './i18n';
 
-// The standard edition's anchor map, so both editions open the same section and doona-docs checks lite's links too.
-export type DocsAnchor = keyof typeof anchors;
+// The standard edition's anchor map, so both editions open the same section and the manual's tests cover lite's links too.
+export type {DocsAnchor};
 
-// Without an anchor it opens the guide's start page.
+// Without an anchor it opens the manual's start page.
 export function docsHref(locale: Locale, anchor?: DocsAnchor): string {
-  return `https://doona.daeuniverse.org/${locale}/${anchor ? `${anchors[anchor]}.html#${anchor}` : ''}`;
+  return manualHref(locale, anchor);
 }

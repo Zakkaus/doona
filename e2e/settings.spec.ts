@@ -585,7 +585,7 @@ test('the About card opens the keyboard shortcuts and links the guide', async ({
   await expect(dialog).toContainText('Search');
   await dialog.getByRole('button', {name: 'Close', exact: true}).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole('main').getByRole('link', {name: /^Guide/})).toHaveAttribute('href', /^https:\/\/doona\.daeuniverse\.org\//);
+  await expect(page.getByRole('main').getByRole('link', {name: /^Guide/})).toHaveAttribute('href', /^https:\/\/daeuniverse\.org\/doona\//);
 });
 
 test('About doona lists its links in full-width rows on a phone and keeps its footer clear of the screen edge', async ({page}) => {

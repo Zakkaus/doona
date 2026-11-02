@@ -192,7 +192,7 @@ for (const [loaded, files] of [
     await refuse();
     await expect(alert).toContainText(`Missing or unusable: ${files}.`);
     const docs = alert.getByRole('link', {name: 'How to install geodata'});
-    await expect(docs).toHaveAttribute('href', /\/en\/troubleshooting\.html#offline-dependency$/);
+    await expect(docs).toHaveAttribute('href', /\/doona\/troubleshooting#offline-dependency$/);
     await expect(download(page)).toHaveCount(0);
     // The backend's words stay under Details for a bug report.
     const backendWords = alert.getByText(offlineMessage, {exact: true});

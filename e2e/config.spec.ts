@@ -797,7 +797,7 @@ test('a restart-only change is refused with the setting named, and the next writ
   await expect(notice).toBeFocused();
   await expect(notice).toContainText('other init systems');
   await expect(notice).toContainText('systemctl restart honk-core');
-  await expect(notice.getByRole('link', {name: /Reload and restart/})).toHaveAttribute('href', /install\.html#reload-and-restart$/);
+  await expect(notice.getByRole('link', {name: /Reload and restart/})).toHaveAttribute('href', /doona\/install#reload-and-restart$/);
   await expect(editor).toContainText('# restart draft');
   await editor.fill((await editor.innerText()) + '\n# revised draft\n');
   await expect(notice).toHaveCount(0);

@@ -294,7 +294,7 @@ test.describe('with the base profile', () => {
     );
     await page.keyboard.press('Escape');
     await expect(help).toBeHidden();
-    await expect(rows.nth(4).getByRole('link', {name: 'Version requirements'})).toHaveAttribute('href', /\/en\/requirements\.html#honk-version$/);
+    await expect(rows.nth(4).getByRole('link', {name: 'Version requirements'})).toHaveAttribute('href', /\/doona\/requirements#honk-version$/);
     // The card sits below the Datapath and Backend features row, across the page.
     const lower = await page.locator('.rp-overview-lower').boundingBox();
     const box = await card.boundingBox();
@@ -362,14 +362,14 @@ test('with configuration writes and recorders off, each group names the setting 
   const help = page.getByRole('dialog', {name: 'How to turn on'});
   await rows.nth(0).getByRole('button', {name: 'How to turn on'}).click();
   await expect(help.locator('pre')).toHaveText('experimental {\n  native_api {\n    config_write: true\n  }\n}');
-  await expect(help.getByRole('link', {name: /^Configuration: requirements/})).toHaveAttribute('href', /feature-requirements\.html#req-config-edit$/);
-  await expect(help.getByRole('link', {name: /^Editing rules: requirements/})).toHaveAttribute('href', /feature-requirements\.html#req-rules$/);
+  await expect(help.getByRole('link', {name: /^Configuration: requirements/})).toHaveAttribute('href', /feature-requirements#req-config-edit$/);
+  await expect(help.getByRole('link', {name: /^Editing rules: requirements/})).toHaveAttribute('href', /feature-requirements#req-rules$/);
   await page.keyboard.press('Escape');
   await expect(help).toBeHidden();
   await rows.nth(1).getByRole('button', {name: 'How to turn on'}).click();
   await expect(help.locator('pre')).toContainText('record_traffic: true');
-  await expect(help.getByRole('link', {name: /^Traffic history: requirements/})).toHaveAttribute('href', /feature-requirements\.html#req-traffic-history$/);
-  await expect(help.getByRole('link', {name: /^Logs: requirements/})).toHaveAttribute('href', /feature-requirements\.html#req-logs$/);
+  await expect(help.getByRole('link', {name: /^Traffic history: requirements/})).toHaveAttribute('href', /feature-requirements#req-traffic-history$/);
+  await expect(help.getByRole('link', {name: /^Logs: requirements/})).toHaveAttribute('href', /feature-requirements#req-logs$/);
 });
 
 test.describe(() => {

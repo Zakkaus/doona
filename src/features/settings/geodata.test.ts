@@ -170,7 +170,7 @@ describe('rows', () => {
     expect(statusLine(other, false, now, 'en-US', t, true).help).toBeUndefined();
   });
   it('links the update failures in the docs for a stage a retry does not get past', () => {
-    const link = {href: 'https://doona.daeuniverse.org/en/troubleshooting.html#geodata-update', text: t('ov.lim.docsGeodataUpdate'), external: true};
+    const link = {href: 'https://daeuniverse.org/doona/troubleshooting#geodata-update', text: t('ov.lim.docsGeodataUpdate'), external: true};
     const cases = [
       ['asset_too_large', link],
       ['asset_validation_failed', link],

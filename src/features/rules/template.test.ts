@@ -107,14 +107,14 @@ it('refuses routing split over files and files it may not write', () => {
 });
 
 it('links each refusal to the docs on lifting it, and none where the refusal already says how', () => {
-  const docs = 'https://doona.daeuniverse.org/en/';
+  const docs = 'https://daeuniverse.org/doona/';
   const cases = [
-    ['writesOff', `${docs}troubleshooting.html#read-only`],
-    ['readOnly', `${docs}troubleshooting.html#read-only`],
-    ['denied', `${docs}troubleshooting.html#read-only`],
-    ['incomplete', `${docs}troubleshooting.html#read-only`],
-    ['noSource', `${docs}feature-requirements.html#req-rules`],
-    ['syntax', `${docs}feature-requirements.html#req-rules`],
+    ['writesOff', `${docs}troubleshooting#read-only`],
+    ['readOnly', `${docs}troubleshooting#read-only`],
+    ['denied', `${docs}troubleshooting#read-only`],
+    ['incomplete', `${docs}troubleshooting#read-only`],
+    ['noSource', `${docs}feature-requirements#req-rules`],
+    ['syntax', `${docs}feature-requirements#req-rules`],
     ['split', undefined],
     ['secret', undefined]
   ] as const;
