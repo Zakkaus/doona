@@ -1,6 +1,6 @@
 # Country flags
 
-The standard edition uses a bundled Twemoji font to render flag characters and a separate lookup to add display prefixes to node names. For the global display setting, see [appearance settings](https://doona.daeuniverse.org/en/config-and-settings.html#appearance). Per-node controls are described below.
+The standard edition uses a bundled Twemoji font to render flag characters and a separate lookup to add display prefixes to node names. For the global display setting, see [appearance settings](https://daeuniverse.org/doona/config-and-settings#appearance). Per-node controls are described below.
 
 ## Font asset and licence
 

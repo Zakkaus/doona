@@ -4,7 +4,9 @@
 
 doona 以静态网页文件发布。当前版本为 v0.1.0-rc.4；doona lite 是测试中的预览版。
 
-安装请参阅文档站的[系统要求](https://doona.daeuniverse.org/zh-CN/requirements.html)、[安装指南](https://doona.daeuniverse.org/zh-CN/install.html)与 [doona lite 指南](https://doona.daeuniverse.org/zh-CN/lite.html)。这些页面说明后端配置、各发行版的安装步骤与首次登录。本页说明本仓库构建的文件。honk 构建的下载位置见[配套 honk 构建](#配套-honk-构建)。
+安装请参阅文档站的[系统要求](https://daeuniverse.org/zh-CN/doona/requirements)、[安装指南](https://daeuniverse.org/zh-CN/doona/install)与 [doona lite 指南](https://daeuniverse.org/zh-CN/doona/lite)。这些页面说明后端配置、各发行版的安装步骤与首次登录。本页说明本仓库构建的文件。honk 构建的下载位置见[配套 honk 构建](#配套-honk-构建)。
+
+Debian、Ubuntu、Fedora 与 openSUSE 优先使用 daeuniverse 软件源：Debian 与 Ubuntu 用 `doona-web`（可选 `doona-web-fonts` 与 `doona-web-precompressed`），Fedora 与 openSUSE 用 `doona`（可选 `doona-fonts` 与 `doona-precompressed`）。软件源的配置见 [Debian](https://daeuniverse.org/zh-CN/guide/packages/debian)、[Fedora](https://daeuniverse.org/zh-CN/guide/packages/fedora) 与 [openSUSE](https://daeuniverse.org/zh-CN/guide/packages/opensuse) 指南。下列发布压缩包与软件包作为替代方式。
 
 ## 发布压缩包
 
@@ -53,4 +55,4 @@ Alpine 还提供 `doona-doc-<version>-r0.alpine.apk`，其中包含 `NOTICE` 文
 | [install/openwrt/doona/Makefile](../install/openwrt/doona/Makefile)                                                            | OpenWrt 软件包与附加包                                            |
 | [install/gentoo/net-proxy/doona/](../install/gentoo/net-proxy/doona/) 与 [install/nix/package.nix](../install/nix/package.nix) | Gentoo 与 Nix 配方                                                |
 
-打包前必须先构建两个版本，即使只需要标准版压缩包。依赖安装与构建命令见[开发指南](https://doona.daeuniverse.org/zh-CN/development.html)，软件包维护见 [install/README.md](../install/README.md)。
+打包前必须先构建两个版本，即使只需要标准版压缩包。依赖安装与构建命令见[开发指南](https://daeuniverse.org/zh-CN/doona/development)，软件包维护见 [install/README.md](../install/README.md)。

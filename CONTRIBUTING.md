@@ -26,7 +26,7 @@ Run the gates for the CI lane selected by `tools/ci-changes.mjs`, from the repos
 - `contract/`: the vendored native API contract that `pnpm gen:api` reads.
 - `public/`: app icons, logo, manifest and service-worker template. Noto fonts come from npm packages; see [Fonts](docs/fonts.md).
 - `install/`: packaging for Alpine, Gentoo, nfpm, Nix and OpenWrt.
-- `docs/`: font and country-flag documentation, and the duck artwork. README screenshots live in doona-docs.
+- `docs/`: font and country-flag documentation, and the duck artwork. README screenshots are published with the manual.
 - `patches/`: pnpm patches to dependencies.
 - `LICENSES/`: license texts for REUSE.
 - `.github/`: CI workflows and the issue and pull request templates.
@@ -182,7 +182,7 @@ A reviewer checks the rest by hand: watched and cached reads go through the stor
 
 ## User documentation
 
-The user documentation lives in [Zakkaus/doona-docs](https://github.com/Zakkaus/doona-docs) and is published at [doona.daeuniverse.org](https://doona.daeuniverse.org/). When a change alters what users see or do, open a matching pull request there. The app links docs sections through `docsHref`; `src/features/shared/docsAnchors.json` maps each anchor to its page, and doona-docs checks that map against its pages.
+The user documentation lives in [daeuniverse/repo-for-linux](https://github.com/daeuniverse/repo-for-linux) (`docs/doona/`) and is published at [daeuniverse.org/doona](https://daeuniverse.org/doona/). When a change alters what users see or do, open a matching pull request there. The app links manual sections through `docsHref`; `src/features/shared/docsAnchors.json` maps each anchor to its page, and the tests in repo-for-linux check that every anchor exists on its page in every locale.
 
 ## Translations
 
@@ -208,9 +208,9 @@ Template names are doona's own. Generated group labels follow the current UI lan
 To add a language:
 
 1. Open an issue first, naming the language and who will review its strings.
-2. Add an entry to `src/i18n/languages.ts` with `complete: false`: its id, its name in itself, its BCP 47 locale, the docs folder it links to (one of the languages doona-docs publishes, otherwise `en`; when doona-docs gains a language, widen the `docs` type there), and, only when its script needs faces doona ships, the `<name>` of the `src/fonts-<name>.css` stylesheet that declares them. List in `faces` the font families its text prefers, before the system font. If the browser's language tag needs more than its primary subtag to pick it, extend `browserLang` there and the same lines in `tools/stamp.js`, and add the tags to `src/i18n/negotiation.test-cases.ts`.
+2. Add an entry to `src/i18n/languages.ts` with `complete: false`: its id, its name in itself, its BCP 47 locale, the docs folder it links to (one of the locales the manual publishes, otherwise `en`; when the manual gains a locale, widen the `docs` type there), and, only when its script needs faces doona ships, the `<name>` of the `src/fonts-<name>.css` stylesheet that declares them. List in `faces` the font families its text prefers, before the system font. If the browser's language tag needs more than its primary subtag to pick it, extend `browserLang` there and the same lines in `tools/stamp.js`, and add the tags to `src/i18n/negotiation.test-cases.ts`.
 3. Create `src/i18n/locales/<id>.json`. `pnpm check:i18n --missing <id>`, which works before that file exists, prints the keys it lacks with their English text, grouped by prefix, as lines to paste in and translate.
-4. Run `pnpm check`, which also prints the language's coverage. The user documentation is translated separately, in doona-docs.
+4. Run `pnpm check`, which also prints the language's coverage. The user documentation is translated separately, in repo-for-linux.
 
 A partial language shows English for the strings it lacks. Once it has every key, maintainers may mark it `complete: true`.
 

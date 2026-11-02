@@ -6,7 +6,7 @@
 
 **Static web UI for the [daeuniverse](https://github.com/daeuniverse) engines: manage nodes, groups, rules and configuration in a browser.**
 
-**[Live demo](https://demo.daeuniverse.org/)** / **[Lite demo (preview)](https://demo.daeuniverse.org/lite/)** / **[Documentation](https://doona.daeuniverse.org/en/)**
+**[Live demo](https://demo.daeuniverse.org/)** / **[Lite demo (preview)](https://demo.daeuniverse.org/lite/)** / **[Documentation](https://daeuniverse.org/doona/)**
 
 [繁體中文](README.md) / [简体中文](README.zh-CN.md) / English
 
@@ -82,7 +82,7 @@ Compare the available palettes.
 
 Browse connections and change appearance on a phone.
 
-Available features depend on the backend’s capabilities and configuration; see the [feature requirements](https://doona.daeuniverse.org/en/feature-requirements.html).
+Available features depend on the backend’s capabilities and configuration; see the [feature requirements](https://daeuniverse.org/doona/feature-requirements).
 
 ## Two editions
 
@@ -96,7 +96,7 @@ doona lite is a preview in testing in 0.1.0-rc.4; its pages and behaviour may ch
 | Intended use       | full interface for everyday management                    | smaller configuration editor                       |
 | Status             | release candidate                                         | preview in testing                                 |
 
-See the [edition comparison](https://doona.daeuniverse.org/en/editions.html) for features, backend requirements and switching editions.
+See the [edition comparison](https://daeuniverse.org/doona/editions) for features, backend requirements and switching editions.
 
 ![The doona lite Nodes page](https://doona.daeuniverse.org/images/lite-nodes-light.webp)
 
@@ -112,7 +112,7 @@ To see error states, use [`?scenario=faults`](https://demo.daeuniverse.org/?scen
 
 ## Install
 
-honk's full releases already embed doona. Follow the [quick start](https://doona.daeuniverse.org/en/quick-start.html) to use it; the documentation also covers installing doona separately.
+honk's full releases already embed doona. Follow the [quick start](https://daeuniverse.org/doona/quick-start) to use it; the documentation also covers installing doona separately. On Debian, Ubuntu, Fedora and openSUSE, install it from the daeuniverse package repository: `doona-web` on Debian and Ubuntu, `doona` on Fedora and openSUSE, with the repository set up as described for [Debian](https://daeuniverse.org/guide/packages/debian), [Fedora](https://daeuniverse.org/guide/packages/fedora) and [openSUSE](https://daeuniverse.org/guide/packages/opensuse). The release archives and packages stay available from the GitHub releases.
 
 ## Backend protocols
 
@@ -132,13 +132,13 @@ This release adds node multi-select, to test latency together or remove manual n
 - [Fonts](docs/fonts.md)
 - [Country flags](docs/country-flags.md)
 - [Changelog](CHANGELOG.md)
-- [Documentation site](https://doona.daeuniverse.org/en/)
+- [Documentation site](https://daeuniverse.org/doona/)
 
 ## Development
 
-The build, test and packaging commands, the source layout and the contract pin are on the [development page](https://doona.daeuniverse.org/en/development.html). See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+The build, test and packaging commands, the source layout and the contract pin are on the [development page](https://daeuniverse.org/doona/development). See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
-For lite’s separate dependency install and build commands, see [Development](https://doona.daeuniverse.org/en/development.html#build-doona-lite).
+For lite’s separate dependency install and build commands, see [Development](https://daeuniverse.org/doona/development#doona-lite).
 
 ## Support
 

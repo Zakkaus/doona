@@ -2,7 +2,7 @@
 
 English / [简体中文](pages.zh-CN.md) / [繁體中文](pages.zh-TW.md)
 
-The standard edition groups its pages into four navigation hubs. For page operations and phone navigation, start with the [interface tour](https://doona.daeuniverse.org/en/tour.html). The [monitoring guide](https://doona.daeuniverse.org/en/observe.html), [routing guide](https://doona.daeuniverse.org/en/routing.html) and [configuration guide](https://doona.daeuniverse.org/en/config-and-settings.html) describe the available controls.
+The standard edition groups its pages into four navigation hubs. For page operations and phone navigation, start with the [interface tour](https://daeuniverse.org/doona/tour). The [monitoring guide](https://daeuniverse.org/doona/observe), [routing guide](https://daeuniverse.org/doona/routing) and [configuration guide](https://daeuniverse.org/doona/config-and-settings) describe the available controls.
 
 ## Source map
 

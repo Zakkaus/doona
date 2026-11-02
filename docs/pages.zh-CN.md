@@ -2,7 +2,7 @@
 
 [English](pages.md) / 简体中文 / [繁體中文](pages.zh-TW.md)
 
-标准版将页面分为四个导航分区。页面操作与手机导航见[界面导览](https://doona.daeuniverse.org/zh-CN/tour.html)，各项控件的使用方法见[观测指南](https://doona.daeuniverse.org/zh-CN/observe.html)、[路由指南](https://doona.daeuniverse.org/zh-CN/routing.html)与[配置指南](https://doona.daeuniverse.org/zh-CN/config-and-settings.html)。
+标准版将页面分为四个导航分区。页面操作与手机导航见[界面导览](https://daeuniverse.org/zh-CN/doona/tour)，各项控件的使用方法见[观测指南](https://daeuniverse.org/zh-CN/doona/observe)、[路由指南](https://daeuniverse.org/zh-CN/doona/routing)与[配置指南](https://daeuniverse.org/zh-CN/doona/config-and-settings)。
 
 ## 源码索引
 

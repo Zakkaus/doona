@@ -41,4 +41,4 @@ Only subsets intersecting the loaded catalogue stages are fetched, rather than t
 4. Update the source and licence records in `NOTICE`, `REUSE.toml` and `LICENSES/` as needed. Keep this page accurate because the build includes it in the font archive.
 5. Check the generated `dist/fonts/` and test both an installed and an absent font archive. [e2e/flag-font.spec.ts](../e2e/flag-font.spec.ts) covers font requests, font stacks and exclusion of Noto subsets from the shell precache.
 
-See the [development guide](https://doona.daeuniverse.org/en/development.html) for build prerequisites and commands, and [package layout](install.md) for the release archives.
+See the [development guide](https://daeuniverse.org/doona/development) for build prerequisites and commands, and [package layout](install.md) for the release archives.
