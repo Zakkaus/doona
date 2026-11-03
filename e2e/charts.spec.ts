@@ -259,7 +259,8 @@ for (const count of [0, 4]) {
     backend.handlers['GET dns/log'] = async () => ({...seed, records: seed.records.slice(0, count), next_cursor: null});
     await page.goto('/#/dns');
     const card = page.getByRole('region', {name: 'Cache', exact: true});
-    await expect(fact(card, 'Capacity')).toHaveText('256');
+    // The first DNS page load can take longer than the default wait on a busy runner.
+    await expect(fact(card, 'Capacity')).toHaveText('256', {timeout: 15_000});
     await expect(page.getByText('Too few records to chart yet', {exact: true})).toHaveCount(3);
     await expect(page.locator('.rp-chart-page > .rp-facts')).toHaveCount(0);
   });
