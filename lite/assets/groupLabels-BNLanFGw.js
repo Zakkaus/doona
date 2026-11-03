@@ -1,0 +1,1 @@
+import{c as e}from"./describe-CXDpA1M7.js";function t(t,n){return n[e(t)]}export{t};
