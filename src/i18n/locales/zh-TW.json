@@ -1576,6 +1576,7 @@
   "rule.template.networkManagerDirectHelp": "僅使用 NetworkManager 的 Linux 桌面需要，路由器不需要。",
   "rule.template.networkManagerOff": "NetworkManager 流量將遵循分流規則。",
   "rule.template.networkManagerOn": "NetworkManager 流量將保持直連。",
+  "rule.template.optionsNeedMode": "請先選擇分流方式，這些選項隨分流方式一併套用。",
   "rule.template.pinnedHelp": "此群組固定使用單一節點，指定此群組的規則均經由該節點傳送。",
   "rule.template.quicOff": "將關閉 QUIC 封鎖。",
   "rule.template.quicOn": "將開啟 QUIC 封鎖。",

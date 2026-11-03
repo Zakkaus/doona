@@ -1777,6 +1777,7 @@
   "rule.template.networkManagerDirectHelp": "Only needed on Linux desktops using NetworkManager; routers do not need it.",
   "rule.template.networkManagerOff": "NetworkManager traffic follows the routing rules.",
   "rule.template.networkManagerOn": "NetworkManager traffic stays direct.",
+  "rule.template.optionsNeedMode": "Choose a routing mode first; these options are applied with it.",
   "rule.template.pinnedHelp": "This group uses a single fixed node. Rules referencing this group use that node.",
   "rule.template.quicOff": "QUIC blocking is off.",
   "rule.template.quicOn": "QUIC blocking is on.",

@@ -33,6 +33,7 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
   const t = useT();
   const headingId = useId();
   const confirmFormId = useId();
+  const optionsNoteId = useId();
   const {current, dialog} = model;
   const summaries: Partial<Record<RuleTemplate, Key>> = {
     single: 'rule.template.singleSummary',
@@ -76,12 +77,19 @@ export function RuleTemplates({model}: {model: RuleTemplatesModel}) {
             </Disclosure>
           </RadioGroup>
           <div className="rp-col">
+            {!model.selected && (
+              <p id={optionsNoteId} className="rp-note">
+                {t('rule.template.optionsNeedMode')}
+              </p>
+            )}
             {templateOptionKeys.map(option => (
               <Switch
                 key={option}
                 isSelected={model[option]}
                 onChange={enabled => model.setOption(option, enabled)}
-                isDisabled={model.applying}
+                // The options are written with a mode, so without one there is nothing for Apply to write.
+                isDisabled={model.applying || !model.selected}
+                aria-describedby={model.selected ? undefined : optionsNoteId}
                 description={t(templateOptionText[option].help)}
               >
                 {t(templateOptionText[option].label)}
