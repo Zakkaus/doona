@@ -516,6 +516,30 @@ test('the routing list opens on the simple view for template and custom routing,
   await expect(table).toBeVisible();
 });
 
+test('custom routing disables the options until a mode is chosen', async ({page}) => {
+  const {write} = await backend(page);
+  await write(oneFile);
+  await page.goto('/#/rules?tab=list&view=simple');
+  const options = ['Block ads', 'Block QUIC', 'Keep NetworkManager direct'].map(name => page.getByRole('switch', {name, exact: true}));
+  const note = page.getByText(t('rule.template.optionsNeedMode'), {exact: true});
+  await expect(modes(page).getByRole('radio', {checked: true})).toHaveCount(0);
+  await expect(note).toBeVisible();
+  for (const option of options) {
+    await expect(option).toBeDisabled();
+    await expect(option).toHaveAccessibleDescription(new RegExp(t('rule.template.optionsNeedMode')));
+  }
+  await expect(applyButton(page)).toBeDisabled();
+  await choose(page, 'Bypass mainland China');
+  await expect(note).toHaveCount(0);
+  for (const option of options) await expect(option).toBeEnabled();
+  await expect(applyButton(page)).toBeEnabled();
+  const ads = options[0];
+  await ads.focus();
+  await ads.press('Space');
+  await expect(ads).toBeChecked();
+  await expect(applyButton(page)).toBeEnabled();
+});
+
 test('without a dns block the dialog offers the DNS split, checked, and writes it only while checked', async ({page}) => {
   const {main, write} = await backend(page);
   await write(text => noDns(oneFile(text)));
