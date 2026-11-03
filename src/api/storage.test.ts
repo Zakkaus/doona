@@ -30,6 +30,7 @@ it('keeps the keys browsers already hold', () => {
     'doona-connections-view',
     'doona-activity-group',
     'doona-policy-folds',
+    'doona-alive-only',
     'doona-getting-started',
     'doona-session',
     'doona-saved',
