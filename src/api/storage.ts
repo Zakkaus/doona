@@ -31,6 +31,8 @@ export const storageKeys = {
   activityGroup: 'doona-activity-group',
   // Each backend's policy groups folded or opened against their default; see features/policies/folds.ts.
   policyFolds: 'doona-policy-folds',
+  // Whether the node grids list only available nodes, for every group; see features/policies/aliveOnly.ts.
+  aliveOnly: 'doona-alive-only',
   gettingStarted: 'doona-getting-started',
   // The password session; see api/session.ts.
   session: 'doona-session',
