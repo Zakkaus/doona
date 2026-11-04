@@ -26,6 +26,7 @@ import {
   setIncludes,
   type IncludeKind
 } from './groupIncludes';
+import {draftMembers} from './draftMembers';
 import {nameText, readGroupEntries, writeGroupEntry, type GroupEntry, type GroupEntryUpdate} from '../../../dae/groups';
 import {href} from '../../../shell/route';
 import {unquote} from '../../../dae/text';
@@ -45,7 +46,6 @@ import {
   finalExcluded,
   groupConfigLabels,
   memberSections,
-  draftMembers,
   routeChoiceId,
   routeChoiceValue,
   routeFields,
