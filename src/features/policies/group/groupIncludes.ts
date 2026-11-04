@@ -1,11 +1,15 @@
 import {groupFilterText, groupFilterTexts, reconcileGroupFilters, type GroupFilterDraft} from '../../../dae/groupConditions';
 import type {Node, Provider} from '../../../api/model';
-import {describeFilters, exactTokens, isWritableName, noNodes, quoteName} from '../../../dae/groups';
+import {describeFilters, exactTokens, isWritableName, nestedIn, noNodes, quoteName} from '../../../dae/groups';
 import {compileFilters} from '../../../dae/groupFilters';
 import {regions} from '../../../dae/regions';
 import {flagChoices} from '../../../dae/flags';
 import {regionGroups} from '../../../dae/templates';
 import {quote, unquote} from '../../../dae/text';
+import {preferredHealth} from '../../../api/selectors';
+import type {Translator} from '../../../i18n';
+import type {NodeStatus} from '../../../ui/ui';
+import {healthStatus} from '../../shared/groupText';
 
 export type IncludeKind = 'region' | 'subscription' | 'node' | 'group';
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -128,6 +132,16 @@ export function includeMatches(filters: string[], nodes: Node[]) {
   const lines = includeLines(filters);
   const matching = matcher(nodes);
   return {selected: matching(lines), regions: new Map(regionFilters.map(region => [region.id, matching(regionLines(lines, region))]))};
+}
+// Member choices follow the draft filters, including before a new group exists on the backend. It lives here, with
+// the group dialog, rather than in shared/groupText.ts, so the filter compiler and its regex converter stay out of the
+// startup bundle the nodes view pulls that module into.
+export function draftMembers(filters: string[], nodes: Node[], t: Translator): Array<{name: string; nodeName: boolean; status: NodeStatus}> {
+  const admits = compileFilters(filters);
+  return [
+    ...nestedIn({filters}).map(name => ({name, nodeName: false, status: {text: '', badge: t('ui.group')}})),
+    ...nodes.filter(admits).map(node => ({name: node.name, nodeName: true, status: healthStatus(preferredHealth(node), t)}))
+  ];
 }
 const subscriptionLabel = (tag: string, nodes: Node[], providers: Provider[]) => {
   const owned = nodes.filter(node => node.subscription_tag === tag);

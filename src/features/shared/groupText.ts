@@ -1,6 +1,5 @@
-import type {ConfigSource, Group, HealthObservation, Node} from '../../api/model';
+import type {ConfigSource, Group, HealthObservation} from '../../api/model';
 import {isWritableName, nestedIn, readGroupEntries, type GroupEntry} from '../../dae/groups';
-import {compileFilters} from '../../dae/groupFilters';
 import {unquote} from '../../dae/text';
 import {builtinOutboundNames} from '../../dae/vocab';
 import {formatLatency} from '../../i18n/format';
@@ -9,7 +8,7 @@ import {latencyTone, type NodeStatus} from '../../ui/ui';
 import type {SearchItem, SearchSection} from '../../ui/SearchSelect';
 import {manualPolicy} from './policyText';
 import {errorText} from '../../api/error';
-import {healthMillis, preferredHealth} from '../../api/selectors';
+import {healthMillis} from '../../api/selectors';
 export const groupConfigLabels = {
   default_member_id: 'policy.cfg.defaultMember',
   final_outbound: 'policy.cfg.finalOutbound',
@@ -133,15 +132,6 @@ export function healthStatus(health: Pick<HealthObservation, 'state' | 'latency_
   const ms = healthMillis(health);
   if (ms !== undefined) return {text: formatLatency(ms, t), tone: latencyTone(ms)};
   return health?.state === 'unavailable' ? {text: t('ui.unavailable'), tone: 'err'} : {text: '—'};
-}
-
-// Member choices follow the draft filters, including before a new group exists on the backend.
-export function draftMembers(filters: string[], nodes: Node[], t: Translator): Array<{name: string; nodeName: boolean; status: NodeStatus}> {
-  const admits = compileFilters(filters);
-  return [
-    ...nestedIn({filters}).map(name => ({name, nodeName: false, status: {text: '', badge: t('ui.group')}})),
-    ...nodes.filter(admits).map(node => ({name: node.name, nodeName: true, status: healthStatus(preferredHealth(node), t)}))
-  ];
 }
 
 // Where a group is declared: its entry and the source whose group section holds it. 'ambiguous' when more than one
