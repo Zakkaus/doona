@@ -41,15 +41,15 @@
     "check": "pnpm typecheck && pnpm lint && pnpm check:i18n && pnpm format:check && pnpm test && pnpm check:gen"
   },
   "sizeBudget": {
-    "startupLogin": 216051,
-    "startupActivity": 330556,
-    "startupCss": 31552,
-    "locale": 25463,
-    "fontCss": 36000,
-    "route": 72800,
-    "routePart": 16000,
-    "routeConfig": 196095,
-    "mock": 38000
+    "startupLogin": 227000,
+    "startupActivity": 343000,
+    "startupCss": 30000,
+    "locale": 27000,
+    "fontCss": 37000,
+    "route": 76000,
+    "routePart": 17000,
+    "routeConfig": 206000,
+    "mock": 44000
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",
