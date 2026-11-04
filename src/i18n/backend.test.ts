@@ -15,6 +15,7 @@ const operationCodes = [
   'probe_cleanup_failed',
   'publication_rejected',
   'fetch_failed',
+  'parse_failed',
   'provider_replaced',
   'result_too_large',
   'route_unavailable',

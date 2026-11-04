@@ -599,6 +599,7 @@ export function useNodesPage({go, query}: PageProps) {
   };
   const providerTable = useProviderTable({
     rows: list,
+    names,
     loading: providers.loading && !providers.data,
     selected: selectedId,
     onSelect: id => {

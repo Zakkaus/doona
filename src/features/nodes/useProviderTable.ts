@@ -1,7 +1,8 @@
 import {useT, useLang, LOCALE} from '../../i18n';
 import type {Provider} from '../../api/model';
+import type {OutboundNames} from '../../api/selectors';
 import {useProviderRefresh} from '../../store';
-import {toast, toastFailure} from '../../ui/ui';
+import {toast, toastFailure, type Help} from '../../ui/ui';
 import {type MainSourceEdit} from '../../store/mainSource';
 import {type SubscriptionText} from '../../dae/subscriptions';
 import {providerRowView, type ProviderRow} from './view';
@@ -9,6 +10,8 @@ import type {useRefreshAll} from '../shared/useRefreshAll';
 
 type ProviderTableInput = {
   rows: ProviderRow[];
+  // Group and node ids to their names, for the outbound a failed download took.
+  names: OutboundNames;
   loading: boolean;
   selected: string | null;
   onSelect: (id: string | null) => void;
@@ -31,28 +34,34 @@ export function useProviderTable(input: ProviderTableInput) {
   const locale = LOCALE[useLang()];
   const {refresh} = input;
   const intervals = new Map(input.entries.map(entry => [entry.tag, entry.interval]));
-  const rows = input.rows.map(item => ({
-    ...providerRowView(item, intervals.get(item.configTag ?? item.sourceTag ?? ''), locale, t),
-    action: input.editAction(item),
-    editLabel: t('nodes.edit', {name: item.displayName ?? item.name}),
-    refreshable: item.kind === 'subscription' && input.canRefresh,
-    refreshing: refresh.busy === item.id,
-    refreshDisabled: !!refresh.busy,
-    refresh: () =>
-      void refresh.refresh(item.id).then(
-        result => {
-          if (!result) return;
-          if ('degraded' in result) toast('warning', t('nodes.refreshedDegraded', {name: item.name}));
-          else toast('positive', t('nodes.refreshed', {name: item.name, n: result.node_count}));
-        },
-        error => toastFailure(error, t, t('nodes.refreshFailed', {name: item.name}))
-      ),
-    removable: input.canManage && (item.kind === 'subscription' || item.kind === 'file'),
-    removeReason: input.inInclude(item) ? t('nodes.removeInclude') : null,
-    remove: () => {
-      if (item.kind === 'subscription' || item.kind === 'file') input.onRemove(item);
-    }
-  }));
+  const rows = input.rows.map(item => {
+    const view = providerRowView(item, intervals.get(item.configTag ?? item.sourceTag ?? ''), locale, t, input.names);
+    const action = input.editAction(item);
+    return {
+      ...view,
+      // Why the download failed, for the help button beside the status.
+      help: view.failure ? {title: t('nodes.fetchTitle'), text: view.failure} : null,
+      action,
+      editLabel: t('nodes.edit', {name: item.displayName ?? item.name}),
+      refreshable: item.kind === 'subscription' && input.canRefresh,
+      refreshing: refresh.busy === item.id,
+      refreshDisabled: !!refresh.busy,
+      refresh: () =>
+        void refresh.refresh(item.id).then(
+          result => {
+            if (!result) return;
+            if ('degraded' in result) toast('warning', t('nodes.refreshedDegraded', {name: item.name}));
+            else toast('positive', t('nodes.refreshed', {name: item.name, n: result.node_count}));
+          },
+          error => toastFailure(error, t, t('nodes.refreshFailed', {name: item.name}))
+        ),
+      removable: input.canManage && (item.kind === 'subscription' || item.kind === 'file'),
+      removeReason: input.inInclude(item) ? t('nodes.removeInclude') : null,
+      remove: () => {
+        if (item.kind === 'subscription' || item.kind === 'file') input.onRemove(item);
+      }
+    };
+  });
   return {
     rows,
     loading: input.loading,
@@ -84,6 +93,8 @@ export type ProviderTableView = {
     status: string | null;
     tone: 'ok' | 'warn' | 'err' | 'neutral';
     error?: string;
+    failure?: string[];
+    help: Help | null;
     refreshLabel: string;
     removeLabel: string;
     action: {kind: 'edit' | 'open'; run: () => void} | null;

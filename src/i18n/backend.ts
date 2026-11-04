@@ -55,6 +55,8 @@ const known: Record<string, Key> = {
   probe_cleanup_failed: 'ui.backend.probeCleanupFailed',
   publication_rejected: 'ui.backend.publicationRejected',
   fetch_failed: 'ui.backend.fetchFailed',
+  // The fetch_failed stage for a body that downloaded but held no usable nodes.
+  parse_failed: 'ui.backend.parseFailed',
   provider_replaced: 'ui.backend.providerReplaced',
   result_too_large: 'ui.backend.resultTooLarge',
   route_unavailable: 'ui.backend.routeUnavailable',

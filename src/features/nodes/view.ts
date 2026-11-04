@@ -19,7 +19,7 @@ import type {Key} from '../../i18n';
 import type {OutboundNames} from '../../api/selectors';
 import {addU64, pctU64} from '../../api/u64';
 import {compareNames, localMinute, localTime, formatBytes, formatBytesFraction, formatLatency} from '../../i18n/format';
-import {backendCode, backendMessage, oneLine} from '../../i18n/backend';
+import {backendCode, backendMessage, knownCode, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
 import {isBareName, isQuotable} from '../../dae/text';
 import {nodeReferenced, readNodeEntries, type NodeEntry} from '../../dae/nodes';
@@ -276,7 +276,34 @@ export function providerCreate(form: ProviderForm, options: CreateOptions): Prov
   return request;
 }
 
-export function providerRowView(item: ProviderRow, seconds: number | null | undefined, locale: string, t: Translator) {
+// honk sends details {stage, node, group_id} with a fetch_failed: the step that failed, and the node name and group id the download took.
+// An engine that sends none keeps the plain error text. A direct download has neither node nor group, and an engine
+// that omits `download` only fetches directly; a download that failed before an outbound was chosen says nothing.
+export function fetchFailure(item: ProviderRow, names: OutboundNames | undefined, t: Translator): string[] | undefined {
+  const error = item.last_error;
+  const details = error?.details as {stage?: unknown; node?: unknown; group_id?: unknown} | null | undefined;
+  if (error?.code !== 'fetch_failed' || typeof details?.stage !== 'string') return undefined;
+  const {stage} = details;
+  // The node comes as the name the engine knows it by; only the group is an id, which the page words by its name.
+  const node = typeof details.node === 'string' && details.node ? details.node : null;
+  const group = typeof details.group_id === 'string' && details.group_id ? (names?.get(details.group_id) ?? details.group_id) : null;
+  const via =
+    node && group
+      ? t('nodes.fetchViaNodeGroup', {node, group})
+      : node
+        ? t('nodes.fetchViaNode', {node})
+        : group
+          ? t('nodes.fetchViaGroup', {group})
+          : !item.download || item.download.route === 'direct'
+            ? t('nodes.fetchDirect')
+            : null;
+  // A stage with words of its own replaces the code's, which said the nodes are kept; any other stage is appended to them.
+  const ownWords = stage !== error.code && knownCode(stage);
+  const reason = oneLine(backendMessage(error.code, error.message, t, details), t);
+  return [reason, via, ownWords ? t('nodes.fetchKept') : null].filter((line): line is string => line !== null);
+}
+
+export function providerRowView(item: ProviderRow, seconds: number | null | undefined, locale: string, t: Translator, names?: OutboundNames) {
   const kinds: Record<ProviderRow['kind'], Key> = {
     subscription: 'nodes.kind.subscription',
     file: 'nodes.kind.file',
@@ -295,6 +322,7 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
   // undefined: no configuration entry to write; null: an entry without an interval, which can still get one.
   const interval = item.kind === 'subscription' ? seconds : undefined;
   const name = item.displayName ?? item.name;
+  const failure = fetchFailure(item, names, t);
   return {
     id: item.id,
     name,
@@ -310,7 +338,9 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
     interval: interval == null ? '—' : intervalText(interval, locale, t),
     status: pseudo ? null : never ? t('nodes.status.never') : enumLabel(statuses, item.status, t),
     tone: never ? ('neutral' as const) : tones[item.status],
-    error: item.last_error ? oneLine(backendMessage(item.last_error.code, item.last_error.message, t), t) : undefined,
+    // A failure the engine explained is shown by the help popover beside the status, so it has no tooltip as well.
+    error: !failure && item.last_error ? oneLine(backendMessage(item.last_error.code, item.last_error.message, t), t) : undefined,
+    failure,
     refreshLabel: t('nodes.refresh', {name}),
     removeLabel: t('nodes.remove', {name})
   };

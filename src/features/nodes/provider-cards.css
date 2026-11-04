@@ -1,0 +1,7 @@
+/* The meta row of a provider card, found by its kind badge. A failed one adds a quiet icon button (the help beside its status), which is
+   taller than the badge and the light, so every card's row takes that height: the cards in one grid row stay equal, and
+   the dot, the badge, the status and the button sit on one centre line. */
+.rp-cardview-meta:has(.rp-provider-kind) {
+  align-items: center;
+  min-block-size: var(--rp-control-xs);
+}
