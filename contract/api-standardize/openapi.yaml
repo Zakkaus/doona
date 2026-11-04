@@ -9654,7 +9654,7 @@ components:
           oneOf:
             - type: 'null'
             - $ref: '#/components/schemas/SafeError'
-          description: The last failure, or null. A subscription fetch whose download route has no usable node yet reports code route_unavailable; other fetch failures report fetch_failed.
+          description: The last failure, or null. A subscription fetch whose download route has no usable node yet reports code route_unavailable; other fetch failures report fetch_failed, whose details may carry stage (the failed step, a download stage code such as connection_failed or tls_failed, or parse_failed when the body downloaded but yielded no usable nodes), node (the name of the node the download went through, null when direct) and group_id (the group that chose it, null when none did).
         download:
           description: The route a subscription's fetches take, with the values of the geodata download route. routing follows the routing rules like user traffic, group always goes through the group in group_id, and direct connects straight to the host. group_id is null for routing and direct and for a group that no longer exists. Null for file and inline providers. Engines that fetch subscriptions only directly omit it.
           oneOf:

@@ -1,6 +1,6 @@
 Pin: api-standardize e6b0dbab5599689d965bc18a71be67c809d99d0f + honk 3ae980fed extension
 
-SHA-256: 9f780ba92f13218ed7bc52e9a9af79a960d241ce6552a45522b41c30fc04faa0
+SHA-256: b8dd6852e8d830703720d231425187bab850ef3d2cce696455d28d805cc55f7e
 
 openapi.yaml combines api-standardize `source/openapi.yaml` at commit
 e6b0dbab5599689d965bc18a71be67c809d99d0f with the unchanged
