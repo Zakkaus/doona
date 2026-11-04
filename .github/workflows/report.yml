@@ -1,0 +1,90 @@
+name: Size report
+
+# Comments a pull request's size measurement against main's. It runs after Check from the default branch's code with its own
+# token, so it only reads the run's artifact and never runs the pull request's code, which keeps pull requests from forks safe.
+on:
+  workflow_run:
+    workflows: [Check]
+    types: [completed]
+
+permissions: {}
+
+# One group per pull request branch, so two quick pushes cannot both find no comment and each create one; the later run waits.
+concurrency:
+  group: size-report-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+
+jobs:
+  report:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'cancelled'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Check out the trusted renderer
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Render the report
+        id: render
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/size-report"
+          mkdir -p "$root/run"
+          echo "root=$root" >> "$GITHUB_OUTPUT"
+          # A documentation-only run, or one that stopped before measuring, has no artifact. A report larger than 1 MiB is not read.
+          size=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts?name=size-report" \
+            --jq '[.artifacts[] | select(.expired | not)] | first | .size_in_bytes // empty')
+          if [[ ! $size =~ ^[0-9]+$ ]] || ((size > 1048576)); then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! gh run download "$RUN_ID" -R "$REPO" -n size-report -D "$root/run"; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          file="$root/run/size-report.json"
+          if [[ ! -f $file ]] || (($(wc -c < "$file") > 1048576)); then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base=$(jq -r 'if (.base | type) == "string" and (.base | test("^[0-9a-f]{40}$")) then .base else "" end' "$file" 2>/dev/null || true)
+          tools/size-baseline.sh "$REPO" "$base" "$root/main"
+          node tools/size-report.mjs "$file" "$root/main/size-report.json" > "$root/body.md"
+          echo "found=true" >> "$GITHUB_OUTPUT"
+      - name: Update the comment on the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          ROOT: ${{ steps.render.outputs.root }}
+          FOUND: ${{ steps.render.outputs.found }}
+        run: |
+          set -euo pipefail
+          marker='<!-- size-report -->'
+          body="$ROOT/body.md"
+          # Without a measurement the comment is not removed but marked, so numbers from an earlier commit are not read as this one's.
+          if [[ $FOUND != true ]]; then
+            printf '**Size report**: commit %s has no size measurement (a documentation-only change, or the run stopped before measuring).\n%s\n' \
+              "${HEAD_SHA:0:8}" "$marker" > "$body"
+          fi
+          # A pull request from a fork is not listed in the run, so it is found by its head commit.
+          gh api "repos/$REPO/pulls?state=open&per_page=100" --paginate \
+            --jq ".[] | select(.head.sha == \"$HEAD_SHA\" and .base.repo.full_name == \"$REPO\") | .number" > "$ROOT/pulls"
+          while read -r pr; do
+            [[ $pr =~ ^[0-9]+$ ]]
+            comment=$(gh api "repos/$REPO/issues/$pr/comments?per_page=100" --paginate \
+              --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"$marker\"))) | .id" | sed -n 1p)
+            if [[ -n $comment ]]; then
+              gh api -X PATCH "repos/$REPO/issues/comments/$comment" -F body=@"$body" > /dev/null
+            elif [[ $FOUND == true ]]; then
+              gh api "repos/$REPO/issues/$pr/comments" -F body=@"$body" > /dev/null
+            fi
+          done < "$ROOT/pulls"

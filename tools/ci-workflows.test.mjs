@@ -8,6 +8,7 @@ import {parse} from 'yaml';
 const load = name => parse(readFileSync(new URL(`../.github/workflows/${name}.yml`, import.meta.url), 'utf8'));
 const release = load('release');
 const check = load('check');
+const sizeReport = load('report');
 const uses = (job, name) => job.steps.find(step => step.uses?.startsWith(`${name}@`));
 
 it('keeps the release write token away from dependency and build steps', () => {
@@ -94,4 +95,47 @@ it('publishes standalone assets before honk is available', () => {
   expect(files).toContain('release/SHA256SUMS');
   expect(files).toContain('release/*-${{ env.NPM }}.tar.gz');
   expect(release.jobs.sums.steps.some(step => step.run?.includes('sha256sum -- *'))).toBe(true);
+});
+
+it('keeps the size measurement of every Check run and shows it in the run summary', () => {
+  expect(check.permissions).toEqual({contents: 'read'});
+  expect(check.jobs.check.permissions).toEqual({actions: 'read', contents: 'read'});
+  const steps = check.jobs.check.steps;
+  const measure = steps.findIndex(step => step.run?.startsWith('pnpm check:size --json size-report.json'));
+  const upload = steps.findIndex(step => step.uses?.startsWith('actions/upload-artifact@') && step.with.name === 'size-report');
+  const summary = steps.findIndex(step => step.name === 'Show the size report');
+  expect(measure).toBeGreaterThan(steps.findIndex(step => step.run === 'pnpm build'));
+  expect(upload).toBeGreaterThan(measure);
+  expect(summary).toBeGreaterThan(upload);
+  // An over-limit build fails the measuring step, and that is when the numbers matter most.
+  for (const index of [upload, summary]) expect(steps[index].if).toMatch(/!cancelled\(\)/);
+  expect(steps[summary].run).toMatch(/>> "\$GITHUB_STEP_SUMMARY"/);
+});
+
+it('comments the size report from the default branch with a write token only in that job', () => {
+  expect(sizeReport.on.workflow_run.workflows).toEqual(['Check']);
+  expect(sizeReport.permissions).toEqual({});
+  const {report} = sizeReport.jobs;
+  expect(report.permissions).toEqual({actions: 'read', contents: 'read', 'pull-requests': 'write'});
+  expect(report.if).toMatch(/workflow_run\.event == 'pull_request'/);
+  expect(uses(report, 'actions/checkout').with).toEqual({ref: '${{ github.event.repository.default_branch }}', 'persist-credentials': false});
+  const script = report.steps.map(step => step.run ?? '').join('\n');
+  expect(script).not.toMatch(/pnpm|npm |npx|git checkout/);
+  expect(script).toContain('<!-- size-report -->');
+  // One group per pull request branch and no cancelling, so a second run waits for the first instead of both creating a comment.
+  expect(sizeReport.concurrency).toEqual({
+    group: 'size-report-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}'
+  });
+  expect(script).toMatch(/size_in_bytes/);
+  expect(script).not.toMatch(/head -n/);
+  expect(script).toMatch(/-X PATCH "repos\/\$REPO\/issues\/comments\//);
+});
+
+it('pins every action in every workflow by commit', () => {
+  expect(sizeReport.jobs.report.steps.filter(step => step.uses).length).toBeGreaterThan(0);
+  for (const workflow of [check, release, sizeReport]) {
+    for (const job of Object.values(workflow.jobs)) {
+      for (const step of job.steps ?? []) if (step.uses) expect(step.uses).toMatch(/^[\w.-]+\/[\w.-]+@[0-9a-f]{40}$/);
+    }
+  }
 });

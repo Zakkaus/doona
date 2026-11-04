@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "commit": "568f266c00000000000000000000000000000000",
+  "base": null,
+  "budgets": [
+    {
+      "name": "startupLogin",
+      "limit": 227000,
+      "bytes": 216051,
+      "label": "login",
+      "parts": [
+        {"file": "assets/index-Bx1yQ2aZ.js", "bytes": 150000},
+        {"file": "assets/Login-Ab3dE5fG.js", "bytes": 40000},
+        {"file": "assets/locale-zh-CN-Qw8rT6yU.js", "bytes": 26051}
+      ]
+    },
+    {"name": "startupCss", "limit": 34000, "bytes": 31552, "label": "activity", "parts": [{"file": "assets/index-Cd2eF4gH.css", "bytes": 31552}]},
+    {
+      "name": "route",
+      "limit": 76000,
+      "bytes": 71925,
+      "label": "src/features/rules/Rules.tsx",
+      "parts": [
+        {"file": "assets/Rules-Zz9yX8wV.js", "bytes": 50000},
+        {"file": "assets/table-Uu7tS6rQ.js", "bytes": 21925}
+      ]
+    }
+  ],
+  "total": {"js": 900000, "css": 40000}
+}
