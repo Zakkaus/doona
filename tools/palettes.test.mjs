@@ -13,15 +13,21 @@ it('has one stylesheet per palette family and none without a palette', () => {
   expect(files.sort()).toEqual(families);
 });
 
-// Glass's tokens load with its materials, only for the Glass palettes. Halloween's stylesheet is imported by no other: its
-// own module links it, only for the Halloween palette.
-const onDemand = ['halloween'];
-it('imports every family stylesheet, or loads it on demand', () => {
-  const index = ['palettes.css', 'glass.css'].map(file => readFileSync(new URL(file, styles), 'utf8')).join('\n');
-  expect([...index.matchAll(/@import '\.\/palettes\/(.+)\.css';/g)].map(match => match[1]).sort()).toEqual(
-    families.filter(family => !onDemand.includes(family))
-  );
-  for (const family of onDemand) expect(readFileSync(new URL(`../src/shell/${family}.ts`, import.meta.url), 'utf8')).toContain(`/palettes/${family}.css?url'`);
+// Only Rosé Pine, the default, loads with the app. Every other family loads on demand: Glass's tokens with its materials
+// (glass.ts), Halloween's from its own module, and the rest from paletteSheets.ts, each named in useAppearance.ts.
+const shell = file => readFileSync(new URL(`../src/shell/${file}`, import.meta.url), 'utf8');
+it('imports only the default family stylesheet and loads every other on demand', () => {
+  const imported = file => [...readFileSync(new URL(file, styles), 'utf8').matchAll(/@import '\.\/palettes\/(.+)\.css';/g)].map(match => match[1]);
+  expect(imported('palettes.css')).toEqual(['rose-pine']);
+  expect(imported('glass.css')).toEqual(['glass']);
+  expect(shell('glass.ts')).toContain("from '../ui/styles/glass.css?url'");
+  expect(shell('halloween.ts')).toContain("from '../ui/styles/palettes/halloween.css?url'");
+  const sheets = shell('paletteSheets.ts');
+  const appearance = shell('useAppearance.ts');
+  for (const family of families.filter(family => !['rose-pine', 'glass', 'halloween'].includes(family))) {
+    expect(sheets).toContain(`import ${family} from '../ui/styles/palettes/${family}.css?url';`);
+    expect(appearance).toContain(`${family}: sheet('${family}')`);
+  }
 });
 
 // A token a palette block leaves out does not fail anywhere: it silently inherits Rosé Pine's `:root` default, so a

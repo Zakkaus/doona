@@ -201,6 +201,32 @@ export async function paletteBoxes(page: Page) {
   if ((await tab.getAttribute('aria-selected')) !== 'true') await tab.click();
   return page.getByRole('region', {name: 'Appearance', exact: true}).getByRole('listbox', {name: 'Palette'});
 }
+// Every palette family's stylesheet but the default's loads only for its palettes. A spec that switches palettes by
+// writing the root's data attributes links the ones not yet linked first, from the names the first-paint script holds,
+// at the place src/shell/paletteSheet.ts links them. Glass's stays out unless asked for: its specs load it with its
+// wallpaper.
+export async function linkPaletteSheets(page: Page, {glass = false} = {}) {
+  await page.evaluate(async glass => {
+    const stamp = [...document.scripts].find(script => script.textContent?.includes('var sheets = '))!.textContent!;
+    const sheets: Record<string, string> = JSON.parse(/var sheets = (\{[^}]*\});/.exec(stamp)![1]);
+    await Promise.all(
+      Object.entries(sheets)
+        .filter(([family]) => (glass || family !== 'glass') && !document.head.querySelector(`link[data-${family}]`))
+        .map(
+          ([family, href]) =>
+            new Promise((resolve, reject) => {
+              const link = document.createElement('link');
+              link.rel = 'stylesheet';
+              link.href = href;
+              link.dataset[family] = '';
+              link.onload = resolve;
+              link.onerror = reject;
+              document.head.insertBefore(link, document.head.querySelector('link[rel="stylesheet"], style'));
+            })
+        )
+    );
+  }, glass);
+}
 // The language and scheme the page takes from its next load.
 export const setAppearance = (page: Page, lang: string, scheme: string) =>
   page.evaluate(

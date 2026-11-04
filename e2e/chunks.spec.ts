@@ -304,6 +304,45 @@ test('only the Halloween palette loads its stylesheet, art and logo', async ({pa
   await expect.poll(shown).toBe(`url("${new URL(witch, page.url()).href}")`);
 });
 
+// Every other family's stylesheet loads only for its palettes too: none of them for Rosé Pine, the default; a picked
+// one's before it applies; and a stored one's before the first paint, so the first frame the shell draws carries its
+// tokens and the default palette never flashes.
+test('a palette outside Rosé Pine loads its own stylesheet, before the first paint once stored', async ({page}) => {
+  const sheets = /\/assets\/(antd|arco|catppuccin|kary|nord|qiangguo|semi)-[\w-]{8}\.css$/;
+  const requested: string[] = [];
+  page.on('request', request => requested.push(new URL(request.url()).pathname));
+  const loadedFamilies = () => requested.flatMap(path => sheets.exec(path)?.[1] ?? []);
+  await page.goto('/#/activity');
+  await expect(page.locator('.rp-card').first()).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  expect(loadedFamilies()).toEqual([]);
+
+  await page.locator('.rp-top').getByRole('button', {name: 'Palette', exact: true}).click();
+  await page.getByRole('menuitemradio', {name: /^Mocha/}).click();
+  await expect(page.locator('html')).toHaveAttribute('data-flavour', 'mocha');
+  expect(loadedFamilies()).toEqual(['catppuccin']);
+  // Light Mocha takes Catppuccin's Latte tokens.
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--rp-base').trim())).toBe('#e6e9ef');
+
+  requested.length = 0;
+  await page.evaluate(() => {
+    localStorage.setItem('doona-palette', 'nord/nord');
+    localStorage.setItem('doona-scheme', 'dark');
+  });
+  await page.addInitScript(() => {
+    new MutationObserver((_, observer) => {
+      if (!document.querySelector('.rp-top')) return;
+      observer.disconnect();
+      document.documentElement.dataset.firstBase = getComputedStyle(document.documentElement).getPropertyValue('--rp-base').trim();
+    }).observe(document, {childList: true, subtree: true});
+  });
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-family', 'nord');
+  await expect(page.locator('html')).toHaveAttribute('data-first-base', '#2e3440');
+  expect(await page.evaluate(() => document.head.querySelector('link[rel="stylesheet"]')?.hasAttribute('data-nord'))).toBe(true);
+  expect(loadedFamilies()).toEqual(['nord']);
+});
+
 // While Glass loads, its pick shows selected and the page keeps its palette, so picking that palette again is a change,
 // and it wins over the Glass still loading.
 type PalettePicker = (page: Page) => Record<'glass' | 'moon' | 'shown', () => Promise<void>>;

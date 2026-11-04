@@ -1,12 +1,5 @@
-/* One file per palette family, each with its light and dark tokens and its flavours; src/shell/palettes.ts lists the
-   palettes. The files key on different data-family and data-flavour values, so their order does not matter, except
-   that rose-pine.css holds the :root defaults. Glass's file loads with ../glass.css, only for the Glass palettes,
-   and halloween.css loads by itself, only for Halloween (src/shell/halloween.ts). */
+/* Rosé Pine, the default palette, holds the :root defaults and loads with the app. Every other family's file, with its
+   light and dark tokens and its flavours, loads on demand only for its own palettes (src/shell/paletteSheet.ts): linked
+   before first paint for a stored palette (tools/stamp.js), else before a picked one applies. Glass's file loads with
+   ../glass.css. src/shell/palettes.ts lists the palettes. */
 @import './palettes/rose-pine.css';
-@import './palettes/catppuccin.css';
-@import './palettes/nord.css';
-@import './palettes/kary.css';
-@import './palettes/antd.css';
-@import './palettes/arco.css';
-@import './palettes/semi.css';
-@import './palettes/qiangguo.css';
