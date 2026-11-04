@@ -72,11 +72,19 @@ export function createInventory(
   const providers = structuredClone(fixtures.providers);
   const {nodes, groups} = fixtures.nodeFixtures(Number.isFinite(count) ? count : 120, faults);
   for (const provider of providers) provider.node_count = nodes.filter(n => n.provider_id === provider.id).length;
-  // In the faults scenario the subscription host fails every fetch: the provider keeps its cached nodes as stale.
+  // In the faults scenario the subscription host fails every fetch: the provider keeps its cached nodes as stale. Like
+  // honk's fetch_failed, the error names the failed stage and the node and group the download went through.
+  const fetchFault = () => ({
+    ...structuredClone(fixtures.providerFault),
+    details: {stage: 'http_status_rejected', node: 'hk-01', group_id: groups.find(group => group.name === 'proxy')?.id ?? null} as unknown as Record<
+      string,
+      never
+    >
+  });
   if (faults)
     Object.assign(
       providers.find(provider => provider.id === 'harbor')!,
-      {status: 'stale', last_error: fixtures.providerFault}
+      {status: 'stale', last_error: fetchFault()}
     );
   const revisions = new Map<string, bigint>();
   const updating = new Set<string>();
@@ -271,7 +279,7 @@ export function createInventory(
       return enqueue('provider_refresh', () => {
         updating.delete('refresh:' + providerId);
         if (faults && provider.id === 'harbor') {
-          provider.last_error = structuredClone(fixtures.providerFault);
+          provider.last_error = fetchFault();
           log('warn', 'honk::subscription', 'Subscription fetch failed.', {provider: provider.name, error: fixtures.providerFault.code});
           throw new ApiError(502, fixtures.providerFault.code, fixtures.providerFault.message);
         }

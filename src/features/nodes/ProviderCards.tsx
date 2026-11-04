@@ -1,7 +1,8 @@
 import {useCallback, type ReactNode} from 'react';
 import {useT} from '../../i18n';
-import {ActionGroup, ActionHelp, Badge, Button, CardView, CardViewItem, Kv, Light, MoreMenu, TextTooltip, TimeCell, Toolbar} from '../../ui/ui';
+import {ActionGroup, ActionHelp, Badge, Button, CardView, CardViewItem, HelpRow, Kv, Light, MoreMenu, TextTooltip, TimeCell, Toolbar} from '../../ui/ui';
 import Refresh from '../../ui/icons/Refresh';
+import './provider-cards.css';
 import type {ProviderTableView} from './useProviderTable';
 
 type Row = ProviderTableView['rows'][number];
@@ -20,11 +21,13 @@ export function ProviderCards({model: m, intro}: {model: ProviderTableView; intr
         titleFull={row.url}
         meta={
           <>
-            <Badge>{row.kind}</Badge>
+            <Badge className="rp-provider-kind">{row.kind}</Badge>
             {row.status && (
-              <Light small tone={row.tone}>
-                <TextTooltip text={row.error}>{row.status}</TextTooltip>
-              </Light>
+              <HelpRow help={row.help}>
+                <Light small tone={row.tone}>
+                  <TextTooltip text={row.error}>{row.status}</TextTooltip>
+                </Light>
+              </HelpRow>
             )}
           </>
         }

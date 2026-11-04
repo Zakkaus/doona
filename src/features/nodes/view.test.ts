@@ -468,6 +468,82 @@ it('tells a subscription never fetched apart from one holding older data', () =>
   expect(providerRowView(provider('f', {kind: 'file'}), undefined, 'en-US', t)).toMatchObject({status: 'Stale'});
 });
 
+describe('a failed subscription download', () => {
+  const names = new Map([['g1', 'proxy']]);
+  const failed = (details: unknown, overrides: Partial<Provider> = {}) =>
+    provider('a', {last_error: {code: 'fetch_failed', message: 'HTTP 502', details: details as Record<string, never> | null}, ...overrides});
+  const kept = 'The active nodes are kept';
+
+  it('names the stage, the node and the group the download went through', () => {
+    const row = providerRowView(failed({stage: 'connection_failed', node: 'hk-01', group_id: 'g1'}), undefined, 'en-US', t, names);
+    expect(row.failure).toEqual([t('ui.backend.connectionFailed'), 'The download went through node hk-01 of group proxy', kept]);
+    expect(row.error).toBeUndefined();
+  });
+
+  it('leaves out the part it lacks', () => {
+    const view = (details: unknown) => providerRowView(failed(details), undefined, 'en-US', t, names).failure;
+    expect(view({stage: 'tls_failed', node: 'hk-01', group_id: null})?.[1]).toBe('The download went through node hk-01');
+    expect(view({stage: 'tls_failed', node: null, group_id: 'g1'})?.[1]).toBe('The download went through group proxy');
+    // A group missing from the names is worded by its id, as everywhere else on the page.
+    expect(view({stage: 'tls_failed', node: 'gone', group_id: 'g9'})?.[1]).toBe('The download went through node gone of group g9');
+  });
+
+  it('says a direct download connected directly, and says nothing about a route that was not reached', () => {
+    const details = {stage: 'download_timeout', node: null, group_id: null};
+    expect(providerRowView(failed(details, {download: {route: 'direct', group_id: null}}), undefined, 'en-US', t).failure).toEqual([
+      t('ui.backend.downloadTimeout'),
+      'The download connected directly',
+      kept
+    ]);
+    expect(providerRowView(failed(details), undefined, 'en-US', t).failure).toEqual([t('ui.backend.downloadTimeout'), 'The download connected directly', kept]);
+    expect(providerRowView(failed(details, {download: {route: 'routing', group_id: null}}), undefined, 'en-US', t).failure).toEqual([
+      t('ui.backend.downloadTimeout'),
+      kept
+    ]);
+  });
+
+  it('says a body that held no nodes downloaded', () => {
+    const row = providerRowView(
+      failed({stage: 'parse_failed', node: null, group_id: null}, {download: {route: 'routing', group_id: null}}),
+      undefined,
+      'en-US',
+      t
+    );
+    expect(row.failure).toEqual([t('ui.backend.parseFailed'), kept]);
+    expect(row.failure![0]).toContain('downloaded');
+  });
+
+  it('keeps the plain text for an engine that sends no details or no stage', () => {
+    for (const details of [null, {}, {node: 'n1'}]) {
+      const row = providerRowView(failed(details), undefined, 'en-US', t, names);
+      expect(row.failure).toBeUndefined();
+      expect(row.error).toBe(t('ui.backend.fetchFailed'));
+    }
+  });
+
+  it('adds an unknown stage to the code text, which already says the nodes are kept', () => {
+    const row = providerRowView(
+      failed({stage: 'new_stage', node: null, group_id: null}, {download: {route: 'routing', group_id: null}}),
+      undefined,
+      'en-US',
+      t
+    );
+    expect(row.failure).toEqual([`${t('ui.backend.fetchFailed')} (new_stage)`]);
+  });
+
+  it('leaves other codes alone', () => {
+    const row = providerRowView(
+      provider('a', {last_error: {code: 'route_unavailable', message: 'No node', details: {stage: 'connection_failed'} as unknown as Record<string, never>}}),
+      undefined,
+      'en-US',
+      t,
+      names
+    );
+    expect(row.failure).toBeUndefined();
+    expect(row.error).toBe(t('ui.backend.routeUnavailable'));
+  });
+});
+
 it('uses a unique verified node tag for the interval without authorizing guesses', () => {
   const entries = readSubscriptionEntries("subscription {\n primary: {\n url: 'https://primary.example/sub'\n interval: 1h\n }\n}\n");
   const tagged = node('tagged', {provider_id: 'a', subscription_tag: 'primary'});

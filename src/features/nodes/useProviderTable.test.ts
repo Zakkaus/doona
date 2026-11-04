@@ -25,6 +25,7 @@ it('looks up opaque provider intervals by verified tags and keeps editing in the
   ).list;
   const input: Parameters<typeof providerTable>[0] = {
     rows,
+    names: new Map(),
     entries,
     loading: false,
     selected: null,
@@ -49,4 +50,39 @@ it('looks up opaque provider intervals by verified tags and keeps editing in the
     const view = providerTable({...input, editAction: () => (kind ? {kind, run: vi.fn()} : null)});
     expect(view.rows.find(item => item.id === 'harbor')!.action?.kind ?? null).toBe(kind);
   }
+});
+
+it("explains a failed download in a help popover, naming the node and group from the demo's faults scenario", async () => {
+  const api = createMockApi({faults: true});
+  const {sources} = await api.config();
+  const entries = readSubscriptionEntries(sources.find(source => source.kind === 'main')!.content).map(entry => ({...entry, interval: 3600}));
+  const {providers} = await api.providers();
+  const {nodes} = await api.nodes();
+  const groups = await api.groups();
+  const names = new Map([...groups, ...nodes].map(item => [item.id, item.name] as const));
+  const rows = providerRows(providers, nodes, entries, translate.bind(null, 'en')).list;
+  const run = vi.fn();
+  const input: Parameters<typeof providerTable>[0] = {
+    rows,
+    names,
+    entries,
+    loading: false,
+    selected: null,
+    onSelect: vi.fn(),
+    canManage: true,
+    canRefresh: false,
+    busy: false,
+    source: {main: null, writable: true, busy: false, error: null, retry: vi.fn(), apply: vi.fn()},
+    refresh: {busy: null, refresh: vi.fn(), refreshMany: vi.fn()},
+    refreshAll: {refreshing: false, run: vi.fn(), disabled: false, reason: null, label: ''},
+    onAdd: vi.fn(),
+    onRemove: vi.fn(),
+    inInclude: () => false,
+    editAction: () => ({kind: 'edit', run})
+  };
+  const harbor = providerTable(input).rows.find(item => item.id === 'harbor')!;
+  expect(harbor.failure?.[1]).toBe('The download went through node hk-01 of group proxy');
+  expect(harbor.help).toEqual({title: 'Could not update this subscription', text: harbor.failure});
+  // A source that did not fail, or whose engine gave no reason, keeps the plain status.
+  expect(providerTable(input).rows.filter(item => item.id !== 'harbor' && item.help)).toEqual([]);
 });

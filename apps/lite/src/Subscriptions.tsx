@@ -36,6 +36,7 @@ import {lazy, Suspense, useCallback, useContext, useEffect, useState} from 'reac
 import type {Node, Provider} from '../../../src/api/model';
 import {LiteError, readMain, readProviders, providerSnapshot, mainSnapshot, refreshProvider, type Connection} from './api';
 import {LocaleContext, useMessages} from './i18n';
+import {fetchFailureText} from './fetchFailure';
 import {noticeText, useFocusRefresh, useRead, useTask} from './state';
 import {DocsLink, Feedback, ReadOnlyNote, ReadState, useNoticeToast} from './ui';
 import {DateStamp} from './ui/DateStamp';
@@ -321,7 +322,8 @@ export function Subscriptions({connection, setBusy}: {connection: Connection; se
                           ? status.empty
                           : status[provider.status];
                   // Why the last update failed; the rows still list the nodes of the update before it.
-                  const failure = state === status.error || state === status.stale ? provider.last_error?.message : undefined;
+                  const failure =
+                    (state === status.error || state === status.stale) && provider.last_error ? fetchFailureText(provider.last_error, t) : undefined;
                   return (
                     <VStack as="li" key={provider.id} data-provider-id={provider.id} tabIndex={-1} className="lite-subscription-row">
                       <Grid className="lite-disclosure-grid" style={compact ? {gridTemplateColumns: 'minmax(0, 1fr) fit-content(50%)'} : undefined}>
