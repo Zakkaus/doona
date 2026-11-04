@@ -1,6 +1,11 @@
-import {readdir, readFile} from 'node:fs/promises';
+import {readdir, readFile, writeFile} from 'node:fs/promises';
+import {parseArgs} from 'node:util';
 import {gzipSync} from 'node:zlib';
 import {checkLimits, evaluate, measure, report, totals} from './size-budget.mjs';
+import {summarize} from './size-report.mjs';
+
+// --json <path> also writes the measurement for the size report; --commit and --base name the commit measured and main's commit under it.
+const {values: options} = parseArgs({options: {json: {type: 'string'}, commit: {type: 'string'}, base: {type: 'string'}}});
 
 const {sizeBudget} = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 checkLimits(sizeBudget);
@@ -19,4 +24,5 @@ const results = evaluate(measure(manifest, size), sizeBudget);
 for (const result of results) console.log(report(result));
 const total = totals(sizes);
 console.log(`total (information only): js ${total.js} bytes gzip, css ${total.css} bytes gzip, ${sizes.size} files`);
+if (options.json) await writeFile(options.json, `${JSON.stringify(summarize(results, total, options), null, 2)}\n`);
 if (results.some(({ok}) => !ok)) process.exitCode = 1;
