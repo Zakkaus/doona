@@ -106,14 +106,16 @@ it('stamps the mirrored layout right to left in every language before first pain
   }
 });
 
-it('links the Glass and Halloween stylesheets before first paint for their own palettes only', () => {
+it("links each family's stylesheet before first paint for its own palettes only", () => {
+  const defaultFamily = DEFAULT_PALETTE.split('/')[0];
+  const own = [...new Set(palettes.map(palette => palette.id.split('/')[0]))].filter(family => family !== defaultFamily);
   const linked = stampScript({
     palettes: palettes.map(palette => palette.id),
     defaultPalette: DEFAULT_PALETTE,
     locales: LOCALE,
     referenceLocale: LOCALE.en,
     rtlScripts,
-    paletteStylesheets: {glass: './assets/glass-hash.css', halloween: './assets/halloween-hash.css'}
+    paletteStylesheets: Object.fromEntries(own.map(family => [family, `./assets/${family}-hash.css`]))
   });
   for (const {id} of palettes) {
     const written = [];
@@ -125,6 +127,6 @@ it('links the Glass and Halloween stylesheets before first paint for their own p
       matchMedia: () => ({matches: false})
     });
     const family = id.split('/')[0];
-    expect(written).toEqual(family === 'glass' || family === 'halloween' ? [`<link rel="stylesheet" data-${family} href="./assets/${family}-hash.css">`] : []);
+    expect(written).toEqual(family !== defaultFamily ? [`<link rel="stylesheet" data-${family} href="./assets/${family}-hash.css">`] : []);
   }
 });

@@ -90,14 +90,18 @@ export default defineConfig({
     {
       // The stored theme and language are stamped on <html> by an inline script before the stylesheet can paint,
       // so a returning dark-theme reader never sees a light first frame. The CSP allows that one script by hash.
-      // Glass's and Halloween's stylesheets are linked from the script too, so the build's names for them are filled in
-      // once the bundle exists.
+      // Every palette family's stylesheet but the default's is linked from the script too (Glass's is glass.css, which
+      // brings its tokens), so the build's names for them are filled in once the bundle exists.
       name: 'first-paint-stamp',
       transformIndexHtml: {
         order: 'post',
         handler(html, {bundle}) {
+          const defaultFamily = DEFAULT_PALETTE.split('/')[0];
+          const ownSheets = [...new Set(palettes.map(palette => palette.id.split('/')[0]))]
+            .filter(family => family !== defaultFamily)
+            .map(family => [family, family === 'glass' ? 'src/ui/styles/glass.css' : `src/ui/styles/palettes/${family}.css`]);
           const paletteStylesheets = Object.fromEntries(
-            Object.entries({glass: 'src/ui/styles/glass.css', halloween: 'src/ui/styles/palettes/halloween.css'}).map(([family, source]) => {
+            ownSheets.map(([family, source]) => {
               const file = bundle
                 ? Object.values(bundle).find(file => file.type === 'asset' && file.originalFileNames.some(name => name.endsWith(source)))?.fileName
                 : source;

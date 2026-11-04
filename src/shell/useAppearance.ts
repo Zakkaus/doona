@@ -14,12 +14,22 @@ import {useMediaQuery, withCrossfade} from '../ui/hooks';
 import type {RoutePath} from './routes';
 import {setDateFormat, setTimeFormat} from '../i18n/format';
 import {isChunkLoadError, reloadForStaleChunk} from '../ui/staleChunk';
+import type {sheets} from './paletteSheets';
 
-// Glass's stylesheet and wallpaper (glass.ts) and Halloween's stylesheet (halloween.ts) load only for their palettes; a
-// failed load is tried again next time.
+// Every family but Rosé Pine, the default in theme.css, loads its stylesheet only for its palettes: Glass's with its
+// wallpaper (glass.ts), Halloween's from its own module (halloween.ts), and the rest from paletteSheets.ts. A failed load
+// is tried again next time.
+const sheet = (family: keyof typeof sheets) => () => import('./paletteSheets').then(module => ({linkStylesheet: () => module.linkStylesheet(family)}));
 const families: Record<string, () => Promise<{linkStylesheet(): Promise<void>}>> = {
   glass: () => import('./glass'),
-  halloween: () => import('./halloween')
+  halloween: () => import('./halloween'),
+  antd: sheet('antd'),
+  arco: sheet('arco'),
+  catppuccin: sheet('catppuccin'),
+  kary: sheet('kary'),
+  nord: sheet('nord'),
+  qiangguo: sheet('qiangguo'),
+  semi: sheet('semi')
 };
 const loads: Record<string, Promise<void> | undefined> = {};
 const loaded = new Set<string>();
@@ -104,7 +114,9 @@ export function useAppearance(stored: Settings) {
       if (picked.current !== next) return;
       if (!isChunkLoadError(error)) return setPending(undefined);
       writeSetting('palette', next);
-      reloadForStaleChunk();
+      // The palette is kept for the next load. When the guard refuses a second reload, nothing is going to apply it now, so
+      // the picker goes back to the palette that is on screen.
+      if (!reloadForStaleChunk()) setPending(undefined);
     });
   }, []);
   const shownPalette = pending ?? palette;

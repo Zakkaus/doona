@@ -1,4 +1,4 @@
-import {expect, test} from './fixtures';
+import {expect, linkPaletteSheets, test} from './fixtures';
 import type {PaletteId} from '../src/shell/preferences';
 
 // Every palette, both schemes: the accent, the status tones and secondary text as text on the base, the surface, a
@@ -87,6 +87,7 @@ test('accent, status and secondary text and text on accent, success, error and n
   page
 }) => {
   await page.goto('/#/activity');
+  await linkPaletteSheets(page);
   const failures: string[] = [];
   for (const [palette, checked] of Object.entries(palettes)) {
     if (!checked) continue;
@@ -177,6 +178,7 @@ test('accent, status and secondary text and text on accent, success, error and n
 // Glass included; the notice fill's own text colour is for badges.
 test('the warning toast takes the text colour of the info toast in every palette', async ({page}) => {
   await page.goto('/#/activity');
+  await linkPaletteSheets(page);
   const differing = await page.evaluate(palettes => {
     const colour = (className: string) => {
       const toast = document.createElement('div');
@@ -204,6 +206,7 @@ test('the warning toast takes the text colour of the info toast in every palette
 // --rp-subtle) are non-text graphics and need 3:1 on the card and the page.
 test('lines and quiet fills show on a card, and chart marks reach 3:1, in every palette', async ({page}) => {
   await page.goto('/#/activity');
+  await linkPaletteSheets(page);
   const failures: string[] = [];
   for (const [palette, checked] of Object.entries(palettes)) {
     if (!checked) continue;
