@@ -9,7 +9,7 @@ import {TextTooltip} from './Tooltip';
 // S2's CardView with highlight selection: a grid of cards of which one is selected, drawn with S2's dark stroke round
 // the card. The arrow keys move between cards and select the one they reach; within a card, left and right also reach
 // its actions. Cards in a row share its height. A first load draws Skeleton cards at a provider card's height.
-const cardHeight = 224;
+const cardHeight = 228;
 export function CardView<T extends {id: string}>({
   label,
   items,
