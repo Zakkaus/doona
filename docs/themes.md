@@ -14,10 +14,11 @@ See the [palette comparison](https://daeuniverse.org/doona/screenshots/palettes.
 | [src/shell/preferences.ts](../src/shell/preferences.ts)     | Stored palette validation and `system`, `light` or `dark` color scheme                           |
 | [src/shell/useAppearance.ts](../src/shell/useAppearance.ts) | Apply `data-family`, `data-flavour` and `data-scheme` to the document root                       |
 | [src/ui/styles/palettes/](../src/ui/styles/palettes/)       | One CSS file per palette family, with light and dark tokens                                      |
-| [src/ui/styles/palettes.css](../src/ui/styles/palettes.css) | Imports for palette families that load at startup                                                |
+| [src/ui/styles/palettes.css](../src/ui/styles/palettes.css) | Import of the default family, rose-pine, which loads at startup                                  |
 | [src/shell/glass.ts](../src/shell/glass.ts)                 | Load Glass styles and wallpaper when needed                                                      |
 | [src/shell/halloween.ts](../src/shell/halloween.ts)         | Load Halloween styles, card art and logo when needed                                             |
 | [src/shell/paletteSheet.ts](../src/shell/paletteSheet.ts)   | Link the stylesheet of a family that loads on demand                                             |
+| [src/shell/paletteSheets.ts](../src/shell/paletteSheets.ts) | Stylesheets of the other token-only families, loaded on demand                                   |
 | [src/ui/charts/palette.ts](../src/ui/charts/palette.ts)     | Read CSS tokens for charts and observe palette changes                                           |
 
 ## Palette contract
@@ -32,7 +33,7 @@ In the Qiangguo palette, a running state reads Improving; unavailable and degrad
 
 ## Add or update a palette
 
-1. Update `src/shell/palettes.ts` and the family stylesheet. Import a new family from `src/ui/styles/palettes.css`, unless it loads on demand like Glass and Halloween.
+1. Update `src/shell/palettes.ts` and the family stylesheet. Register a new family in the `sheets` map of `src/shell/paletteSheets.ts` and in the `families` map of `src/shell/useAppearance.ts`, which load it on demand; only the default family is imported from `src/ui/styles/palettes.css`.
 2. Add label keys to [src/i18n/locales/](../src/i18n/locales/). An optional `words` map in the registry redirects existing translation keys to palette-specific ones.
 3. Keep family images beside the stylesheet under `src/ui/styles/palettes/<family>/`. Record their sources and licences in [NOTICE](../NOTICE) and [REUSE.toml](../REUSE.toml).
 4. Update the palette map in [e2e/contrast.spec.ts](../e2e/contrast.spec.ts). Run the palette and contrast checks required by [CONTRIBUTING.md](../CONTRIBUTING.md#add-a-palette), and inspect both schemes. The contrast spec excludes translucent Glass surfaces from its numeric checks.

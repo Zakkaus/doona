@@ -29,9 +29,9 @@
   d.dataset.scheme = dark ? 'dark' : 'light';
   d.dataset.family = parts[0];
   d.dataset.flavour = parts[1];
-  // Only the Glass palettes load Glass's stylesheet, and only Halloween loads its own. Written by the parser, it holds
-  // the first paint as the main one does, and it lands before the main one, where src/shell/paletteSheet.ts links it
-  // for a palette picked later.
+  // Every family but the default's has its own stylesheet, which only its palettes load. Written by the parser, it
+  // holds the first paint as the main one does, and it lands before the main one, where src/shell/paletteSheet.ts links
+  // it for a palette picked later.
   var sheets = '__PALETTE_STYLESHEETS__';
   var sheet = sheets[parts[0]];
   if (sheet) document.write('<link rel="stylesheet" data-' + parts[0] + ' href="' + sheet + '">');

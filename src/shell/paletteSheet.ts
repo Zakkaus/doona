@@ -1,8 +1,9 @@
-// A palette family's own stylesheet, which no other palette needs: Glass's (glass.ts) and Halloween's (halloween.ts).
-// useAppearance.ts loads the family's module before one of its palettes applies. For a stored palette of the family
-// the first-paint script (tools/stamp.js) has already linked the stylesheet; otherwise it is linked here at the same
-// place, before every other stylesheet, where theme.css used to import Glass's, so it loses the same ties to later
-// rules, and to pages' stylesheets loaded since, as it did there.
+// A palette family's own stylesheet, which no other palette needs: every family's but Rosé Pine's, the default.
+// useAppearance.ts loads it before one of the family's palettes applies. For a stored palette of the family the
+// first-paint script (tools/stamp.js) has already linked the stylesheet; otherwise it is linked here at the same place,
+// before every other stylesheet, where theme.css used to import it, so it loses the same ties to later rules, and to
+// pages' stylesheets loaded since, as it did there. Only Rosé Pine's :root defaults now come after it, and every
+// family's blocks outrank those.
 const linked = new Map<string, Promise<void>>();
 export function linkStylesheet(family: string, href: string): Promise<void> {
   const known = linked.get(family);

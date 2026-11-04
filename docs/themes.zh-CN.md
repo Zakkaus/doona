@@ -14,10 +14,11 @@
 | [src/shell/preferences.ts](../src/shell/preferences.ts)     | 已保存配色的校验，以及 `system`、`light`、`dark` 颜色模式          |
 | [src/shell/useAppearance.ts](../src/shell/useAppearance.ts) | 将 `data-family`、`data-flavour` 与 `data-scheme` 应用到文档根元素 |
 | [src/ui/styles/palettes/](../src/ui/styles/palettes/)       | 每个配色系列一个 CSS 文件，包含浅色与深色变量                      |
-| [src/ui/styles/palettes.css](../src/ui/styles/palettes.css) | 启动时加载的配色系列的导入                                         |
+| [src/ui/styles/palettes.css](../src/ui/styles/palettes.css) | 导入启动时加载的默认系列 rose-pine                                 |
 | [src/shell/glass.ts](../src/shell/glass.ts)                 | 按需加载玻璃样式与壁纸                                             |
 | [src/shell/halloween.ts](../src/shell/halloween.ts)         | 按需加载万圣节样式、卡片插图与标志                                 |
 | [src/shell/paletteSheet.ts](../src/shell/paletteSheet.ts)   | 为按需加载的配色系列链接样式表                                     |
+| [src/shell/paletteSheets.ts](../src/shell/paletteSheets.ts) | 其他只含变量的配色系列样式表，按需加载                             |
 | [src/ui/charts/palette.ts](../src/ui/charts/palette.ts)     | 为图表读取 CSS 变量并监听配色变化                                  |
 
 ## 配色约定
@@ -32,7 +33,7 @@
 
 ## 新增或更新配色
 
-1. 更新 `src/shell/palettes.ts` 与系列样式表。新增系列时，在 `src/ui/styles/palettes.css` 中导入；像玻璃与万圣节一样按需加载的系列除外。
+1. 更新 `src/shell/palettes.ts` 与系列样式表。新增系列时，在 `src/shell/paletteSheets.ts` 的 `sheets` 与 `src/shell/useAppearance.ts` 的 `families` 中登记，按需加载；只有默认系列在 `src/ui/styles/palettes.css` 中导入。
 2. 在 [src/i18n/locales/](../src/i18n/locales/) 中加入标签键。注册表的可选 `words` 映射可将已有翻译键指向配色专用键。
 3. 系列图片放在样式表旁的 `src/ui/styles/palettes/<family>/` 中，并在 [NOTICE](../NOTICE) 与 [REUSE.toml](../REUSE.toml) 中记录来源及许可证。
 4. 更新 [e2e/contrast.spec.ts](../e2e/contrast.spec.ts) 中的配色表。执行 [CONTRIBUTING.md](../CONTRIBUTING.md#add-a-palette) 要求的配色与对比度检查，并检查浅色及深色效果。对比度测试不对半透明玻璃表面执行数值检查。

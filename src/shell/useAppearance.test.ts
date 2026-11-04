@@ -41,8 +41,10 @@ it.each([
   expect(readSettings(storage).scheme).toBe('system');
 });
 
-// A Glass palette waits for its stylesheet; a palette picked meanwhile wins.
+// A palette outside Rosé Pine waits for its family's stylesheet; a palette picked meanwhile wins. Rosé Pine, the
+// default, loads with the app and applies at once.
 vi.mock('./glass', () => ({linkStylesheet: () => Promise.resolve()}));
+vi.mock('./paletteSheet', () => ({linkStylesheet: () => Promise.resolve()}));
 it('applies a Glass palette once its stylesheet loads, unless another palette was picked meanwhile', async () => {
   const stored = new Map<string, string>();
   const storage = {getItem: (key: string) => stored.get(key) ?? null, setItem: (key: string, value: string) => stored.set(key, value), removeItem: vi.fn()};
@@ -57,10 +59,14 @@ it('applies a Glass palette once its stylesheet loads, unless another palette wa
   appearance.pickPalette('glass/frosted');
   appearance.pickPalette('nord/nord');
   await loadStyles('glass');
+  await loadStyles('nord');
   render();
   expect(appearance.palette).toBe('nord/nord');
   expect(readSettings(storage).palette).toBe('nord/nord');
   appearance.pickPalette('glass/tinted');
   render();
   expect(appearance.palette).toBe('glass/tinted');
+  appearance.pickPalette('rose-pine/main');
+  render();
+  expect(appearance.palette).toBe('rose-pine/main');
 });
