@@ -5,7 +5,7 @@ import type {Group, HealthObservation, JsonPatch, Node, ProbeResult, Provider} f
 import type {Key} from '../../i18n';
 import {compareLatency, foldFamilies, healthMillis, safeHttpUrl, type MessageRef} from '../../api/selectors';
 import {groupPolicyText} from '../shared/policyText';
-import {formatNumber, type Translator} from '../../i18n';
+import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Help, NodeStatus, KvItem} from '../../ui/ui';
 import {builtinOutboundNames} from '../../dae/vocab';
 import {regionOf} from '../shared/geo';
@@ -106,19 +106,28 @@ export function actionErrorText(error: Error, t: Translator, showRequestId = tru
   const progress = t('policy.probePartial', {done: completed, n: total, error: errorText(cause, t, showRequestId)});
   return t('ui.valuePair', {label: errorText(error, t, showRequestId), value: progress});
 }
-// Count each member once, its address families folded as its tile folds them.
-export function probeSummary(result: ProbeResult): MessageRef {
+const unknownReasons = new Map<string | null, Key>([
+  ['deadline', 'policy.probeReason.deadline'],
+  ['address_unavailable', 'policy.probeReason.address'],
+  ['cancelled', 'policy.probeReason.cancelled']
+]);
+// Count each member once, its address families folded as its tile folds them; an unknown member counts under the error
+// of the row that decided its state.
+export function probeSummary(result: ProbeResult, t: Translator, lang: Lang): string {
   const rows = new Map<string, ProbeResult['results']>();
   for (const item of result.results) rows.set(item.member_id, [...(rows.get(item.member_id) ?? []), item]);
-  const states = [...rows.values()].map(items => foldFamilies(items)?.state);
-  return {
-    key: result.selection_changed.tcp || result.selection_changed.udp ? 'policy.probeChanged' : 'policy.probeUnchanged',
-    params: {
-      healthy: states.filter(s => s === 'healthy').length,
-      unavailable: states.filter(s => s === 'unavailable').length,
-      unknown: states.filter(s => s === 'unknown').length
-    }
-  };
+  const folded = [...rows.values()].map(items => foldFamilies(items));
+  const states = folded.map(row => row?.state);
+  const unknown = folded.filter(row => row?.state === 'unknown').map(row => unknownReasons.get(row!.error) ?? 'policy.probeReason.other');
+  const reasons = [...unknownReasons.values(), 'policy.probeReason.other' as const]
+    .map(key => ({key, n: unknown.filter(reason => reason === key).length}))
+    .filter(({n}) => n > 0)
+    .map(({key, n}) => t(key, {n}));
+  return t(result.selection_changed.tcp || result.selection_changed.udp ? 'policy.probeChanged' : 'policy.probeUnchanged', {
+    healthy: states.filter(s => s === 'healthy').length,
+    unavailable: states.filter(s => s === 'unavailable').length,
+    unknown: reasons.length ? t('policy.probeUnknownWhy', {n: unknown.length, reasons: formatList(lang, reasons)}) : unknown.length
+  });
 }
 
 export type MemberView = {

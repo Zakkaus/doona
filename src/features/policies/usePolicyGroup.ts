@@ -145,10 +145,9 @@ export function usePolicyGroup(input: PolicyGroupInput) {
   const probe = (options?: ProbeOptions) =>
     void control.probe(options).then(result => {
       if (result && g) {
-        const summary = probeSummary(result);
         toast(
           probeLevel(foldFamilies(result.results)),
-          t('ui.valuePair', {label: g.name, value: t(summary.key, summary.params)}) + probeFallbackNotice(result.fallback, g.name, t)
+          t('ui.valuePair', {label: g.name, value: probeSummary(result, t, lang)}) + probeFallbackNotice(result.fallback, g.name, t)
         );
       }
     });
