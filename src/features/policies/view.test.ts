@@ -41,6 +41,7 @@ import {
 } from '../shared/groupText';
 import {memberHealth} from './health';
 const t: Translator = (key, params) => translate('en', key, params);
+const summarize = (result: Parameters<typeof probeSummary>[0]) => probeSummary(result, t, 'en');
 it('writes the kind filter into the URL, clears a deep link and preserves other query state', () => {
   expect(kindQuery('tab=groups&kind=auto&group=a&keep=1', 'manual')).toBe('tab=groups&kind=manual&keep=1');
   expect(kindQuery('kind=manual&group=a&keep=1', 'auto')).toBe('kind=auto&keep=1');
@@ -98,7 +99,7 @@ it('counts each member once with its address families folded and reports selecti
     kind: 'tcp_connect' as const,
     health_updated: true
   };
-  const result = probeSummary({
+  const result = summarize({
     target: {type: 'group', group_id: 'proxy'},
     selection_before: {tcp: null, udp: null},
     selection_after: {tcp: 'a', udp: null},
@@ -111,7 +112,7 @@ it('counts each member once with its address families folded and reports selecti
     ],
     selection_changed: {tcp: true, udp: false}
   });
-  expect(result).toEqual({key: 'policy.probeChanged', params: {healthy: 1, unavailable: 1, unknown: 1}});
+  expect(result).toBe('Available: 1, unavailable: 1, unknown: 1 (1 other), selection: changed');
 });
 
 it('names the policy as the picker does and keeps the engine spelling for the tooltip', () => {
@@ -241,12 +242,12 @@ it('counts each probed member once, by the row that says most', () => {
     purpose: 'data',
     warmth: 'cold',
     latency_ms: state === 'healthy' ? 0.2 : null,
-    error: state === 'healthy' ? null : {code: state === 'unknown' ? 'address_unavailable' : 'probe_failed', message: ''},
+    error: state === 'healthy' ? null : state === 'unknown' ? 'address_unavailable' : 'probe_failed',
     health_updated: true,
     observed_at: '2026-09-20T04:12:36.546Z',
     resolved_leaf_node_id: member_id
   });
-  const summary = probeSummary({
+  const summary = summarize({
     target: {type: 'group', group_id: 'g'},
     selection_changed: {tcp: false, udp: false},
     selection_before: {tcp: null, udp: null},
@@ -260,7 +261,53 @@ it('counts each probed member once, by the row that says most', () => {
       row('c', 'ipv4', 'unknown')
     ]
   } as unknown as Parameters<typeof probeSummary>[0]);
-  expect(summary).toEqual({key: 'policy.probeUnchanged', params: {healthy: 1, unavailable: 1, unknown: 1}});
+  expect(summary).toBe('Available: 1, unavailable: 1, unknown: 1 (1 unresolved), selection: unchanged');
+});
+
+it('says why probed members are unknown, by the row that decided each member', () => {
+  const row = (member_id: string, state: 'healthy' | 'unknown', error: string | null, ip_version: 'ipv4' | 'ipv6' = 'ipv4') => ({
+    member_id,
+    ip_version,
+    state,
+    kind: 'tcp_connect',
+    transport: 'tcp',
+    purpose: 'data',
+    warmth: 'cold',
+    latency_ms: state === 'healthy' ? 12 : null,
+    error,
+    health_updated: true,
+    observed_at: '2026-09-20T04:12:36.546Z',
+    resolved_leaf_node_id: member_id
+  });
+  const probe = (results: Array<ReturnType<typeof row>>) =>
+    ({
+      target: {type: 'group', group_id: 'g'},
+      selection_changed: {tcp: false, udp: false},
+      selection_before: {tcp: null, udp: null},
+      selection_after: {tcp: null, udp: null},
+      results
+    }) as unknown as Parameters<typeof probeSummary>[0];
+  const mixed = probe([
+    row('a', 'unknown', 'deadline'),
+    row('b', 'unknown', 'deadline'),
+    row('c', 'unknown', 'address_unavailable'),
+    row('d', 'healthy', null),
+    // A healthy IPv4 answer decides the member; its IPv6 deadline is no reason.
+    row('e', 'healthy', null),
+    row('e', 'unknown', 'deadline', 'ipv6'),
+    row('f', 'unknown', 'cancelled'),
+    row('g', 'unknown', null),
+    row('h', 'unknown', 'probe_failed'),
+    // Both families unknown: the IPv4 row decides, as on the member's tile.
+    row('x', 'unknown', 'address_unavailable', 'ipv6'),
+    row('x', 'unknown', 'deadline')
+  ]);
+  const text = (lang: 'en' | 'zh-CN' | 'zh-TW') => probeSummary(mixed, (key, params) => translate(lang, key, params), lang);
+  expect(text('en')).toBe('Available: 2, unavailable: 0, unknown: 7 (3 timed out, 1 unresolved, 1 cancelled, 2 other), selection: unchanged');
+  expect(text('zh-CN')).toBe('可用：2，不可用：0，状态未知：7（超时 3、未解析到地址 1、已取消 1、其他 2），选择：未更改');
+  expect(text('zh-TW')).toBe('可用：2，無法使用：0，狀態未知：7（逾時 3、未解析到位址 1、已取消 1、其他 2），選擇：未變更');
+  const healthy = summarize(probe([row('a', 'healthy', null), row('a', 'unknown', 'deadline', 'ipv6'), row('b', 'healthy', null)]));
+  expect(healthy).toBe('Available: 2, unavailable: 0, unknown: 0, selection: unchanged');
 });
 const withInterval = <G extends ReturnType<typeof nodeFixtures>['groups'][number]>(g: G): G => ({
   ...g,

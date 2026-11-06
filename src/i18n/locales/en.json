@@ -1502,7 +1502,12 @@
     "one": "Tested {done} of {n} member; {error}",
     "other": "Tested {done} of {n} members; {error}"
   },
+  "policy.probeReason.address": "{n} unresolved",
+  "policy.probeReason.cancelled": "{n} cancelled",
+  "policy.probeReason.deadline": "{n} timed out",
+  "policy.probeReason.other": "{n} other",
   "policy.probeUnchanged": "Available: {healthy}, unavailable: {unavailable}, unknown: {unknown}, selection: unchanged",
+  "policy.probeUnknownWhy": "{n} ({reasons})",
   "policy.probing": "Testing…",
   "policy.purpose.data": "data",
   "policy.purpose.shared": "shared",
