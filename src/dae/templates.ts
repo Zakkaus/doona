@@ -88,20 +88,19 @@ const gfw = (target: string) => ['# GFW list', `domain(geosite:gfw) -> ${target}
 
 // Selector groups include nested groups and all proxy nodes. Exclude injected direct/block nodes because an
 // unfiltered honk group would select them too.
-type GroupSpec = {name: string; label: Key; flag?: string; lines: string[]};
+type GroupSpec = {name: string; label: Key; flag?: string; lines: string[]; unflagged?: string};
 export const everyNode = "filter: !name('direct', 'block')";
 const selectGroup = (name: string, label: Key, nested: string[], fallback = nested[0]): GroupSpec => ({
   name,
   label,
   lines: [`filter: group(${nested.map(quote).join(', ')})`, everyNode, 'policy: select', `default: ${quote(fallback)}`]
 });
-// `exclude` drops nodes the pattern would also catch, such as Hong Kong nodes named 中国香港.
-const region = (name: string, label: Key, flag: string, pattern: string, exclude?: string): GroupSpec => ({
-  name,
-  label,
-  flag,
-  lines: [`filter: name(regex: ${quote(pattern)})${exclude ? ` && !name(regex: ${quote(exclude)})` : ''}`, 'policy: min_moving_avg']
-});
+// `exclude` drops nodes the pattern would also catch, such as Hong Kong nodes named 中国香港. The flag is one more
+// alternative of the pattern; `unflagged` is the line written before that, which older configs still carry.
+const region = (name: string, label: Key, flag: string, pattern: string, exclude?: string): GroupSpec => {
+  const filter = (regex: string) => `filter: name(regex: ${quote(regex)})${exclude ? ` && !name(regex: ${quote(exclude)})` : ''}`;
+  return {name, label, flag, lines: [filter(`${pattern}|${flag}`), 'policy: min_moving_avg'], unflagged: filter(pattern)};
+};
 const templateText = {
   proxy: 'rule.template.group.proxy',
   auto: 'rule.template.group.auto',

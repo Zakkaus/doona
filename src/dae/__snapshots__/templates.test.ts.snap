@@ -85,7 +85,7 @@ exports[`template output > writes the complete homebound configuration 1`] = `
 group {
   # 🇨🇳 Mainland China
   cn {
-    filter: name(regex: '(?i)回国|回國|中国|中國|大陆|大陸|(?:^|[^A-Za-z])(?:China|Mainland|CN)(?:[^A-Za-z]|$)') && !name(regex: '(?i)香港|澳门|澳門|台湾|台灣|臺灣|(?:^|[^A-Za-z])(?:HK|MO|TW)(?:[^A-Za-z]|$)|Hong ?Kong|Macau|Macao|Taiwan')
+    filter: name(regex: '(?i)回国|回國|中国|中國|大陆|大陸|(?:^|[^A-Za-z])(?:China|Mainland|CN)(?:[^A-Za-z]|$)|🇨🇳') && !name(regex: '(?i)香港|澳门|澳門|台湾|台灣|臺灣|(?:^|[^A-Za-z])(?:HK|MO|TW)(?:[^A-Za-z]|$)|Hong ?Kong|Macau|Macao|Taiwan')
     policy: min_moving_avg
   }
 }
@@ -124,32 +124,32 @@ group {
   }
   # 🇭🇰 Hong Kong
   hk {
-    filter: name(regex: '港|HK|Hong Kong|HongKong')
+    filter: name(regex: '港|HK|Hong Kong|HongKong|🇭🇰')
     policy: min_moving_avg
   }
   # 🇯🇵 Japan
   jp {
-    filter: name(regex: '日|JP|Japan|Tokyo')
+    filter: name(regex: '日|JP|Japan|Tokyo|🇯🇵')
     policy: min_moving_avg
   }
   # 🇺🇸 United States
   us {
-    filter: name(regex: '美|US|United States|America')
+    filter: name(regex: '美|US|United States|America|🇺🇸')
     policy: min_moving_avg
   }
   # 🇹🇼 Taiwan
   tw {
-    filter: name(regex: '台|臺|TW|Taiwan')
+    filter: name(regex: '台|臺|TW|Taiwan|🇹🇼')
     policy: min_moving_avg
   }
   # 🇸🇬 Singapore
   sg {
-    filter: name(regex: '新加坡|獅城|狮城|SG|Singapore')
+    filter: name(regex: '新加坡|獅城|狮城|SG|Singapore|🇸🇬')
     policy: min_moving_avg
   }
   # 🇰🇷 South Korea
   kr {
-    filter: name(regex: '韓|韩|KR|Korea')
+    filter: name(regex: '韓|韩|KR|Korea|🇰🇷')
     policy: min_moving_avg
   }
   # Telegram

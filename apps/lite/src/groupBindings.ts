@@ -2,7 +2,7 @@ import type {Node, Provider} from '../../../src/api/model';
 import {quote} from '../../../src/dae/text';
 import {rustRegexToJs} from '../../../src/dae/rustRegex';
 import {parseConditionValues, parseGroupConditions} from '../../../src/dae/groupConditions';
-import {capitalOnlyRegionCodes, regions} from '../../../src/dae/regions';
+import {capitalOnlyRegionCodes, regionFlag, regions} from '../../../src/dae/regions';
 
 // The filter a new group starts with; it admits nothing and is not a member.
 export const EMPTY_GROUP_FILTER = "name(regex: '^$')";
@@ -36,7 +36,8 @@ export function honkPolicy(value: string): string {
   return ['fallback', 'score'].includes(base) ? base : 'select';
 }
 
-export function regionPatterns(iso: string): string[] {
+// The flag is one more alternative; without it these are the patterns older configs carry.
+function patternsOf(iso: string, withFlag: boolean): string[] {
   const entry = regions.find(([code]) => code === iso);
   if (!entry) return [];
   const capitalOnly = capitalOnlyRegionCodes[iso] === true;
@@ -51,11 +52,13 @@ export function regionPatterns(iso: string): string[] {
   const hanPattern = alternatives(han.filter(key => !han.some(other => other !== key && key.includes(other))));
   const start = String.raw`(?:^|[^\p{L}\p{M}])`;
   const end = String.raw`(?:[^\p{L}\p{M}]|$)`;
-  const patterns = [`(?i)${start}(?:${alternatives(latin)})${end}${hanPattern ? `|${hanPattern}` : ''}`];
+  const rest = [hanPattern, withFlag && regionFlag(iso)].filter(Boolean).join('|');
+  const patterns = [`(?i)${start}(?:${alternatives(latin)})${end}${rest ? `|${rest}` : ''}`];
   if (capitalOnly) patterns.push(`${start}${iso}${end}`);
   return patterns;
 }
-const regionRegexes = regions.map(([iso]) => ({iso, patterns: regionPatterns(iso)}));
+export const regionPatterns = (iso: string) => patternsOf(iso, true);
+const regionRegexes = regions.flatMap(([iso]) => [true, false].map(withFlag => ({iso, patterns: patternsOf(iso, withFlag)})));
 
 // Region patterns and case-sensitive keywords are alternatives within one subscription.
 export function subscriptionBinding(name: string, regions: string[], words: string[]): string {

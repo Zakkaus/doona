@@ -2,24 +2,29 @@ import {groupFilterText, groupFilterTexts, reconcileGroupFilters, type GroupFilt
 import type {Node, Provider} from '../../../api/model';
 import {describeFilters, exactTokens, isWritableName, noNodes, quoteName} from '../../../dae/groups';
 import {compileFilters} from '../../../dae/groupFilters';
-import {regions} from '../../../dae/regions';
+import {regionFlag, regions} from '../../../dae/regions';
 import {flagChoices} from '../../../dae/flags';
 import {regionGroups} from '../../../dae/templates';
 import {quote, unquote} from '../../../dae/text';
 
 export type IncludeKind = 'region' | 'subscription' | 'node' | 'group';
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const regionFilter = (keys: string[]) => {
+  const pattern = keys.map(key => (/^[a-z0-9 ]+$/.test(key) ? `(?:^|[^a-z0-9])${escapeRegex(key)}(?:[^a-z0-9]|$)` : escapeRegex(key))).join('|');
+  return `name(regex: ${quote('(?i)' + pattern)})`;
+};
+const templateFilter = (line?: string) => line?.slice('filter: '.length);
 export const regionFilters = regions.map(([iso, keys]) => {
   const template = regionGroups.find(group => group.name === iso.toLowerCase());
-  const pattern = keys.map(key => (/^[a-z0-9 ]+$/.test(key) ? `(?:^|[^a-z0-9])${escapeRegex(key)}(?:[^a-z0-9]|$)` : escapeRegex(key))).join('|');
-  return {
-    id: iso,
-    filter: iso === 'CN' ? template!.lines[0].slice('filter: '.length) : `name(regex: ${quote('(?i)' + pattern)})`,
-    legacy: template?.lines[0].slice('filter: '.length)
-  };
+  const filter = iso === 'CN' ? templateFilter(template!.lines[0])! : regionFilter([...keys, regionFlag(iso)]);
+  // Lines written before a region's flag counted as an alias, and the template's own lines, still read as this region.
+  const legacy = [templateFilter(template?.unflagged), templateFilter(template?.lines[0]), ...(iso === 'CN' ? [] : [regionFilter(keys)])].filter(
+    (line, i, all): line is string => line !== undefined && line !== filter && all.indexOf(line) === i
+  );
+  return {id: iso, filter, legacy};
 });
 export function recogniseInclude(filter: string): {kind: IncludeKind; values: string[]} | null {
-  const region = regionFilters.find(region => region.filter === filter.trim() || region.legacy === filter.trim());
+  const region = regionFilters.find(region => region.filter === filter.trim() || region.legacy.includes(filter.trim()));
   if (region) return {kind: 'region', values: [region.id]};
   for (const [kind, call] of [
     ['node', 'name'],

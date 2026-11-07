@@ -1,6 +1,6 @@
 import {expect, it, vi} from 'vitest';
 import {nodeFixtures} from '../../../mock/fixtures/inventory';
-import {regions} from '../../dae/regions';
+import {regionFlag, regions} from '../../dae/regions';
 import {MAX_PAGE} from '../../store/cadence';
 import {regionOf} from './geo';
 
@@ -14,6 +14,8 @@ const legacyAliases = regions.flatMap(([iso, keys]) =>
     )
   }))
 );
+// A flag is one more alias that matches literally.
+legacyAliases.push(...regions.map(([iso]) => ({iso, pattern: new RegExp(regionFlag(iso), 'u')})));
 function legacyRegionOf(name: string): string | null {
   let chosen: {iso: string; index: number; length: number} | undefined;
   for (const {iso, pattern} of legacyAliases) {
@@ -54,7 +56,17 @@ it.each([
   ['Japané', null],
   ['Japan\u0301', null],
   ['xUnited States', null],
-  ['United Statesman', null]
+  ['United Statesman', null],
+  ['🇭🇰-家宽-倍率', 'HK'],
+  ['🇺🇸 LA 01', 'US'],
+  ['🇹🇼', 'TW'],
+  ['🇭🇰🇺🇸', 'HK'],
+  ['🇦🇶 01', null],
+  ['🇦🇶 🇯🇵', 'JP'],
+  ['JP 🇭🇰', 'JP'],
+  ['🇭🇰 JP', 'HK'],
+  ['🇺🇭🇰', null],
+  ['🇭', null]
 ])('uses bounded aliases and location order for %s', (name, expected) => expect(regionOf(name)).toBe(expected));
 
 it('caches both recognized and unknown regions without repeating detection', () => {
