@@ -177,7 +177,38 @@ describe('subscription bindings', () => {
     expect(readSubscriptionBinding(subscriptionBinding('harbor', ['IN'], []))).toEqual({source: 'harbor', regions: ['IN'], words: []});
   });
   it('uses the canonical Hong Kong pattern', () => {
-    expect(regionPatterns('HK')).toEqual([String.raw`(?i)(?:^|[^\p{L}\p{M}])(?:hong kong|hongkong|hkg|hk)(?:[^\p{L}\p{M}]|$)|港`]);
+    expect(regionPatterns('HK')).toEqual([String.raw`(?i)(?:^|[^\p{L}\p{M}])(?:hong kong|hongkong|hkg|hk)(?:[^\p{L}\p{M}]|$)|港|🇭🇰`]);
+  });
+  it.each([
+    ['HK', '🇭🇰-家宽-倍率'],
+    ['US', '🇺🇸 LA 01'],
+    ['IN', '🇮🇳 01'],
+    ['GB', '🇬🇧']
+  ])('selects %s by a flag-only name', (iso, name) => {
+    const filter = subscriptionBinding('harbor', [iso], []);
+    expect(compileFilters([filter])({name, subscription_tag: 'harbor'})).toBe(true);
+    expect(compileFilters([filter])({name: '🇦🇶 01', subscription_tag: 'harbor'})).toBe(false);
+    for (const pattern of regionPatterns(iso)) expect(rustRegexToJs(pattern)).not.toBeNull();
+  });
+  it.each([
+    ['HK', String.raw`(?i)(?:^|[^\p{L}\p{M}])(?:hong kong|hongkong|hkg|hk)(?:[^\p{L}\p{M}]|$)|港`],
+    ['JP', String.raw`(?i)(?:^|[^\p{L}\p{M}])(?:japan|osaka|tokyo|hnd|jpn|kix|nrt|jp)(?:[^\p{L}\p{M}]|$)|东京|大阪|日本|東京`]
+  ])('still reads the earlier %s pattern', (iso, pattern) => {
+    expect(readSubscriptionBinding(`subtag(harbor) && name(regex: ${quote(pattern)})`)).toEqual({source: 'harbor', regions: [iso], words: []});
+    expect(readSubscriptionBinding(`subtag(harbor) && name(regex: ${quote(pattern)}, keyword: IPLC)`)).toEqual({
+      source: 'harbor',
+      regions: [iso],
+      words: ['IPLC']
+    });
+  });
+  it('still reads the earlier capitals-only pattern pair', () => {
+    const lower = String.raw`(?i)(?:^|[^\p{L}\p{M}])(?:mumbai|india|bom|ind)(?:[^\p{L}\p{M}]|$)|印度|孟买|孟買`;
+    const capitals = String.raw`(?:^|[^\p{L}\p{M}])IN(?:[^\p{L}\p{M}]|$)`;
+    expect(readSubscriptionBinding(`subtag(harbor) && name(regex: ${quote(lower)}, regex: ${quote(capitals)})`)).toEqual({
+      source: 'harbor',
+      regions: ['IN'],
+      words: []
+    });
   });
   it.each(regions)('writes valid, readable patterns for %s', iso => {
     for (const pattern of regionPatterns(iso)) {

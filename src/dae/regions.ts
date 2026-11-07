@@ -74,6 +74,7 @@ export const regions: Array<[string, string[], RegionNames?]> = [
   ['CN', ['cn', 'chn', 'china', 'shanghai', 'beijing', 'shenzhen', '中國', '中国', '上海', '北京', '深圳']]
 ];
 
+export const regionFlag = (region: string) => String.fromCodePoint(...[...region].map(letter => 0x1f1e6 + letter.charCodeAt(0) - 65));
 export const capitalOnlyRegionCodes: Partial<Record<string, true>> = {IN: true, IT: true, MY: true, NO: true, ID: true};
 
 // Aliases in priority order. ISO codes that are also common words only match in capitals.
@@ -100,6 +101,16 @@ const matchers = [false, true].map(exactCase => {
   const source = [latin.length && `(?<![\\p{L}\\p{M}])(?:${group(latin)})(?![\\p{L}\\p{M}])`, han.length && group(han)].filter(Boolean).join('|');
   return {members: [...latin, ...han], pattern: new RegExp(source, exactCase ? 'u' : 'iu')};
 });
+// A flag names its region like an alias, so a node called only by its flag is found too.
+const flagPattern = /[\u{1F1E6}-\u{1F1FF}]{2}/gu;
+const regionByFlag = new Map(regions.map(([iso]) => [regionFlag(iso), iso]));
+function matchFlag(name: string) {
+  for (const {0: flag, index} of name.matchAll(flagPattern)) {
+    const iso = regionByFlag.get(flag);
+    if (iso) return {iso, index};
+  }
+  return null;
+}
 export function matchRegion(name: string): string | null {
   // Prefer the first location, then the longest alias (Indonesia before India), then priority.
   let chosen: {iso: string; index: number; length: number; rank: number} | undefined;
@@ -111,5 +122,7 @@ export function matchRegion(name: string): string | null {
     if (!chosen || index < chosen.index || (index === chosen.index && (text.length > chosen.length || (text.length === chosen.length && rank < chosen.rank))))
       chosen = {iso, index, length: text.length, rank};
   }
-  return chosen?.iso ?? null;
+  // No alias starts with a regional indicator, so a flag never ties with one.
+  const flag = matchFlag(name);
+  return flag && (!chosen || flag.index < chosen.index) ? flag.iso : (chosen?.iso ?? null);
 }
