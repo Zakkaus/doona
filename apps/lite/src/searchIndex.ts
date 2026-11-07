@@ -2,13 +2,13 @@ import type {ConfigSource, GroupSummary, Node, Provider} from '../../../src/api/
 import {blockFields, scanConfig, unquote} from '../../../src/dae/text';
 import {findBlocks, parseRuleList} from './ruleDraft';
 import type {SearchTarget} from './ui/commands';
-import {regions} from '../../../src/dae/regions';
+import {allRegions} from '../../../src/dae/regions';
 import {regionOf} from './regions';
 
 // A name that mentions a region also answers to that region's other names, in every script (japan finds 日本).
 function regionTerms(name: string): string[] {
   const iso = regionOf(name);
-  const entry = iso ? regions.find(([code]) => code === iso) : undefined;
+  const entry = iso ? allRegions.find(([code]) => code === iso) : undefined;
   if (!iso || !entry) return [];
   const display = ['en', 'zh-CN', 'zh-TW'].map(locale => new Intl.DisplayNames([locale], {type: 'region'}).of(iso) ?? '');
   return [...new Set([iso, ...entry[1], ...Object.values(entry[2]?.short ?? {}), ...(entry[2]?.official ?? []), ...display].filter(Boolean) as string[])];

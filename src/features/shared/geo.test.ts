@@ -1,6 +1,6 @@
 import {expect, it, vi} from 'vitest';
 import {nodeFixtures} from '../../../mock/fixtures/inventory';
-import {regionFlag, regions} from '../../dae/regions';
+import {allRegions, capitalOnlyRegionCodes, regionFlag, regions} from '../../dae/regions';
 import {MAX_PAGE} from '../../store/cadence';
 import {regionOf} from './geo';
 
@@ -10,18 +10,20 @@ const legacyAliases = regions.flatMap(([iso, keys]) =>
     iso,
     pattern: new RegExp(
       /\p{Script=Han}/u.test(key) ? key : `(?<![\\p{L}\\p{M}])${key}(?![\\p{L}\\p{M}])`,
-      key.toUpperCase() === iso && ['IN', 'IT', 'MY', 'NO', 'ID'].includes(iso) ? 'u' : 'iu'
+      key.toUpperCase() === iso && capitalOnlyRegionCodes[iso] === true ? 'u' : 'iu'
     )
   }))
 );
-// A flag is one more alias that matches literally.
-legacyAliases.push(...regions.map(([iso]) => ({iso, pattern: new RegExp(regionFlag(iso), 'u')})));
+// A flag is one more alias that matches literally, for every region including those with no other alias. One
+// alternation keeps the pairwise test within its time limit; per-flag patterns made it 249 more regexes per name.
+const legacyFlags = new Map(allRegions.map(([iso]) => [regionFlag(iso), iso]));
+legacyAliases.push({iso: '', pattern: new RegExp([...legacyFlags.keys()].join('|'), 'u')});
 function legacyRegionOf(name: string): string | null {
   let chosen: {iso: string; index: number; length: number} | undefined;
   for (const {iso, pattern} of legacyAliases) {
     const match = pattern.exec(name);
     if (match && (!chosen || match.index < chosen.index || (match.index === chosen.index && match[0].length > chosen.length)))
-      chosen = {iso, index: match.index, length: match[0].length};
+      chosen = {iso: iso || legacyFlags.get(match[0])!, index: match.index, length: match[0].length};
   }
   return chosen?.iso ?? null;
 }
@@ -61,13 +63,35 @@ it.each([
   ['🇺🇸 LA 01', 'US'],
   ['🇹🇼', 'TW'],
   ['🇭🇰🇺🇸', 'HK'],
-  ['🇦🇶 01', null],
-  ['🇦🇶 🇯🇵', 'JP'],
+  ['🇰🇿 Almaty 01', 'KZ'],
+  ['🇦🇹', 'AT'],
+  ['🇵🇰-01', 'PK'],
+  ['🇦🇶 01', 'AQ'],
+  ['🇽🇽 01', null],
+  ['🇽🇽 🇯🇵', 'JP'],
+  ['🇦🇶 JP', 'AQ'],
+  ['JP 🇦🇶', 'JP'],
+  ['哈萨克 01', 'KZ'],
+  ['哈薩克-01', 'KZ'],
+  ['沙特 02', 'SA'],
+  ['奥地利', 'AT'],
+  ['Vienna 01', 'AT'],
+  ['AT 01', 'AT'],
+  ['at the gate', null],
+  ['Santiago', 'CL'],
+  ['Lagos 01', 'NG'],
+  ['US-CL 01', 'US'],
   ['JP 🇭🇰', 'JP'],
   ['🇭🇰 JP', 'HK'],
   ['🇺🇭🇰', null],
   ['🇭', null]
 ])('uses bounded aliases and location order for %s', (name, expected) => expect(regionOf(name)).toBe(expected));
+
+// Regions with no text alias match only by flag: their two-letter codes are ordinary words.
+it.each(['AS', 'as', 'PM', 'pm', 'AM', 'am', 'is', 'be', 'at', 'Premium PM 8am to 5pm', 'Node as backup', 'Standard AS plan'])(
+  'gives %s no region without a flag',
+  name => expect(regionOf(name)).toBeNull()
+);
 
 it('caches both recognized and unknown regions without repeating detection', () => {
   const names = ['FRA region memo', 'unknown region memo'];
@@ -132,11 +156,14 @@ it('matches the per-alias reference on every alias, its case forms and its surro
   expect(mismatches).toEqual([]);
 });
 
-it('matches the per-alias reference on every ordered pair of aliases', () => {
-  // Pairs cover location order across regions and every alias that sits inside another (in, india, indonesia).
-  const names = keys.flatMap(first =>
-    keys.flatMap(second => [`${first} ${second}`, ...(first.includes(second) || second.includes(first) ? [first + second, `${first}-${second}`] : [])])
-  );
+it('matches the per-alias reference on every alias paired with each region, and on every nested pair', () => {
+  // Each alias before and after one alias of every region covers location order across regions; every alias that sits
+  // inside another (in, india, indonesia) is paired in full. All ordered pairs grew past the time limit with 54 regions.
+  const firsts = regions.map(([iso, aliases]) => aliases[0] ?? iso);
+  const names = keys.flatMap(key => [
+    ...firsts.flatMap(first => [`${key} ${first}`, `${first} ${key}`]),
+    ...keys.flatMap(other => (key !== other && (key.includes(other) || other.includes(key)) ? [key + other, `${key}-${other}`, `${key} ${other}`] : []))
+  ]);
   const mismatches = names.filter(name => regionOf(name) !== legacyRegionOf(name));
   expect(mismatches).toEqual([]);
 });
