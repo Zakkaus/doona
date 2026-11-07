@@ -71,11 +71,56 @@ export const regions: Array<[string, string[], RegionNames?]> = [
   ['IL', ['israel', '以色列']],
   ['UA', ['ukraine', '乌克兰', '烏克蘭']],
   ['PT', ['portugal', '葡萄牙']],
-  ['CN', ['cn', 'chn', 'china', 'shanghai', 'beijing', 'shenzhen', '中國', '中国', '上海', '北京', '深圳']]
+  ['CN', ['cn', 'chn', 'china', 'shanghai', 'beijing', 'shenzhen', '中國', '中国', '上海', '北京', '深圳']],
+  ['KZ', ['kazakhstan', 'almaty', '哈萨克斯坦', '哈薩克斯坦', '哈萨克', '哈薩克']],
+  ['AT', ['austria', 'vienna', '奥地利', '奧地利']],
+  ['BE', ['belgium', 'brussels', '比利时', '比利時']],
+  ['LU', ['luxembourg', '卢森堡', '盧森堡']],
+  ['CZ', ['czech', 'czechia', 'prague', '捷克']],
+  ['RO', ['romania', 'bucharest', '罗马尼亚', '羅馬尼亞']],
+  ['IS', ['iceland', 'reykjavik', '冰岛', '冰島']],
+  ['CL', ['chile', 'santiago', '智利']],
+  ['CO', ['colombia', 'bogota', '哥伦比亚', '哥倫比亞']],
+  ['SA', ['saudi', 'riyadh', '沙特', '沙烏地']],
+  ['PK', ['pakistan', 'karachi', '巴基斯坦']],
+  ['NG', ['nigeria', 'lagos', '尼日利亚', '尼日利亞', '奈及利亞']],
+  ['EG', ['egypt', 'cairo', '埃及']],
+  ['KH', ['cambodia', '柬埔寨']]
 ];
 
+export const flagRegions =
+  'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'.split(
+    ' '
+  );
 export const regionFlag = (region: string) => String.fromCodePoint(...[...region].map(letter => 0x1f1e6 + letter.charCodeAt(0) - 65));
-export const capitalOnlyRegionCodes: Partial<Record<string, true>> = {IN: true, IT: true, MY: true, NO: true, ID: true};
+export const capitalOnlyRegionCodes: Partial<Record<string, true>> = {
+  IN: true,
+  IT: true,
+  MY: true,
+  NO: true,
+  ID: true,
+  KZ: true,
+  AT: true,
+  BE: true,
+  LU: true,
+  CZ: true,
+  RO: true,
+  IS: true,
+  CL: true,
+  CO: true,
+  SA: true,
+  PK: true,
+  NG: true,
+  EG: true,
+  KH: true
+};
+
+// The alias regions, then every other flag with no text alias at all: a two-letter code such as AS or PM would match
+// ordinary words in a node name, so only the flag names those regions.
+export const allRegions: Array<[string, string[], RegionNames?]> = [
+  ...regions,
+  ...flagRegions.filter(code => !regions.some(([iso]) => iso === code)).map((code): [string, string[]] => [code, []])
+];
 
 // Aliases in priority order. ISO codes that are also common words only match in capitals.
 const aliases = regions.flatMap(([iso, keys]) =>
@@ -103,7 +148,7 @@ const matchers = [false, true].map(exactCase => {
 });
 // A flag names its region like an alias, so a node called only by its flag is found too.
 const flagPattern = /[\u{1F1E6}-\u{1F1FF}]{2}/gu;
-const regionByFlag = new Map(regions.map(([iso]) => [regionFlag(iso), iso]));
+const regionByFlag = new Map(allRegions.map(([iso]) => [regionFlag(iso), iso]));
 function matchFlag(name: string) {
   for (const {0: flag, index} of name.matchAll(flagPattern)) {
     const iso = regionByFlag.get(flag);

@@ -34,16 +34,18 @@ export function IncludesEditor({model: m}: {model: GroupDialogView}) {
       <Switch isSelected={m.includes.everyNode} onChange={m.includes.changeEveryNode} isDisabled={m.busy}>
         {t('group.allNodes')}
       </Switch>
-      <Disclosure flush title={t('policy.regions')}>
-        <CheckboxSet
-          label={t('policy.regions')}
-          hideLabel
-          items={m.includes.choices.region}
-          value={m.includes.selected.region}
-          onChange={value => m.includes.change('region', value)}
-          isDisabled={m.busy}
-        />
-      </Disclosure>
+      {m.includes.choices.region.length > 0 && (
+        <Disclosure flush title={t('policy.regions')}>
+          <CheckboxSet
+            label={t('policy.regions')}
+            hideLabel
+            items={m.includes.choices.region}
+            value={m.includes.selected.region}
+            onChange={value => m.includes.change('region', value)}
+            isDisabled={m.busy}
+          />
+        </Disclosure>
+      )}
       {m.includes.choices.subscription.length > 0 && (
         <CheckboxSet
           label={t('group.subscriptions')}

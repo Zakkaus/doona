@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {describeCondition, describeGroupFilter, describeGroupFilters, describeRule, describeTarget, phraseText, policyKey} from '../src/describe';
 import {catalogs} from '../src/i18n';
-import {regions} from '../../../src/dae/regions';
+import {allRegions, capitalOnlyRegionCodes} from '../../../src/dae/regions';
 import {rustRegexToJs} from '../../../src/dae/rustRegex';
 import {quote} from '../../../src/dae/text';
 import {compileFilters} from '../../../src/dae/groupFilters';
@@ -183,12 +183,20 @@ describe('subscription bindings', () => {
     ['HK', '🇭🇰-家宽-倍率'],
     ['US', '🇺🇸 LA 01'],
     ['IN', '🇮🇳 01'],
-    ['GB', '🇬🇧']
+    ['GB', '🇬🇧'],
+    ['KZ', '🇰🇿 01'],
+    ['AT', '🇦🇹'],
+    ['AS', '🇦🇸 01']
   ])('selects %s by a flag-only name', (iso, name) => {
     const filter = subscriptionBinding('harbor', [iso], []);
     expect(compileFilters([filter])({name, subscription_tag: 'harbor'})).toBe(true);
-    expect(compileFilters([filter])({name: '🇦🇶 01', subscription_tag: 'harbor'})).toBe(false);
+    expect(compileFilters([filter])({name: '🇽🇽 01', subscription_tag: 'harbor'})).toBe(false);
     for (const pattern of regionPatterns(iso)) expect(rustRegexToJs(pattern)).not.toBeNull();
+  });
+  it('gives a region with no alias only its flag', () => {
+    expect(regionPatterns('AS')).toEqual(['🇦🇸']);
+    const matches = compileFilters([subscriptionBinding('harbor', ['AS'], [])]);
+    for (const name of ['AS', 'as 01', 'Node as backup']) expect(matches({name, subscription_tag: 'harbor'})).toBe(false);
   });
   it.each([
     ['HK', String.raw`(?i)(?:^|[^\p{L}\p{M}])(?:hong kong|hongkong|hkg|hk)(?:[^\p{L}\p{M}]|$)|港`],
@@ -210,14 +218,14 @@ describe('subscription bindings', () => {
       words: []
     });
   });
-  it.each(regions)('writes valid, readable patterns for %s', iso => {
+  it.each(allRegions)('writes valid, readable patterns for %s', iso => {
     for (const pattern of regionPatterns(iso)) {
       expect(rustRegexToJs(pattern)).not.toBeNull();
       expect(() => quote(pattern)).not.toThrow();
     }
     expect(readSubscriptionBinding(subscriptionBinding('harbor', [iso], []))).toEqual({source: 'harbor', regions: [iso], words: []});
   });
-  it.each(['IN', 'IT', 'MY', 'NO', 'ID'])('matches %s only in capitals, while retaining aliases', iso => {
+  it.each(Object.keys(capitalOnlyRegionCodes))('matches %s only in capitals, while retaining aliases', iso => {
     const matches = compileFilters([subscriptionBinding('harbor', [iso], [])]);
     expect(matches({name: `${iso}-01`, subscription_tag: 'harbor'})).toBe(true);
     expect(matches({name: `${iso.toLowerCase()}-01`, subscription_tag: 'harbor'})).toBe(false);

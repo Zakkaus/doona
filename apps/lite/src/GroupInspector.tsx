@@ -24,7 +24,7 @@ import * as stylex from '@stylexjs/stylex';
 import {memo, useCallback, useContext, useDeferredValue, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {Group, GroupSelectionRequest, Node, Provider} from '../../../src/api/model';
 import {compareLatency, healthMillis} from '../../../src/api/selectors';
-import {regions} from '../../../src/dae/regions';
+import {allRegions} from '../../../src/dae/regions';
 import {policyKey} from './describe';
 import {memberName, observedMembers, type HealthFallback} from './groupHealth';
 import {LocaleContext, useMessages} from './i18n';
@@ -314,13 +314,12 @@ export function GroupInspector({
         jump={jumpRow}
       />
     ));
-  const regionOptions = useMemo(
-    () =>
-      regions
-        .filter(([iso]) => observed.some(member => regionOf(member.name) === iso))
-        .map(([iso, , names]) => ({value: iso, label: names?.short[locale] ?? new Intl.DisplayNames([locale], {type: 'region'}).of(iso) ?? iso})),
-    [observed, locale]
-  );
+  const regionOptions = useMemo(() => {
+    const present = new Set(observed.map(member => regionOf(member.name)));
+    return allRegions
+      .filter(([iso]) => present.has(iso))
+      .map(([iso, , names]) => ({value: iso, label: names?.short[locale] ?? new Intl.DisplayNames([locale], {type: 'region'}).of(iso) ?? iso}));
+  }, [observed, locale]);
   return (
     <VStack gap={0} data-group-inspector={group.name} aria-busy={pending !== null}>
       <Section variant="transparent" padding={pageRhythm.inset} paddingBlockStart={sheet ? 0 : pageRhythm.inset}>

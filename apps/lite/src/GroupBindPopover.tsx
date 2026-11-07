@@ -9,7 +9,7 @@ import {TextInput} from '@astryxdesign/core/TextInput';
 import {ToggleButton} from '@astryxdesign/core/ToggleButton';
 import {useContext, useRef, useState, type ComponentProps} from 'react';
 import {compileFilters} from '../../../src/dae/groupFilters';
-import {regions} from '../../../src/dae/regions';
+import {allRegions} from '../../../src/dae/regions';
 import {subscriptionBinding} from './groupBindings';
 import {LocaleContext, useMessages} from './i18n';
 import {regionLabel, regionOf} from './regions';
@@ -56,12 +56,13 @@ export function GroupBindPopover({
     setSelectedRegions(new Set(initial?.regions));
   };
   const words = scope === 'all' ? [] : split(text);
-  const filter = subscriptionBinding(name, scope === 'all' ? [] : regions.filter(([iso]) => selectedRegions.has(iso)).map(([iso]) => iso), words);
+  const filter = subscriptionBinding(name, scope === 'all' ? [] : allRegions.filter(([iso]) => selectedRegions.has(iso)).map(([iso]) => iso), words);
   const matches = open ? compileFilters([filter]) : null;
   const count = matches ? names.filter(node => matches({name: node, subscription_tag: name})).length : 0;
   const missing = scope === 'filtered' && !selectedRegions.size && !words.length;
-  const chips = (open ? regions : [])
-    .filter(([iso]) => names.some(node => regionOf(node) === iso) || initial?.regions.includes(iso))
+  const present = new Set(open ? names.map(regionOf) : []);
+  const chips = (open ? allRegions : [])
+    .filter(([iso]) => present.has(iso) || initial?.regions.includes(iso))
     .map(([iso]) => ({iso, label: regionLabel(iso, locale)}));
   const toggle = (iso: string, on: boolean) => {
     setSelectedRegions(current => {

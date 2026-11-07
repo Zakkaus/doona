@@ -2,7 +2,7 @@ import type {Node, Provider} from '../../../src/api/model';
 import {quote} from '../../../src/dae/text';
 import {rustRegexToJs} from '../../../src/dae/rustRegex';
 import {parseConditionValues, parseGroupConditions} from '../../../src/dae/groupConditions';
-import {capitalOnlyRegionCodes, regionFlag, regions} from '../../../src/dae/regions';
+import {allRegions, capitalOnlyRegionCodes, regionFlag} from '../../../src/dae/regions';
 
 // The filter a new group starts with; it admits nothing and is not a member.
 export const EMPTY_GROUP_FILTER = "name(regex: '^$')";
@@ -36,12 +36,13 @@ export function honkPolicy(value: string): string {
   return ['fallback', 'score'].includes(base) ? base : 'select';
 }
 
-// The flag is one more alternative; without it these are the patterns older configs carry.
+// The flag is one more alternative; without it these are the patterns older configs carry. A region with no aliases
+// has the flag only, and nothing older.
 function patternsOf(iso: string, withFlag: boolean): string[] {
-  const entry = regions.find(([code]) => code === iso);
+  const entry = allRegions.find(([code]) => code === iso);
   if (!entry) return [];
   const capitalOnly = capitalOnlyRegionCodes[iso] === true;
-  const keys = [...new Set([iso, ...entry[1]])];
+  const keys = entry[1].length ? [...new Set([iso, ...entry[1]])] : [];
   const han = keys.filter(key => /\p{Script=Han}/u.test(key));
   const latin = [...new Set(keys.filter(key => !han.includes(key) && !(capitalOnly && key.toUpperCase() === iso)).map(key => key.toLowerCase()))];
   const alternatives = (keys: string[]) =>
@@ -53,12 +54,14 @@ function patternsOf(iso: string, withFlag: boolean): string[] {
   const start = String.raw`(?:^|[^\p{L}\p{M}])`;
   const end = String.raw`(?:[^\p{L}\p{M}]|$)`;
   const rest = [hanPattern, withFlag && regionFlag(iso)].filter(Boolean).join('|');
-  const patterns = [`(?i)${start}(?:${alternatives(latin)})${end}${rest ? `|${rest}` : ''}`];
+  const patterns = [[latin.length && `(?i)${start}(?:${alternatives(latin)})${end}`, rest].filter(Boolean).join('|')].filter(Boolean);
   if (capitalOnly) patterns.push(`${start}${iso}${end}`);
   return patterns;
 }
 export const regionPatterns = (iso: string) => patternsOf(iso, true);
-const regionRegexes = regions.flatMap(([iso]) => [true, false].map(withFlag => ({iso, patterns: patternsOf(iso, withFlag)})));
+const regionRegexes = allRegions
+  .flatMap(([iso]) => [true, false].map(withFlag => ({iso, patterns: patternsOf(iso, withFlag)})))
+  .filter(({patterns}) => patterns.length);
 
 // Region patterns and case-sensitive keywords are alternatives within one subscription.
 export function subscriptionBinding(name: string, regions: string[], words: string[]): string {
