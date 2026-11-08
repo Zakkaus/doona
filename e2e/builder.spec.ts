@@ -23,12 +23,12 @@ test('a node joins an existing group or a new one through the name filter', asyn
   await page.getByRole('menuitem', {name: 'New group…', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('textbox', {name: 'Group name', exact: true}).fill('visual-travel');
-  await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('Fastest on average');
+  await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('Score');
   await dialog.getByRole('button', {name: 'Create', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'Configuration for visual-travel written and reloaded'})).toBeVisible();
   await page.goto('/#/config?tab=source');
   expect(await editorText(page)).toContain('gaming {\n    filter: name(jp-01, hk-02)\n    filter: name(sg-01)\n    policy: min_last_delay\n  }');
-  expect(await editorText(page)).toContain('visual-travel {\n    filter: name(us-01)\n    policy: min_moving_avg\n  }');
+  expect(await editorText(page)).toContain('visual-travel {\n    filter: name(us-01)\n    policy: score\n  }');
 });
 
 test('a group card edits its policy and filters in the main source', async ({page}) => {

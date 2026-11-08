@@ -43,7 +43,7 @@ function groupLines(current: string[], rules: RuleTemplate, t: Translator): stri
   const wanted = templates[rules].groups.filter(group => !have.has(group.name));
   if (!wanted.length && current.length) return [];
   // One setting per line: honk reads a filter to the end of its line, so a one-line block would swallow the policy.
-  if (!wanted.length) return [`  ${defaultGroup} {`, `    ${everyNode}`, '    policy: min_moving_avg', '  }'];
+  if (!wanted.length) return [`  ${defaultGroup} {`, `    ${everyNode}`, '    policy: score', '  }'];
   return wanted.flatMap(group => [`  # ${templateGroupLabel(group, t)}`, `  ${group.name} {`, ...group.lines.map(line => '    ' + line), '  }']);
 }
 // The groups a template adds beside `defined`, the names already declared as written: its own that are missing, or, for a template

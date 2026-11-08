@@ -41,7 +41,7 @@ it('offers a policy the picker does not list as its own choice', () => {
   const kept = policyChoices('min_avg10', t);
   expect(kept.selected).toBe('min_avg10');
   expect(kept.items[0]).toEqual({id: 'min_avg10', label: t('policy.kind.urltest')});
-  expect(policyChoices('fallback', t).items.map(item => item.id)).toEqual(['min_moving_avg', 'score', 'fallback', 'roundrobin', 'select']);
+  expect(policyChoices('fallback', t).items.map(item => item.id)).toEqual(['score', 'min_moving_avg', 'fallback', 'roundrobin', 'select']);
   expect(policyChoices(null, t).selected).toBe('select');
 });
 

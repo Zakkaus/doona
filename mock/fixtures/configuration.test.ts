@@ -32,7 +32,7 @@ it('seeds the regions template with its default routing and groups beside explic
     ]);
     expect(group.config.default_member_id).toBe(entry.default?.replaceAll("'", '') ?? null);
   }
-  expect(actual.find(entry => entry.name === 'auto')).toMatchObject({filters: ["!name('direct', 'block')"], policy: 'min_moving_avg'});
+  expect(actual.find(entry => entry.name === 'auto')).toMatchObject({filters: ["!name('direct', 'block')"], policy: 'score'});
   expect(actual.find(entry => entry.name === 'gaming')).toMatchObject({filters: ['name(jp-01, hk-02)'], policy: 'min_last_delay'});
   expect((await api.group('gaming')).members.map(member => member.id)).toEqual(['hk-02', 'jp-01']);
   expect((await api.group('backup')).members).toHaveLength(120);
