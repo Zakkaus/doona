@@ -6,6 +6,30 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Entries live in [changes/](changes/) until release.
 
+## [0.1.0-rc.6] - 2026-11-09
+
+### Added
+
+- Nodes named only by a flag emoji, such as "🇭🇰-家宽" or "🇰🇿 01", now count toward that region in the region picker and region groups, for the flag of any country. (#677)
+- The group dialog lists only the regions that have nodes, plus the ones already selected. (#677)
+- Kazakhstan, Austria, Belgium, Luxembourg, Czechia, Romania, Iceland, Chile, Colombia, Saudi Arabia, Pakistan, Nigeria, Egypt and Cambodia are also detected by name. (#677)
+- Routing rules can match the source device by MAC address, in the standard app next to the geosite and IP conditions. (#678)
+
+### Changed
+
+- The group picker recommends Score, the policy honk's own shipped configuration uses, and new groups and the configuration templates start with it instead of the lowest-latency policy. (#679)
+- The load-balance policy says that it rotates nodes per connection, so sign-ins and Cloudflare checks may break. (#679)
+- The first load downloads less: the group filter regex converter loads with the Policies page. (#674)
+- The first load downloads less: each palette other than Rosé Pine loads its stylesheet only when it is in use. (#674)
+
+### Fixed
+
+- After a group latency test, the toast says why members are unknown: timed out, unresolved, cancelled or other. (#676)
+- The "Available only" switch on a policy group's nodes stays on after a reload. (#669)
+- A subscription that failed to download says at which step, and through which node and group the download went. The status on its card gets a help button that explains the failure. Older engines keep the short message. (#672)
+- The Lite edition words the failure in the interface language instead of showing the engine's English message. (#672)
+- The ad, QUIC and NetworkManager options on the routing mode card are disabled, with a note saying why, until a mode is chosen; before, they took changes that Apply could not write. (#671)
+
 ## [0.1.0-rc.5] - 2026-11-02
 
 ### Added
@@ -1043,7 +1067,8 @@ Entries live in [changes/](changes/) until release.
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
-[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.5...HEAD
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.6...HEAD
+[0.1.0-rc.6]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.5...v0.1.0-rc.6
 [0.1.0-rc.5]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.4...v0.1.0-rc.5
 [0.1.0-rc.4]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.3...v0.1.0-rc.4
 [0.1.0-rc.3]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.2...v0.1.0-rc.3

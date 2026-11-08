@@ -2,7 +2,7 @@
 
 [English](install.md) / [简体中文](install.zh-CN.md) / 繁體中文
 
-doona 以靜態網頁檔案發布。目前版本為 v0.1.0-rc.5；doona lite 是測試中的預覽版。
+doona 以靜態網頁檔案發布。目前版本為 v0.1.0-rc.6；doona lite 是測試中的預覽版。
 
 安裝請參閱文件站的[系統需求](https://daeuniverse.org/zh-TW/doona/requirements)、[安裝指南](https://daeuniverse.org/zh-TW/doona/install)與 [doona lite 指南](https://daeuniverse.org/zh-TW/doona/lite)。這些頁面說明後端設定、各發行版的安裝步驟與首次登入。本頁說明本倉庫建置的檔案。honk 建置的下載位置見[配套 honk 建置](#配套-honk-建置)。
 

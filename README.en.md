@@ -86,7 +86,7 @@ Available features depend on the backend’s capabilities and configuration; see
 
 ## Two editions
 
-doona lite is a preview in testing in 0.1.0-rc.5; its pages and behaviour may change. Both editions connect to the same honk with the same administrator credentials.
+doona lite is a preview in testing in 0.1.0-rc.6; its pages and behaviour may change. Both editions connect to the same honk with the same administrator credentials.
 
 | Area               | Standard edition                                          | doona lite (preview)                               |
 | ------------------ | --------------------------------------------------------- | -------------------------------------------------- |
@@ -120,7 +120,7 @@ honk handles proxying; see the [honk node reference](https://github.com/daeunive
 
 ## Latest release
 
-[0.1.0-rc.5](CHANGELOG.md) has 33 entries: 10 additions, 5 changes, 15 fixes and 3 internal updates.
+[0.1.0-rc.6](CHANGELOG.md) has 13 entries: 4 additions, 4 changes and 5 fixes.
 
 This release adds a Manual tab to the Add node dialog, and new nodes can join groups in the same step. Manual policy groups fold, group members name their subscription, and help links open the manual on daeuniverse.org. Dark Reader no longer recolours doona, links into a setting or card scroll to their target, and page skeletons match the loaded pages.
 
