@@ -102,7 +102,7 @@ test('Nodes creates through the shared editor with region and subscription selec
   await expect(page).toHaveURL(/#\/policies/);
   const dialog = page.getByRole('dialog', {name: 'New group', exact: true});
   await dialog.getByRole('textbox', {name: 'Group name', exact: true}).fill('visual');
-  await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('Fastest on average');
+  await expect(dialog.getByRole('button', {name: /Selection policy/})).toContainText('Score');
   const regions = dialog.getByRole('button', {name: 'Regions', exact: true});
   await expect(regions).toHaveAttribute('aria-expanded', 'false');
   await expect(dialog.getByRole('checkbox', {name: /^Hong Kong/})).toBeHidden();

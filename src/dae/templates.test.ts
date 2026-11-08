@@ -204,7 +204,7 @@ describe('template output', () => {
   it('creates the mainland group and keeps other traffic direct', () => {
     const text = writeTemplate('', 'homebound', [], {t});
     expect(readGroupEntries(text).map(group => group.name)).toEqual(['cn']);
-    expect(text).toContain('policy: min_moving_avg');
+    expect(text).toContain('policy: score');
     expect(text).toContain('domain(geosite:cn) -> cn');
     expect(text).toContain('dip(geoip:cn) -> cn');
     expect(text).toContain('fallback: direct');

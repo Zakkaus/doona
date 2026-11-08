@@ -99,7 +99,7 @@ const selectGroup = (name: string, label: Key, nested: string[], fallback = nest
 // alternative of the pattern; `unflagged` is the line written before that, which older configs still carry.
 const region = (name: string, label: Key, flag: string, pattern: string, exclude?: string): GroupSpec => {
   const filter = (regex: string) => `filter: name(regex: ${quote(regex)})${exclude ? ` && !name(regex: ${quote(exclude)})` : ''}`;
-  return {name, label, flag, lines: [filter(`${pattern}|${flag}`), 'policy: min_moving_avg'], unflagged: filter(pattern)};
+  return {name, label, flag, lines: [filter(`${pattern}|${flag}`), 'policy: score'], unflagged: filter(pattern)};
 };
 const templateText = {
   proxy: 'rule.template.group.proxy',
@@ -126,7 +126,7 @@ const templateText = {
 } as const;
 
 const proxy = selectGroup('proxy', templateText.proxy, ['auto']);
-const auto: GroupSpec = {name: 'auto', label: templateText.auto, lines: [everyNode, 'policy: min_moving_avg']};
+const auto: GroupSpec = {name: 'auto', label: templateText.auto, lines: [everyNode, 'policy: score']};
 const regions = (['hk', 'jp', 'us', 'tw', 'sg', 'kr'] as const).map(id => region(id, templateText[id][0], templateText[id][1], templateText[id][2]));
 export const regionGroups = [...regions, region('cn', ...templateText.cn)];
 const service = (name: string, label: Key, nested: string[] = ['proxy', 'auto'], fallback?: string) => selectGroup(name, label, nested, fallback);
