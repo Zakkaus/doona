@@ -349,7 +349,7 @@ export function splitTop(text: string, separator: string): string[] {
   return parts.map(part => part.trim());
 }
 
-export type ConditionKind = 'domain' | 'domainSuffix' | 'domainKeyword' | 'geosite' | 'dip' | 'geoip' | 'dport' | 'sport' | 'pname' | 'l4proto' | 'sip';
+export type ConditionKind = 'domain' | 'domainSuffix' | 'domainKeyword' | 'geosite' | 'dip' | 'geoip' | 'dport' | 'sport' | 'pname' | 'l4proto' | 'sip' | 'mac';
 export const conditionKinds: ConditionKind[] = [
   'domainSuffix',
   'domain',
@@ -358,6 +358,7 @@ export const conditionKinds: ConditionKind[] = [
   'dip',
   'geoip',
   'sip',
+  'mac',
   'dport',
   'sport',
   'pname',
@@ -405,6 +406,8 @@ function conditionText(kind: RuleConditionKind, values: string[]): string {
       return `dip(${qualified('geoip')})`;
     case 'sip':
       return `sip(${list})`;
+    case 'mac':
+      return `mac(${list})`;
     case 'dport':
       return `dport(${list})`;
     case 'sport':

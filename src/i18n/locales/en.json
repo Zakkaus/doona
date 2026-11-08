@@ -1652,6 +1652,7 @@
   "rule.kind.geoip": "geoip region",
   "rule.kind.geosite": "geosite category",
   "rule.kind.l4proto": "Transport protocol",
+  "rule.kind.mac": "Device MAC address",
   "rule.kind.sport": "Source port",
   "rule.likelyHelp": "Earlier rules could not be evaluated because inputs were missing. If none matches, traffic uses the indicated likely outbound. Provide {inputs} and simulate again to determine the result.",
   "rule.likelyOutbound": "Likely outbound",

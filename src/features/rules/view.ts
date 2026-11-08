@@ -46,6 +46,7 @@ const kindHints: Record<RuleConditionKind, string> = {
   dip: '10.0.0.0/8, 224.0.0.0/4',
   geoip: 'cn, private',
   sip: '192.168.1.10',
+  mac: 'aa:bb:cc:dd:ee:ff',
   dport: '80, 443',
   sport: '53',
   pname: 'curl, firefox',
