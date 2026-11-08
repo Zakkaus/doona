@@ -32,6 +32,7 @@ export const ruleKindLabels: Record<RuleConditionKind, Key> = {
   dip: 'ui.destinationIp',
   geoip: 'rule.kind.geoip',
   sip: 'ui.sourceIp',
+  mac: 'rule.kind.mac',
   dport: 'rule.kind.dport',
   sport: 'rule.kind.sport',
   pname: 'ui.process',

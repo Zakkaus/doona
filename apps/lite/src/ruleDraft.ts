@@ -11,12 +11,11 @@ export type Condition = {kind: string; value: string; negate: boolean};
 const extra: Record<string, [string, string]> = {
   domainRegex: ['domain', 'regex'],
   ipversion: ['ipversion', ''],
-  mac: ['mac', ''],
   dscp: ['dscp', ''],
   qnameRegex: ['qname', 'regex']
 };
 export function kindsFor(kind: RuleListKind): string[] {
-  return kind === 'routing' ? [...conditionKinds, 'domainRegex', 'ipversion', 'mac', 'dscp'] : [...dnsConditionKinds[kind], 'qnameRegex'];
+  return kind === 'routing' ? [...conditionKinds, 'domainRegex', 'ipversion', 'dscp'] : [...dnsConditionKinds[kind], 'qnameRegex'];
 }
 export function serializeBuilder(rows: Condition[]): string | null {
   if (!rows.length) return null;

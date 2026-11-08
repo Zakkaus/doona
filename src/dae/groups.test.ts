@@ -120,6 +120,7 @@ describe('group entries', () => {
     expect(ruleCondition('geoip', 'cn us')).toBe('dip(geoip: cn, geoip: us)');
     expect(ruleCondition('dport', '80 443')).toBe('dport(80, 443)');
     expect(ruleCondition('pname', 'curl')).toBe('pname(curl)');
+    expect(ruleCondition('mac', 'aa:bb:cc:dd:ee:ff, 00:11:22:33:44:55')).toBe("mac('aa:bb:cc:dd:ee:ff', '00:11:22:33:44:55')");
   });
   it('composes DNS conditions in the qname, qtype, upstream and ip forms honk reads', () => {
     expect(ruleCondition('qnameSuffix', 'lan home.arpa')).toBe('qname(suffix: lan, suffix: home.arpa)');

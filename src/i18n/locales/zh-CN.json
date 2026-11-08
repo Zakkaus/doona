@@ -1460,6 +1460,7 @@
   "rule.kind.geoip": "geoip 地区",
   "rule.kind.geosite": "geosite 分类",
   "rule.kind.l4proto": "传输协议",
+  "rule.kind.mac": "设备 MAC 地址",
   "rule.kind.sport": "来源端口",
   "rule.likelyHelp": "前序规则因缺少输入而无法判定；若均不匹配，流量将使用所示的可能出站。请提供 {inputs} 并重新模拟，以确认结果。",
   "rule.likelyOutbound": "可能出站",

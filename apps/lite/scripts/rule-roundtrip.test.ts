@@ -71,6 +71,10 @@ describe('lossless draft boundaries', () => {
     const row = parseRuleList(text, 'routing').rows[0];
     expect(row.conditions).not.toBeNull();
     expect(editDraftRule(text, row, row.conditions!, row.target)).toBe(text);
+    expect(serializeBuilder([{kind: 'mac', value: 'aa:bb:cc:dd:ee:ff, 00:11:22:33:44:55', negate: false}])).toBe(
+      "mac('aa:bb:cc:dd:ee:ff', '00:11:22:33:44:55')"
+    );
+    expect(serializeBuilder([{kind: 'mac', value: 'aa:bb:cc:dd:ee:ff', negate: true}])).toBe("!mac('aa:bb:cc:dd:ee:ff')");
     expect(serializeBuilder([{kind: 'dport', value: '443) -> direct #', negate: false}])).toBeNull();
   });
 });

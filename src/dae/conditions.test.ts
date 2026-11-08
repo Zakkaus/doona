@@ -13,6 +13,11 @@ it('reconstructs every offered routing and DNS call, AND and negation', () => {
     {kind: 'dip', value: '2001:db8::/32', negate: true},
     {kind: 'dport', value: '80, 443', negate: false}
   ]);
+  for (const text of ["mac('aa:bb:cc:dd:ee:ff', '00:11:22:33:44:55')", "!mac('aa:bb:cc:dd:ee:ff')"]) {
+    const rows = parseConditions(text, conditionKinds)!;
+    expect(rows[0].kind).toBe('mac');
+    expect(serializeConditions(rows)).toBe(text);
+  }
   expect(parseConditions('pname(\n curl,\n firefox\n)', conditionKinds)?.[0].value).toBe('curl, firefox');
   expect(parseConditions('qname(suffix: lan, home.arpa)', dnsConditionKinds.request)).toEqual([{kind: 'qnameSuffix', value: 'lan, home.arpa', negate: false}]);
   expect(parseConditions('domain(example.com)', conditionKinds)?.[0].kind).toBe('domainSuffix');
@@ -24,6 +29,7 @@ it('keeps calls the picker cannot reproduce and invalid grammar in Expression mo
   for (const raw of [
     '',
     'mac(aa:bb)',
+    'mac(aa:bb:cc:dd:ee:ff)',
     'domain(full: a, suffix: b)',
     'domain(regex: a)',
     'domain(full:)',
