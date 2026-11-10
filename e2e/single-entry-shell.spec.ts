@@ -166,7 +166,12 @@ test('forbidden recording links to the requirements without changing configurati
   await expect(page).toHaveURL(/#\/overview\?card=limits$/);
   const limits = page.locator('section').filter({has: page.locator('#overview-limits')});
   await expect(limits).toBeFocused();
-  await limits.getByRole('button', {name: 'How to turn on'}).click();
+  // Flow recording has its own help in this card, so the recorders' row is named.
+  await limits
+    .locator('.rp-limit')
+    .filter({hasText: /recorder/})
+    .getByRole('button', {name: 'How to turn on'})
+    .click();
   await expect(page.getByRole('dialog')).toContainText('record_dns_log: true');
   expect(requests.filter(request => request.method() !== 'GET')).toHaveLength(0);
 });
@@ -214,7 +219,10 @@ for (const width of [390, 768]) {
     await expect(limits).toBeFocused();
     await expect(page.locator('.rp-skeleton')).toHaveCount(0);
     await page.evaluate(() => document.fonts.ready);
-    const help = limits.getByRole('button', {name: 'How to turn on'});
+    const help = limits
+      .locator('.rp-limit')
+      .filter({hasText: /recorder/})
+      .getByRole('button', {name: 'How to turn on'});
     await expect
       .poll(async () => {
         const button = await box(help);
