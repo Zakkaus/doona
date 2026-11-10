@@ -110,12 +110,17 @@ export function backendLimits(
       }
       case 'flowsIdle': {
         // Auto records on demand and the Off mode never records; a backend that says neither leaves it at off.
-        const code = reason('flows')?.code;
+        const flows = reason('flows');
+        const code = flows?.code;
+        // Without the record_flows switch Settings has nothing to turn on. A row shows its help or its link, never
+        // both, so the help carries the link.
+        const settings = flowsSwitch ? [{href: href('settings', {card: 'runtime'}), text: t('settings.runtime')}] : [];
         return {
           headline: t(code === 'recorded-on-demand' ? 'ov.lim.h.flowsIdle' : code === 'mode-off' ? 'ov.lim.h.flowsModeOff' : 'ov.lim.h.flowsOff'),
           named: ['flows'],
-          // Without the record_flows switch Settings has nothing to turn on.
-          link: flowsSwitch ? {href: href('settings', {card: 'runtime'}), text: t('settings.runtime')} : undefined
+          // The text names the Settings control, so it reads as how to record without a client, not as a cause.
+          help: flows && reasonHelp[flows.code] ? {label: t('ov.lim.howTo'), text: reasonText(t, flows), links: settings} : undefined,
+          link: settings[0]
         };
       }
       case 'notProvided': {

@@ -142,6 +142,14 @@ it('explains a refused write with its diagnostics, restart-only settings or the 
     diagnostics: [{...diagnostic, line: null, code: 'restart-required', message: 'global.tproxy_port'}]
   });
   expect(ruleFailure(restart, null, sources, t).text).toContain('1 setting takes effect only after a restart');
+  // honk names the write's own source for a restart-required setting, so a setting the files never state is one honk
+  // turned off at startup: the write is refused over an edit the user did not make.
+  const absent = new ApiError(422, 'validation_failed', 'invalid', undefined, {
+    diagnostics: [{...diagnostic, line: null, code: 'restart-required', message: 'Changing global.nfqueue_enable requires restarting honk'}]
+  });
+  expect(ruleFailure(absent, null, sources, t).text).toBe(
+    'The setting honk refuses the write over is not in the configuration. State it there and restart honk once.'
+  );
   expect(ruleFailure(new Error('offline'), null, sources, t)).toEqual({text: 'Could not write the configuration: offline', lines: []});
   const refused = ruleFailure(new ApiError(503, 'backend_unavailable', 'Try later', 'rule-17'), null, sources, t);
   expect(refused.text).toContain('request_id: rule-17');

@@ -365,6 +365,10 @@
     "one": "{n} setting takes effect only after a restart; nothing written",
     "other": "{n} settings take effect only after a restart; nothing written"
   },
+  "config.writeRestartAbsent": {
+    "one": "The setting honk refuses the write over is not in the configuration. State it there and restart honk once.",
+    "other": "The {n} settings honk refuses the write over are not in the configuration. State them there and restart honk once."
+  },
   "conn.activeCount": {
     "one": "{n} active",
     "other": "{n} active"
@@ -1249,6 +1253,8 @@
   "ov.lim.docsStateDb": "State database problems",
   "ov.lim.docsVersion": "Version requirements",
   "ov.lim.export": "Export",
+  "ov.lim.flowsIdle": "Recording starts when a client asks for flows and stops soon after, so flows from before that are not kept. Set Flow recording to Always to record without a client.",
+  "ov.lim.flowsModeOff": "Nothing is recorded while recording is off, even with this page open. Set Flow recording to Always, or to On flow demand for automatic recording.",
   "ov.lim.geoNoAssets": "The configuration loads no geosite or geoip file.",
   "ov.lim.geoNoStateDb": "honk's state database did not open, so it has no built-in download URLs. Add the URLs below to the configuration, then restart honk. If experimental.native_api already sets geosite_download_url or geoip_download_url, remove the matching legacy setting to avoid a conflict between the old and new settings. A loaded file without a path on disk still cannot be updated.",
   "ov.lim.geoNoUrl": "A loaded file has no download URL or no path on disk.",

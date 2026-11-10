@@ -28,6 +28,14 @@ const readOnlyDocs = {href: docsHref('en', 'read-only'), text: t('ov.lim.docsRea
 // honk's settings sit in its native_api section.
 const nativeApi = (lines: string[]) => ['experimental {', '  native_api {', ...lines.map(line => '    ' + line), '  }', '}'].join('\n');
 const howTo = (text: Key, lines: string[], links: object[] = []) => ({label: t('ov.lim.howTo'), text: t(text), snippet: nativeApi(lines), links});
+// Flow recording needs no configuration snippet: the Settings control turns it on, and the row shows its help instead
+// of its link, so the help carries that link.
+const runtimeLink = {href: '#/settings?card=runtime', text: t('settings.runtime')};
+const flowsHelp = (text: Key, links: object[] = [runtimeLink]) => ({
+  label: t('ov.lim.howTo'),
+  text: t(text),
+  links: [...links, req('req-flows', 'flow.records')]
+});
 // honk's configuration extension: the file store reports no revisions and refuses imports.
 const withStore = (caps: Capabilities, db: boolean, canActivate = db): Capabilities => ({
   ...caps,
@@ -67,11 +75,16 @@ describe('backendLimits', () => {
     expect(idle).toEqual({
       cause: 'flowsIdle',
       headline: t('ov.lim.h.flowsIdle'),
-      link: {href: '#/settings?card=runtime', text: t('settings.runtime')},
+      help: flowsHelp('ov.lim.flowsIdle'),
+      link: runtimeLink,
       items: [{id: 'flows', label: t('flow.records')}]
     });
     // The Off mode never records, so it is not described as recording on demand.
-    expect(group(limits(patched({flows: {recording: 'off'}})), 'flowsIdle')).toEqual({...idle, headline: t('ov.lim.h.flowsModeOff')});
+    expect(group(limits(patched({flows: {recording: 'off'}})), 'flowsIdle')).toEqual({
+      ...idle,
+      headline: t('ov.lim.h.flowsModeOff'),
+      help: flowsHelp('ov.lim.flowsModeOff')
+    });
     const offMode = {flows: {allowed: true, active: false, mode: 'off' as const}};
     expect(group(backendLimits(patched({flows: {recording: 'off'}}), version, t, 'en', offMode), 'flowsIdle')?.headline).toBe(t('ov.lim.h.flowsModeOff'));
     expect(group(limits(patched({flows: {recording: 'off'}}), other), 'flowsIdle')?.headline).toBe(t('ov.lim.h.flowsOff'));
@@ -88,7 +101,13 @@ describe('backendLimits', () => {
     const items = [{id: 'flows', label: t('flow.records')}];
     // Without a field list honk does not say whether the mode or the configuration turned recording off.
     expect(off({available: false})).toEqual({cause: 'flowsIdle', headline: t('ov.lim.h.flowsOff'), items});
-    expect(off({fields: ['flows.max_flows', 'log.level']})).toEqual({cause: 'flowsIdle', headline: t('ov.lim.h.flowsModeOff'), items});
+    // Without the switch the help keeps only the feature's requirements.
+    expect(off({fields: ['flows.max_flows', 'log.level']})).toEqual({
+      cause: 'flowsIdle',
+      headline: t('ov.lim.h.flowsModeOff'),
+      help: flowsHelp('ov.lim.flowsModeOff', []),
+      items
+    });
   });
 
   it('lists the rule list, validation and closing connections when the backend turns them off', () => {

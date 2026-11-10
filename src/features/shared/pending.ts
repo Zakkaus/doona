@@ -6,7 +6,7 @@ import type {Translator} from '../../i18n';
 import type {PendingFailure, PendingRule} from '../../store';
 import type {EditResult} from '../../store/mainSource';
 import {scanConfig} from '../../dae/text';
-import {fileName, restartRequired} from '../../dae/sources';
+import {fileName, restartSettings, unwrittenRestartSettings} from '../../dae/sources';
 import {dnsListEnd, dnsRuleAnchor, ruleAnchor, ruleLine, type RuleAnchor} from '../../dae/ruleText';
 import {dnsEndPosition} from './ruleNotice';
 
@@ -80,11 +80,17 @@ export function ruleFailure(error: unknown, diagnostics: ConfigDiagnostic[] | nu
     };
   }
   const errors = found.filter(item => item.level === 'error').length;
-  const restart = restartRequired(found);
+  const restart = restartSettings(found);
+  // Every named setting missing from the configuration means the restart is honk's startup downgrade, not an edit.
+  const unwritten = unwrittenRestartSettings(restart, sources).length === restart.length;
   const shown = found.map(item => ({item, message: oneLine(explainDiagnostic(item, t), t)}));
   const backend = backendWords(shown);
   return {
-    text: restart ? t('config.writeRestart', {n: restart}) : errors ? t('ui.writeInvalid', {n: errors}) : t('rule.refused'),
+    text: restart.length
+      ? t(unwritten ? 'config.writeRestartAbsent' : 'config.writeRestart', {n: restart.length})
+      : errors
+        ? t('ui.writeInvalid', {n: errors})
+        : t('rule.refused'),
     lines: shown.map(({item, message}) => {
       const source = sources.find(source => source.id === item.source_id);
       return item.line === null ? message : t('config.atFile', {file: source ? fileName(source) : item.source_id, line: item.line, message});

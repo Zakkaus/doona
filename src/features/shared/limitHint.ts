@@ -75,13 +75,14 @@ export type LimitLink = {href: string; text: string; external?: boolean};
 // docs section.
 export type LimitHint = {text: string; setting?: string; link: LimitLink};
 
-// The help text for each engine reason, with the docs section on it. `recorded-on-demand` and `build-lacks` change
-// the headline instead.
+// The help text for each engine reason, with the docs section on it. `build-lacks` changes the headline instead.
 export const reasonHelp: Partial<Record<EngineReason['code'], {text: Key; docs?: [DocsAnchor, Key]}>> = {
   'config-unloaded': {text: 'ov.lim.configMissing'},
   'writes-off': {text: 'ov.lim.configWrite', docs: ['read-only', 'ov.lim.docsReadOnly']},
   'main-file-read-only': {text: 'ov.lim.mainReadOnly', docs: ['read-only', 'ov.lim.docsReadOnly']},
   'recorder-off': {text: 'ov.lim.recordOff'},
+  'recorded-on-demand': {text: 'ov.lim.flowsIdle'},
+  'mode-off': {text: 'ov.lim.flowsModeOff'},
   'no-download-urls': {text: 'ov.lim.geoNoStateDb', docs: ['state-db', 'ov.lim.docsStateDb']},
   'geodata-mismatch': {text: 'ov.lim.geoUnreadable'},
   'starting-or-stopping': {text: 'ov.lim.notRunningReason'},
