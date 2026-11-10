@@ -48,6 +48,16 @@ export const restartSettings = (diagnostics: ConfigDiagnostic[]): RestartSetting
     .map(item => ({key: /\b[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+\b/.exec(item.message)?.[0] ?? (item.message || null), sourceId: item.source_id, line: item.line}));
 export const restartRequired = (diagnostics: ConfigDiagnostic[]) => restartSettings(diagnostics).length;
 
+// honk reports the write's own source for a restart-required setting, never where the setting is written, so a setting
+// the configuration does not mention at all is one honk turned off at startup: its file default then differs from the
+// running value and every write is refused until the file states the value and honk restarts once. honk stopped
+// comparing against the downgraded value in 0.1.0-beta.5.
+export const unwrittenRestartSettings = (settings: RestartSetting[], sources: {content?: string | null}[]) =>
+  settings.filter(setting => {
+    const leaf = setting.key?.split('.').pop();
+    return leaf !== undefined && leaf !== '' && !sources.some(source => (source.content ?? '').includes(leaf));
+  });
+
 // The label of each kind of configuration source.
 export const sourceKinds: Record<ConfigSource['kind'], Key> = {
   main: 'config.kind.main',

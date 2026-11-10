@@ -317,6 +317,7 @@
   "config.warnings": "{n} 个警告",
   "config.writeHelp": "若加载后磁盘上的文件已更改，honk 会拒绝写入。",
   "config.writeRestart": "{n} 项设置需重启才会生效，未写入",
+  "config.writeRestartAbsent": "honk 拒绝写入所指的 {n} 项设置不在配置文件里。在配置文件明写这些值，并重新启动 honk 一次。",
   "conn.activeCount": "{n} 条进行中",
   "conn.addRuleFor": "为 {target} 添加路由规则",
   "conn.allDevices": "所有设备",

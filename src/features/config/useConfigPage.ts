@@ -7,7 +7,7 @@ import {groupQuery} from '../shared/link';
 import type {ConfigDiagnostic, ConfigSource, ConfigValidationRequest, ConfigValidationResult} from '../../api/model';
 import {refusalDetails} from '../shared/pending';
 import {downloadFile, isMac, toast, toastFailure, useLinked} from '../../ui/ui';
-import {allGroupNames, allUpstreamNames, fileName, restartRequired, restartSettings} from '../../dae/sources';
+import {allGroupNames, allUpstreamNames, fileName, restartRequired, restartSettings, unwrittenRestartSettings} from '../../dae/sources';
 import type {PageProps} from '../../shell/routes';
 import {buildHash, href, pickTab, tabQuery, within} from '../../shell/route';
 import {
@@ -256,11 +256,15 @@ export function useSourceCard({
     // Put the cursor on the first error so the problem is on screen, not below a long file.
     const first = result.diagnostics.find(d => d.source_id === source.id && d.level === 'error' && d.line !== null);
     jumpTo(first ? first.line : null);
-    const restart = restartRequired(result.diagnostics);
+    const restart = restartSettings(result.diagnostics);
+    // A named setting the sent files do not contain is honk's startup downgrade, not an edit of the draft.
+    const unwritten = restart.length > 0 && unwrittenRestartSettings(restart, candidates ?? []).length === restart.length;
     if (!result.valid)
       toast(
         'negative',
-        restart ? t('config.writeRestart', {n: restart}) : t('config.invalid', {n: result.diagnostics.filter(d => d.level === 'error').length})
+        restart.length > 0
+          ? t(unwritten ? 'config.writeRestartAbsent' : 'config.writeRestart', {n: restart.length})
+          : t('config.invalid', {n: result.diagnostics.filter(d => d.level === 'error').length})
       );
     else if (announce) toast('positive', t('config.valid'));
     return result.valid;

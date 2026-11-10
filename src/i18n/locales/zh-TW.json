@@ -317,6 +317,7 @@
   "config.warnings": "{n} 個警告",
   "config.writeHelp": "若載入後磁碟上的檔案已變更，honk 會拒絕寫入。",
   "config.writeRestart": "{n} 項設定需重新啟動才會生效，未寫入",
+  "config.writeRestartAbsent": "honk 拒絕寫入所指的 {n} 項設定不在設定檔裡。在設定檔明寫這些值，並重新啟動 honk 一次。",
   "conn.activeCount": "{n} 條進行中",
   "conn.addRuleFor": "為 {target} 新增路由規則",
   "conn.allDevices": "所有裝置",
