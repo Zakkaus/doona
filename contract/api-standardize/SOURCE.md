@@ -1,6 +1,6 @@
 Pin: api-standardize e6b0dbab5599689d965bc18a71be67c809d99d0f + honk 3ae980fed extension
 
-SHA-256: b8dd6852e8d830703720d231425187bab850ef3d2cce696455d28d805cc55f7e
+SHA-256: f2fdede38fbea92eded9783e5a5d680f5b4acc05f8bccfc46eb37c371cbbd5e0
 
 openapi.yaml combines api-standardize `source/openapi.yaml` at commit
 e6b0dbab5599689d965bc18a71be67c809d99d0f with the unchanged
@@ -11,5 +11,9 @@ applied to the previous vendored fixture. The hash above identifies this local b
 not a new honk fixture commit or the contract shipped in doona beta.17.
 The bundle also adds MaskedHttpUrl, the type of a check_url read back with listener
 secrets masked; honk's fixture mirrors it byte for byte.
+The geodata auto_update `cron` schedule mirrors the fixture of daeuniverse/honk
+pull request 484 and is not yet in api-standardize; the bundle keeps `cron`
+optional, as with verify_checksum, because older engines omit it, and leaves out its
+`default`, which would make the generated type require it.
 
 Regenerate src/api/types.ts with `pnpm gen:api`.

@@ -1078,10 +1078,11 @@ export interface paths {
          *     are each overridden on their own; null removes every override and every
          *     value taken from the configuration file, so the built-in sources and
          *     defaults apply until the engine next takes file values. When it takes file
-         *     values, a URL list or download route the configuration file names replaces
-         *     the override for that field. Geodata URLs are fetched under the
-         *     outbound-request policy in api-config. More URLs than resources.geodata.max_urls or an interval outside
-         *     resources.geodata.interval_hours returns 400. A patch never downloads; POST
+         *     values, a URL list, download route, schedule or checksum switch the
+         *     configuration file names replaces the override for that field. Geodata URLs are fetched under the
+         *     outbound-request policy in api-config. More URLs than resources.geodata.max_urls, an interval outside
+         *     resources.geodata.interval_hours, interval_hours together with cron, or a
+         *     cron expression the engine refuses returns 400. A patch never downloads; POST
          *     /geodata/update does. A download with route group whose group_id is not a
          *     current group returns 409 state_conflict and changes nothing.
          */
@@ -1662,7 +1663,7 @@ export interface components {
                     configurable_sources?: boolean;
                     /** @description Most download URLs per asset a geodata patch may set. Required when configurable_sources is true. */
                     max_urls?: number;
-                    /** @description Bounds and default of geodata auto_update.interval_hours. Required when configurable_sources is true. min <= default <= max is required; JSON Schema cannot express this ordering, so validators check it separately. */
+                    /** @description Bounds of geodata auto_update.interval_hours, and the nominal value it reads under a cron schedule. Required when configurable_sources is true. min <= default <= max is required; JSON Schema cannot express this ordering, so validators check it separately. */
                     interval_hours?: {
                         min: number;
                         max: number;
@@ -2287,14 +2288,17 @@ export interface components {
             /** @description Download URLs in fallback order, at most resources.geodata.max_urls. Returned as written, with only listener-secret values masked, to every admitted caller; see the visibility table in api-config. */
             urls: components["schemas"]["GeoDataUrl"][];
         };
+        /** @description When the engine takes file values, a schedule the configuration file names replaces a stored one, and a schedule an earlier file set returns to the default when the file names none; a patched schedule is kept. */
         GeoDataAutoUpdate: {
             /**
              * @description Update on a schedule. On by default.
              * @default true
              */
             enabled: boolean;
-            /** @description Hours between automatic updates, within resources.geodata.interval_hours, whose default applies when nothing is set. The engine may add a random delay; next_check_at reports the result. */
+            /** @description Hours between automatic updates, within resources.geodata.interval_hours, when cron is null. Under a cron schedule it reads resources.geodata.interval_hours.default and has no effect. The engine may add a random delay; next_check_at reports the result. */
             interval_hours: number;
+            /** @description Five-field cron expression (minute hour day-of-month month day-of-week) evaluated in the engine's local time zone, or null when interval_hours applies. Daily at 03:00 when nothing is set. The engine adds a random delay of up to an hour. An engine that omits the field has only the interval schedule. */
+            cron?: string | null;
         };
         /**
          * @description How geodata downloads leave the device. routing follows the routing rules like user traffic, so a rule can send them to a node, a group, direct or block. group always goes through the group in group_id. direct connects straight to the host, outside the routing rules.
@@ -2325,7 +2329,7 @@ export interface components {
              *     }
              */
             download: components["schemas"]["GeoDataDownload"];
-            /** @description Whether an update verifies each file by the resources.geodata.checksum method and rejects a file that does not match. true when nothing is set, and an engine that omits the field behaves as true. false sends no checksum request and accepts the file unverified, with verified false, for a mirror that answers the checksum URL with an error page or a status other than 404. */
+            /** @description Whether an update verifies each file by the resources.geodata.checksum method and rejects a file that does not match. true when nothing is set, and an engine that omits the field behaves as true. false sends no checksum request and accepts the file unverified, with verified false, for a mirror that answers the checksum URL with an error page or a status other than 404. When the engine takes file values, a value the configuration file names replaces a stored one, and a value an earlier file set returns to true when the file names none; a patched value is kept. */
             verify_checksum?: boolean;
         };
         GeoDataSourcesPatch: {
@@ -2340,8 +2344,10 @@ export interface components {
             verify_checksum?: boolean;
             auto_update?: {
                 enabled?: boolean;
-                /** @description Within resources.geodata.interval_hours; a value outside it returns 400. */
+                /** @description Within resources.geodata.interval_hours; a value outside it returns 400. Switches to the interval schedule. */
                 interval_hours?: number;
+                /** @description Switches to the cron schedule. Numbers, lists, ranges and steps only, firing at most four times a day; an expression that breaks these rules or never fires returns 400. */
+                cron?: string;
             };
         };
         GroupPolicy: {

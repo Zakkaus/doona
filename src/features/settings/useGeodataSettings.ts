@@ -15,7 +15,10 @@ import {
   cleanUrls,
   customFields,
   customInvalid,
+  dailyCron,
+  geodataSchedule,
   hostOf,
+  hourChoices,
   intervalChoices,
   lackingCodes,
   presetLabels,
@@ -110,6 +113,8 @@ export function useGeodataSettings() {
         : null;
   const preset = urls ? matchPreset(urls) : null;
   const auto = {...stored?.auto_update, ...pending?.auto_update};
+  // An interval being saved ends a cron schedule.
+  const schedule = geodataSchedule(pending?.auto_update?.interval_hours !== undefined ? null : auto.cron);
   const download = stored?.download && (pending?.download ?? stored.download);
   // Downloads follow the routing rules unless a route is stored.
   const route = routeChoice ?? download?.route ?? 'routing';
@@ -284,7 +289,17 @@ export function useGeodataSettings() {
       intervals: auto.interval_hours ? intervalChoices(auto.interval_hours, geodataCaps?.interval_hours, locale) : [],
       pick: (hours: string) => {
         if (Number(hours) !== stored?.auto_update.interval_hours) void save({auto_update: {interval_hours: Number(hours)}});
-      }
+      },
+      // daily, custom and interval come from a backend with cron schedules; unsupported keeps the interval alone.
+      schedule,
+      hours: hourChoices,
+      pickHour: (hour: string) => {
+        const cron = dailyCron(Number(hour));
+        if (cron !== stored?.auto_update.cron) void save({auto_update: {cron}});
+      },
+      toDaily: () => void save({auto_update: {cron: dailyCron(3)}}),
+      // Under cron, interval_hours reads the default interval.
+      toInterval: () => stored && void save({auto_update: {interval_hours: stored.auto_update.interval_hours}})
     },
     status: {...status, details: [...checkTimes(geodata.data, now, locale, t), ...assetDetails(geodata.data, groups.data, locale, t)]},
     statusError: geodata.error,

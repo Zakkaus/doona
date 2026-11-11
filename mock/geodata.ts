@@ -28,7 +28,9 @@ export function createGeodataState(capabilities: Capabilities, groupIds: () => S
   const maxUrls = capabilities.resources.geodata.max_urls ?? 0;
   const intervals = capabilities.resources.geodata.interval_hours ?? {min: 1, max: 168, default: 24};
   let stored: Record<GeoAssetKind, string[]> | null = null;
-  const auto = {enabled: true, interval_hours: intervals.default};
+  // Daily at 03:00 by default; an interval clears cron, and under cron interval_hours reads the default.
+  const defaultCron = '0 3 * * *';
+  const auto: {enabled: boolean; interval_hours: number; cron: string | null} = {enabled: true, interval_hours: intervals.default, cron: defaultCron};
   let download: GeoDataDownload = {route: 'routing', group_id: null};
   let verifyChecksum = true;
   const data = structuredClone(fixtures.geodata);
@@ -36,7 +38,8 @@ export function createGeodataState(capabilities: Capabilities, groupIds: () => S
   // In the faults scenario this morning's automatic check could not reach any URL; the files from three days ago stay.
   if (faults) Object.assign(data, fixtures.geodataFault);
   const urls = () => stored ?? {geosite: [...defaultGeodataPreset.urls.geosite], geoip: [...defaultGeodataPreset.urls.geoip]};
-  const nextCheck = (from: number) => (auto.enabled ? new Date(from + auto.interval_hours * 3600_000 + 17 * 60_000).toISOString() : null);
+  const nextCheck = (from: number) =>
+    auto.enabled ? new Date(from + (auto.cron === null ? auto.interval_hours : 24) * 3600_000 + 17 * 60_000).toISOString() : null;
   data.next_check_at = nextCheck(Date.parse(data.last_checked_at ?? '') || Date.now());
   const invalid = (message: string) => new ApiError(400, 'invalid_request', message);
   const status = (): GeoData => {
@@ -69,7 +72,7 @@ export function createGeodataState(capabilities: Capabilities, groupIds: () => S
     patch(patch: GeoDataSettingsPatch) {
       if (patch === null) {
         stored = null;
-        Object.assign(auto, {enabled: true, interval_hours: intervals.default});
+        Object.assign(auto, {enabled: true, interval_hours: intervals.default, cron: defaultCron});
         download = {route: 'routing', group_id: null};
         verifyChecksum = true;
       } else {
@@ -84,12 +87,18 @@ export function createGeodataState(capabilities: Capabilities, groupIds: () => S
         const {min, max} = intervals;
         if (interval !== undefined && (!Number.isInteger(interval) || interval < min || interval > max))
           throw invalid(`geodata.auto_update.interval_hours must lie in [${min}, ${max}]`);
+        const cron = patch.auto_update?.cron;
+        if (interval !== undefined && cron !== undefined) throw invalid('geodata.auto_update takes interval_hours or cron, not both');
+        // Five fields of numbers, lists, ranges and steps; names, macros and seconds are refused.
+        if (cron !== undefined && !/^[\d*,/-]+( [\d*,/-]+){4}$/.test(cron)) throw invalid(`geodata.auto_update.cron ${cron} is not a supported expression`);
         const route = patch.download;
         if (route && (route.route === 'group') !== (route.group_id !== undefined)) throw invalid('geodata.download.group_id is required for route group only');
         if (route?.group_id !== undefined && !groupIds().has(route.group_id))
           throw new ApiError(422, 'unsupported_value', `geodata.download.group_id ${route.group_id} is not a current group`);
         if (patch.geosite || patch.geoip) stored = {geosite: patch.geosite?.urls ?? urls().geosite, geoip: patch.geoip?.urls ?? urls().geoip};
-        Object.assign(auto, patch.auto_update ?? {});
+        if (patch.auto_update?.enabled !== undefined) auto.enabled = patch.auto_update.enabled;
+        if (interval !== undefined) Object.assign(auto, {interval_hours: interval, cron: null});
+        if (cron !== undefined) Object.assign(auto, {interval_hours: intervals.default, cron});
         if (route) download = {route: route.route, group_id: route.group_id ?? null};
         if (patch.verify_checksum !== undefined) verifyChecksum = patch.verify_checksum;
       }

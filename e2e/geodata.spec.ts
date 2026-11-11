@@ -322,19 +322,53 @@ test('a backend without the checksum setting shows no verify switch', async ({pa
   await expect(row(page, 'settings.geodataVerifyChecksum')).toHaveCount(0);
 });
 
-test('automatic updates save as they change, and the interval shows only while they are on', async ({page}) => {
+test('automatic updates run daily at an hour that saves as it changes, and the schedule shows only while they are on', async ({page}) => {
   const {bodies} = await traffic(page);
   await page.goto('/#/settings');
   const auto = row(page, 'settings.geodataAutoUpdate');
-  const interval = auto.getByRole('button', {name: t('settings.geodataInterval')});
-  await expect(interval).toContainText('1 day');
-  await pick(page, 'settings.geodataInterval', '3 days');
-  await expect.poll(() => bodies).toEqual([{geodata: {auto_update: {interval_hours: 72}}}]);
-  await expect(interval).toContainText('3 days');
+  const hour = auto.getByRole('button', {name: t('settings.geodataDailyHour')});
+  await expect(hour).toContainText('03:00');
+  await expect(auto).toContainText(t('settings.geodataDailyHelp'));
+  await pick(page, 'settings.geodataDailyHour', '05:00');
+  await expect.poll(() => bodies).toEqual([{geodata: {auto_update: {cron: '0 5 * * *'}}}]);
+  await expect(hour).toContainText('05:00');
   await auto.getByRole('switch', {name: t('settings.geodataAutoUpdate')}).click({force: true});
   await expect.poll(() => bodies.length).toBe(2);
   expect(bodies[1]).toEqual({geodata: {auto_update: {enabled: false}}});
+  await expect(hour).toHaveCount(0);
+});
+
+test('a daily schedule switches to an interval and back to daily at 03:00', async ({page}) => {
+  const {bodies} = await traffic(page);
+  await page.goto('/#/settings');
+  const auto = row(page, 'settings.geodataAutoUpdate');
+  await auto.getByRole('button', {name: t('settings.geodataUseInterval')}).click();
+  await expect.poll(() => bodies).toEqual([{geodata: {auto_update: {interval_hours: 24}}}]);
+  const interval = auto.getByRole('button', {name: t('settings.geodataInterval')});
+  await expect(interval).toContainText('1 day');
+  await pick(page, 'settings.geodataInterval', '3 days');
+  await expect.poll(() => bodies.length).toBe(2);
+  expect(bodies[1]).toEqual({geodata: {auto_update: {interval_hours: 72}}});
+  await expect(interval).toContainText('3 days');
+  await auto.getByRole('button', {name: t('settings.geodataUseDaily')}).click();
+  await expect.poll(() => bodies.length).toBe(3);
+  expect(bodies[2]).toEqual({geodata: {auto_update: {cron: '0 3 * * *'}}});
+  await expect(auto.getByRole('button', {name: t('settings.geodataDailyHour')})).toContainText('03:00');
   await expect(interval).toHaveCount(0);
+});
+
+test('another cron expression shows as it is, and only the switch to daily replaces it', async ({page}) => {
+  const {api, bodies} = await traffic(page);
+  await api.patchRuntimeSettings({geodata: {auto_update: {cron: '30 4 * * 1-5'}}});
+  await page.goto('/#/settings');
+  const auto = row(page, 'settings.geodataAutoUpdate');
+  await expect(auto.locator('.rp-code')).toHaveText('30 4 * * 1-5');
+  await expect(auto).toContainText(t('settings.geodataCronCustom'));
+  await expect(auto.getByRole('button', {name: t('settings.geodataDailyHour')})).toHaveCount(0);
+  expect(bodies).toEqual([]);
+  await auto.getByRole('button', {name: t('settings.geodataUseDaily')}).click();
+  await expect.poll(() => bodies).toEqual([{geodata: {auto_update: {cron: '0 3 * * *'}}}]);
+  await expect(auto.getByRole('button', {name: t('settings.geodataDailyHour')})).toContainText('03:00');
 });
 
 test('the details list each asset by host, with the full URL behind it', async ({page}) => {

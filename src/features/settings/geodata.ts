@@ -73,6 +73,20 @@ export function intervalChoices(current: number, bounds: {min: number; max: numb
   });
 }
 
+// The automatic update schedule auto_update.cron describes: an hour of the day the controls can edit, another
+// expression they only show, the interval, or none from a backend that predates cron. The backend validates
+// expressions, and adds a delay of up to an hour, so the controls offer whole hours only.
+export type GeodataSchedule = {kind: 'daily'; hour: number} | {kind: 'custom'; cron: string} | {kind: 'interval'} | {kind: 'unsupported'};
+export function geodataSchedule(cron: string | null | undefined): GeodataSchedule {
+  if (cron === undefined) return {kind: 'unsupported'};
+  if (cron === null) return {kind: 'interval'};
+  const match = /^(\d{1,2}) (\d{1,2}) \* \* \*$/.exec(cron);
+  const hour = Number(match?.[2]);
+  return match && Number(match[1]) === 0 && hour < 24 ? {kind: 'daily', hour} : {kind: 'custom', cron};
+}
+export const dailyCron = (hour: number) => `0 ${hour} * * *`;
+export const hourChoices = Array.from({length: 24}, (_, hour) => ({id: String(hour), label: `${String(hour).padStart(2, '0')}:00`}));
+
 // How a download went out: the group by its name, or the route itself.
 export function routeLabel(route: GeoDataDownload, groups: GroupSummary[] | undefined, t: Translator): string {
   if (route.route === 'direct') return t('settings.geodataRouteDirect');
