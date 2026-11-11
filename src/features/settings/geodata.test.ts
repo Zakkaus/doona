@@ -8,6 +8,9 @@ import {
   cleanUrls,
   customFields,
   customInvalid,
+  dailyCron,
+  geodataSchedule,
+  hourChoices,
   intervalChoices,
   lackingCodes,
   presetNote,
@@ -125,6 +128,20 @@ describe('rows', () => {
     expect(intervalChoices(48, bounds, 'en-US').map(item => item.id)).toEqual(['6', '12', '24', '48', '72', '168']);
     expect(intervalChoices(12, {min: 12, max: 48, default: 36}, 'en-US').map(item => item.id)).toEqual(['12', '24', '36']);
     expect(intervalChoices(2, {min: 1, max: 4, default: 2}, 'en-US').map(item => item.id)).toEqual(['2']);
+  });
+  it('reads a cron schedule as daily only at a whole hour on every day', () => {
+    expect(geodataSchedule(undefined)).toEqual({kind: 'unsupported'});
+    expect(geodataSchedule(null)).toEqual({kind: 'interval'});
+    expect(geodataSchedule('0 3 * * *')).toEqual({kind: 'daily', hour: 3});
+    expect(geodataSchedule('00 03 * * *')).toEqual({kind: 'daily', hour: 3});
+    for (const cron of ['5 0 * * *', '30 4 * * *', '*/5 3 * * *', '0 3,15 * * *', '0 3 * * 1', '0 24 * * *', '0  3 * * *'])
+      expect(geodataSchedule(cron)).toEqual({kind: 'custom', cron});
+    for (const hour of [0, 3, 23]) expect(geodataSchedule(dailyCron(hour))).toEqual({kind: 'daily', hour});
+    expect(dailyCron(0)).toBe('0 0 * * *');
+  });
+  it('labels the daily hours as times', () => {
+    expect(hourChoices.map(item => item.label)).toEqual(Array.from({length: 24}, (_, hour) => `${hour < 10 ? '0' : ''}${hour}:00`));
+    expect(hourChoices[23]).toEqual({id: '23', label: '23:00'});
   });
   it('names a route by its group where it has one', () => {
     const groups = [{id: 'proxy', name: 'Proxy'}] as Parameters<typeof routeLabel>[1];

@@ -125,16 +125,7 @@ export function GeodataSettingsCard() {
             <span className="rp-label">{t('settings.geodataAutoUpdate')}</span>
             <div className="rp-cluster">
               <Switch aria-label={t('settings.geodataAutoUpdate')} isSelected={m.auto.enabled} isDisabled={m.busy} onChange={m.auto.toggle} />
-              {m.auto.enabled && (
-                <LabeledSelect
-                  bare
-                  label={t('settings.geodataInterval')}
-                  value={m.auto.interval}
-                  onChange={m.auto.pick}
-                  items={m.auto.intervals}
-                  isDisabled={m.busy}
-                />
-              )}
+              {m.auto.enabled && <AutoSchedule auto={m.auto} busy={m.busy} />}
             </div>
           </div>
         </div>
@@ -306,5 +297,43 @@ export function GeodataSettingsCard() {
         </ConfirmDialog>
       )}
     </Card>
+  );
+}
+
+// A daily hour or the interval, each with a switch to the other; another cron expression shows as it is, with a switch
+// to daily that saves 03:00. A backend without cron keeps the interval alone.
+function AutoSchedule({auto, busy}: {auto: ReturnType<typeof useGeodataSettings>['auto']; busy: boolean}) {
+  const t = useT();
+  const {schedule} = auto;
+  const toDaily = schedule.kind === 'interval' || schedule.kind === 'custom';
+  return (
+    <>
+      {schedule.kind === 'daily' ? (
+        <LabeledSelect
+          bare
+          label={t('settings.geodataDailyHour')}
+          value={String(schedule.hour)}
+          onChange={auto.pickHour}
+          items={auto.hours}
+          isDisabled={busy}
+        />
+      ) : schedule.kind === 'custom' ? (
+        <span className="rp-code">{schedule.cron}</span>
+      ) : (
+        <LabeledSelect bare label={t('settings.geodataInterval')} value={auto.interval} onChange={auto.pick} items={auto.intervals} isDisabled={busy} />
+      )}
+      {schedule.kind === 'daily' && (
+        <Button isDisabled={busy} onPress={auto.toInterval}>
+          {t('settings.geodataUseInterval')}
+        </Button>
+      )}
+      {toDaily && (
+        <Button isDisabled={busy} onPress={auto.toDaily}>
+          {t('settings.geodataUseDaily')}
+        </Button>
+      )}
+      {schedule.kind === 'daily' && <span className="rp-label">{t('settings.geodataDailyHelp')}</span>}
+      {schedule.kind === 'custom' && <span className="rp-label">{t('settings.geodataCronCustom')}</span>}
+    </>
   );
 }
