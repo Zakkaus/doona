@@ -173,9 +173,12 @@ describe('writeSubscriptionEntry', () => {
     ['agent', 'agent2', 'https://example.net/sub', '  agent:', '  agent2:'],
     ['old', 'fresh', 'https://example.org/x', "  old: {\n    url: 'https://example.org/old'", "  fresh: {\n    url: 'https://example.org/x'"],
     ['quoted tag', 'plain', 'https://example.org/new', "'quoted tag':", "'plain':"],
-    ['short', 'two words', 'https://example.com/sub', '  short:', "  'two words':"]
+    ['short', 'two words', 'https://example.com/sub', '  short:', "  'two words':"],
+    ['short', '机场', 'https://example.com/sub', '  short:', "  '机场':"]
   ])('renames %s to %s, keeping the form, the options and quotes where the tag had them', (from, tag, url, before, after) => {
-    expect(edit(from, {tag, url})).toBe(text.replace(before, after));
+    const renamed = edit(from, {tag, url});
+    expect(renamed).toBe(text.replace(before, after));
+    expect(readSubscriptionEntries(renamed).find(entry => entry.tag === tag)?.url).toBe(url);
   });
 
   it('writes nothing when neither changes', () => {

@@ -957,7 +957,7 @@
   "nodes.manualOnly": "僅手動",
   "nodes.minutes": "分鐘",
   "nodes.moreGroups": "另有 {n} 個群組",
-  "nodes.nameInvalid": "名稱只能使用英文字母、數字、_、. 與 -",
+  "nodes.nameInvalid": "名稱最多 {n} 個字元，不能含 ' 或換行等控制字元，也不能以反斜線結尾",
   "nodes.nameMissing": "須填寫名稱",
   "nodes.nameTaken": "已有節點使用此名稱。",
   "nodes.newGroup": "新增群組…",

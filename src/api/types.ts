@@ -2207,7 +2207,7 @@ export interface components {
             error?: null;
         };
         ProviderCreate: {
-            /** @description The subscription tag as written in the configuration; unique among providers. */
+            /** @description The subscription tag as written in the configuration; unique among providers. Any text without control characters that the configuration can quote; names outside [A-Za-z0-9_.-] are written quoted. */
             name: string;
             /** @constant */
             kind: "subscription";

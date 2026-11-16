@@ -1110,7 +1110,7 @@
     "one": "{n} more group",
     "other": "{n} more groups"
   },
-  "nodes.nameInvalid": "The name may use only letters, digits, _, . and -",
+  "nodes.nameInvalid": "The name may have up to {n} characters, may not contain ' or a control character such as a line break, and may not end with a backslash",
   "nodes.nameMissing": "Enter a name",
   "nodes.nameTaken": "A node already uses this name.",
   "nodes.newGroup": "New group…",

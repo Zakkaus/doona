@@ -21,7 +21,7 @@ import {addU64, pctU64} from '../../api/u64';
 import {compareNames, localMinute, localTime, formatBytes, formatBytesFraction, formatLatency} from '../../i18n/format';
 import {backendCode, backendMessage, knownCode, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
-import {isBareName, isQuotable} from '../../dae/text';
+import {isQuotable} from '../../dae/text';
 import {nodeReferenced, readNodeEntries, type NodeEntry} from '../../dae/nodes';
 import {
   addNodesToGroup,
@@ -363,6 +363,14 @@ export function nodeLinkError(value: string, t: Translator, schemes?: readonly s
         ? t('config.unquotable')
         : null;
 }
+// The name field's inline error, quiet while empty: any text the configuration can quote, without the control
+// characters POST /providers refuses, within the 64 characters it takes.
+const MAX_SUBSCRIPTION_NAME = 64;
+export function subscriptionNameError(name: string, t: Translator) {
+  return !name || (isWritableName(name) && !/\p{Cc}/u.test(name) && [...name].length <= MAX_SUBSCRIPTION_NAME)
+    ? null
+    : t('nodes.nameInvalid', {n: MAX_SUBSCRIPTION_NAME});
+}
 
 // POST /nodes takes at most this many characters; a longer declaration still fits a configuration source edit.
 const MAX_CREATE_LINK = 8192;
@@ -377,8 +385,7 @@ export function nodeFormReason(kind: string | undefined, name: string, value: st
     if (!link) return t('nodes.linkInvalid');
     return nodeLinkError(value, t) ?? ([...link].length > MAX_CREATE_LINK ? t('nodes.linkTooLong', {n: MAX_CREATE_LINK}) : null);
   }
-  if (!isBareName(bare)) return t('nodes.nameInvalid');
-  return subscriptionUrlError(value, t) ?? (value.trim() ? null : t('nodes.urlInvalid'));
+  return subscriptionNameError(bare, t) ?? subscriptionUrlError(value, t) ?? (value.trim() ? null : t('nodes.urlInvalid'));
 }
 
 // Joining opens the group's editor in the source that declares it, so only a group that editor can write is offered:

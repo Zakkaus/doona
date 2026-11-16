@@ -174,6 +174,14 @@ it('explains empty add forms and shows an edited unsupported link on its field',
   expect(read()).toMatchObject({formValid: false, formReason: 'Enter a name'});
 });
 
+it('puts the reason a subscription name is refused on the add dialog name field', () => {
+  read().setDialog({kind: 'provider'});
+  read().setForm({...read().form, name: '机场', value: 'https://example.org/sub'});
+  expect(read()).toMatchObject({formValid: true, subscriptionErrors: {name: null}});
+  read().setForm({...read().form, name: "it's"});
+  expect(read()).toMatchObject({formValid: false, subscriptionErrors: {name: translate('en', 'nodes.nameInvalid', {n: 64})}});
+});
+
 const fillManual = (fields: Record<string, string>) => Object.entries(fields).forEach(([key, value]) => read().setDraftField(key, value));
 const trojan = {protocol: 'trojan', name: 'manual', host: 'example.com', port: '443', password: 'pw'};
 
