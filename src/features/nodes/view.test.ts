@@ -22,7 +22,8 @@ import {
   selectedProvider,
   joinableGroups,
   joinNodesToGroups,
-  customGroup
+  customGroup,
+  subscriptionNameError
 } from './view';
 import {translate, type Translator} from '../../i18n';
 import {readNodeEntries} from '../../dae/nodes';
@@ -417,7 +418,7 @@ it('says why the add dialog cannot submit, first applicable', () => {
   expect(nodeFormReason('provider', '', '', t)).toBe(t('nodes.nameMissing'));
   expect(nodeFormReason('node', '', '', t)).toBe(t('nodes.nameMissing'));
   expect(nodeFormReason('provider', '', 'https://example.org/sub', t)).toBe('Enter a name');
-  expect(nodeFormReason('provider', 'sub a', 'ftp://x', t)).toBe(t('nodes.nameInvalid'));
+  expect(nodeFormReason('provider', "sub'a", 'ftp://x', t)).toBe(t('nodes.nameInvalid', {n: 64}));
   expect(nodeFormReason('provider', 'sub-a', 'ftp://x', t)).toBe(t('nodes.urlInvalid'));
   expect(nodeFormReason('provider', 'sub-a', 'https://example.org/sub', t)).toBeNull();
   expect(nodeFormReason('provider', 'sub-a', 'example.org/sub', t)).toBeNull();
@@ -428,6 +429,25 @@ it('says why the add dialog cannot submit, first applicable', () => {
   expect(nodeFormReason('node', 'hk 03', 'vless://id@host:443', t)).toBeNull();
   // A group name's problem is shown at its field.
   expect(nodeFormReason('group', 'bad name', '', t)).toBeNull();
+});
+
+// Adding checks the name through nodeFormReason and renaming through subscriptionNameError; both quote a name that is
+// not bare, so only what a quoted string cannot hold, or more than 64 code points, is refused.
+it.each([
+  ['a CJK name', '机场', true],
+  ['a name with a space', 'two words', true],
+  ['64 CJK characters', '机'.repeat(64), true],
+  ['64 astral code points', '\u{1F680}'.repeat(64), true],
+  ['an apostrophe', "it's", false],
+  ['a line break', 'a\nb', false],
+  ['a tab', 'a\tb', false],
+  ['a trailing backslash', 'ends\\', false],
+  ['65 characters', 'x'.repeat(65), false],
+  ['65 CJK characters', '机'.repeat(65), false]
+])('checks %s when adding or renaming a subscription', (_case, name, valid) => {
+  const error = valid ? null : t('nodes.nameInvalid', {n: 64});
+  expect(subscriptionNameError(name, t)).toBe(error);
+  expect(nodeFormReason('provider', name, 'https://example.org/sub', t)).toBe(error);
 });
 
 it('a subscription is matched to its entry by its name, before any node is fetched', () => {

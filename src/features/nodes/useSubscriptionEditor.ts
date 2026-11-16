@@ -2,11 +2,10 @@ import {useState} from 'react';
 import {formatList, type Lang, type Translator} from '../../i18n';
 import type {Capabilities, ConfigSource} from '../../api/model';
 import {addSubtagsToGroup, citingGroups, removeSubtagsFromGroup} from '../../dae/groups';
-import {isBareName} from '../../dae/text';
 import {agentProblem, completeSubscriptionUrl, writeSubscriptionEntry, type SubscriptionChange, type SubscriptionText} from '../../dae/subscriptions';
 import {draftInterval} from './subscription';
 import type {SubscriptionFieldSet} from './SubscriptionFields';
-import {keptOptions, providerChanges, renameReferences, subscriptionUrlError, type ProviderForm, type ProviderRow} from './view';
+import {keptOptions, providerChanges, renameReferences, subscriptionNameError, subscriptionUrlError, type ProviderForm, type ProviderRow} from './view';
 
 export type SubscriptionEdit = {kind: 'editProvider'; item: ProviderRow; source: ConfigSource; entry: SubscriptionText; focus?: 'interval'};
 type CreateOptions = Capabilities['resources']['providers']['create_options'] | undefined;
@@ -51,10 +50,11 @@ export function useSubscriptionEditor(input: {
   // The switch shows the entry's cache, or the default a new subscription gets when the entry sets none.
   const writtenCache = dialog ? (dialog.entry.cache ?? input.createOptions?.cache) : undefined;
   const change = dialog ? subscriptionChange(dialog.entry, form, input.createOptions?.cache) : {};
-  // A kept name is valid as written; a new one is bare, as doona writes names, and free among the subscriptions.
+  // A kept name is valid as written; a new one must be writable, quoted when it is not bare, and free among the
+  // subscriptions.
   const name = form.name.trim();
   const nameError =
-    !dialog || name === dialog.entry.tag || !name ? null : !isBareName(name) ? t('nodes.nameInvalid') : declared.has(name) ? t('nodes.tagTaken') : null;
+    !dialog || name === dialog.entry.tag || !name ? null : (subscriptionNameError(name, t) ?? (declared.has(name) ? t('nodes.tagTaken') : null));
   // An entry's own User-Agent must also be written back as a quoted value; empty removes it, leaving the engine default.
   const agentKey = agentProblem(form.agent, true);
   const agentError = agentKey && t(agentKey);

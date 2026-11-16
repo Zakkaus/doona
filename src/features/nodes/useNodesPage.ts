@@ -18,7 +18,7 @@ import {toast, toastFailure, type Problem} from '../../ui/ui';
 import {useMainSourceEdit} from '../../store/mainSource';
 import {editProblem, editToast} from '../shared/pending';
 import {isWritableName, groupsNamingTag, readGroupEntries} from '../../dae/groups';
-import {isBareName, isQuotable, quote} from '../../dae/text';
+import {isQuotable, quote} from '../../dae/text';
 import {agentProblem} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
 import {readNodeEntries, writeNodeEntry, type NodeEntry} from '../../dae/nodes';
@@ -43,6 +43,7 @@ import {
   providerChanges,
   providerRows,
   selectedProvider,
+  subscriptionNameError,
   subscriptionUrlError,
   type ProviderForm,
   type ProviderRow
@@ -583,7 +584,7 @@ export function useNodesPage({go, query}: PageProps) {
       : dialog?.kind === 'editProvider'
         ? subscriptionEdit.valid
         : dialog?.kind === 'provider'
-          ? isBareName(form.name.trim()) && !!form.value.trim() && subscriptionUrlError(form.value, t) === null && !agentError && intervalSeconds !== null
+          ? nodeFormReason('provider', form.name, form.value, t) === null && !agentError && intervalSeconds !== null
           : dialog?.kind === 'node'
             ? newName !== '' && !!nodeValue.trim() && nodeFormReason('node', newName, nodeValue, t) === null && !nodeNameError && !linkError && !headerError
             : dialog?.kind === 'removeNodes'
@@ -775,7 +776,9 @@ export function useNodesPage({go, query}: PageProps) {
     },
     subscriptionFields,
     subscriptionErrors: {
-      ...(dialog?.kind === 'editProvider' ? subscriptionEdit.errors : {name: null, agent: agentError, url: subscriptionUrlError(form.value, t)}),
+      ...(dialog?.kind === 'editProvider'
+        ? subscriptionEdit.errors
+        : {name: subscriptionNameError(form.name.trim(), t), agent: agentError, url: subscriptionUrlError(form.value, t)}),
       interval: intervalError
     }
   };
