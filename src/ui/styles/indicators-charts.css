@@ -276,9 +276,35 @@
   gap: var(--rp-space-2);
   white-space: nowrap;
 }
-/* An area chart under its legend (AreaChart's legend) takes one legend line, the gap and its chart height at least, and
-   grows with its card's row. A legend wrapped onto more lines takes its room from the plot, which keeps its height
-   less two legend lines, so a long series name in one language never makes the card or its row taller. */
+/* An area chart under its legend (AreaChart's legend), which only dashboard cards draw, takes one legend line, the gap
+   and its chart height at least, and grows with its card's row. A legend wrapped onto more lines takes its room from
+   the plot, which keeps its height less two legend lines, so a long series name in one language never makes the card or
+   its row taller. A dashboard card sets its legend in body lines (dashboard.css), wrapping one --rp-space-4 apart. */
+/* An area chart's height is the chart token's, times its card's height step (dashboard.css); a Skeleton bar standing
+   in for it takes the same. */
+:is(.rp-area-figure, .rp-area-plot, .rp-skeleton-bar.chart) {
+  --area-height: calc(var(--rp-chart-h) * var(--rp-chart-scale, 1));
+}
+:is(.rp-area-figure, .rp-area-plot)[data-stacked],
+.rp-skeleton-bar.chart-stacked {
+  --area-height: calc(var(--rp-chart-stacked-h) * var(--rp-chart-scale, 1));
+}
+.rp-skeleton-bar:is(.chart, .chart-stacked),
+.rp-area-plot {
+  block-size: var(--area-height);
+}
+.rp-area-plot {
+  position: relative;
+  inline-size: 100%;
+}
+/* Under a legend (.rp-area-figure) the plot gives a wrapped legend's lines their room and takes the rest of the card's
+   height, from the card, never from the plot it last drew, so it can shrink again. */
+.rp-area-plot[data-fill] {
+  flex: 1 0 auto;
+  block-size: auto;
+  min-block-size: var(--area-min, var(--area-height));
+  contain: size;
+}
 .rp-area-figure {
   --area-min: calc(var(--area-height) - 2 * (var(--rp-line-body) + var(--rp-space-4)));
   display: flex;

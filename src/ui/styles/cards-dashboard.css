@@ -555,8 +555,6 @@
   margin-inline-start: 0;
 }
 .rp-tile-body {
-  /* The widest value, 888 MB/s, at the value type in every locale (see the tile container query below). */
-  --rp-tile-value: 98px;
   display: flex;
   align-items: center;
   justify-content: space-between;

@@ -38,21 +38,16 @@ import {useRankingCard} from './useRankingCard';
 
 export function ActivityCard({
   item,
-  scale = 1,
   selection,
   ranking
 }: {
   item: {id: string; form?: string; rows?: number; width?: string};
-  // A chart's height as a multiple of its standard height.
-  scale?: number;
   ranking?: {by: string; setBy: (by: string) => void};
   selection?: {chosen: string; setChosen: (id: string) => void};
 }) {
-  // A value tile two thirds of a row or wider lists its sparkline's peak and average (see dashboard.css): by its chosen
-  // width, or by the box its footprint has now, which on a phone is the whole row whatever width was chosen. An area
-  // chart marks them on its plot and says them in its tip.
-  const wideCell = useContext(WideCell);
-  const stats = item.width === '2/3' || item.width === 'full' || wideCell;
+  // A value tile two thirds of a row or wider, by the box packing measured (data-wide), lists its sparkline's peak and
+  // average (see dashboard.css). An area chart marks them on its plot and says them in its tip.
+  const stats = useContext(WideCell);
   switch (item.id) {
     case 'mode':
       return <ModeModule part="mode" />;
@@ -72,10 +67,10 @@ export function ActivityCard({
     case 'cpu':
     case 'history':
     case 'status':
-      return <MetricModule kind={item.id} scale={scale} stats={stats} />;
+      return <MetricModule kind={item.id} stats={stats} />;
     // Memory's sparkline form is a value tile like download's; its area form is the chart card.
     case 'memory':
-      return <MetricModule kind={item.form === 'sparkline' ? 'memoryTile' : 'memory'} scale={scale} stats={stats} />;
+      return <MetricModule kind={item.form === 'sparkline' ? 'memoryTile' : 'memory'} stats={stats} />;
     default:
       return null;
   }
@@ -96,12 +91,11 @@ export function RuntimeAlert() {
   const vm = useActivity('status');
   return vm.error ? <ErrorMessage error={vm.error} onRetry={vm.retry} /> : null;
 }
-// An area chart card's chart height at scale 1, its plots and time labels, the traffic and memory cards alike; the
-// card's skeleton repeats it (--chart in dashboard.css). The plots take any height its row gives the card beyond it.
-// Traffic stacks a plot for download over one for upload, whose rates often lie ten times apart; memory's two
-// measures share one scale and one plot.
-const areaHeight = 144;
-function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useActivity>[0] | 'memoryTile'; scale: number; stats: boolean}) {
+// An area chart takes its height from the chart token, times the card's height step, which the card's skeleton
+// repeats (dashboard.css); the plots take any height its row gives the card beyond it. Traffic stacks a plot for
+// download over one for upload, whose rates often lie ten times apart; memory's two measures share one scale and one
+// plot.
+function MetricModule({kind, stats: wide}: {kind: Parameters<typeof useActivity>[0] | 'memoryTile'; stats: boolean}) {
   const t = useT();
   const vm = useActivity(kind === 'memoryTile' ? 'memory' : kind);
   const limitNotice = useContext(SettingsContext)?.ap.limitNotice ?? true;
@@ -204,7 +198,7 @@ function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useAc
             </ChartWait>
           ) : vm.history.state === 'loading' ? (
             // The legend's line and the chart's height, as the loaded body draws them.
-            <DeferredChart parts={[{line: 'body'}, {height: areaHeight * scale}]} />
+            <DeferredChart parts={[{line: 'body'}, {line: 'chart-stacked'}]} />
           ) : vm.history.state === 'empty' ? (
             <ChartWait holds="tall">
               <Empty>{t('act.emptyHistory')}</Empty>
@@ -217,7 +211,6 @@ function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useAc
               timestamps={vm.trafficTimestamps}
               fmt={chartRate}
               locale={locale}
-              height={areaHeight * scale}
               fill
               split
               window={vm.trafficBounds}
@@ -270,7 +263,6 @@ function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useAc
               timestamps={vm.memoryTimestamps}
               fmt={memoryBytes}
               locale={locale}
-              height={areaHeight * scale}
               fill
               baseline="auto"
               window={vm.memoryBounds}

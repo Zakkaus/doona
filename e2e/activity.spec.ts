@@ -1191,8 +1191,8 @@ test('the latency menu contains only Automatic and group names with one checked 
 // the plot's box, a value gutter as wide as its widest label and the gap, time labels apart from each other and under
 // the lower plot only, readable secondary text, and no ring on the plot under a pointer or after a click. The legend is
 // one line of each series' swatch, name and live value from the card's text inset, and the plots take the card down to
-// its padding. Hovering either plot guides across both and tips the time, both values and each series' peak and
-// average, which the chart's description also carries.
+// its padding. Hovering either plot guides across both and tips a table: the time over each series' current value,
+// peak and average, the last two of which the chart's description also carries.
 for (const [width, scheme] of [
   [1440, 'dark'],
   [1440, 'light'],
@@ -1235,7 +1235,9 @@ for (const [width, scheme] of [
         const values = [...card.querySelectorAll('.rp-area-y-ticks text')].map(text => text.getBoundingClientRect());
         const times = [...card.querySelectorAll('.rp-area-x-ticks text')].map(text => text.getBoundingClientRect()).sort((a, b) => a.left - b.left);
         const entries = [...card.querySelectorAll('.rp-legend .it')].map(entry => entry.getBoundingClientRect());
+        const token = (name: string) => parseFloat(getComputedStyle(card).getPropertyValue(name));
         return {
+          gaps: {gutter: token('--rp-space-2'), times: token('--rp-space-4')},
           ticks: [...values, ...times].map(box => ({
             above: svg.top - box.top,
             below: box.bottom - svg.bottom,
@@ -1267,9 +1269,9 @@ for (const [width, scheme] of [
         expect(tick.end, 'label past the plot box').toBeGreaterThanOrEqual(-0.5);
       }
       expect(geometry.valueLabels).toBeGreaterThanOrEqual(2);
-      for (const gap of geometry.timeGaps) expect(gap, 'time labels apart').toBeGreaterThanOrEqual(16);
-      expect(geometry.gutter, 'value gutter').toBeGreaterThanOrEqual(7.5);
-      expect(geometry.gutter, 'value gutter').toBeLessThanOrEqual(9.5);
+      for (const gap of geometry.timeGaps) expect(gap, 'time labels apart').toBeGreaterThanOrEqual(geometry.gaps.times);
+      expect(geometry.gutter, 'value gutter').toBeGreaterThanOrEqual(geometry.gaps.gutter - 0.5);
+      expect(geometry.gutter, 'value gutter').toBeLessThanOrEqual(geometry.gaps.gutter + 1.5);
       expect(Math.abs(geometry.plotStart), 'plot at the text inset').toBeLessThanOrEqual(1);
       expect(Math.abs(geometry.band), 'no band under the plot').toBeLessThanOrEqual(1);
       expect(geometry.legendLines, 'legend on one line').toBe(1);
@@ -1288,7 +1290,9 @@ for (const [width, scheme] of [
       await page.mouse.move(area.x + area.width / 2, area.y + area.height * 0.6);
       const tip = page.locator('.rp-boundedtip');
       await expect(tip).toBeVisible();
-      await expect(tip.locator('li')).toHaveText([/^下載：/, /^下載峰值：/, /^下載平均：/, /^上傳：/, /^上傳峰值：/, /^上傳平均：/]);
+      await expect(tip.locator('thead th')).toHaveText([/\d:\d{2}/, '目前', '峰值', '平均']);
+      await expect(tip.locator('tbody th')).toHaveText(['下載', '上傳']);
+      for (const row of await tip.locator('tbody tr').all()) await expect(row.locator('td')).toHaveText([/\d/, /\d/, /\d/]);
       const guides = await plot.evaluate(svg => [...svg.querySelectorAll(':scope > path[stroke-dasharray]')].map(path => path.getBoundingClientRect().height));
       expect(guides).toHaveLength(2);
       expect(Math.abs(guides[0] - guides[1]), 'plots of one height').toBeLessThanOrEqual(1);
@@ -1296,11 +1300,12 @@ for (const [width, scheme] of [
       await page.mouse.move(0, 0);
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 3);
       await expect(plot).toHaveCSS('outline-style', 'none');
+      // A click draws no ring, whether or not the browser focuses the plot on it (WebKit does not focus an SVG).
       await page.mouse.down();
       await page.mouse.up();
-      await expect(plot).toBeFocused();
       await expect(plot).toHaveCSS('outline-style', 'none');
       // Keyboard focus still draws the ring.
+      await plot.focus();
       await page.keyboard.press('Shift+Tab');
       await page.keyboard.press('Tab');
       await expect(plot).toBeFocused();

@@ -400,7 +400,8 @@ test('activity draws all eight charts without loading a chart vendor', async ({p
   expect(requests.filter(url => /vendor-charts/.test(url))).toEqual([]);
   // The CPU and latency lines draw from their second sample, the latency one after the next node list read.
   await page.clock.runFor(61000);
-  // Activity's own eight; a widget card further down draws its chart when it comes into view.
+  // Activity's own eight, the memory card under the fold once it comes into view, as a widget card further down does.
+  await page.locator("main [data-module='memory']").scrollIntoViewIfNeeded();
   const own = ['download', 'upload', 'connections', 'latency', 'cpu', 'history', 'outbounds', 'memory'].map(
     id => `main [data-module='${id}'] .rp-activity-surface`
   );
@@ -443,7 +444,7 @@ for (const lang of ['zh-TW', 'zh-CN']) {
         .locator('.rp-legend .it')
         .first()
         .evaluate(entry => entry.childNodes[1].textContent))!;
-      await expect(page.locator('body > .rp-charttip-bounded li').first()).toContainText(new RegExp(`^${first}`));
+      await expect(page.locator('body > .rp-charttip-bounded tbody th').first()).toContainText(new RegExp(`^${first}`));
     });
   });
 }

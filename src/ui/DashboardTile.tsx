@@ -1,6 +1,7 @@
 import {createContext, useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type Ref, type RefObject} from 'react';
 import {mergeRefs} from 'react-aria';
 import {packSection} from './packing';
+import {HeldCard} from './Card';
 
 // A section packs as it mounts, before its first paint, and keeps packing until it unmounts.
 export function usePacking(ref: RefObject<HTMLElement | null>) {
@@ -47,12 +48,27 @@ function useWideMark(cellOf: (node: HTMLElement) => Element | null = ownCell) {
   return [ref, wide] as const;
 }
 
-export function DashboardTile({tile, visible, targetRef, children}: {tile: TileProps; visible: boolean; targetRef: Ref<HTMLDivElement>; children: ReactNode}) {
+// `card`: the name dashboard.css gives the card's heights (its Skeleton's), which its preview keeps off screen.
+export function DashboardTile({
+  tile,
+  card,
+  visible,
+  targetRef,
+  children
+}: {
+  tile: TileProps;
+  card?: string;
+  visible: boolean;
+  targetRef: Ref<HTMLDivElement>;
+  children: ReactNode;
+}) {
   const [mark, wide] = useWideMark();
   const ref = useMemo(() => mergeRefs<HTMLDivElement>(mark, targetRef), [mark, targetRef]);
   return (
     <div ref={ref} className="rp-dashboard-cell" data-visible={visible} {...tileAttributes(tile)}>
-      <WideCell value={wide}>{children}</WideCell>
+      <WideCell value={wide}>
+        <HeldCard value={visible ? undefined : card}>{children}</HeldCard>
+      </WideCell>
     </div>
   );
 }

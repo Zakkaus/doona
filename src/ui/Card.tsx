@@ -14,6 +14,9 @@ export const cardClass = (...layout: Array<string | false | undefined>) => cx('r
 // False inside a preview whose frame already names it (a gallery item): its cards and widget sections keep their names
 // for assistive technology but draw no title.
 export const TitlesShown = createContext(true);
+// The name dashboard.css gives the heights of a card that a dashboard cell holds off screen (DashboardTile), so the
+// preview there keeps the room its Skeleton held; the cards inside it name none.
+export const HeldCard = createContext<string | undefined>(undefined);
 
 type Tint = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export type TileHeader = {icon: ReactNode; tint: Tint; kind: 'metric' | 'control'; layout?: 'responsive'};
@@ -132,6 +135,7 @@ export function Card({
   const Heading = level === 2 ? 'h2' : 'h3';
   const Title = titleVariant === 'caption' ? 'span' : Heading;
   const shown = useContext(TitlesShown);
+  const held = useContext(HeldCard);
   const titled = title != null && !tile;
   const named = title != null && (shown || tile) && (
     <Title className={titleVariant === 'caption' ? 'rp-qlabel' : 'rp-h3'} id={headingId}>
@@ -160,6 +164,7 @@ export function Card({
       )}
       aria-labelledby={titled && shown && !label ? headingId : undefined}
       aria-label={label ?? (titled && !shown ? title : undefined)}
+      data-card={held}
     >
       <ActionHelp reason={reason}>
         {aside && tile && tile.kind === 'control' ? (
@@ -179,7 +184,9 @@ export function Card({
             {note}
           </p>
         )}
-        <ChartDescription.Provider value={note ? noteId : undefined}>{children}</ChartDescription.Provider>
+        <ChartDescription.Provider value={note ? noteId : undefined}>
+          <HeldCard value={undefined}>{children}</HeldCard>
+        </ChartDescription.Provider>
       </ActionHelp>
     </section>
   );

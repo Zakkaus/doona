@@ -1585,7 +1585,6 @@ test.describe('control row zh-TW', () => {
       await page.setViewportSize({width, height: 900});
       await page.goto('/#/activity');
       await expect(quick(page).locator('.rp-control-card')).toHaveCount(3);
-      await expect(quick(page).locator('.rp-control-card')).toHaveCount(3);
       const order = await cells(page);
       expect(order.map(cell => cell.id)).toEqual(['mode', 'global', 'status']);
       const details = await cells(page, 'details');

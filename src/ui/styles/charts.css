@@ -472,6 +472,38 @@
   display: block;
   padding-block: var(--rp-space-1);
 }
+/* An area chart's tip: the time over a column per figure, a row per series. Names start, figures end in tabular
+   digits, and every cell keeps one line. */
+.rp-boundedtip table {
+  border-collapse: collapse;
+  line-height: var(--rp-line-caption);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rp-boundedtip :is(th, td) {
+  padding: var(--rp-space-half) 0;
+  font-weight: 400;
+  text-align: end;
+}
+.rp-boundedtip :is(th, td) + :is(th, td) {
+  padding-inline-start: var(--rp-space-3);
+}
+.rp-boundedtip th:first-child {
+  text-align: start;
+}
+.rp-boundedtip thead th {
+  padding-block-end: var(--rp-space-1);
+}
+.rp-boundedtip tbody td {
+  font-weight: 700;
+}
+.rp-boundedtip .sw {
+  display: inline-block;
+  inline-size: 10px;
+  block-size: 10px;
+  margin-inline-end: var(--rp-space-2);
+  border-radius: var(--rp-r-xs);
+}
 
 /* On a phone a lead tile takes the first row alone and the rest pair up below it, so the odd last tile no longer fills
    its row. */

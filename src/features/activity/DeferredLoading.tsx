@@ -6,7 +6,7 @@ export function DeferredLoading({shape = 'rows', count = 1, ...props}: Partial<C
   return useContext(ResourcePreview) ? <span aria-hidden="true">—</span> : <SkeletonBody shape={shape} count={count} {...props} />;
 }
 // A chart's first load as Skeleton bars in the loaded body's own lines and heights, in the card's own gap.
-export function DeferredChart({parts}: {parts: Array<{line: 'body' | 'caption'} | {height: number}>}) {
+export function DeferredChart({parts}: {parts: Array<{line: 'body' | 'caption' | 'chart' | 'chart-stacked'} | {height: number}>}) {
   return useContext(ResourcePreview) ? (
     <span aria-hidden="true">—</span>
   ) : (

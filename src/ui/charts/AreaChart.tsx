@@ -1,4 +1,4 @@
-import {useCallback, useId, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useEffect, useId, useLayoutEffect, useMemo, useReducer, useRef, useState, type RefObject} from 'react';
 import {useT} from '../../i18n';
 import {localClockFormat, localMonthDayFormat, localTimeFormat} from '../../i18n/format';
 import {useContentSize} from '../hooks';
@@ -7,7 +7,7 @@ import {ChartTip, tipOverlay, useChartTip} from './tip';
 import {clockLabels, linearPosition, nearestIndex, placeLabels, sampleTicks, seriesStats, valueAxis} from './layout';
 import {pointerPosition, useSelection} from './interaction';
 import {Curve, Gradient} from './AreaCurve';
-import {seriesTipLines, type Series} from './Charts';
+import {seriesTipLines, stackedPlots, type Series} from './Charts';
 // Use three to six round clock ticks, excluding marks whose labels would overhang the axis.
 const tickSteps = [30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 21600, 43200, 86400].map(s => s * 1000);
 function clockTicks(since: number, until: number): {ticks: number[]; step: number} {
@@ -47,13 +47,29 @@ function useTickSizes(labels: string[], locale: string) {
   return sizes;
 }
 
-// The gap between the plot's end and the value axis's widest label (--rp-space-2).
-const valueGap = 8;
-// The room under the last plot for its time labels: a caption line (16px) and the --rp-space-1h gap above it.
-const timeRoom = 22;
-const timeGap = 6;
-// The gap between stacked plots (--rp-space-2).
-const plotGap = 8;
+// The plot's gaps, read from the spacing tokens (foundations.css) once its box is in the page: the value gutter's and
+// stacked plots' (--rp-space-2), the time labels' gap under the plot and their caption line, and the least room between
+// value labels, between round times, beside the plot's end times and between sample times.
+const gapTokens = {
+  value: '--rp-space-2',
+  plot: '--rp-space-2',
+  time: '--rp-space-1h',
+  caption: '--rp-line-caption',
+  label: '--rp-space-half',
+  clock: '--rp-space-4',
+  clockEnd: '--rp-space-6',
+  sample: '--rp-space-2'
+} as const;
+type Gaps = Record<keyof typeof gapTokens, number>;
+const noGaps = Object.fromEntries(Object.keys(gapTokens).map(key => [key, 0])) as Gaps;
+function useGaps(ref: RefObject<HTMLElement | null>) {
+  const [gaps, setGaps] = useState<Gaps | null>(null);
+  useLayoutEffect(() => {
+    const style = getComputedStyle(ref.current!);
+    setGaps(Object.fromEntries(Object.entries(gapTokens).map(([key, name]) => [key, parseFloat(style.getPropertyValue(name))])) as Gaps);
+  }, [ref]);
+  return gaps;
+}
 const known = (value: number | null): value is number => value !== null;
 
 export function AreaPlot({
@@ -62,7 +78,7 @@ export function AreaPlot({
   timestamps,
   fmt,
   locale,
-  height = 150,
+  height,
   baseline = 'zero',
   window,
   fill,
@@ -75,7 +91,10 @@ export function AreaPlot({
   timestamps: number[];
   fmt: (value: number) => string;
   locale: string;
+  // A bare plot's height, a sparkline's; any other takes the chart token's (--rp-chart-h, or --rp-chart-stacked-h for
+  // stacked plots) times its card's height step.
   height?: number;
+  // Under a legend, filling the card's height beyond the chart's (.rp-area-figure).
   fill?: boolean;
   window?: {since: number; until: number};
   baseline?: 'zero' | 'auto';
@@ -92,6 +111,8 @@ export function AreaPlot({
   const p = usePalette();
   const uid = useId();
   const [ref, size] = useContentSize<HTMLDivElement>(Math.round, 120);
+  const gaps = useGaps(ref);
+  const g = gaps ?? noGaps;
   const {tip, showAt, hide} = useChartTip();
   const [selectionPoint, setSelectionPoint] = useState<{index: number; y?: number} | null>(null);
   const selected = selectionPoint && selectionPoint.index < timestamps.length ? selectionPoint.index : null;
@@ -109,7 +130,8 @@ export function AreaPlot({
   // Use dates for day-scale windows and seconds for sub-minute tick spacing.
   const withDate = marks ? marks.step >= 86400000 : span > 36 * 60 * 60 * 1000;
   const clock = useMemo(() => (withDate ? localMonthDayFormat(locale) : localClockFormat(locale, withSeconds)), [locale, withSeconds, withDate]);
-  const panels = split && !bare && series.length > 1 ? series.length : 1;
+  const stacked = stackedPlots({split, bare, series});
+  const panels = stacked ? series.length : 1;
   const panelOf = (index: number) => (panels > 1 ? index : 0);
   const axes = useMemo(
     () =>
@@ -133,18 +155,18 @@ export function AreaPlot({
       : [...new Set((withSeconds ? [0, Math.round(last / 2), last] : [0, Math.round(last / 3), Math.round((2 * last) / 3), last]).map(i => timestamps[i]))];
   }, [marks, withSeconds, timestamps, xDomain]);
   const width = size?.width ?? 0;
-  const h = size?.height ?? height;
+  const h = size?.height ?? 0;
   // The plot starts at the box's start edge, the card's text inset, and its top at the box's top; the value axis labels
   // sit right-aligned in a gutter of the plot's own at its end, and the time labels under the last plot.
   const left = bare ? inset : 0;
   const top = bare ? 2 : 0;
-  const bottom = h - (bare ? 2 : timeRoom);
+  const bottom = h - (bare ? 2 : g.caption + g.time);
   // The value axis takes the room of its widest label and the gap before it, no more.
-  const right = width - (bare ? inset : Math.ceil(Math.max(0, ...ySizes.map(size => size.width))) + valueGap);
+  const right = width - (bare ? inset : Math.ceil(Math.max(0, ...ySizes.map(size => size.width))) + g.value);
   // Stacked plots share the height equally, one --rp-space-2 apart.
-  const band = (bottom - top - plotGap * (panels - 1)) / panels;
+  const band = (bottom - top - g.plot * (panels - 1)) / panels;
   const frames = axes.map((axis, k) => {
-    const start = top + k * (band + plotGap);
+    const start = top + k * (band + g.plot);
     return {top: start, bottom: start + band, y: (value: number) => linearPosition(value, axis.domain, [start + band, start])};
   });
   const x = useCallback((value: number) => linearPosition(value, xDomain, [left, right]), [xDomain, left, right]);
@@ -169,6 +191,28 @@ export function AreaPlot({
         ]
       : [];
   };
+  // The tip's table: a row per series, its current value, peak and average under a header that carries the time.
+  const tipTable = (at: number) => ({
+    head: [localTimeFormat(locale).format(timestamps[at]), t('ui.current'), t('ui.peak'), t('ui.average')],
+    rows: series.map((s, index) => {
+      const value = s.values[at];
+      const stat = stats[index];
+      return {swatch: s.color, cells: [s.label, value == null ? '—' : fmt(value), stat ? fmt(stat.peak) : '—', stat ? fmt(stat.average) : '—']};
+    })
+  });
+  // The tip over the page is placed from the plot's place in the viewport, so while it is open a scroll or a resize
+  // draws the chart again to place it anew.
+  const [, place] = useReducer((n: number) => n + 1, 0);
+  const open = selected !== null;
+  useEffect(() => {
+    if (!open) return;
+    globalThis.addEventListener('scroll', place, {capture: true, passive: true});
+    globalThis.addEventListener('resize', place);
+    return () => {
+      globalThis.removeEventListener('scroll', place, {capture: true});
+      globalThis.removeEventListener('resize', place);
+    };
+  }, [open]);
   useLayoutEffect(() => {
     if (selected === null || !series.some(s => s.values[selected] != null)) {
       hide();
@@ -181,12 +225,7 @@ export function AreaPlot({
       // The tip is drawn over the page, inside the viewport: a short plot's card would cut it off or cover its header.
       ...(ref.current ? tipOverlay(ref.current) : {bounds}),
       label: localTimeFormat(locale).format(timestamps[selected]),
-      lines: bare
-        ? seriesTipLines(series, selected, fmt, t)
-        : series.flatMap((s, index) => [
-            ...(s.values[selected] == null ? [] : [t('ui.valuePair', {label: s.label, value: fmt(s.values[selected]!)})]),
-            ...statLines(index)
-          ])
+      ...(bare ? {lines: seriesTipLines(series, selected, fmt, t)} : {lines: [], table: tipTable(selected)})
     });
   });
   const selection = useSelection(timestamps.length, select, clear);
@@ -201,27 +240,27 @@ export function AreaPlot({
             ticks.map((value, index) => ({position: x(value), width: xSizes[index].width})),
             left,
             right,
-            16,
-            24
+            g.clock,
+            g.clockEnd
           )
         : // The first label starts at the plot's start and the last ends at its end.
           sampleTicks(
             ticks.map(x),
             xSizes.map(size => size.width),
-            8,
+            g.sample,
             right
           );
-  // Each plot labels its top and middle, and its bottom where that is not zero, inside the plot's own height; a plot
-  // too short for two keeps its top.
+  // Each plot labels its top, and its middle from zero or else its bottom, inside the plot's own height: two labels at
+  // most, never overlapping, and a plot too short for two keeps its top.
   const yLabels =
     ySizes.length !== yTexts.length
       ? []
       : frames.flatMap((frame, k) =>
           placeLabels(
-            (axes[k].ticks[0] === 0 ? [2, 1] : [2, 1, 0]).map(i => ({index: k * 3 + i, position: frame.y(axes[k].ticks[i]), size: ySizes[k * 3 + i].height})),
+            (axes[k].ticks[0] === 0 ? [2, 1] : [2, 0]).map(i => ({index: k * 3 + i, position: frame.y(axes[k].ticks[i]), size: ySizes[k * 3 + i].height})),
             frame.top,
             frame.bottom,
-            2
+            g.label
           )
         );
   const described = !bare && stats.some(Boolean);
@@ -229,19 +268,12 @@ export function AreaPlot({
     <div
       ref={ref}
       className="rp-area-plot"
-      style={{
-        height: fill ? undefined : height,
-        // Under a legend (.rp-area-figure), the plot gives a wrapped legend's lines their room.
-        minHeight: fill ? `var(--area-min, ${height}px)` : undefined,
-        width: '100%',
-        flex: fill ? '1 0 auto' : undefined,
-        // Filling, the box takes its height from the card, never from the plot it last drew, so it can shrink again.
-        contain: fill ? 'size' : undefined,
-        position: 'relative'
-      }}
+      data-stacked={stacked || undefined}
+      data-fill={fill || undefined}
+      style={bare ? {height} : undefined}
       onPointerLeave={selection.onPointerLeave}
     >
-      {timestamps.length > 0 && size && (
+      {timestamps.length > 0 && size && gaps && (
         <>
           <ChartTip tip={tip} />
           <svg
@@ -317,7 +349,7 @@ export function AreaPlot({
               <>
                 <g className="rp-area-x-ticks">
                   {xTicks.map(({index, position}) => (
-                    <text key={index} x={position} y={bottom + timeGap} className="rp-area-tick" textAnchor="middle">
+                    <text key={index} x={position} y={bottom + g.time} className="rp-area-tick" textAnchor="middle">
                       <tspan x={position} dy="0.71em">
                         {tickLabels[index]}
                       </tspan>
