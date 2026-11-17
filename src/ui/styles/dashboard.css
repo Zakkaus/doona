@@ -12,6 +12,12 @@
 .rp-dashboard-body > .rp-card {
   flex: 1;
 }
+/* A donut in a card its row makes taller, as the outbounds card beside the traffic chart, sits in the middle of the
+   room under the title rather than leaving a band below it. */
+.rp-dashboard-cell > .rp-card > .rp-donut {
+  flex: 1 0 auto;
+  align-content: center;
+}
 .rp-module-actions {
   display: flex;
   flex-wrap: wrap;
@@ -144,15 +150,16 @@
   grid-column: 1 / -1;
 }
 
-/* A Skeleton card, named for its module, at the height its loaded card takes. The height follows the width of the
+/* A Skeleton card, named for its module, at the height its loaded card takes, and an off-screen card's preview at
+   least as tall (DashboardTile's `card`), so neither moves the cards below when the loaded card replaces it. The height follows the width of the
    card's cell, which the cell's tile container (above) tells as the cards' own container queries do, and the columns
    its section has at the viewport's width. A card holding a control, which every titled card's title line is, is taller
    by what the control takes over 32px, which is its height on a phone (--x). A module not named here is 260px. */
 [data-card] {
   --x: calc(var(--rp-control) - 32px);
 }
-/* A charted card's height step multiplies the chart (dashboardSizing.ts), whose standard height (--chart) repeats the one
-   ActivityCard.tsx draws at scale 1; the rest of the card stays. The saved-height cases in page-skeletons.spec.ts
+/* A charted card's height step multiplies the chart (dashboardSizing.ts), whose standard height (--chart) is the chart
+   token the loaded card draws at scale 1; the rest of the card stays. The saved-height cases in page-skeletons.spec.ts
    catch the two drifting apart. */
 .rp-dashboard-cell[data-height='short'] {
   --rp-chart-scale: 0.75;
@@ -160,11 +167,28 @@
 .rp-dashboard-cell[data-height='tall'] {
   --rp-chart-scale: 2;
 }
-.rp-skeleton-cards > .rp-card[data-card] {
-  height: calc(var(--h, 260px) + var(--x) + var(--chart, 0px) * (var(--rp-chart-scale, 1) - 1));
+:is(.rp-skeleton-cards, .rp-dashboard-cell[data-visible='false']) > .rp-card[data-card] {
+  --held: calc(var(--h, 260px) + var(--x) + var(--chart, 0px) * (var(--rp-chart-scale, 1) - 1));
 }
-:is([data-card='history'], [data-card='memory']) {
-  --chart: 144px;
+.rp-skeleton-cards > .rp-card[data-card] {
+  height: var(--held);
+}
+.rp-dashboard-cell[data-visible='false'] > .rp-card[data-card] {
+  min-block-size: var(--held);
+}
+/* An area chart card: its border and padding, a phone's title line (32px; --x adds a taller control), the body's gap,
+   the legend's line and the gap under it, and the chart. */
+:is([data-card='history'], [data-card='outbounds']) {
+  --chart-card: calc(2px + 2 * var(--rp-space-4) + 32px + 2 * var(--rp-space-3) + var(--rp-line-body) + var(--chart, 0px));
+}
+[data-card='history'] {
+  --h: var(--chart-card);
+}
+[data-card='history'] {
+  --chart: var(--rp-chart-stacked-h);
+}
+[data-card='memory'] {
+  --chart: var(--rp-chart-h);
 }
 :is([data-card='mode'], [data-card='global'], [data-card='status']) {
   --h: 66px;
@@ -179,9 +203,6 @@
     --h: 146px;
   }
 }
-[data-card='history'] {
-  --h: 254px;
-}
 [data-card='outbounds'] {
   --h: 98px;
 }
@@ -195,11 +216,12 @@
     --h: 214px;
   }
 }
-/* The traffic pair side by side is as tall as the taller of the two: the traffic card, or the outbounds list, which
-   takes more lines the narrower it is. */
+/* The traffic pair side by side is as tall as the taller of the two: the traffic card, whose height the outbounds list
+   then takes as a chart card's, or the outbounds list, which takes more lines the narrower it is. */
 @media (min-width: 1024px) {
-  :is([data-card='history'], [data-card='outbounds']) {
-    --h: 254px;
+  [data-card='outbounds'] {
+    --chart: var(--rp-chart-stacked-h);
+    --h: var(--chart-card);
   }
   @container rp-tile (width < 656px) {
     [data-card='history'] {
@@ -230,6 +252,7 @@
     --h: 260px;
   }
 }
+/* Memory's chart card takes the height of the notices list beside it. */
 :is([data-card='memory'], [data-card='notices']) {
   --h: 260px;
 }
@@ -250,10 +273,10 @@
     --h: 154px;
   }
 }
+/* On a phone the traffic card's range control takes a line under its title. */
 @media (max-width: 599.98px) {
   [data-card='history'] {
-    --h: 150px;
-    --x: 0px;
+    --h: calc(var(--chart-card) + var(--rp-control) + var(--rp-space-3));
   }
   [data-card='nodeLatency'] {
     --h: 602px;
@@ -452,8 +475,8 @@
 }
 
 /* A value tile's, a key-value card's or a compact chart's statistics, each series' peak and average, show only on a card
-   two thirds of its row or wider, by its chosen width or, for Auto, by the box its footprint has now (data-wide, see
-   packSection), which takes in a phone's whole row. Elsewhere the wrapper adds no box. Each figure drops the tile's box.
+   two thirds of its row or wider by the box packing measured (data-wide, see packSection), whatever width was chosen,
+   which takes in a phone's whole row. Elsewhere the wrapper adds no box. Each figure drops the tile's box.
    From tablet width they take a column (--rp-chart-facts) beside the readings or chart, each one compact line, its
    label at the start and its value at the card's end, never wrapping, so four figures stay within a short chart's
    height (90px). An area chart marks them on its plot and says them in its tip instead. */
@@ -487,28 +510,28 @@
   line-height: var(--rp-space-5);
 }
 @media (min-width: 768px) {
-  .rp-dashboard-cell:is([data-width='2/3'], [data-width='full'], [data-wide]) .rp-chart-stats:has(> .rp-facts) {
+  .rp-dashboard-cell[data-wide] .rp-chart-stats:has(> .rp-facts) {
     display: grid;
     flex: 1 0 auto;
     grid-template-columns: minmax(0, 1fr) var(--rp-chart-facts);
     gap: var(--rp-space-3) var(--rp-space-4);
     align-items: start;
   }
-  .rp-dashboard-cell:is([data-width='2/3'], [data-width='full'], [data-wide]) :is(.rp-chart-stats, .rp-tile-body) > .rp-strip.rp-facts {
+  .rp-dashboard-cell[data-wide] :is(.rp-chart-stats, .rp-tile-body) > .rp-strip.rp-facts {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
     align-content: start;
   }
-  .rp-dashboard-cell:is([data-width='2/3'], [data-width='full'], [data-wide]) .rp-tile-body > .rp-facts {
+  .rp-dashboard-cell[data-wide] .rp-tile-body > .rp-facts {
     flex: none;
     min-inline-size: calc((100% - 2 * var(--rp-space-3)) / 3);
     align-self: start;
   }
-  .rp-dashboard-cell:is([data-width='2/3'], [data-width='full'], [data-wide])[data-tile='stacked'] .rp-tile-body {
+  .rp-dashboard-cell[data-wide][data-tile='stacked'] .rp-tile-body {
     grid-template-columns: minmax(0, 2fr) minmax(max-content, 1fr);
   }
-  .rp-dashboard-cell:is([data-width='2/3'], [data-width='full'], [data-wide])[data-tile='stacked'] .rp-tile-body > .rp-facts {
+  .rp-dashboard-cell[data-wide][data-tile='stacked'] .rp-tile-body > .rp-facts {
     grid-area: 1 / 2 / span 2;
   }
 }

@@ -13,7 +13,7 @@ import {GettingStarted, RuntimeAlert, useGettingStarted} from '../../features/ac
 import {CardJump} from './CardJump';
 import {WidgetCard} from './WidgetCard';
 import '../../ui/styles/dashboard.css';
-import {savedCards} from './DashboardSkeleton';
+import {cardOf, savedCards} from './DashboardSkeleton';
 const DashboardEditor = lazy(() => import('./Editors').then(module => ({default: module.DashboardEditor})));
 const DashboardActions = lazy(() => import('./Editors').then(module => ({default: module.DashboardActions})));
 export function Activity({query}: PageProps) {
@@ -77,7 +77,7 @@ export function Activity({query}: PageProps) {
 function DashboardModule({item, onChange}: {item: Widget; onChange: (item: Widget) => void}) {
   const [ref, visible] = useNearViewport(undefined, 0);
   return (
-    <DashboardTile tile={tileOf(item)} visible={visible} targetRef={ref}>
+    <DashboardTile tile={tileOf(item)} card={cardOf(item)} visible={visible} targetRef={ref}>
       <ResourcePreview value={!visible}>
         <WidgetCard item={item} onChange={onChange} />
       </ResourcePreview>

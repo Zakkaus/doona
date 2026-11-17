@@ -110,7 +110,7 @@ test('chart data tooltips are reachable without pointer interaction', async ({pa
   await chart.focus();
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('body > .rp-charttip-bounded')).toBeVisible();
-  await expect(page.locator('body > .rp-charttip-bounded li').first()).toContainText(/\d/);
+  await expect(page.locator('body > .rp-charttip-bounded td').first()).toContainText(/\d/);
   const donut = page.locator('[data-module=outbounds] .rp-donut');
   if (!(await donut.count())) return;
   const surface = donut.locator('svg');
@@ -193,7 +193,8 @@ test('idle traffic has distinct fractional rate labels', async ({page}) => {
   });
   await page.goto('/#/activity');
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
-  await expect(traffic.locator('.rp-area-y-ticks text')).toHaveText(['600 B/s', '1.2 KB/s']);
+  // Download and upload each take a plot, labelled at its top and middle.
+  await expect(traffic.locator('.rp-area-y-ticks text')).toHaveText(['1.2 KB/s', '600 B/s', '1.2 KB/s', '600 B/s']);
 });
 
 test('charts are named and icon buttons show their tooltip on keyboard focus', async ({page}) => {

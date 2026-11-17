@@ -20,17 +20,17 @@ import {scaleOf} from './dashboardSizing';
 
 // A chart's legend carries the live value beside its colour, so a charted widget lists the rates once, there.
 export const chartedRates = (item: Pick<Widget, 'id' | 'size'>, form: ModuleForm) => registry[item.id].rate === true && form !== 'kv' && item.size !== 'small';
-// A dashboard card two thirds of a row or wider lists its compact chart's or readings' peak and average beside them (see
-// dashboard.css): by its chosen width, or by the box its footprint has now, which on a phone is the whole row.
-function useWide(item: Widget) {
+// A dashboard card two thirds of a row or wider, by the box packing measured (data-wide), lists its compact chart's or
+// readings' peak and average beside them (see dashboard.css).
+function useWide() {
   const surface = useContext(WidgetSurface);
   const cell = useContext(WideCell);
-  return surface === 'dashboard' && (item.width === '2/3' || item.width === 'full' || cell);
+  return surface === 'dashboard' && cell;
 }
 export function RuntimeWidget({item, form}: {item: Widget; form: ModuleForm}) {
   const t = useT();
   const locale = LOCALE[useLang()];
-  const wide = useWide(item);
+  const wide = useWide();
   const runtime = useRuntime();
   const r = runtime.data;
   const rates = r?.traffic.rates;
@@ -196,7 +196,7 @@ export function MemoryWidget({item, form}: {item: Widget; form: ModuleForm}) {
   const t = useT();
   const locale = LOCALE[useLang()];
   const surface = useContext(WidgetSurface);
-  const wide = useWide(item);
+  const wide = useWide();
   const memory = useRuntimeMemory();
   const metrics = useCapabilities().data?.resources.runtime_memory?.metrics ?? [];
   const rss = metrics.includes('process.rss_bytes');

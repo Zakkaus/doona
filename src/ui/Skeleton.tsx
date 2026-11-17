@@ -135,9 +135,18 @@ export function SkeletonBody({
   );
 }
 // One Skeleton bar for a part a feature lays out beside its real labels: a control at the control height, a line of
-// body or caption text, or a block `height` pixels tall such as a small chart, or its height wide and then on a phone
-// for a note that takes more lines there. Inert and hidden from assistive technology; a SkeletonGroup round it reads the status.
-export function SkeletonBar({line, width, height}: {line?: 'body' | 'caption'; width?: number | string; height?: number | readonly [number, number]}) {
+// body or caption text, an area chart at its height, one plot (`chart`) or stacked plots (`chart-stacked`), or a block
+// `height` pixels tall such as a small chart, or its height wide and then on a phone for a note that takes more lines
+// there. Inert and hidden from assistive technology; a SkeletonGroup round it reads the status.
+export function SkeletonBar({
+  line,
+  width,
+  height
+}: {
+  line?: 'body' | 'caption' | 'chart' | 'chart-stacked';
+  width?: number | string;
+  height?: number | readonly [number, number];
+}) {
   return (
     <span
       className={cx('rp-skeleton-text', 'rp-skeleton-bar', line ?? 'control')}

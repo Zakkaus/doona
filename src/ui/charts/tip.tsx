@@ -4,6 +4,8 @@ import {pointerPosition} from './interaction';
 import {useContentSize} from '../hooks';
 import {NodeName} from '../NodeName';
 
+type TipTable = {head: string[]; rows: Array<{swatch: string; cells: string[]}>};
+const sameTable = (a?: TipTable, b?: TipTable) => a === b || (!!a && !!b && JSON.stringify(a) === JSON.stringify(b));
 type Tip = {
   x: number;
   y: number;
@@ -11,6 +13,9 @@ type Tip = {
   lines: string[];
   nodeName?: boolean;
   label?: string;
+  // In place of the lines, a table: a header row whose first cell is the time, then a row per series, its name and
+  // swatch first.
+  table?: TipTable;
   bounds?: {x: number; y: number; width: number; height: number};
   // The chart's place in the viewport, for a tip drawn over the page rather than inside its card.
   origin?: {x: number; y: number};
@@ -31,6 +36,7 @@ const same = (a: Tip | null, b: Tip | null) =>
     a.bounds?.width === b.bounds?.width &&
     a.origin?.x === b.origin?.x &&
     a.origin?.y === b.origin?.y &&
+    sameTable(a.table, b.table) &&
     a.lines.length === b.lines.length &&
     a.lines.every((line, i) => line === b.lines[i]));
 
@@ -141,12 +147,41 @@ function BoundedTip({tip}: {tip: Tip}) {
     >
       {/* Never wider than the bounds, so a narrow card wraps it instead of cutting it off. */}
       <div role="status" aria-live="polite" className="rp-boundedtip" style={{maxInlineSize: bounds.width}}>
-        <p>{tip.label}</p>
-        <ul>
-          {tip.lines.map((line, index) => (
-            <li key={index}>{line}</li>
-          ))}
-        </ul>
+        {tip.table ? (
+          <table>
+            <thead>
+              <tr>
+                {tip.table.head.map((cell, index) => (
+                  <th key={index} scope="col">
+                    {cell}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {tip.table.rows.map(({swatch, cells: [name, ...values]}) => (
+                <tr key={name}>
+                  <th scope="row">
+                    <span className="sw" style={{background: swatch}} />
+                    {name}
+                  </th>
+                  {values.map((value, index) => (
+                    <td key={index}>{value}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <>
+            <p>{tip.label}</p>
+            <ul>
+              {tip.lines.map((line, index) => (
+                <li key={index}>{line}</li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
     </div>
   );

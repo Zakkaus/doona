@@ -82,6 +82,13 @@
     monospace;
   --rp-line-body: 20px;
   --rp-line-caption: 16px;
+  /* An area chart: its plot and the time labels under it. A chart of stacked plots, one per series, is a third taller,
+     so each of its two plots is about 80px. */
+  --rp-chart-h: 144px;
+  --rp-chart-stacked-h: calc(var(--rp-chart-h) * 4 / 3);
+  /* A value tile's widest value, 888 MB/s, at the value type in every locale; a sparkline beside a value starts after
+     it (cards-dashboard.css, dashboard.css). */
+  --rp-tile-value: 98px;
   --rp-focus-width: 2px;
   --rp-focus-color: var(--rp-accent);
   --rp-focus-offset: var(--rp-space-half);
