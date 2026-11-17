@@ -4,22 +4,10 @@ import {localClockFormat, localMonthDayFormat, localTimeFormat} from '../../i18n
 import {useContentSize} from '../hooks';
 import {usePalette} from './palette';
 import {ChartTip, tipOverlay, useChartTip} from './tip';
-import {linearPosition, visibleTicks, nearestIndex, sampleTicks} from './layout';
+import {clockLabels, linearPosition, nearestIndex, placeLabels, sampleTicks, seriesStats, valueAxis} from './layout';
 import {pointerPosition, useSelection} from './interaction';
 import {Curve, Gradient} from './AreaCurve';
 import {seriesTipLines, type Series} from './Charts';
-const niceMax = (v: number) => {
-  const p = Math.pow(10, Math.floor(Math.log10(v)));
-  const n = v / p;
-  const s = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find(k => n <= k) ?? 10;
-  return s * p;
-};
-const niceStep = (range: number) => {
-  const p = Math.pow(10, Math.floor(Math.log10(Math.max(range, 1e-9))));
-  const n = range / p;
-  const s = n <= 1 ? 0.2 : n <= 2 ? 0.5 : n <= 5 ? 1 : 2;
-  return s * p;
-};
 // Use three to six round clock ticks, excluding marks whose labels would overhang the axis.
 const tickSteps = [30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 21600, 43200, 86400].map(s => s * 1000);
 function clockTicks(since: number, until: number): {ticks: number[]; step: number} {
@@ -44,7 +32,8 @@ function useTickSizes(labels: string[], locale: string) {
     measured.current = key;
     const el = document.createElement('span');
     el.className = 'rp-area-tick';
-    Object.assign(el.style, {position: 'absolute', top: '-20000px', whiteSpace: 'pre'});
+    // One caption line high, as the labels set in a card (dashboard.css), whatever the body's line height.
+    Object.assign(el.style, {position: 'absolute', top: '-20000px', whiteSpace: 'pre', lineHeight: 'var(--rp-line-caption)'});
     document.body.appendChild(el);
     setSizes(
       labels.map(label => {
@@ -60,6 +49,12 @@ function useTickSizes(labels: string[], locale: string) {
 
 // The gap between the plot's end and the value axis's widest label (--rp-space-2).
 const valueGap = 8;
+// The room under the last plot for its time labels: a caption line (16px) and the --rp-space-1h gap above it.
+const timeRoom = 22;
+const timeGap = 6;
+// The gap between stacked plots (--rp-space-2).
+const plotGap = 8;
+const known = (value: number | null): value is number => value !== null;
 
 export function AreaPlot({
   label,
@@ -71,6 +66,7 @@ export function AreaPlot({
   baseline = 'zero',
   window,
   fill,
+  split = false,
   bare = false,
   inset = 2
 }: {
@@ -83,6 +79,10 @@ export function AreaPlot({
   fill?: boolean;
   window?: {since: number; until: number};
   baseline?: 'zero' | 'auto';
+  // One plot per series, stacked over one time axis, each with a value axis of its own: for series that measure
+  // different things in one unit, such as download and upload, whose scales can lie ten times apart. Series that share
+  // a scale, such as two measures of one memory, share one plot.
+  split?: boolean;
   // Without axis labels, the plot filling its box as a sparkline does: the panel's chart a sparkline high.
   bare?: boolean;
   // A bare plot's inline margin, as a sparkline's `inset`.
@@ -109,56 +109,68 @@ export function AreaPlot({
   // Use dates for day-scale windows and seconds for sub-minute tick spacing.
   const withDate = marks ? marks.step >= 86400000 : span > 36 * 60 * 60 * 1000;
   const clock = useMemo(() => (withDate ? localMonthDayFormat(locale) : localClockFormat(locale, withSeconds)), [locale, withSeconds, withDate]);
-  const {yDomain, yTicks} = useMemo(() => {
-    const values = series.flatMap(s => s.values.filter((v): v is number => v !== null));
-    let lo = 0;
-    let max = niceMax(Math.max(1, ...values) * 1.08);
-    if (baseline === 'auto' && values.length) {
-      const min = Math.min(...values);
-      const top = Math.max(...values);
-      const step = niceStep(Math.max(top - min, top * 0.02, 1));
-      lo = Math.max(0, Math.floor(min / step) * step - step);
-      max = Math.ceil(top / step) * step + step;
-    }
-    return {yDomain: [lo, max], yTicks: baseline === 'auto' ? [lo, (lo + max) / 2, max] : [max / 2, max]};
-  }, [series, baseline]);
-  // The axis labels the plot's two ends and, between them, round clock times or evenly spaced samples.
+  const panels = split && !bare && series.length > 1 ? series.length : 1;
+  const panelOf = (index: number) => (panels > 1 ? index : 0);
+  const axes = useMemo(
+    () =>
+      Array.from({length: panels}, (_, k) =>
+        valueAxis(
+          (panels > 1 ? [series[k]] : series).flatMap(s => s.values.filter(known)),
+          baseline
+        )
+      ),
+    [series, baseline, panels]
+  );
+  const stats = useMemo(() => series.map(s => seriesStats(s.values)), [series]);
+  // Each plot's tick labels, three a plot: its bottom, middle and top.
+  const yTexts = useMemo(() => axes.flatMap(axis => axis.ticks.map(fmt)), [axes, fmt]);
+  const ySizes = useTickSizes(yTexts, locale);
+  // The time axis labels round clock times between the plot's ends, or evenly spaced samples.
   const ticks = useMemo(() => {
     const last = timestamps.length - 1;
     return marks
-      ? [...new Set([xDomain[0], ...marks.ticks, xDomain[1]])]
+      ? [xDomain[0], ...marks.ticks, xDomain[1]]
       : [...new Set((withSeconds ? [0, Math.round(last / 2), last] : [0, Math.round(last / 3), Math.round((2 * last) / 3), last]).map(i => timestamps[i]))];
   }, [marks, withSeconds, timestamps, xDomain]);
-  const yLabels = useMemo(() => yTicks.map(fmt), [yTicks, fmt]);
-  const ySizes = useTickSizes(yLabels, locale);
   const width = size?.width ?? 0;
   const h = size?.height ?? height;
-  // The plot starts at the box's start edge, the card's text inset, and its top at the box's top, level with the
-  // figures beside it; the value axis labels sit right-aligned in a gutter of the plot's own at its end.
+  // The plot starts at the box's start edge, the card's text inset, and its top at the box's top; the value axis labels
+  // sit right-aligned in a gutter of the plot's own at its end, and the time labels under the last plot.
   const left = bare ? inset : 0;
   const top = bare ? 2 : 0;
-  const bottom = h - (bare ? 2 : 30);
+  const bottom = h - (bare ? 2 : timeRoom);
   // The value axis takes the room of its widest label and the gap before it, no more.
   const right = width - (bare ? inset : Math.ceil(Math.max(0, ...ySizes.map(size => size.width))) + valueGap);
+  // Stacked plots share the height equally, one --rp-space-2 apart.
+  const band = (bottom - top - plotGap * (panels - 1)) / panels;
+  const frames = axes.map((axis, k) => {
+    const start = top + k * (band + plotGap);
+    return {top: start, bottom: start + band, y: (value: number) => linearPosition(value, axis.domain, [start + band, start])};
+  });
   const x = useCallback((value: number) => linearPosition(value, xDomain, [left, right]), [xDomain, left, right]);
-  const y = useCallback((value: number) => linearPosition(value, yDomain as [number, number], [bottom, top]), [yDomain, bottom, top]);
   const xs = useMemo(() => timestamps.map(x), [timestamps, x]);
-  const curves = useMemo(
-    () => series.map(s => timestamps.map((_, i) => (s.values[i] == null ? null : {x: xs[i], y: y(s.values[i]!)}))),
-    [series, timestamps, xs, y]
-  );
+  const yOf = (index: number, value: number) => frames[panelOf(index)].y(value);
+  const curves = series.map((s, index) => timestamps.map((_, i) => (s.values[i] == null ? null : {x: xs[i], y: yOf(index, s.values[i]!)})));
   const bounds = {x: left, y: top, width: right - left, height: bottom - top};
   const select = (index: number, pointerY?: number) => setSelectionPoint({index, y: pointerY});
   const clear = () => {
     setSelectionPoint(null);
     hide();
   };
+  // Each series' peak and average over the range, said by the tip and the chart's description rather than written on
+  // the card: the plot marks them with a dot and a dashed line.
+  const statLines = (index: number) => {
+    const stat = stats[index];
+    const name = series[index].label;
+    return stat && !bare
+      ? [
+          t('ui.valuePair', {label: t('widgets.peak', {series: name}), value: fmt(stat.peak)}),
+          t('ui.valuePair', {label: t('widgets.average', {series: name}), value: fmt(stat.average)})
+        ]
+      : [];
+  };
   useLayoutEffect(() => {
-    if (selected === null) {
-      hide();
-      return;
-    }
-    if (!series.some(s => s.values[selected] != null)) {
+    if (selected === null || !series.some(s => s.values[selected] != null)) {
       hide();
       return;
     }
@@ -169,36 +181,58 @@ export function AreaPlot({
       // The tip is drawn over the page, inside the viewport: a short plot's card would cut it off or cover its header.
       ...(ref.current ? tipOverlay(ref.current) : {bounds}),
       label: localTimeFormat(locale).format(timestamps[selected]),
-      lines: seriesTipLines(series, selected, fmt, t)
+      lines: bare
+        ? seriesTipLines(series, selected, fmt, t)
+        : series.flatMap((s, index) => [
+            ...(s.values[selected] == null ? [] : [t('ui.valuePair', {label: s.label, value: fmt(s.values[selected]!)})]),
+            ...statLines(index)
+          ])
     });
   });
   const selection = useSelection(timestamps.length, select, clear);
   const tickLabels = useMemo(() => ticks.map(value => clock.format(value)), [ticks, clock]);
   const xSizes = useTickSizes(tickLabels, locale);
-  // The first label starts at the plot's start and the last ends at its end.
-  const xTicks = sampleTicks(
-    ticks.map(x),
-    xSizes.map(size => size.width),
-    marks ? 16 : 8,
-    right
-  );
-  // Every label stays inside the box: the top one hangs from the plot's top edge, level with the figures beside it.
-  const yTicksVisible = visibleTicks(
-    yTicks.map(y),
-    ySizes.map(size => size.height),
-    top,
-    h,
-    5,
-    false
-  );
-  const grid = [...new Set([...(bare ? yTicks : yTicksVisible.map(tick => yTicks[tick.index])).map(y), top, bottom])];
+  const xTicks =
+    xSizes.length !== ticks.length
+      ? []
+      : marks
+        ? // Round times, never crowding each other, and the plot's first and last times only where they stand clear.
+          clockLabels(
+            ticks.map((value, index) => ({position: x(value), width: xSizes[index].width})),
+            left,
+            right,
+            16,
+            24
+          )
+        : // The first label starts at the plot's start and the last ends at its end.
+          sampleTicks(
+            ticks.map(x),
+            xSizes.map(size => size.width),
+            8,
+            right
+          );
+  // Each plot labels its top and middle, and its bottom where that is not zero, inside the plot's own height; a plot
+  // too short for two keeps its top.
+  const yLabels =
+    ySizes.length !== yTexts.length
+      ? []
+      : frames.flatMap((frame, k) =>
+          placeLabels(
+            (axes[k].ticks[0] === 0 ? [2, 1] : [2, 1, 0]).map(i => ({index: k * 3 + i, position: frame.y(axes[k].ticks[i]), size: ySizes[k * 3 + i].height})),
+            frame.top,
+            frame.bottom,
+            2
+          )
+        );
+  const described = !bare && stats.some(Boolean);
   return (
     <div
       ref={ref}
       className="rp-area-plot"
       style={{
         height: fill ? undefined : height,
-        minHeight: fill ? height : undefined,
+        // Under a legend (.rp-area-figure), the plot gives a wrapped legend's lines their room.
+        minHeight: fill ? `var(--area-min, ${height}px)` : undefined,
         width: '100%',
         flex: fill ? '1 0 auto' : undefined,
         // Filling, the box takes its height from the card, never from the plot it last drew, so it can shrink again.
@@ -218,6 +252,7 @@ export function AreaPlot({
             style={{display: 'block', overflow: 'visible'}}
             role="application"
             aria-label={label}
+            aria-describedby={described ? uid + 'desc' : undefined}
             tabIndex={0}
             onFocus={selection.onFocus}
             onBlur={selection.onBlur}
@@ -232,10 +267,13 @@ export function AreaPlot({
               select(index, py);
             }}
           >
+            {described && <desc id={uid + 'desc'}>{series.flatMap((_, index) => statLines(index)).join(t('ui.separator'))}</desc>}
             <g className="rp-area-grid">
-              {grid.map(value => (
-                <line key={value} x1={left} x2={right} y1={value} y2={value} stroke={p['hl-med']} strokeDasharray="2 4" fill="none" />
-              ))}
+              {frames.flatMap((frame, k) =>
+                [...new Set(axes[k].ticks.map(frame.y))].map(value => (
+                  <line key={`${k}-${value}`} x1={left} x2={right} y1={value} y2={value} stroke={p['hl-med']} strokeOpacity={0.6} fill="none" />
+                ))
+              )}
             </g>
             <defs>
               {series.map((s, k) => (
@@ -243,16 +281,43 @@ export function AreaPlot({
               ))}
             </defs>
             {series.map((s, k) => (
-              <Curve key={s.label} points={curves[k]} baseline={y(Math.max(0, yDomain[0]))} color={s.color} id={uid + k} strokeWidth={2} />
+              <Curve
+                key={s.label}
+                points={curves[k]}
+                baseline={yOf(k, Math.max(0, axes[panelOf(k)].domain[0]))}
+                color={s.color}
+                id={uid + k}
+                strokeWidth={bare ? 2 : 1.75}
+              />
             ))}
-            {selected !== null && (
-              <path d={`M${xs[selected]},${top}L${xs[selected]},${bottom}`} stroke={p.subtle} strokeDasharray="3 3" fill="none" pointerEvents="none" />
-            )}
+            {!bare &&
+              series.map((s, k) => {
+                const stat = stats[k];
+                if (!stat) return null;
+                const average = yOf(k, stat.average);
+                return (
+                  <g key={s.label} className="rp-area-marks" pointerEvents="none">
+                    <line x1={left} x2={right} y1={average} y2={average} stroke={s.color} strokeOpacity={0.55} strokeDasharray="4 4" />
+                    <circle cx={xs[stat.at]} cy={yOf(k, stat.peak)} r={3} fill={s.color} stroke={p.surface} strokeWidth={1.5} />
+                  </g>
+                );
+              })}
+            {selected !== null &&
+              frames.map(frame => (
+                <path
+                  key={frame.top}
+                  d={`M${xs[selected]},${frame.top}L${xs[selected]},${frame.bottom}`}
+                  stroke={p.subtle}
+                  strokeDasharray="3 3"
+                  fill="none"
+                  pointerEvents="none"
+                />
+              ))}
             {!bare && (
               <>
                 <g className="rp-area-x-ticks">
                   {xTicks.map(({index, position}) => (
-                    <text key={index} x={position} y={bottom + 8} className="rp-area-tick" textAnchor="middle">
+                    <text key={index} x={position} y={bottom + timeGap} className="rp-area-tick" textAnchor="middle">
                       <tspan x={position} dy="0.71em">
                         {tickLabels[index]}
                       </tspan>
@@ -260,10 +325,10 @@ export function AreaPlot({
                   ))}
                 </g>
                 <g className="rp-area-y-ticks">
-                  {yTicksVisible.map(({index, position}) => (
+                  {yLabels.map(({index, position}) => (
                     <text key={index} x={width} y={position} className="rp-area-tick" textAnchor="end">
                       <tspan x={width} dy="0.355em">
-                        {fmt(yTicks[index])}
+                        {yTexts[index]}
                       </tspan>
                     </text>
                   ))}
@@ -271,9 +336,9 @@ export function AreaPlot({
               </>
             )}
             {selected !== null &&
-              series.map(s =>
+              series.map((s, k) =>
                 s.values[selected] == null ? null : (
-                  <circle key={s.label} cx={xs[selected]} cy={y(s.values[selected]!)} r={4} fill={s.color} stroke={p.base} strokeWidth={2} />
+                  <circle key={s.label} cx={xs[selected]} cy={yOf(k, s.values[selected]!)} r={4} fill={s.color} stroke={p.base} strokeWidth={2} />
                 )
               )}
           </svg>

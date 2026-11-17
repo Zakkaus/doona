@@ -434,12 +434,16 @@ test('activity draws all eight charts without loading a chart vendor', async ({p
 for (const lang of ['zh-TW', 'zh-CN']) {
   test.describe(`activity tooltips in ${lang}`, () => {
     test.use({storage: {'doona-lang': lang}});
-    test('sorts translated series names consistently', async ({page}) => {
+    test('lists translated series in the legend order', async ({page}) => {
       await page.goto('/#/activity');
       const memory = page.locator('[data-module=memory]');
       await memory.scrollIntoViewIfNeeded();
       await memory.getByRole('application').focus();
-      await expect(page.locator('body > .rp-charttip-bounded li').first()).toContainText(/^cgroup/);
+      const first = (await memory
+        .locator('.rp-legend .it')
+        .first()
+        .evaluate(entry => entry.childNodes[1].textContent))!;
+      await expect(page.locator('body > .rp-charttip-bounded li').first()).toContainText(new RegExp(`^${first}`));
     });
   });
 }

@@ -2,8 +2,11 @@ import {describe, expect, it} from 'vitest';
 import {
   donutAngles,
   linearPosition,
-  visibleTicks,
   sampleTicks,
+  placeLabels,
+  clockLabels,
+  valueAxis,
+  seriesStats,
   nearestIndex,
   heatTone,
   logDomain,
@@ -112,16 +115,72 @@ describe('linearPosition', () => {
     expect(linearPosition(7, [7, 7], [20, 120])).toBe(70);
   });
 });
-it('keeps end ticks and thins overlapping interior labels', () => {
-  expect(visibleTicks([10, 30, 50, 70, 90], [20, 20, 20, 20, 20], 0, 100, 16, true)).toEqual([
-    {index: 0, position: 10},
-    {index: 2, position: 50},
-    {index: 4, position: 90}
-  ]);
+describe('valueAxis', () => {
+  it('starts at zero and tops out at a round number whose half its label prints exactly', () => {
+    expect(valueAxis([3800, 1200], 'zero')).toEqual({domain: [0, 4000], ticks: [0, 2000, 4000]});
+    expect(valueAxis([340], 'zero')).toEqual({domain: [0, 400], ticks: [0, 200, 400]});
+    expect(valueAxis([1400], 'zero').ticks).toEqual([0, 750, 1500]);
+    expect(valueAxis([], 'zero').ticks).toEqual([0, 1, 2].map(n => n * 0.6));
+  });
+  it('fits a narrow range above zero in whole label steps, with a step at the middle', () => {
+    // 50 to 52 MB prints whole megabytes, so a half-megabyte step would show 52.5 MB as 53 MB.
+    expect(valueAxis([50e6, 52e6], 'auto')).toEqual({domain: [49e6, 53e6], ticks: [49e6, 51e6, 53e6]});
+  });
 });
-
-it('omits ticks until their label dimensions are measured', () => {
-  expect(visibleTicks([10, 50], [], 0, 100, 16, true)).toEqual([]);
+it('finds a series peak, where it falls and its average, skipping gaps', () => {
+  expect(seriesStats([1, null, 5, 3])).toEqual({peak: 5, at: 2, average: 3});
+  expect(seriesStats([null, null])).toBeNull();
+});
+it('places labels most wanted first, inside the edge, dropping one that would crowd another', () => {
+  // A 16px label at the top hangs from it; the middle one at 22 would crowd it in a 45px plot and gives way.
+  expect(
+    placeLabels(
+      [
+        {index: 2, position: 0, size: 16},
+        {index: 1, position: 22, size: 16}
+      ],
+      0,
+      45,
+      4
+    )
+  ).toEqual([{index: 2, position: 8}]);
+  expect(
+    placeLabels(
+      [
+        {index: 2, position: 0, size: 16},
+        {index: 1, position: 40, size: 16}
+      ],
+      0,
+      80,
+      4
+    )
+  ).toEqual([
+    {index: 2, position: 8},
+    {index: 1, position: 40}
+  ]);
+  expect(placeLabels([{index: 0, position: 10, size: Number.NaN}], 0, 80, 4)).toEqual([]);
+});
+describe('clockLabels', () => {
+  const tick = (position: number) => ({position, width: 40});
+  it('keeps round times and an end only where it clears its neighbour', () => {
+    // The plot runs 0 to 400: round times at 60, 160, 260 and 380; the last end at 400 would crowd 380.
+    expect(clockLabels([tick(0), tick(60), tick(160), tick(260), tick(380), tick(400)], 0, 400, 16, 24)).toEqual([
+      {index: 1, position: 60},
+      {index: 2, position: 160},
+      {index: 3, position: 260},
+      {index: 4, position: 380}
+    ]);
+    expect(clockLabels([tick(0), tick(150), tick(250), tick(400)], 0, 400, 16, 24)).toEqual([
+      {index: 0, position: 20},
+      {index: 1, position: 150},
+      {index: 2, position: 250},
+      {index: 3, position: 380}
+    ]);
+  });
+  it('thins crowded round times to every second one', () => {
+    const labels = clockLabels([tick(0), tick(100), tick(140), tick(180), tick(220), tick(400)], 0, 400, 16, 24);
+    expect(labels.filter(label => label.index > 0 && label.index < 5).map(label => label.index)).toEqual([1, 3]);
+  });
 });
 it('selects the nearest sample, keeping the earlier sample at a midpoint', () => {
   expect(nearestIndex([0, 10, 20], 5)).toBe(0);

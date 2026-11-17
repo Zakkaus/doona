@@ -48,8 +48,9 @@ export function ActivityCard({
   ranking?: {by: string; setBy: (by: string) => void};
   selection?: {chosen: string; setChosen: (id: string) => void};
 }) {
-  // A card two thirds of a row or wider lists its chart's peak and average (see dashboard.css): by its chosen width, or
-  // by the box its footprint has now, which on a phone is the whole row whatever width was chosen.
+  // A value tile two thirds of a row or wider lists its sparkline's peak and average (see dashboard.css): by its chosen
+  // width, or by the box its footprint has now, which on a phone is the whole row whatever width was chosen. An area
+  // chart marks them on its plot and says them in its tip.
   const wideCell = useContext(WideCell);
   const stats = item.width === '2/3' || item.width === 'full' || wideCell;
   switch (item.id) {
@@ -95,9 +96,11 @@ export function RuntimeAlert() {
   const vm = useActivity('status');
   return vm.error ? <ErrorMessage error={vm.error} onRetry={vm.retry} /> : null;
 }
-// An area chart card's plot height at scale 1, the traffic and memory cards alike; the card's skeleton repeats it
-// (--chart in dashboard.css). The plot takes any height its row gives the card beyond it.
-const areaHeight = 120;
+// An area chart card's chart height at scale 1, its plots and time labels, the traffic and memory cards alike; the
+// card's skeleton repeats it (--chart in dashboard.css). The plots take any height its row gives the card beyond it.
+// Traffic stacks a plot for download over one for upload, whose rates often lie ten times apart; memory's two
+// measures share one scale and one plot.
+const areaHeight = 144;
 function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useActivity>[0] | 'memoryTile'; scale: number; stats: boolean}) {
   const t = useT();
   const vm = useActivity(kind === 'memoryTile' ? 'memory' : kind);
@@ -201,26 +204,24 @@ function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useAc
             </ChartWait>
           ) : vm.history.state === 'loading' ? (
             // The legend's line and the chart's height, as the loaded body draws them.
-            <DeferredChart parts={[{line: 'caption'}, {height: areaHeight * scale}]} />
+            <DeferredChart parts={[{line: 'body'}, {height: areaHeight * scale}]} />
           ) : vm.history.state === 'empty' ? (
             <ChartWait holds="tall">
               <Empty>{t('act.emptyHistory')}</Empty>
             </ChartWait>
           ) : (
-            <div className="rp-chart-stats">
-              <Legend series={traffic} fmt={chartRate} />
-              <AreaChart
-                label={t('act.traffic')}
-                series={traffic}
-                timestamps={vm.trafficTimestamps}
-                fmt={chartRate}
-                locale={locale}
-                height={areaHeight * scale}
-                fill
-                window={vm.trafficBounds}
-              />
-              {wide && <FactStrip facts={seriesFacts(traffic, chartRate, t)} fit />}
-            </div>
+            <AreaChart
+              legend={<Legend series={traffic} fmt={chartRate} />}
+              label={t('act.traffic')}
+              series={traffic}
+              timestamps={vm.trafficTimestamps}
+              fmt={chartRate}
+              locale={locale}
+              height={areaHeight * scale}
+              fill
+              split
+              window={vm.trafficBounds}
+            />
           )}
         </Card>
       );
@@ -262,21 +263,18 @@ function MetricModule({kind, scale, stats: wide}: {kind: Parameters<typeof useAc
           {vm.memoryState.error ? (
             <ErrorMessage error={vm.memoryState.error} onRetry={vm.memoryState.retry} />
           ) : vm.memoryState.state === 'ready' ? (
-            <div className="rp-chart-stats">
-              <Legend series={memorySeries} fmt={memoryBytes} />
-              <AreaChart
-                label={t('act.memory')}
-                series={memorySeries}
-                timestamps={vm.memoryTimestamps}
-                fmt={memoryBytes}
-                locale={locale}
-                height={areaHeight * scale}
-                fill
-                baseline="auto"
-                window={vm.memoryBounds}
-              />
-              {wide && <FactStrip facts={seriesFacts(memorySeries, memoryBytes, t)} fit />}
-            </div>
+            <AreaChart
+              legend={<Legend series={memorySeries} fmt={memoryBytes} />}
+              label={t('act.memory')}
+              series={memorySeries}
+              timestamps={vm.memoryTimestamps}
+              fmt={memoryBytes}
+              locale={locale}
+              height={areaHeight * scale}
+              fill
+              baseline="auto"
+              window={vm.memoryBounds}
+            />
           ) : vm.memoryState.state === 'unavailable' ? (
             <Empty>{t('act.noHistory')}</Empty>
           ) : (

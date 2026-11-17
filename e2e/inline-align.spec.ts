@@ -83,8 +83,8 @@ for (const width of [1440, 390]) {
             if (Math.abs(line.top - inset(card).top) > 1 || Math.abs(line.height - control) > 1)
               problems.push(`title ${title.textContent} at ${line.top - box(card).top}, ${line.height} high`);
           }
-          // A chart's plot starts at its card's text inset: its grid, its fill and line, and its first time label start at
-          // one x, and end at one x with its last time label; its value labels end at the plot's box.
+          // A chart's plot starts at its card's text inset: its grid and its fill and line start at one x and end at one x,
+          // its time labels stay between the two, and its value labels end at the plot's box.
           for (const grid of [...document.querySelectorAll('.rp-content .rp-area-grid line:first-child')].filter(shown)) {
             const card = grid.closest('.rp-card')!;
             const svg = grid.closest('svg')!;
@@ -102,18 +102,22 @@ for (const width of [1440, 390]) {
                 );
             };
             edges('data', data);
-            edges('time labels', labels);
+            for (const label of labels)
+              if (label.left < box(grid).left - 1 || label.right > box(grid).right + 1)
+                problems.push(`chart time label ${label.left - box(grid).left}..${label.right - box(grid).right} outside the grid`);
             for (const value of values)
               if (Math.abs(value.right - box(svg).right) > 1) problems.push(`chart value label ends ${box(svg).right - value.right} before the plot box`);
-            // The value gutter is its widest label and one 8px gap; an area chart's figures under the plot run from the
-            // text inset to the end inset, and other charts' figures beside it end at the end inset.
+            // The value gutter is its widest label and one 8px gap, and a chart's figures beside it end at the end inset.
             if (values.length && Math.min(...values.map(value => value.left)) - box(grid).right < 7.5)
               problems.push(`chart value labels ${Math.min(...values.map(value => value.left)) - box(grid).right}px from the plot`);
             const facts = card.querySelector('.rp-chart-stats > .rp-facts');
             if (facts && shown(facts) && Math.abs(box(facts).right - inset(card).end) > 1)
               problems.push(`chart figures end ${inset(card).end - box(facts).right} before the end inset`);
-            if (facts && shown(facts) && card.querySelector('.rp-chart-stats > .rp-legend') && Math.abs(box(facts).left - inset(card).start) > 1)
-              problems.push(`chart figures start ${box(facts).left - inset(card).start} after the text inset`);
+            // An area chart's legend lines start at the text inset, one entry on its own line when it wraps.
+            const parts = [...card.querySelectorAll('.rp-legend .it')].filter(shown).map(box);
+            const lines = new Map<number, number>();
+            for (const part of parts) lines.set(Math.round(part.top), Math.min(lines.get(Math.round(part.top)) ?? Infinity, part.left));
+            for (const start of lines.values()) if (Math.abs(start - inset(card).start) > 1) problems.push(`legend line at ${start - inset(card).start}`);
           }
           // Cards of a page column (a grid, or sibling grids) land on the lines of one grid of equal tracks: rows of equal
           // cards set the track count, and a row of unequal spans takes its lines.
@@ -232,6 +236,47 @@ for (const width of [1440, 390]) {
         for (const [role, types] of Object.entries(found.roles)) for (const type of types) seen.set(role, (seen.get(role) ?? new Set()).add(type));
       }
       for (const [role, types] of seen) expect([...types], role).toHaveLength(1);
+    });
+
+    // Activity's cards set their text in four roles (CONTRIBUTING, Type roles): the card title, a primary value, a label
+    // and meta, at weights 400 and 700 only; a value tile's figure keeps the stat value's size. Controls keep S2's own.
+    test('the Activity cards keep to four type roles in either language', async ({page}) => {
+      for (const lang of ['zh-TW', 'en']) {
+        await page.addInitScript(value => localStorage.setItem('doona-lang', value), lang);
+        await page.goto('/#/activity');
+        await expect(page.locator("[data-profile='details'] > .rp-dashboard-cell")).toHaveCount(3);
+        await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
+        await expect(page.locator('[data-instance="history"] .rp-area-y-ticks text').first()).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
+        const found = await page.evaluate(() => {
+          const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+          const roles = new Map([
+            [`${token('--rp-text-lg')} 700`, 'title'],
+            [`${token('--rp-text-md')} 700`, 'value'],
+            [`${token('--rp-text-md')} 400`, 'label'],
+            [`${token('--rp-text-xs')} 400`, 'meta']
+          ]);
+          const stat = `${token('--rp-text-3xl')} 700`;
+          const off: string[] = [];
+          const seen = new Set<string>();
+          for (const cell of document.querySelectorAll('.rp-content .rp-dashboard-cell')) {
+            const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+              const element = node.parentElement!;
+              if (!node.textContent!.trim() || !element.checkVisibility()) continue;
+              if (element.closest('button, [role=button], [role=radio], [role=tab], .rp-btn, .rp-segpick, [role=tooltip]')) continue;
+              const style = getComputedStyle(element);
+              const type = `${style.fontSize} ${style.fontWeight}`;
+              const role = roles.get(type) ?? (type === stat && element.closest('.rp-tile-val') ? 'stat' : undefined);
+              if (role) seen.add(role);
+              else off.push(`${type} ${node.textContent!.trim().slice(0, 24)}`);
+            }
+          }
+          return {off, seen: [...seen].sort()};
+        });
+        expect(found.off, lang).toEqual([]);
+        expect(found.seen, lang).toEqual(['label', 'meta', 'stat', 'title', 'value']);
+      }
     });
 
     test('the Activity rows share their column lines', async ({page}) => {

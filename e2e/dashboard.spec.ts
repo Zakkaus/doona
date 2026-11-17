@@ -674,7 +674,7 @@ test('a full-width list of four rows or more takes two columns, the first filled
   expect(Math.abs(memory - notices)).toBeLessThanOrEqual(1);
 });
 
-test('a chart two thirds of a row or wider lists its peak and average under it', async ({page}) => {
+test('an area chart marks its peak and average on its plot at every width, a compact chart lists them beside it when wide', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 1000});
   await seed(page, {
     version: 3,
@@ -691,31 +691,20 @@ test('a chart two thirds of a row or wider lists its peak and average under it',
     ]
   });
   await page.goto('/#/activity');
-  for (const [id, facts] of [
-    ['history', 4],
-    ['speed', 4],
-    ['cpu', 2]
-  ] as const) {
-    const strip = tile(page, id).locator('.rp-facts');
-    await expect(strip.locator('dt')).toHaveCount(facts);
-    await expect(strip).toBeVisible();
+  // Each area chart's legend is its series' names and live values; every series marks its average and peak on its plot,
+  // and the chart says them in its description, with no figures written on the card.
+  for (const id of ['history', 'speed', 'memory']) {
+    await expect(tile(page, id).locator('.rp-area-marks'), id).toHaveCount(2);
+    await expect(tile(page, id).locator('.rp-facts'), id).toHaveCount(0);
+    await expect(tile(page, id).locator('.rp-legend .it'), id).toHaveCount(2);
   }
-  await expect(tile(page, 'memory').locator('.rp-facts')).toBeHidden();
-  // The chart loads lazily and its wrapper replaces the placeholder that stood in for it; measure the wrapper once it is there.
-  await expect(tile(page, 'history').locator('.rp-chart-stats svg.rp-activity-surface')).toBeVisible();
-  const card = await box(tile(page, 'history').locator('section').first());
-  const chart = await box(tile(page, 'history').locator('.rp-chart-stats > :nth-child(2)'));
-  const strip = await box(tile(page, 'history').locator('.rp-facts'));
-  // The figures take a row one gap under the plot, from the card's text inset to its end inset.
-  const inset = await tile(page, 'history')
-    .locator('section')
-    .first()
-    .evaluate(node => parseFloat(getComputedStyle(node).paddingRight) + parseFloat(getComputedStyle(node).borderRightWidth));
-  expect(Math.abs(strip.x + strip.width - (card.x + card.width - inset))).toBeLessThanOrEqual(1);
-  expect(Math.abs(strip.x - chart.x)).toBeLessThanOrEqual(1);
-  expect(Math.abs(strip.y - (chart.y + chart.height) - 12)).toBeLessThanOrEqual(1);
-  await expect(tile(page, 'history').locator('.rp-facts dt').first()).toHaveText('Download peak');
-  // Nothing overflows its card at the narrower widths, and a phone still lists the full-width card's figures.
+  await expect(tile(page, 'history').locator('svg.rp-activity-surface desc')).toHaveText(
+    /^Download peak: .+Download average: .+Upload peak: .+Upload average: /
+  );
+  // A compact chart two thirds of its row or wider lists them beside it.
+  await expect(tile(page, 'cpu').locator('.rp-facts dt')).toHaveCount(2);
+  await expect(tile(page, 'cpu').locator('.rp-facts')).toBeVisible();
+  // Nothing overflows its card at the narrower widths.
   for (const width of [1280, 390]) {
     await page.setViewportSize({width, height: 1000});
     // Charts measure their box after a resize, so the check waits for them to settle.
@@ -730,39 +719,45 @@ test('a chart two thirds of a row or wider lists its peak and average under it',
         {message: String(width)}
       )
       .toEqual([]);
+    for (const id of ['history', 'speed', 'memory']) await expectTextInside(tile(page, id).locator('section').first());
   }
-  await expect(tile(page, 'history').locator('.rp-facts')).toBeVisible();
+  await expect(tile(page, 'memory').locator('.rp-area-marks')).toHaveCount(2);
 });
 
-test('an Auto chart lists its statistics once its footprint is two thirds of its row, as the default traffic card', async ({page}) => {
+test('the default traffic card stacks a plot for each series with one legend line at every width', async ({page}) => {
   await page.goto('/#/activity');
   const history = tile(page, 'history');
-  for (const width of [1024, 1280, 1440]) {
+  for (const width of [1024, 1280, 1440, 390]) {
     await page.setViewportSize({width, height: 1000});
-    await expect(history).toHaveAttribute('data-wide', '');
-    await expect(tile(page, 'outbounds')).not.toHaveAttribute('data-wide');
-    await expect(history.locator('.rp-chart-stats svg.rp-activity-surface')).toBeVisible();
-    const strip = history.locator('.rp-facts');
-    await expect(strip).toBeVisible();
-    await expect(strip.locator('dt')).toHaveCount(4);
-    // The figures take a row under the chart, as wide as it, at every width; each stays on one line. Sections repack in
-    // the frames after a resize and move the card, so both boxes come from one settled layout.
+    await expect(history.locator('svg.rp-activity-surface')).toBeVisible();
+    await expect(history.locator('.rp-facts')).toHaveCount(0);
     await settleFrames(page);
-    const [chart, facts] = await history.evaluate(cell =>
-      [cell.querySelector('.rp-chart-stats > :nth-child(2)')!, cell.querySelector('.rp-facts')!].map(el => el.getBoundingClientRect().toJSON() as DOMRect)
-    );
-    expect(facts.y, String(width)).toBeGreaterThanOrEqual(chart.y + chart.height);
-    expect(Math.abs(facts.x - chart.x), String(width)).toBeLessThanOrEqual(1);
-    expect(Math.abs(facts.width - chart.width), String(width)).toBeLessThanOrEqual(1);
-    expect(await strip.locator('dt').evaluateAll(list => list.filter(dt => dt.getClientRects().length > 1 || dt.scrollWidth > dt.clientWidth + 1).length)).toBe(
-      0
-    );
+    // The chart draws again at its box's new size a frame after the resize.
+    await expect
+      .poll(() =>
+        history.locator('.rp-area-plot').evaluate(box => {
+          const [outer, svg] = [box, box.querySelector('svg')!].map(el => el.getBoundingClientRect());
+          return Math.max(Math.abs(outer.width - svg.width), Math.abs(outer.height - svg.height));
+        })
+      )
+      .toBeLessThanOrEqual(1);
+    const layout = await history.evaluate(cell => {
+      const entries = [...cell.querySelectorAll('.rp-legend .it')].map(entry => entry.getBoundingClientRect());
+      const svg = cell.querySelector('svg.rp-activity-surface')!.getBoundingClientRect();
+      // The gridlines of the two plots: each plot's top, middle and bottom.
+      const grid = [...cell.querySelectorAll('.rp-area-grid line')].map(line => line.getBoundingClientRect().top - svg.top).sort((a, b) => a - b);
+      const times = [...cell.querySelectorAll('.rp-area-x-ticks text')].map(text => text.getBoundingClientRect().top - svg.top);
+      return {lines: new Set(entries.map(entry => Math.round(entry.top))).size, grid, times};
+    });
+    expect(layout.lines, `${width} legend lines`).toBe(1);
+    expect(layout.grid, String(width)).toHaveLength(6);
+    // Two plots of one height, one gap apart, the time labels under the lower one only.
+    const [upper, lower] = [layout.grid.slice(0, 3), layout.grid.slice(3)];
+    expect(Math.abs(upper[2] - upper[0] - (lower[2] - lower[0])), String(width)).toBeLessThanOrEqual(1);
+    expect(lower[0] - upper[2], String(width)).toBeGreaterThan(4);
+    for (const top of layout.times) expect(top, String(width)).toBeGreaterThan(lower[2]);
     await expectTextInside(history.locator('section').first());
   }
-  // A phone's card is its whole row, and lists the figures under the chart too.
-  await page.setViewportSize({width: 390, height: 900});
-  await expect(history).toHaveAttribute('data-wide', '');
-  await expect(history.locator('.rp-facts')).toBeVisible();
 });
 
 test('memory is a value tile like the traffic tiles, its figures beside the sparkline on wide cards', async ({page}) => {
@@ -1448,9 +1443,6 @@ test('a chart set tall, by settings or by its edge, fills the card it grew', asy
       const style = getComputedStyle(node);
       const box = node.getBoundingClientRect();
       const chart = node.querySelector('.rp-legend + div')!.getBoundingClientRect();
-      // The statistics under a wide chart end the card.
-      const strip = node.querySelector('.rp-chart-stats > .rp-facts');
-      const under = strip?.getClientRects().length ? strip.getBoundingClientRect() : undefined;
       return {
         width: chart.width,
         inner:
@@ -1459,12 +1451,13 @@ test('a chart set tall, by settings or by its edge, fills the card it grew', asy
           Number.parseFloat(style.paddingInlineEnd) -
           2 * Number.parseFloat(style.borderInlineStartWidth),
         height: chart.height,
-        gap: box.bottom - Number.parseFloat(style.paddingBlockEnd) - Number.parseFloat(style.borderBlockEndWidth) - (under ?? chart).bottom
+        // The plot ends the card.
+        gap: box.bottom - Number.parseFloat(style.paddingBlockEnd) - Number.parseFloat(style.borderBlockEndWidth) - chart.bottom
       };
     });
   const check = async () => {
     // The chart follows its card's new height in the next frame.
-    await expect.poll(async () => (await plot()).height).toBeGreaterThanOrEqual(2 * 120 - 2);
+    await expect.poll(async () => (await plot()).height).toBeGreaterThanOrEqual(2 * 144 - 2);
     await expect.poll(async () => Math.abs((await plot()).gap)).toBeLessThanOrEqual(2);
     const chart = await plot();
     expect(Math.abs(chart.width - chart.inner)).toBeLessThanOrEqual(2);

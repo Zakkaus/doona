@@ -51,6 +51,7 @@ export function RankingCard({model}: {model: ReturnType<typeof useRankingCard>})
                 </Link>
               }
               value={row.value}
+              share={row.share}
               pct={row.pct}
               color={row.color}
             />
