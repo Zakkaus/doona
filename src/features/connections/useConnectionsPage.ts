@@ -4,7 +4,7 @@ import {useCapabilities, useConnectionClose, useConnections, useFlowDemand, useG
 import {kernelTrafficUncounted} from '../shared/traffic';
 import {outboundTag} from '../shared/link';
 import {ApiError, errorText} from '../../api/error';
-import {chainNames, closedAllTone, connectionRows, ipLiteral, outboundLabel} from '../../api/selectors';
+import {chainNames, closedAllTone, connectionRows, ipLiteral, nodeSubscription, outboundLabel, type OutboundNames} from '../../api/selectors';
 import {downloadFile, exportName, panelQuery, phoneQuery, toast, toastErrorDetail, useLinked, useMediaQuery, useWhileShown} from '../../ui/ui';
 import {pickTab, tabQuery, within} from '../../shell/route';
 import {useT, useLang, LOCALE} from '../../i18n';
@@ -95,6 +95,9 @@ export function useConnectionsPage({go, query}: PageProps) {
   const nodesListed = offered(capabilities.data?.resources, 'nodes', {whileLoading: false});
   const nodes = useNodes(nodesListed);
   const trafficNodes = useWhileShown(nodes.data, tab === 'traffic');
+  // Which subscription each node came from, keyed on the tags alone like the names, so the rows keep their projection.
+  const subscriptionKey = JSON.stringify((nodes.data ?? []).flatMap(n => (n.subscription_tag ? [[n.id, n.subscription_tag]] : [])));
+  const subscriptions = useMemo<OutboundNames>(() => new Map(JSON.parse(subscriptionKey) as Array<[string, string]>), [subscriptionKey]);
   const latency = useMemo(
     () => (nodesListed && trafficNodes ? pathLatency(trafficRows, trafficNodes, locale) : null),
     [nodesListed, trafficNodes, trafficRows, locale]
@@ -115,12 +118,21 @@ export function useConnectionsPage({go, query}: PageProps) {
           (out === 'all' || c.outbound === out) &&
           (rule === 'all' || c.rule_expression === rule) &&
           (!needle ||
-            [c.dst, c.domain, c.src, c.pname, outboundLabel(c.outbound, t), chainNames(c.chain, names).join(' '), c.rule_expression]
+            [
+              c.dst,
+              c.domain,
+              c.src,
+              c.pname,
+              outboundLabel(c.outbound, t),
+              chainNames(c.chain, names).join(' '),
+              nodeSubscription(c, subscriptions),
+              c.rule_expression
+            ]
               .join(' ')
               .toLowerCase()
               .includes(needle))
       ),
-    [rows, network, out, rule, needle, names, t]
+    [rows, network, out, rule, needle, names, subscriptions, t]
   );
   const cur = sel ? rows.find(c => c.id === sel) : undefined;
   // A connection opened by its id shows its row: its group unfolds once, when the id arrives or the connection moves
@@ -136,9 +148,9 @@ export function useConnectionsPage({go, query}: PageProps) {
   const lists = useMemo(() => connectionsView(rows, listData, src, rule, out, locale, t), [rows, listData, src, rule, out, locale, t]);
   const groups = useGroups(offered(capabilities.data?.resources, 'groups', {whileLoading: false})).data;
   const detail = useMemo(() => {
-    const base = connectionDetail(cur, locale, t, names, rulesListed);
+    const base = connectionDetail(cur, locale, t, names, rulesListed, subscriptions);
     return base && {...base, outboundTag: outboundTag(base.outbound, groups, t)};
-  }, [cur, locale, t, names, rulesListed, groups]);
+  }, [cur, locale, t, names, rulesListed, subscriptions, groups]);
   const model = {...lists, detail};
   const collection = useMemo(() => connectionTableView(shown, view, locale, names, rulesListed, t), [shown, view, locale, names, rulesListed, t]);
   const close = async () => {

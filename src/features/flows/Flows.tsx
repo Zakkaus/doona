@@ -220,7 +220,7 @@ function FlowRecords(props: PageProps) {
                 <Badge tone={detail.tone}>{detail.status}</Badge>
                 <span className="rp-label">{detail.revision}</span>
               </div>
-              <Kv inline items={[[t('ui.outbound'), <OutboundTag {...detail.outboundTag} />], ...detail.fields]} />
+              <Kv detail items={[[t('ui.outbound'), <OutboundTag {...detail.outboundTag} />], ...detail.fields]} />
               <div className="rp-cluster">
                 {detail.connectionHref && (
                   <Link appearance="button" href={detail.connectionHref}>

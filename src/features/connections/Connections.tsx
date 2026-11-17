@@ -8,6 +8,7 @@ import {
   HelpRow,
   DetailPanel,
   Kv,
+  KvSections,
   LabeledSelect,
   Light,
   ChoiceMenu,
@@ -30,6 +31,7 @@ import {useT} from '../../i18n';
 import {useConnectionsPage} from './useConnectionsPage';
 import {connectionsTabs} from './nav';
 import type {ConnectionView} from './viewState';
+import type {ReactNode} from 'react';
 
 export function Connections(props: PageProps) {
   const t = useT();
@@ -146,22 +148,53 @@ export function Connections(props: PageProps) {
                   ]}
                 />
               </div>
-              <Kv
-                items={cur.fields.map(([label, value]) => [
-                  label,
-                  typeof value === 'string' ? value : <IpLookup ip={value.ip} address={value.address} sites={ipLookupSites(value.ip)} />
-                ])}
-              />
-              <Kv
-                items={[
-                  [t('ui.outbound'), <OutboundTag {...cur.outboundTag} />],
-                  [t('conn.chain'), cur.chain]
-                ]}
-              />
-              <div className="rp-list">
-                <span className="rp-label">{t('ui.rule')}</span>
-                <RuleRef {...cur.rule} />
-              </div>
+              {/* The route first, as the reason a connection is opened; the diagnostics last. */}
+              <KvSections>
+                <Kv
+                  detail
+                  title={t('conn.section.route')}
+                  items={[
+                    ...(cur.rule
+                      ? [
+                          [
+                            t('ui.rule'),
+                            <span className="rp-rule">
+                              <RuleRef {...cur.rule} />
+                            </span>
+                          ] satisfies [string, ReactNode]
+                        ]
+                      : []),
+                    ...(cur.outbound ? [[t('ui.outbound'), <OutboundTag {...cur.outboundTag} />] satisfies [string, ReactNode]] : []),
+                    ...(cur.chain ? [[t('conn.chain'), cur.chain] satisfies [string, ReactNode]] : []),
+                    ...(cur.subscription ? [[t('nodes.kind.subscription'), cur.subscription] satisfies [string, ReactNode]] : [])
+                  ]}
+                />
+                <Kv
+                  detail
+                  title={t('conn.section.connection')}
+                  items={cur.sections.connection.map(([label, value]) => [
+                    label,
+                    typeof value === 'string' ? value : <IpLookup ip={value.ip} address={value.address} sites={ipLookupSites(value.ip)} />
+                  ])}
+                />
+                {cur.sections.traffic.length > 0 && (
+                  <Kv
+                    detail
+                    title={t('conn.section.traffic')}
+                    items={cur.sections.traffic.map(([label, {total, rate}]) => [
+                      label,
+                      rate ? (
+                        <>
+                          {total} <span className="rp-label">{rate}</span>
+                        </>
+                      ) : (
+                        total
+                      )
+                    ])}
+                  />
+                )}
+                <Kv detail title={t('conn.section.sources')} items={cur.sections.provenance} />
+              </KvSections>
             </>
           )}
         </DetailPanel>
