@@ -42,7 +42,7 @@ export {ErrorMessage, InlineAlert, ProblemAlert, type Problem} from './Alert';
 export {toast, closeToast, toastFailure, toastErrorDetail, Toasts, type ToastPlacement} from './Toast';
 export {Light, Badge} from './Badge';
 export {Bar, Meter} from './Meter';
-export {Kv, type KvItem} from './Kv';
+export {Kv, KvSections, type KvItem} from './Kv';
 export {ContextualHelp, IconTip, HelpRow, type Help} from './ContextualHelp';
 export {type NodeStatus, latencyTone, CardLink, ValueTile, RuleRef} from './Tile';
 export {Tag, Tags, LinkTag, FitTags} from './Tag';

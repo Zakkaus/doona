@@ -483,14 +483,14 @@ test.describe('default view', () => {
     await target.click();
     await expect(page).toHaveURL(/#\/connections\?tab=list&id=c-\d+$/);
     const drawer = page.getByRole('dialog');
-    await expect(drawer.getByRole('heading')).toBeVisible();
+    await expect(drawer.getByRole('heading', {level: 2})).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(drawer).toHaveCount(0);
     await expect(page).toHaveURL(/#\/connections\?tab=list$/);
     await page.setViewportSize({width: 1440, height: 900});
     await target.click();
     await expect(page).toHaveURL(/#\/connections\?tab=list&id=c-\d+$/);
-    await expect(page.locator('.rp-panel').getByRole('heading')).toBeVisible();
+    await expect(page.locator('.rp-panel').getByRole('heading', {level: 2})).toBeVisible();
     await moreAction(page.locator('.rp-panel'), 'Only this device');
     await expect(page).toHaveURL(/src=10\.0\.0\.\d+/);
     await expect(groups).toHaveCount(1);
@@ -527,14 +527,14 @@ test('a connection opened while another closes stays selected', async ({page}) =
   await page.setViewportSize({width: 1440, height: 900});
   await page.goto(`/#/connections?id=${encodeURIComponent(closed.id)}`);
   const panel = page.locator('.rp-panel');
-  await expect(panel.getByRole('heading')).toBeVisible();
+  await expect(panel.getByRole('heading', {level: 2})).toBeVisible();
   await moreAction(panel, 'Close connection');
   await page.locator(`.rp-table [data-key="${opened.id}"]`).click();
   await expect(page).toHaveURL(new RegExp(`[?&]id=${encodeURIComponent(opened.id)}(&|$)`));
   release();
   await expect(page.locator('.rp-toast.positive')).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`[?&]id=${encodeURIComponent(opened.id)}(&|$)`));
-  await expect(panel.getByRole('heading')).toBeVisible();
+  await expect(panel.getByRole('heading', {level: 2})).toBeVisible();
 });
 
 test('phone details retain routing diagnostics and omit unsupported flow actions', async ({page}) => {
@@ -880,7 +880,9 @@ test('only public destination addresses open the IP site picker without backgrou
     const panel = page.locator('.rp-panel');
     await expect(panel).toBeVisible();
     const destination = panel.locator('.rp-kv > div').filter({has: page.locator('.k', {hasText: /^Target address$/})});
-    await expect(destination).toContainText(dst ?? '—');
+    // A connection without a destination has no row for it.
+    if (dst) await expect(destination).toContainText(dst);
+    else await expect(destination).toHaveCount(0);
     expect(external).toEqual([]);
     if (address && ip) {
       await destination.getByRole('button', {name: address, exact: true}).click();

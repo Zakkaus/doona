@@ -1,7 +1,7 @@
 import type {BulkCloseQuery, Connection} from '../../api/model';
 import {tagId} from '../shared/taggedId';
 import {enumLabel} from '../../i18n/enum';
-import {chainLabel, chainNames, connectionStates, sourceIp, addressPort, type MessageRef, type OutboundNames} from '../../api/selectors';
+import {chainLabel, chainNames, connectionStates, nodeSubscription, sourceIp, addressPort, type MessageRef, type OutboundNames} from '../../api/selectors';
 import {isPublicIp} from '../shared/ipLookup';
 import {localTime, formatBytes, formatRate} from '../../i18n/format';
 import type {Key, Translator as LabelFn} from '../../i18n';
@@ -10,39 +10,49 @@ import type {Help} from '../../ui/ui';
 import {csvLine} from '../../ui/ui';
 import {ruleHref, traceQuery} from '../shared/link';
 import {within} from '../../shell/route';
+import {isBuiltinOutbound} from '../../dae/vocab';
 import type {connectionsView} from './tableRows';
 
 const observers: Record<Connection['observed_by'], Key> = {userspace: 'ov.v.userspace', ebpf: 'ov.v.ebpf', mixed: 'conn.observed.mixed'};
 // Where the chain came from: captured when the connection was routed, rebuilt from retained records, or not known.
-const chainSources: Record<Connection['chain_source'], Key> = {
+const chainSources: Partial<Record<Connection['chain_source'], Key>> = {
   evaluation: 'conn.chainSource.evaluation',
-  reconstructed: 'conn.chainSource.reconstructed',
-  unknown: 'ui.unknown'
+  reconstructed: 'conn.chainSource.reconstructed'
 };
 type Destination = {ip: string; address: string};
-export function connectionDetails(c: Connection, locale: string): Array<[Key, string | MessageRef | Destination]> {
-  const address = c.dst ?? '—';
+// A byte count and, while the connection moves data, its rate.
+type Amount = {total: string; rate: string | null};
+type Field<T> = [Key, T | null];
+const present = <T>(fields: Field<T>[]) => fields.filter((field): field is [Key, T] => field[1] != null);
+// A value the backend did not learn ("unknown") says no more than a missing one.
+const known = <T extends string>(value: T | null | undefined) => (value == null || value === 'unknown' ? null : value);
+// The detail's fields by section, most read first; a field the connection lacks or does not know has no row.
+export function connectionDetails(c: Connection, locale: string) {
   const ip = sourceIp(c.dst);
-  const destination = ip && isPublicIp(ip) ? {ip, address} : address;
-  // A backend that predates the field leaves it out, and the row with it.
-  const chainSource: Array<[Key, string | MessageRef]> = c.chain_source
-    ? [['conn.f.chainSource', chainSources[c.chain_source] ? {key: chainSources[c.chain_source]} : c.chain_source]]
-    : [];
-  return [
-    ['ui.device', c.src ?? '—'],
-    ['conn.f.dst', destination],
-    ['ui.domain', c.domain ?? '—'],
-    ['conn.f.ingress', word(c.ingress)],
-    ['conn.f.domainSource', word(c.domain_source)],
-    ...chainSource,
-    ['ui.process', c.pname ?? '—'],
-    ['conn.f.observedBy', observers[c.observed_by] ? {key: observers[c.observed_by]} : c.observed_by],
-    ['ui.upload', formatBytes(c.upload_bytes, locale)],
-    ['ui.download', formatBytes(c.download_bytes, locale)],
-    ['conn.f.uploadRate', formatRate(c.upload_bytes_per_second, locale)],
-    ['conn.f.downloadRate', formatRate(c.download_bytes_per_second, locale)],
-    ['conn.f.started', localTime(c.started_at, locale)]
-  ];
+  const amount = (bytes: Connection['upload_bytes'], rate: Connection['upload_bytes_per_second']) =>
+    bytes == null ? null : {total: formatBytes(bytes, locale), rate: rate == null ? null : formatRate(rate, locale)};
+  const domainSource = known(c.domain_source);
+  // A backend that predates chain_source leaves it out, and the row with it.
+  const chainSource = known(c.chain_source);
+  return {
+    connection: present<string | MessageRef | Destination>([
+      ['ui.domain', c.domain || null],
+      ['conn.f.dst', c.dst ? (ip && isPublicIp(ip) ? {ip, address: c.dst} : c.dst) : null],
+      ['ui.device', c.src || null],
+      ['ui.process', c.pname || null],
+      ['conn.f.ingress', c.ingress ? word(c.ingress) : null],
+      ['conn.f.started', c.started_at ? localTime(c.started_at, locale) : null]
+    ]),
+    traffic: present<Amount>([
+      ['ui.download', amount(c.download_bytes, c.download_bytes_per_second)],
+      ['ui.upload', amount(c.upload_bytes, c.upload_bytes_per_second)]
+    ]),
+    provenance: present<string | MessageRef>([
+      ['conn.f.domainSource', domainSource && word(domainSource)],
+      ['conn.f.chainSource', chainSource && (chainSources[chainSource] ? {key: chainSources[chainSource]} : chainSource)],
+      ['conn.f.observedBy', observers[c.observed_by] ? {key: observers[c.observed_by]} : c.observed_by]
+    ])
+  };
 }
 
 // A phone folds the secondary filters into one menu: a row per filter showing its choice, each opening that filter's
@@ -99,20 +109,30 @@ export function connectionDetail(
   locale: string,
   t: LabelFn,
   names: OutboundNames,
-  rulesListed: boolean
+  rulesListed: boolean,
+  subscriptions?: OutboundNames
 ) {
-  return current
+  // The subscription the chain's node came from, on a row of its own under the chain.
+  const subscription = (current && nodeSubscription(current, subscriptions)) ?? null;
+  const sections = current && connectionDetails(current, locale);
+  return current && sections
     ? {
         id: current.id,
         title: current.domain || current.dst || current.id,
         tone: current.state === 'blocked' || current.state === 'failed' ? ('err' as const) : current.state === 'active' ? ('ok' as const) : ('info' as const),
         status: t('ui.aside', {text: enumLabel(connectionStates, current.state, t), note: current.network.toUpperCase()}),
-        chain: chainLabel(current, t, names),
-        outbound: current.outbound,
-        rule: {expression: current.rule_expression, href: ruleHref(current.rule_id, rulesListed)},
-        fields: connectionDetails(current, locale).map(
-          ([key, value]) => [t(key), typeof value === 'string' || 'ip' in value ? value : t(value.key, value.params)] as [string, string | Destination]
-        ),
+        // A built-in outbound is its own chain, so the chain adds a row only for a group's route.
+        chain: isBuiltinOutbound(current.outbound) ? null : current.chain.length ? chainLabel(current, t, names) : null,
+        subscription,
+        outbound: known(current.outbound),
+        rule: current.rule_expression ? {expression: current.rule_expression, href: ruleHref(current.rule_id, rulesListed)} : null,
+        sections: {
+          connection: sections.connection.map(
+            ([key, value]) => [t(key), typeof value === 'string' || 'ip' in value ? value : t(value.key, value.params)] as [string, string | Destination]
+          ),
+          traffic: sections.traffic.map(([key, value]) => [t(key), value] as [string, Amount]),
+          provenance: sections.provenance.map(([key, value]) => [t(key), typeof value === 'string' ? value : t(value.key, value.params)] as [string, string])
+        },
         flowQuery: within('', {tab: 'records', ...(current.flow_id ? {id: current.flow_id} : {connection_id: current.id})}),
         // The trace of this connection's target, from its source and process; null when it has neither a domain nor an
         // address.

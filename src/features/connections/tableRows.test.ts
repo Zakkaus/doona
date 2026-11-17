@@ -83,14 +83,17 @@ it('groups, sorts and describes by the displayed labels', () => {
   expect(sorted.map(row => row.id)).toEqual(
     [...list].sort((x, y) => compareNames('en-US')(t(`conn.state.${x.state}`), t(`conn.state.${y.state}`))).map(row => row.id)
   );
-  const fields = connectionDetails({...c, observed_by: 'ebpf'}, 'en-US');
+  const fields = connectionDetails({...c, observed_by: 'ebpf'}, 'en-US').provenance;
   expect(fields.find(([key]) => key === 'conn.f.observedBy')?.[1]).toEqual({key: 'ov.v.ebpf'});
-  expect(connectionDetails(c, 'en-US')).toContainEqual(['conn.f.chainSource', {key: 'conn.chainSource.evaluation'}]);
-  expect(connectionDetails({...c, chain_source: 'reconstructed'}, 'en-US')).toContainEqual(['conn.f.chainSource', {key: 'conn.chainSource.reconstructed'}]);
-  expect(connectionDetails({...c, chain_source: 'unknown'}, 'en-US')).toContainEqual(['conn.f.chainSource', {key: 'ui.unknown'}]);
-  // A backend that predates the field leaves it out, and the detail shows no row for it.
+  expect(connectionDetails(c, 'en-US').provenance).toContainEqual(['conn.f.chainSource', {key: 'conn.chainSource.evaluation'}]);
+  expect(connectionDetails({...c, chain_source: 'reconstructed'}, 'en-US').provenance).toContainEqual([
+    'conn.f.chainSource',
+    {key: 'conn.chainSource.reconstructed'}
+  ]);
+  // An unknown source, or a backend that predates the field, shows no row for it.
   const {chain_source: _omitted, ...older} = c;
-  expect(connectionDetails(older as typeof c, 'en-US').some(([key]) => key === 'conn.f.chainSource')).toBe(false);
+  for (const row of [{...c, chain_source: 'unknown' as const}, older as typeof c])
+    expect(connectionDetails(row, 'en-US').provenance.some(([key]) => key === 'conn.f.chainSource')).toBe(false);
 });
 
 it('computes each sort key once and keeps equal keys in their order', () => {
@@ -171,7 +174,7 @@ it('prepares grouped cells and rule-link availability without losing unknown cou
   if (!('children' in group)) throw new Error('Expected client group');
   expect(group.children[0]).toMatchObject({target: '—', source: '—', download: '—', rule: {href: undefined}});
   expect(group.totals.down).toBe('—');
-  expect(connectionDetails(row, 'en-US')).toContainEqual(['ui.device', '—']);
+  expect(connectionDetails(row, 'en-US').connection.some(([key]) => key === 'ui.device')).toBe(false);
 });
 
 it('shows only the leaf node in the table and keeps the full path for the tooltip', () => {

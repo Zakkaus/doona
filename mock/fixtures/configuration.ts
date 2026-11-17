@@ -93,6 +93,8 @@ export const configMain =
   }
 ` +
   templateConfig.slice(groupEnd);
+// The node a demo flow through each group reaches, as the inventory resolves these groups; auto picks a subscription node.
+export const flowLeaf = (group: string | null) => (group === 'auto' ? '日本 01 2x' : group === 'gaming' ? 'hk-02' : 'hk-01');
 const configRulesFile = `# Household overrides can be added here.
 # This include leaves the selected routing template unchanged.
 `;

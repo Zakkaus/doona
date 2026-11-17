@@ -47,7 +47,7 @@ test('the detail rule wraps on phones and truncates on desktop', async ({page}) 
   const connections = await api.connections({detail: 'full', limit: 1000});
   const row = connections.tcp.find(row => row.rule_expression && row.chain.length)!;
   await page.goto(`/#/connections?id=${encodeURIComponent(row.id)}`);
-  const rule = detail(page).locator('.rp-list .rp-truncate').first();
+  const rule = detail(page).locator('.rp-rule .rp-truncate').first();
   for (const {width, whiteSpace} of [
     {width: 390, whiteSpace: 'normal'},
     {width: 1280, whiteSpace: 'nowrap'}

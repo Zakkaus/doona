@@ -389,7 +389,7 @@ function DnsLog({
         <DetailPanel open={!!vm.detail} title={vm.detailTitle} onClose={() => vm.setSelected(null)}>
           {vm.detail && (
             <>
-              <Kv inline items={vm.detail.fields} />
+              <Kv detail items={vm.detail.fields} />
               {vm.detail.answers.length ? (
                 <div className="rp-list">
                   {vm.detail.answers.map((answer, i) => (

@@ -1,7 +1,7 @@
 import type {Connection, FlowDetail, FlowStep} from '../src/api/model';
 import {addressPort, sourceIp} from '../src/api/selectors';
 import {rules} from './rules';
-import {configRules} from './fixtures/configuration';
+import {configRules, flowLeaf} from './fixtures/configuration';
 import {generationId} from './fixtures/clock';
 
 type FlowFields = Pick<Connection, 'chain' | 'chain_source' | 'rule_id' | 'rule_expression' | 'rule_source' | 'ingress' | 'domain_source'>;
@@ -89,7 +89,7 @@ export function createFlow(connection: ConnectionSeed, network: 'tcp' | 'udp', o
         ? {id: 'r2', expression: ruleOf('r2').cond}
         : {id: 'fallback', expression: 'fallback: ' + configRules.fallback.target});
   const expression = decided.expression;
-  const leaf = connection.outbound === 'auto' ? 'sg-01' : connection.outbound === 'gaming' ? 'hk-02' : 'hk-01';
+  const leaf = flowLeaf(connection.outbound);
   const policy = connection.outbound === 'auto' ? 'urltest' : connection.outbound === 'gaming' ? 'urltest' : 'selector';
   const steps: FlowStep[] = [
     {...common, seq: 1, stage: 'input', data: {values: {...input, pname: connection.pname}, source: direct || blocked ? 'kernel' : 'socket'}},

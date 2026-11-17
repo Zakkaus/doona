@@ -195,7 +195,7 @@ test('search reads live connection addresses, node and group names, and availabl
   }
   await dialog.getByRole('option', {name: /live-search.example/}).click();
   await expect(page).toHaveURL(/#\/connections\?id=live%2Fid%3A1$/);
-  await expect(detail(page).getByRole('heading')).toHaveText('live-search.example');
+  await expect(detail(page).getByRole('heading', {level: 2})).toHaveText('live-search.example');
   await page.keyboard.press('Escape');
   await expect(page).not.toHaveURL(/id=/);
   await expect(detail(page)).toHaveCount(0);
