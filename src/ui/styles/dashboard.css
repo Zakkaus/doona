@@ -571,6 +571,13 @@
   color: var(--rp-text);
   font-variant-numeric: tabular-nums;
 }
+/* The running card's state stands where the other control cards put their label, so it takes the title role too; this
+   follows the label role above, which lists .rp-light at the same specificity. */
+.rp-dashboard-cell .rp-control-card > .rp-row > .rp-light {
+  font-size: var(--rp-text-lg);
+  line-height: 20px;
+  font-weight: 700;
+}
 .rp-dashboard-cell :is(.rp-label, .rp-tile-caption, .rp-empty, .rp-area-tick, .rp-markerplot :is(.scale, .note), .rp-donut .r .p, .rp-bar .top .p) {
   font-size: var(--rp-text-xs);
   line-height: var(--rp-line-caption);
