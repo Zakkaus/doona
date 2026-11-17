@@ -155,33 +155,79 @@ export function linearPosition(value: number, [lo, hi]: [number, number], [start
   return start * (1 - fraction) + end * fraction;
 }
 
-// Keep the last label, optionally the first, shifting end labels inside the SVG before thinning.
-export function visibleTicks(positions: number[], sizes: number[], start: number, end: number, gap: number, preserveStart: boolean) {
-  if (!positions.length) return [];
-  const sign = positions.length > 1 && positions[1] < positions[0] ? -1 : 1;
-  let lo = start;
-  let hi = end;
-  const shown: Array<{index: number; position: number}> = [];
-  const last = positions.length - 1;
-  const visit = (index: number) => {
-    const size = sizes[index];
-    if (!Number.isFinite(size) || !Number.isFinite(positions[index])) return;
-    let pos = sign * positions[index];
-    if (index === last) pos = Math.min(pos, hi - size / 2);
-    else if (index === 0 && preserveStart) pos = Math.max(pos, lo + size / 2);
-    if (pos - size / 2 < lo || pos + size / 2 > hi) return;
-    shown.push({index, position: sign * pos});
-    if (preserveStart && index !== last) lo = pos + size / 2 + gap;
-    else hi = pos - size / 2 - gap;
-  };
-  if (sign < 0) {
-    lo = -end;
-    hi = -start;
+// A value axis over the values one plot draws: from zero (`zero`) or from a round step under the least value (`auto`),
+// to a round top a little above the greatest, with a tick at each end and one halfway, each a number its label prints
+// exactly (the half of 1.5 MB is 750 kB, never a rounded 1.3 MB).
+const roundTops = [1, 1.2, 1.5, 2, 3, 4, 5, 6, 8, 10];
+export function valueAxis(values: number[], baseline: 'zero' | 'auto'): {domain: [number, number]; ticks: [number, number, number]} {
+  const top = Math.max(1, ...values);
+  if (baseline === 'auto' && values.length) {
+    const least = Math.min(...values);
+    const decade = 10 ** Math.floor(Math.log10(Math.max(top - least, top * 0.02, 1)));
+    const ratio = Math.max(top - least, top * 0.02, 1) / decade;
+    // A label shows whole units from ten of a unit and tenths below, units a thousand apart (formatBytes), so a step
+    // finer than that would print two ticks alike.
+    const unit = 1000 ** Math.floor(Math.log10(top) / 3);
+    const resolution = top / unit >= 10 ? unit : unit / 10;
+    const step = Math.max(resolution, Math.round(((ratio <= 1 ? 0.2 : ratio <= 2 ? 0.5 : ratio <= 5 ? 1 : 2) * decade) / resolution) * resolution);
+    const lo = Math.max(0, Math.floor(least / step) * step - step);
+    // An even number of steps, so the middle tick falls on a step too.
+    let steps = Math.ceil(top / step) + 1 - lo / step;
+    steps += steps % 2;
+    const hi = lo + steps * step;
+    return {domain: [lo, hi], ticks: [lo, (lo + hi) / 2, hi]};
   }
-  visit(last);
-  if (preserveStart) for (let i = 0; i < last; i++) visit(i);
-  else for (let i = last - 1; i >= 0; i--) visit(i);
-  return shown.sort((a, b) => a.index - b.index);
+  const decade = 10 ** Math.floor(Math.log10(top * 1.05));
+  const hi = (roundTops.find(k => k * decade >= top * 1.05) ?? 10) * decade;
+  return {domain: [0, hi], ticks: [0, hi / 2, hi]};
+}
+
+// A series' peak, the sample it falls on, and its average over the samples a chart draws; null without a sample.
+export function seriesStats(values: (number | null)[]): {peak: number; at: number; average: number} | null {
+  let at = -1;
+  let sum = 0;
+  let count = 0;
+  values.forEach((value, index) => {
+    if (value === null) return;
+    if (at < 0 || value > values[at]!) at = index;
+    sum += value;
+    count++;
+  });
+  return count ? {peak: values[at]!, at, average: sum / count} : null;
+}
+
+// Labels along one edge, placed in the order given (the most wanted first): each centred on its position, moved inside
+// [start, end], and dropped when it would come within `gap` of a label already placed.
+export function placeLabels(labels: Array<{index: number; position: number; size: number}>, start: number, end: number, gap: number) {
+  const placed: Array<{index: number; position: number; size: number}> = [];
+  for (const {index, position, size} of labels) {
+    if (!Number.isFinite(size) || !Number.isFinite(position) || size > end - start) continue;
+    const centre = Math.min(Math.max(position, start + size / 2), end - size / 2);
+    if (placed.some(label => Math.abs(label.position - centre) < (label.size + size) / 2 + gap)) continue;
+    placed.push({index, position: centre, size});
+  }
+  return placed.sort((a, b) => a.position - b.position).map(({index, position}) => ({index, position}));
+}
+
+// Time labels under a plot from `start` to `end`: the round times between its ends (`ticks` 1 to n - 2), every one, or
+// every second, third... while any two would come within `gap`, none crossing the plot's edges; then the plot's first
+// and last times (`ticks` 0 and n - 1), set flush with its edges, each only where it clears its neighbour by `endGap`.
+export function clockLabels(ticks: Array<{position: number; width: number}>, start: number, end: number, gap: number, endGap: number) {
+  const box = (index: number, centre = ticks[index].position) => [centre - ticks[index].width / 2, centre + ticks[index].width / 2];
+  const inner = ticks.map((_, index) => index).filter(index => index > 0 && index < ticks.length - 1 && box(index)[0] >= start && box(index)[1] <= end);
+  let shown = inner;
+  for (let stride = 2; shown.some((index, i) => i > 0 && box(index)[0] < box(shown[i - 1])[1] + gap); stride++)
+    shown = inner.filter((_, i) => i % stride === 0);
+  const labels = shown.map(index => ({index, position: ticks[index].position}));
+  const last = ticks.length - 1;
+  if (last > 0) {
+    const first = start + ticks[0].width / 2;
+    if (!labels.length || box(labels[0].index)[0] >= start + ticks[0].width + endGap) labels.unshift({index: 0, position: first});
+    const final = end - ticks[last].width / 2;
+    if (!labels.length || box(labels[labels.length - 1].index, labels[labels.length - 1].position)[1] <= end - ticks[last].width - endGap)
+      labels.push({index: last, position: final});
+  }
+  return labels;
 }
 
 // Ticks at fixed samples keep the last one, and each earlier one only when its label clears the next kept label by

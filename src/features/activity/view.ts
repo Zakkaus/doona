@@ -170,7 +170,8 @@ export function activityOutbounds(outbounds: RuntimeOutbounds | undefined, local
 export function activityRanking(connections: ConnectionList | undefined, by: string, colors: {cat: string[]}, locale: string, t: LabelFn, limit = 5) {
   return connectionRanking(connections, by, limit).map((row, i) => ({
     name: row.name,
-    value: row.percent === null ? formatBytes(row.download, locale) : t('ui.share', {bytes: formatBytes(row.download, locale), percent: row.percent}),
+    value: formatBytes(row.download, locale),
+    share: row.percent === null ? undefined : t('ui.percent', {n: row.percent}),
     pct: row.percent ?? 0,
     color: colors.cat[i % colors.cat.length],
     href: href('connections', by === 'dev' ? {src: row.name} : {q: row.name})

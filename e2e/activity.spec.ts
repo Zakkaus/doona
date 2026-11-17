@@ -1187,10 +1187,12 @@ test('the latency menu contains only Automatic and group names with one checked 
   await expect(menu.getByRole('menuitemradio', {name: 'Automatic', exact: true})).toHaveAttribute('aria-checked', 'true');
 });
 
-// The traffic chart at a wide card: every axis label inside the plot's box, a value gutter as wide as its widest label
-// and the gap, each figure read label first, readable secondary text, and no ring on the plot under a pointer or after
-// a click. The figures take a row one gap under the plot at every width, in equal columns from the card's text inset to
-// its end inset and down to its padding: four in one row at 1440px, two on a phone.
+// The traffic chart at every width: a plot for download over one for upload, one height each, every axis label inside
+// the plot's box, a value gutter as wide as its widest label and the gap, time labels apart from each other and under
+// the lower plot only, readable secondary text, and no ring on the plot under a pointer or after a click. The legend is
+// one line of each series' swatch, name and live value from the card's text inset, and the plots take the card down to
+// its padding. Hovering either plot guides across both and tips the time, both values and each series' peak and
+// average, which the chart's description also carries.
 for (const [width, scheme] of [
   [1440, 'dark'],
   [1440, 'light'],
@@ -1198,12 +1200,14 @@ for (const [width, scheme] of [
 ] as const)
   test.describe(`traffic chart ${width} ${scheme}`, () => {
     test.use({viewport: {width, height: 900}, storage: {'doona-lang': 'zh-TW', 'doona-scheme': scheme}});
-    test('keeps its labels inside, its figures in place and its plot unringed under a pointer', async ({page}) => {
+    test('stacks its plots, keeps its labels inside and apart, tips both series and leaves its plot unringed under a pointer', async ({page}) => {
       await page.goto('/#/activity');
       const card = page.locator('[data-instance="history"] section.rp-card');
       const plot = card.locator('.rp-area-plot > svg');
       await expect(plot).toBeVisible();
-      await expect(card.locator('.rp-facts')).toBeVisible();
+      await expect(card.locator('.rp-facts')).toHaveCount(0);
+      await expect(card.locator('.rp-legend .it')).toHaveCount(2);
+      await expect(card.locator('.rp-area-marks')).toHaveCount(2);
       await page.evaluate(() => document.fonts.ready);
       const geometry = await card.evaluate(card => {
         const svg = card.querySelector('.rp-area-plot > svg')!.getBoundingClientRect();
@@ -1219,7 +1223,7 @@ for (const [width, scheme] of [
           return (hi + 0.05) / (lo + 0.05);
         };
         const ground = getComputedStyle(card).backgroundColor;
-        const labels = [...card.querySelectorAll('.rp-area-tick, .rp-legend .it > span, .rp-facts dt')];
+        const labels = [...card.querySelectorAll('.rp-area-tick, .rp-legend .it')];
         const pad = getComputedStyle(card);
         const outer = card.getBoundingClientRect();
         const inner = {
@@ -1227,22 +1231,29 @@ for (const [width, scheme] of [
           right: outer.right - parseFloat(pad.borderRightWidth) - parseFloat(pad.paddingRight),
           bottom: outer.bottom - parseFloat(pad.borderBottomWidth) - parseFloat(pad.paddingBottom)
         };
-        const strip = card.querySelector('.rp-facts')!.getBoundingClientRect();
-        const facts = [...card.querySelectorAll('.rp-facts > *')].map(fact => fact.getBoundingClientRect());
         const grid = card.querySelector('.rp-area-grid')!.getBoundingClientRect();
         const values = [...card.querySelectorAll('.rp-area-y-ticks text')].map(text => text.getBoundingClientRect());
+        const times = [...card.querySelectorAll('.rp-area-x-ticks text')].map(text => text.getBoundingClientRect()).sort((a, b) => a.left - b.left);
+        const entries = [...card.querySelectorAll('.rp-legend .it')].map(entry => entry.getBoundingClientRect());
         return {
-          ticks: values.map(box => ({above: svg.top - box.top, below: box.bottom - svg.bottom})),
+          ticks: [...values, ...times].map(box => ({
+            above: svg.top - box.top,
+            below: box.bottom - svg.bottom,
+            start: box.left - svg.left,
+            end: svg.right - box.right
+          })),
+          // Each plot labels at least its top.
+          valueLabels: values.length,
+          timeGaps: times.slice(1).map((box, i) => box.left - times[i].right),
           gutter: Math.min(...values.map(box => box.left)) - grid.right,
-          columns: new Set(facts.map(fact => Math.round(fact.left))).size,
-          widths: facts.map(fact => fact.width),
-          under: strip.top - svg.bottom,
-          start: Math.min(...facts.map(fact => fact.left)) - inner.left,
-          end: inner.right - Math.max(...facts.map(fact => fact.right)),
           plotStart: svg.left - inner.left,
-          band: inner.bottom - strip.bottom,
-          pairs: [...card.querySelectorAll('.rp-facts > *')].map(fact => [...fact.children].map(part => part.tagName)),
-          text: (card.querySelector('.rp-facts') as HTMLElement).innerText.split('\n').slice(0, 2),
+          band: inner.bottom - svg.bottom,
+          legendLines: new Set(entries.map(entry => Math.round(entry.top))).size,
+          legendStart: Math.min(...entries.map(entry => entry.left)) - inner.left,
+          legendEnd: Math.max(...entries.map(entry => entry.right)) - inner.right,
+          // The swatch, the name, then the live value.
+          entries: [...card.querySelectorAll('.rp-legend .it')].map(entry => [...entry.childNodes].map(node => node.nodeName)),
+          description: card.querySelector('svg desc')?.textContent,
           labels: labels.map(label => {
             const style = getComputedStyle(label);
             return {size: parseFloat(style.fontSize), ratio: contrast(label.tagName === 'text' ? style.fill : style.color, ground)};
@@ -1250,27 +1261,38 @@ for (const [width, scheme] of [
         };
       });
       for (const tick of geometry.ticks) {
-        expect(tick.above, 'y label above the plot').toBeLessThanOrEqual(0.5);
-        expect(tick.below, 'y label below the plot').toBeLessThanOrEqual(0.5);
+        expect(tick.above, 'label above the plot box').toBeLessThanOrEqual(0.5);
+        expect(tick.below, 'label below the plot box').toBeLessThanOrEqual(0.5);
+        expect(tick.start, 'label before the plot box').toBeGreaterThanOrEqual(-0.5);
+        expect(tick.end, 'label past the plot box').toBeGreaterThanOrEqual(-0.5);
       }
+      expect(geometry.valueLabels).toBeGreaterThanOrEqual(2);
+      for (const gap of geometry.timeGaps) expect(gap, 'time labels apart').toBeGreaterThanOrEqual(16);
       expect(geometry.gutter, 'value gutter').toBeGreaterThanOrEqual(7.5);
       expect(geometry.gutter, 'value gutter').toBeLessThanOrEqual(9.5);
       expect(Math.abs(geometry.plotStart), 'plot at the text inset').toBeLessThanOrEqual(1);
-      expect(Math.abs(geometry.end), 'figures end at the end inset').toBeLessThanOrEqual(1);
-      expect(Math.abs(geometry.start), 'figures at the text inset').toBeLessThanOrEqual(1);
-      expect(Math.abs(geometry.under - 12), 'one gap under the plot').toBeLessThanOrEqual(1);
-      expect(Math.abs(geometry.band), 'no band under the figures').toBeLessThanOrEqual(1);
-      expect(geometry.columns, 'figures per row').toBe(width === 390 ? 2 : 4);
-      expect(Math.max(...geometry.widths) - Math.min(...geometry.widths), 'equal columns').toBeLessThanOrEqual(1);
-      for (const pair of geometry.pairs) expect(pair).toEqual(['DT', 'DD']);
-      expect(geometry.text[0]).toBe('下載峰值');
+      expect(Math.abs(geometry.band), 'no band under the plot').toBeLessThanOrEqual(1);
+      expect(geometry.legendLines, 'legend on one line').toBe(1);
+      expect(Math.abs(geometry.legendStart), 'legend at the text inset').toBeLessThanOrEqual(1);
+      expect(geometry.legendEnd, 'legend within the card').toBeLessThanOrEqual(1);
+      for (const entry of geometry.entries) expect(entry).toEqual(['I', '#text', '#text', 'B']);
+      expect(geometry.description).toMatch(/^下載峰值：.+下載平均：.+上傳峰值：.+上傳平均：/);
       expect(geometry.labels.length).toBeGreaterThan(4);
       for (const label of geometry.labels) {
         expect(label.size).toBeGreaterThanOrEqual(12);
         expect(label.ratio).toBeGreaterThanOrEqual(4.5);
       }
+      // A pointer over the lower plot guides across both and tips both series.
       await plot.scrollIntoViewIfNeeded();
-      const box = (await plot.boundingBox())!;
+      const area = (await plot.boundingBox())!;
+      await page.mouse.move(area.x + area.width / 2, area.y + area.height * 0.6);
+      const tip = page.locator('.rp-boundedtip');
+      await expect(tip).toBeVisible();
+      await expect(tip.locator('li')).toHaveText([/^下載：/, /^下載峰值：/, /^下載平均：/, /^上傳：/, /^上傳峰值：/, /^上傳平均：/]);
+      const guides = await plot.evaluate(svg => [...svg.querySelectorAll(':scope > path[stroke-dasharray]')].map(path => path.getBoundingClientRect().height));
+      expect(guides).toHaveLength(2);
+      expect(Math.abs(guides[0] - guides[1]), 'plots of one height').toBeLessThanOrEqual(1);
+      const box = area;
       await page.mouse.move(0, 0);
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 3);
       await expect(plot).toHaveCSS('outline-style', 'none');

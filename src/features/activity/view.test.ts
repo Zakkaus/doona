@@ -34,7 +34,7 @@ it('distinguishes missing metrics from zero and keeps block traffic separate fro
   const domains = activityRanking(connections, 'host', colors, 'en', t);
   expect(domains[0].href).toBe(`#/connections?q=${encodeURIComponent(domains[0].name)}`);
   const only = activityRanking({...connections, tcp: connections.tcp.slice(0, 1), udp: []}, 'host', colors, 'en', t);
-  expect(only[0].value).toMatch(/, 100%$/);
+  expect(only[0].share).toBe('100%');
   const usage = activityOutbounds(runtimeOutbounds, 'en-US', colors, t).rows;
   expect(usage.find(row => row.name === t('ui.block'))?.href).toBe('#/connections?out=block');
 });

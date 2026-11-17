@@ -3,12 +3,14 @@ import {Label, Meter as RMeter} from 'react-aria-components';
 import {cx} from './cx';
 import {TextTooltip} from './Tooltip';
 
-export function Bar({label, value, pct, color}: {label: ReactNode; value: string; pct: number; color: string}) {
+// `share`, the row's part of the whole, follows its value as secondary text.
+export function Bar({label, value, share, pct, color}: {label: ReactNode; value: string; share?: string; pct: number; color: string}) {
   return (
     <div className="rp-bar">
       <div className="top">
         <span className="l">{typeof label === 'string' ? <TextTooltip>{label}</TextTooltip> : label}</span>
         <span className="v">{value}</span>
+        {share && <span className="p">{share}</span>}
       </div>
       <div className="track" aria-hidden="true">
         <div className="fill" style={{width: `${Math.max(0, Math.min(100, pct))}%`, background: color}} />

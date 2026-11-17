@@ -164,7 +164,7 @@
   height: calc(var(--h, 260px) + var(--x) + var(--chart, 0px) * (var(--rp-chart-scale, 1) - 1));
 }
 :is([data-card='history'], [data-card='memory']) {
-  --chart: 120px;
+  --chart: 144px;
 }
 :is([data-card='mode'], [data-card='global'], [data-card='status']) {
   --h: 66px;
@@ -180,7 +180,7 @@
   }
 }
 [data-card='history'] {
-  --h: 274px;
+  --h: 254px;
 }
 [data-card='outbounds'] {
   --h: 98px;
@@ -195,11 +195,11 @@
     --h: 214px;
   }
 }
-/* The traffic pair side by side is as tall as the taller of the two: the traffic card with its figures under the plot,
-   or the outbounds list, which takes more lines the narrower it is. */
+/* The traffic pair side by side is as tall as the taller of the two: the traffic card, or the outbounds list, which
+   takes more lines the narrower it is. */
 @media (min-width: 1024px) {
   :is([data-card='history'], [data-card='outbounds']) {
-    --h: 274px;
+    --h: 254px;
   }
   @container rp-tile (width < 656px) {
     [data-card='history'] {
@@ -237,7 +237,7 @@
   --h: 118px;
 }
 [data-card='nodeLatency'] {
-  --h: 542px;
+  --h: 534px;
 }
 [data-card='policyGroups'] {
   --h: 154px;
@@ -451,17 +451,12 @@
   width: auto;
 }
 
-/* A chart's statistics, each series' peak and average, show only on a card two thirds of its row or wider, by its
-   chosen width or, for Auto, by the box its footprint has now (data-wide, see packSection), which takes in a phone's
-   whole row. Elsewhere the wrapper adds no box. Each figure drops the tile's box.
-   An area chart card (its legend leads the wrapper) is its header, the legend, the plot, then the figures, at every
-   width: one --rp-space-3 gap apart, the figures label above value in equal columns from the text inset to the end
-   inset, all in one row while each keeps its text whole and in two otherwise (FactStrip's fit, data-pairs). A value
-   holds the room of its widest reading, 999.9 MB/s or 1023.9 MiB (9ch), so a live value does not switch the two.
-   The plot takes the card's height above the figures, never less than its chart height, so they end the card.
-   From tablet width, key-value readings and compact charts list the figures in a column (--rp-chart-facts) beside
-   them, each one compact line, its label at the start and its value at the card's end, never wrapping, so four
-   figures stay within a short chart's height (90px). */
+/* A value tile's, a key-value card's or a compact chart's statistics, each series' peak and average, show only on a card
+   two thirds of its row or wider, by its chosen width or, for Auto, by the box its footprint has now (data-wide, see
+   packSection), which takes in a phone's whole row. Elsewhere the wrapper adds no box. Each figure drops the tile's box.
+   From tablet width they take a column (--rp-chart-facts) beside the readings or chart, each one compact line, its
+   label at the start and its value at the card's end, never wrapping, so four figures stay within a short chart's
+   height (90px). An area chart marks them on its plot and says them in its tip instead. */
 .rp-chart-stats {
   --rp-chart-facts: 200px;
   display: contents;
@@ -492,14 +487,14 @@
   line-height: var(--rp-space-5);
 }
 @media (min-width: 768px) {
-  .rp-dashboard-cell:is([data-width='2/3'], [data-width='full'], [data-wide]) .rp-chart-stats:not(:has(> .rp-legend)) {
+  .rp-dashboard-cell:is([data-width='2/3'], [data-width='full'], [data-wide]) .rp-chart-stats:has(> .rp-facts) {
     display: grid;
     flex: 1 0 auto;
     grid-template-columns: minmax(0, 1fr) var(--rp-chart-facts);
     gap: var(--rp-space-3) var(--rp-space-4);
     align-items: start;
   }
-  .rp-dashboard-cell:is([data-width='2/3'], [data-width='full'], [data-wide]) :is(.rp-chart-stats:not(:has(> .rp-legend)), .rp-tile-body) > .rp-strip.rp-facts {
+  .rp-dashboard-cell:is([data-width='2/3'], [data-width='full'], [data-wide]) :is(.rp-chart-stats, .rp-tile-body) > .rp-strip.rp-facts {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
@@ -517,28 +512,44 @@
     grid-area: 1 / 2 / span 2;
   }
 }
-.rp-dashboard-cell .rp-chart-stats:has(> .rp-legend):has(> .rp-facts) {
-  display: grid;
-  flex: 1 0 auto;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: var(--rp-space-3);
+/* A dashboard card's text, on Activity and the dashboard, takes four roles (CONTRIBUTING, Type roles), weights 400 and
+   700 only: the card title (.rp-h3, and a control card's label), a primary value, a label and meta; a value tile's
+   figure keeps the stat value's size. A value is the bold one of its line. Meta is secondary text in the palette's
+   subtle colour, which holds 4.5:1 on a card; a chart's own labels take its secondary text on a tile (charts.css). */
+.rp-dashboard-cell .rp-qlabel {
+  font-size: var(--rp-text-lg);
+  line-height: 20px;
+  font-weight: 700;
 }
-.rp-dashboard-cell .rp-chart-stats:has(> .rp-legend) > .rp-strip.rp-facts {
-  display: grid;
-  grid-template-columns: repeat(var(--facts), minmax(0, 1fr));
-  gap: var(--rp-space-2) var(--rp-space-4);
+.rp-dashboard-cell
+  :is(
+    .rp-legend,
+    .rp-light,
+    .rp-list .rp-note,
+    .rp-kv.compact :is(.k, .v),
+    .rp-donut .r,
+    .rp-bar .top,
+    .rp-facts :is(.rp-tile-head, .rp-big),
+    .rp-markerplot :is(.legend, .row, .row .name)
+  ) {
+  font-size: var(--rp-text-md);
+  line-height: var(--rp-line-body);
+  font-weight: 400;
+  color: var(--rp-text);
 }
-.rp-dashboard-cell .rp-chart-stats:has(> .rp-legend) > .rp-strip.rp-facts[data-pairs] {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.rp-dashboard-cell
+  :is(.rp-legend .it > b, .rp-kv.compact .v, .rp-donut .r .v, .rp-donut .center, .rp-bar .top .v, .rp-facts .rp-big, .rp-markerplot .row .value) {
+  font-size: var(--rp-text-md);
+  line-height: var(--rp-line-body);
+  font-weight: 700;
+  color: var(--rp-text);
+  font-variant-numeric: tabular-nums;
 }
-.rp-dashboard-cell .rp-chart-stats:has(> .rp-legend) > .rp-facts > .rp-card {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0;
-}
-.rp-dashboard-cell .rp-chart-stats:has(> .rp-legend) > .rp-facts .rp-big {
-  min-inline-size: 9ch;
+.rp-dashboard-cell :is(.rp-label, .rp-tile-caption, .rp-empty, .rp-area-tick, .rp-markerplot :is(.scale, .note), .rp-donut .r .p, .rp-bar .top .p) {
+  font-size: var(--rp-text-xs);
+  line-height: var(--rp-line-caption);
+  font-weight: 400;
+  color: var(--rp-subtle);
 }
 
 /* A control card's line is its label and its control, the status card's its light and its link, and it never wraps. Each
