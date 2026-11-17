@@ -15,7 +15,7 @@
   display: none;
   color: var(--rp-subtle);
   font-size: var(--rp-text-xs);
-  line-height: 16px;
+  line-height: var(--rp-line-caption);
 }
 @media (max-width: 599.98px) {
   .rp-tree-hint {

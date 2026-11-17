@@ -89,8 +89,10 @@
   }
 }
 @media (min-width: 1100px) {
+  /* The control cards take the thirds of the rows below; a card whose line does not fit its third puts its control
+     under its label, as every card of the row then does (see packSection). */
   .rp-dash-section[data-profile='quick'] {
-    grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .rp-dash-section[data-profile='quick'] > [data-foot='lead'] {
     grid-column: auto;
@@ -144,8 +146,8 @@
 
 /* A Skeleton card, named for its module, at the height its loaded card takes. The height follows the width of the
    card's cell, which the cell's tile container (above) tells as the cards' own container queries do, and the columns
-   its section has at the viewport's width. A card holding a control is taller by what the control takes over 32px, which
-   is its height on a phone (--x). A module not named here is 260px. */
+   its section has at the viewport's width. A card holding a control, which every titled card's title line is, is taller
+   by what the control takes over 32px, which is its height on a phone (--x). A module not named here is 260px. */
 [data-card] {
   --x: calc(var(--rp-control) - 32px);
 }
@@ -161,21 +163,11 @@
 .rp-skeleton-cards > .rp-card[data-card] {
   height: calc(var(--h, 260px) + var(--x) + var(--chart, 0px) * (var(--rp-chart-scale, 1) - 1));
 }
-[data-card='history'] {
+:is([data-card='history'], [data-card='memory']) {
   --chart: 120px;
-}
-[data-card='memory'] {
-  --chart: 150px;
 }
 :is([data-card='mode'], [data-card='global'], [data-card='status']) {
   --h: 66px;
-}
-/* The quick row's cards put their label over their control when the row's labels do not all fit beside their controls,
-   which packSection measures (controlLayout). English labels do not from 1280px, where the row is as wide as it gets. */
-@media (min-width: 1280px) {
-  :lang(en) :is([data-card='mode'], [data-card='global'], [data-card='status']) {
-    --h: 94px;
-  }
 }
 /* A value tile stacks its sparkline under its value below 174px of content (cards-dashboard.css), which is a cell of
    less than 208px, for the card's padding and border. */
@@ -188,7 +180,7 @@
   }
 }
 [data-card='history'] {
-  --h: 226px;
+  --h: 274px;
 }
 [data-card='outbounds'] {
   --h: 98px;
@@ -203,11 +195,11 @@
     --h: 214px;
   }
 }
-/* The traffic pair side by side is as tall as the taller of the two, which is the outbounds list: the narrower it is
-   the more lines it takes. */
+/* The traffic pair side by side is as tall as the taller of the two: the traffic card with its figures under the plot,
+   or the outbounds list, which takes more lines the narrower it is. */
 @media (min-width: 1024px) {
   :is([data-card='history'], [data-card='outbounds']) {
-    --h: 226px;
+    --h: 274px;
   }
   @container rp-tile (width < 656px) {
     [data-card='history'] {
@@ -216,7 +208,7 @@
   }
   @container rp-tile (width < 524px) {
     [data-card='history'] {
-      --h: 358px;
+      --h: 370px;
     }
   }
   @container rp-tile (width < 322px) {
@@ -226,7 +218,7 @@
   }
   @container rp-tile (width < 262px) {
     [data-card='outbounds'] {
-      --h: 358px;
+      --h: 370px;
     }
   }
 }
@@ -241,33 +233,30 @@
 :is([data-card='memory'], [data-card='notices']) {
   --h: 260px;
 }
-:is([data-card='memorySparkline'], [data-card='nodeLatency'], [data-card='connectionOutbounds'], [data-card='dnsAnswers'], [data-card='policyGroups']) {
-  --x: 0px;
-}
 [data-card='memorySparkline'] {
-  --h: 110px;
+  --h: 118px;
 }
 [data-card='nodeLatency'] {
-  --h: 534px;
+  --h: 542px;
 }
 [data-card='policyGroups'] {
-  --h: 146px;
+  --h: 154px;
 }
 :is([data-card='connectionOutbounds'], [data-card='dnsAnswers']) {
-  --h: 138px;
+  --h: 146px;
 }
 @media (min-width: 1280px) {
   :is([data-card='connectionOutbounds'], [data-card='dnsAnswers']) {
-    --h: 146px;
+    --h: 154px;
   }
 }
 @media (max-width: 599.98px) {
   [data-card='history'] {
-    --h: 134px;
+    --h: 150px;
     --x: 0px;
   }
   [data-card='nodeLatency'] {
-    --h: 594px;
+    --h: 602px;
   }
 }
 
@@ -276,11 +265,9 @@
    inline-start margin, and the section reaches one gap before its start, so a card's width depends on its fraction
    alone: the same fraction is the same width in every section, and a profile's equal tracks give the same widths. A
    chosen width (--rp-chosen) snaps to sixths below 1280px. An Auto card (--rp-span) keeps the box its profile gives it
-   at every width, so choosing one card's width never moves or resizes another. A profile of unequal tracks (quick's
-   3:2:2, traffic's 2:1) shares its gaps among its tracks in proportion, so there an Auto card gives back a share of its
-   start gap (--rp-shift) and leaves a share of its end (--rp-trim), each a ratio of the gap. A section with a full row
-   of Auto one-line cards uses the fraction grid too (data-fit): packSection gives each card of that row the span that
-   holds its line whole, with the spare width shared by the footprints. The resize handles read --rp-span, --rp-shift
+   at every width, so choosing one card's width never moves or resizes another. A profile of unequal tracks (traffic's
+   2:1) shares its gaps among its tracks in proportion, so there an Auto card gives back a share of its
+   start gap (--rp-shift) and leaves a share of its end (--rp-trim), each a ratio of the gap. The resize handles read --rp-span, --rp-shift
    and --rp-trim as Auto's width. */
 .rp-dash-section {
   --rp-dash-snap: none;
@@ -289,16 +276,16 @@
   .rp-dash-section {
     --rp-dash-snap: 6;
   }
-  .rp-dash-section:is([data-grid], [data-fit]) {
+  .rp-dash-section[data-grid] {
     grid-template-columns: repeat(420, minmax(0, 1fr));
     column-gap: 0;
     margin-inline-start: calc(0px - var(--rp-dash-gap));
   }
-  .rp-dash-section:is([data-grid], [data-fit])[data-profile] > .rp-dashboard-cell {
+  .rp-dash-section[data-grid][data-profile] > .rp-dashboard-cell {
     grid-column: span var(--rp-chosen, var(--rp-span));
     margin-inline-start: var(--rp-dash-gap);
   }
-  .rp-dash-section:is([data-grid], [data-fit])[data-profile] > .rp-dashboard-cell:not([data-width], [data-size='wide']) {
+  .rp-dash-section[data-grid][data-profile] > .rp-dashboard-cell:not([data-width], [data-size='wide']) {
     margin-inline-start: calc(var(--rp-dash-gap) * (1 - var(--rp-shift, 0)));
     margin-inline-end: calc(var(--rp-dash-gap) * var(--rp-trim, 0));
   }
@@ -348,18 +335,7 @@
 }
 @media (min-width: 1100px) {
   .rp-dash-section[data-profile='quick'] > * {
-    --rp-span: 120;
-  }
-  .rp-dash-section[data-profile='quick'] > :nth-child(3n + 1 of .rp-dashboard-cell) {
-    --rp-span: 180;
-    --rp-trim: 2 / 7;
-  }
-  .rp-dash-section[data-profile='quick'] > :nth-child(3n + 2 of .rp-dashboard-cell) {
-    --rp-shift: 2 / 7;
-    --rp-trim: 1 / 7;
-  }
-  .rp-dash-section[data-profile='quick'] > :nth-child(3n of .rp-dashboard-cell) {
-    --rp-shift: 1 / 7;
+    --rp-span: 140;
   }
   .rp-dash-section[data-profile='metrics'] > * {
     --rp-span: 140;
@@ -470,35 +446,60 @@
   gap: var(--rp-space-2);
 }
 .rp-dashboard-cell[data-height='short'] .rp-tile-body > .rp-spark {
-  flex: 1 1 var(--rp-space-8);
+  flex: 0 1 calc(100% - var(--rp-tile-value) - var(--rp-space-2));
   min-width: var(--rp-space-8);
   width: auto;
 }
 
-/* A chart's statistics, each series' peak and average, show only on a card two thirds of a row or wider once chosen
-   widths apply, by its chosen width or, for Auto, by the box its footprint has now (data-wide, see packSection): the
-   chart keeps two thirds of the card, or less where the figures need more, and the figures sit beside it, level with
-   its top. Elsewhere the wrapper adds no box. Each figure is one compact line, its label at the start and its value at
-   the end, never wrapping, so four figures stay within a short chart's height (90px). */
+/* A chart's statistics, each series' peak and average, show only on a card two thirds of its row or wider, by its
+   chosen width or, for Auto, by the box its footprint has now (data-wide, see packSection), which takes in a phone's
+   whole row. Elsewhere the wrapper adds no box. Each figure drops the tile's box.
+   An area chart card (its legend leads the wrapper) is its header, the legend, the plot, then the figures, at every
+   width: one --rp-space-3 gap apart, the figures label above value in equal columns from the text inset to the end
+   inset, all in one row while each keeps its text whole and in two otherwise (FactStrip's fit, data-pairs). A value
+   holds the room of its widest reading, 999.9 MB/s or 1023.9 MiB (9ch), so a live value does not switch the two.
+   The plot takes the card's height above the figures, never less than its chart height, so they end the card.
+   From tablet width, key-value readings and compact charts list the figures in a column (--rp-chart-facts) beside
+   them, each one compact line, its label at the start and its value at the card's end, never wrapping, so four
+   figures stay within a short chart's height (90px). */
 .rp-chart-stats {
+  --rp-chart-facts: 200px;
   display: contents;
 }
 :is(.rp-chart-stats, .rp-tile-body) > .rp-facts {
   display: none;
 }
+.rp-dashboard-cell .rp-facts > .rp-card {
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--rp-space-2);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.rp-dashboard-cell .rp-facts .rp-tile-head {
+  min-height: 0;
+  white-space: nowrap;
+}
+.rp-dashboard-cell .rp-facts .rp-tile-body {
+  flex: none;
+  min-block-size: 0;
+}
+.rp-dashboard-cell .rp-facts .rp-big {
+  font-size: var(--rp-text-md);
+  line-height: var(--rp-space-5);
+}
 @media (min-width: 768px) {
-  .rp-dashboard-cell:is([data-width='2/3'], [data-width='full'], [data-wide]) .rp-chart-stats {
+  .rp-dashboard-cell:is([data-width='2/3'], [data-width='full'], [data-wide]) .rp-chart-stats:not(:has(> .rp-legend)) {
     display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(max-content, 1fr);
+    flex: 1 0 auto;
+    grid-template-columns: minmax(0, 1fr) var(--rp-chart-facts);
     gap: var(--rp-space-3) var(--rp-space-4);
     align-items: start;
   }
-  .rp-dashboard-cell:is([data-width='2/3'], [data-width='full'], [data-wide]) .rp-chart-stats > .rp-legend {
-    grid-column: 1 / -1;
-    /* Spanning both columns, the legend's own width would widen the figures' column. */
-    contain: inline-size;
-  }
-  .rp-dashboard-cell:is([data-width='2/3'], [data-width='full'], [data-wide]) :is(.rp-chart-stats, .rp-tile-body) > .rp-strip.rp-facts {
+  .rp-dashboard-cell:is([data-width='2/3'], [data-width='full'], [data-wide]) :is(.rp-chart-stats:not(:has(> .rp-legend)), .rp-tile-body) > .rp-strip.rp-facts {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
@@ -515,61 +516,70 @@
   .rp-dashboard-cell:is([data-width='2/3'], [data-width='full'], [data-wide])[data-tile='stacked'] .rp-tile-body > .rp-facts {
     grid-area: 1 / 2 / span 2;
   }
-  .rp-dashboard-cell .rp-facts > .rp-card {
-    flex-direction: row;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--rp-space-2);
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: none;
-  }
-  .rp-dashboard-cell .rp-facts .rp-tile-head {
-    min-height: 0;
-    white-space: nowrap;
-  }
-  .rp-dashboard-cell .rp-facts .rp-tile-body {
-    flex: none;
-    min-block-size: 0;
-  }
-  .rp-dashboard-cell .rp-facts .rp-big {
-    font-size: var(--rp-text-md);
-    line-height: var(--rp-space-5);
-  }
+}
+.rp-dashboard-cell .rp-chart-stats:has(> .rp-legend):has(> .rp-facts) {
+  display: grid;
+  flex: 1 0 auto;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--rp-space-3);
+}
+.rp-dashboard-cell .rp-chart-stats:has(> .rp-legend) > .rp-strip.rp-facts {
+  display: grid;
+  grid-template-columns: repeat(var(--facts), minmax(0, 1fr));
+  gap: var(--rp-space-2) var(--rp-space-4);
+}
+.rp-dashboard-cell .rp-chart-stats:has(> .rp-legend) > .rp-strip.rp-facts[data-pairs] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.rp-dashboard-cell .rp-chart-stats:has(> .rp-legend) > .rp-facts > .rp-card {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+.rp-dashboard-cell .rp-chart-stats:has(> .rp-legend) > .rp-facts .rp-big {
+  min-inline-size: 9ch;
 }
 
-/* A section's control cards share one of two layouts (see packSection): inline, the label and its control on one line,
-   or stacked, the label above the control. The status card's line is its light, then its summary and link. While
-   probing, nothing in a control line shrinks or wraps, so a line wider than its card overflows. */
-.rp-control-card > .rp-row {
+/* A control card's line is its label and its control, the status card's its light and its link, and it never wraps. Each
+   card fits its line to its own width (ControlLine in Card.tsx): its label whole, then without its icon, then the icon
+   alone, the words its tooltip and still the card's name; past that a segmented control turns into its picker. The
+   status card's link gives way with an ellipsis. */
+.rp-control-card > .rp-row,
+.rp-control-card .rp-cluster {
   flex-wrap: nowrap;
 }
+.rp-control-card > .rp-row > :first-child,
+.rp-control-card .rp-cluster > :not(.rp-segfit) {
+  flex: none;
+}
+/* Measuring, the line is as wide as its parts whole. */
+.rp-control-card > .rp-row[data-probe] {
+  inline-size: max-content;
+}
+.rp-control-card > .rp-row[data-step='bare']:not([data-probe]) > .rp-qlabel > svg {
+  display: none;
+}
+.rp-control-card > .rp-row[data-step='icon']:not([data-probe]) > .rp-qlabel > .rp-truncate:not(.rp-qicon) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.rp-qlabel > .rp-qicon {
+  display: flex;
+  flex: none;
+}
 .rp-control-tail {
-  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: var(--rp-space-3);
+  min-width: 0;
 }
-.rp-control-tail > :last-child {
-  flex: none;
-  margin-inline-start: auto;
-}
-.rp-dash-section[data-controls='probe'] .rp-control-card :is(.rp-row, .rp-row *) {
-  flex-shrink: 0;
-  flex-wrap: nowrap;
-}
-/* Measuring a line's own width (see packSection's fitRows), the line is as wide as its content. */
-.rp-dash-section[data-lines='probe'] .rp-control-card > .rp-row {
-  inline-size: max-content;
-}
-.rp-dash-section[data-controls='stacked'] .rp-control-card > .rp-row {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--rp-space-2);
-}
-.rp-dash-section[data-controls='stacked'] .rp-control-tail {
-  align-self: stretch;
+.rp-control-tail > .rp-link {
+  min-width: 0;
 }
 
 /* Edit mode keeps every box: the indicator is a line in the gap, and the drop indicator element itself takes no grid

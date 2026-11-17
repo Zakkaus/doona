@@ -69,7 +69,7 @@ button.rp-node {
   justify-content: space-between;
   gap: var(--rp-space-2);
   font-size: var(--rp-text-xs);
-  line-height: 16px;
+  line-height: var(--rp-line-caption);
   color: var(--rp-subtle);
   white-space: pre;
   overflow: hidden;

@@ -21,7 +21,8 @@ it.each([0, 1, 7])('status offers one overview link with %i features off', count
   expect(links).toHaveLength(1);
   // Counting the features that are off links to the card that lists them.
   expect(links[0][0]).toContain(count ? 'href="#/overview?card=limits"' : 'href="#/overview"');
-  expect(links[0][1]).toBe(state.limited ?? translate('en', 'act.viewDetails'));
+  // The link's words sit in a span that ellipsises them when the card is narrow.
+  expect(links[0][1].replace(/<[^>]*>/g, '')).toBe(state.limited ?? translate('en', 'act.viewDetails'));
 });
 
 it('status shows View details instead of the count when the notice is off', () => {
@@ -34,5 +35,5 @@ it('status shows View details instead of the count when the notice is off', () =
       </SettingsContext.Provider>
     </LangContext.Provider>
   );
-  expect([...markup.matchAll(/<a\b[^>]*>(.*?)<\/a>/gs)].map(link => link[1])).toEqual([translate('en', 'act.viewDetails')]);
+  expect([...markup.matchAll(/<a\b[^>]*>(.*?)<\/a>/gs)].map(link => link[1].replace(/<[^>]*>/g, ''))).toEqual([translate('en', 'act.viewDetails')]);
 });

@@ -53,6 +53,12 @@
 .rp-table table {
   --rp-cell-padding: var(--rp-space-2);
 }
+/* In a card, a table's frame hangs into the card's padding by its border and its cells' padding, so the first column's
+   text starts at the card's text inset as the card's other text does. */
+.rp-card :is(.rp-table:not(.rp-table-scroll > *):has(> table), .rp-table-scroll:has(> .rp-table > table)) {
+  width: auto;
+  margin-inline: calc(-1 * (1px + var(--rp-space-2)));
+}
 .rp-table table,
 .rp-table [role='grid'] {
   /* RAC sets min-content inline; fractional columns must fill the scrollport. */
@@ -65,7 +71,7 @@
 .rp-table [role='columnheader'] {
   text-align: start;
   font-size: var(--rp-text-md);
-  line-height: 20px;
+  line-height: var(--rp-line-body);
   font-weight: 700;
   color: var(--rp-text);
   padding: var(--rp-space-2) var(--rp-cell-padding, var(--rp-space-4));
@@ -258,7 +264,8 @@
   scrollbar-gutter: stable;
   flex: 1 1 auto;
   min-height: 0;
-  padding: var(--rp-space-3) var(--rp-space-8);
+  padding-block: var(--rp-space-3);
+  padding-inline: var(--rp-space-8) calc(var(--rp-space-8) - var(--rp-gutter, 0px));
   overflow: hidden auto;
   border-block: 1px solid transparent;
   outline: none;
@@ -282,7 +289,7 @@
   padding: var(--rp-space-3) var(--rp-space-8) var(--rp-space-6);
 }
 .rp-dialog.split > .foot + .rp-label {
-  margin: -16px 0 0;
+  margin: calc(-1 * var(--rp-space-4)) 0 0;
   padding: 0 var(--rp-space-8) var(--rp-space-6);
 }
 /* The diff in a scrolling dialog grows with its lines: the dialog is the only vertical scroller. */
@@ -312,7 +319,7 @@
 .rp-shortcuts h3 {
   margin: 0 0 var(--rp-space-1);
   font-size: var(--rp-text-md);
-  line-height: 20px;
+  line-height: var(--rp-line-body);
   font-weight: 700;
 }
 .rp-shortcuts section > .rp-label {
@@ -425,7 +432,7 @@
   overflow: auto hidden;
   overflow-anchor: none;
   scroll-padding-top: calc(var(--rp-topbar) + 37px);
-  scroll-padding-bottom: calc(var(--rp-dock) + 16px);
+  scroll-padding-bottom: calc(var(--rp-dock) + var(--rp-space-4));
 }
 .rp-table[data-flow] > div[role='grid'] > div > div:has(> [role='rowgroup']:first-child [role='columnheader']) {
   top: var(--rp-flow-heading, 0px) !important;
@@ -440,11 +447,11 @@
 .rp-table-detail[data-flow]:not(:empty) {
   scrollbar-gutter: stable;
   position: sticky;
-  bottom: calc(var(--rp-dock) + 16px);
+  bottom: calc(var(--rp-dock) + var(--rp-space-4));
   z-index: 1;
   max-height: 50vh;
   overflow: auto;
-  padding: 16px;
+  padding: var(--rp-space-4);
   background: var(--rp-surface);
   border: 1px solid var(--rp-hl-med);
   border-radius: var(--rp-r-md);
@@ -452,7 +459,7 @@
 
 .rp-table[data-flow] :is([role='row'][data-key], [role='rowheader'], [role='gridcell']) {
   scroll-margin-block-start: calc(var(--rp-topbar) + 37px);
-  scroll-margin-block-end: var(--rp-flow-bottom, calc(var(--rp-dock) + 16px));
+  scroll-margin-block-end: var(--rp-flow-bottom, calc(var(--rp-dock) + var(--rp-space-4)));
 }
 @media (max-width: 1023.98px) and (max-height: 500px) {
   .rp-table[data-flow] :is([role='row'][data-key], [role='rowheader'], [role='gridcell']) {

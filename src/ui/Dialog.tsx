@@ -1,4 +1,4 @@
-import {useEffect, useId, useRef, useState, type ComponentProps, type ReactElement, type ReactNode, type RefObject} from 'react';
+import {useEffect, useId, useRef, useState, type ComponentProps, type CSSProperties, type ReactElement, type ReactNode, type RefObject} from 'react';
 import {Button as RButton, DialogTrigger, Modal, ModalOverlay, Dialog, Heading, Text, Popover, type PopoverProps} from 'react-aria-components';
 import {useTabShown} from './useTabShown';
 import {OpenOverlay} from './openOverlays';
@@ -152,9 +152,12 @@ export function DialogSection({title, children}: {title?: string | null; childre
 function ScrollBody({children}: {children: ReactNode}) {
   const ref = useRef<HTMLDivElement>(null);
   const [overflows, setOverflows] = useState(false);
+  const [gutter, setGutter] = useState(0);
   useEffect(() => {
     const body = ref.current;
     if (!body) return;
+    // A classic scrollbar's reserved gutter comes out of the end padding, so fields end where the footer's buttons do.
+    setGutter(body.offsetWidth - body.clientWidth);
     const measure = () => setOverflows(body.scrollHeight > body.clientHeight + 1);
     // The body's own size stops changing at the dialog's height cap, so its content is watched as well.
     const observer = new ResizeObserver(measure);
@@ -163,9 +166,10 @@ function ScrollBody({children}: {children: ReactNode}) {
     measure();
     return () => observer.disconnect();
   }, []);
+  const style = gutter ? ({'--rp-gutter': `${gutter}px`} as CSSProperties) : undefined;
   return (
     // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The scrolling content needs keyboard focus to scroll.
-    <div ref={ref} className="rp-dialog-body" data-overflow={overflows || undefined} tabIndex={0}>
+    <div ref={ref} className="rp-dialog-body" data-overflow={overflows || undefined} style={style} tabIndex={0}>
       <div className="rp-dialog-content">{children}</div>
     </div>
   );

@@ -20,12 +20,12 @@ import {scaleOf} from './dashboardSizing';
 
 // A chart's legend carries the live value beside its colour, so a charted widget lists the rates once, there.
 export const chartedRates = (item: Pick<Widget, 'id' | 'size'>, form: ModuleForm) => registry[item.id].rate === true && form !== 'kv' && item.size !== 'small';
-// A dashboard card two thirds of a row or wider lists its chart's peak and average beside it (see dashboard.css): by its
-// chosen width, or for Auto by the box its footprint has now.
+// A dashboard card two thirds of a row or wider lists its chart's peak and average (see dashboard.css): by its chosen
+// width, or by the box its footprint has now, which on a phone is the whole row whatever width was chosen.
 function useWide(item: Widget) {
   const surface = useContext(WidgetSurface);
   const cell = useContext(WideCell);
-  return surface === 'dashboard' && (item.width ? item.width === '2/3' || item.width === 'full' : cell);
+  return surface === 'dashboard' && (item.width === '2/3' || item.width === 'full' || cell);
 }
 export function RuntimeWidget({item, form}: {item: Widget; form: ModuleForm}) {
   const t = useT();
@@ -138,7 +138,7 @@ function HistoryChart({
           locale={locale}
           {...chart}
         />
-        {wide && <FactStrip facts={seriesFacts(chart.series, chart.fmt, t)} />}
+        {wide && <FactStrip facts={seriesFacts(chart.series, chart.fmt, t)} fit={form !== 'sparkline'} />}
       </div>
     </>
   );

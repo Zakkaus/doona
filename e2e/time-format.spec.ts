@@ -96,8 +96,10 @@ for (const lang of ['en', 'zh-TW'])
         }
         const traffic = page.getByRole('region', {name: lang === 'en' ? 'Traffic' : '流量', exact: true});
         await traffic.getByRole('application').focus();
-        await expect(traffic.getByRole('status')).toContainText(meridiem);
-        await expect(traffic.getByRole('status')).toContainText(/\d:\d{2}:\d{2}/);
+        // The tip opens over the page, outside the card.
+        const tip = page.locator('body > .rp-charttip-bounded').getByRole('status');
+        await expect(tip).toContainText(meridiem);
+        await expect(tip).toContainText(/\d:\d{2}:\d{2}/);
       });
     });
   }

@@ -3,8 +3,8 @@ import {useT} from '../../i18n';
 import {localClockFormat, localMonthDayFormat, localTimeFormat} from '../../i18n/format';
 import {useContentSize} from '../hooks';
 import {usePalette} from './palette';
-import {ChartTip, tipBounds, useChartTip} from './tip';
-import {linearPosition, visibleTicks, nearestIndex} from './layout';
+import {ChartTip, tipOverlay, useChartTip} from './tip';
+import {linearPosition, visibleTicks, nearestIndex, sampleTicks} from './layout';
 import {pointerPosition, useSelection} from './interaction';
 import {Curve, Gradient} from './AreaCurve';
 import {seriesTipLines, type Series} from './Charts';
@@ -33,22 +33,6 @@ function clockTicks(since: number, until: number): {ticks: number[]; step: numbe
   return {ticks, step};
 }
 
-// Ticks at fixed samples keep the last one, and each earlier one only when its label clears the next kept label by
-// `gap`; a narrow plot shows the first and last labels, or only the last.
-function sampleTicks(positions: number[], widths: number[], gap: number) {
-  const box = (index: number) => [positions[index] - (widths[index] ?? 0) / 2, positions[index] + (widths[index] ?? 0) / 2];
-  const last = positions.length - 1;
-  const shown: Array<{index: number; position: number}> = [];
-  let end = Infinity;
-  for (let index = last; index >= 0; index--) {
-    const [start, stop] = box(index);
-    if (stop + gap > end || (index > 0 && index < last && start < box(0)[1] + gap)) continue;
-    shown.unshift({index, position: positions[index]});
-    end = start;
-  }
-  return shown;
-}
-
 // Measures the labels in the axis font. Labels that read the same in the same locale keep the sizes already measured,
 // without touching the DOM or the state.
 function useTickSizes(labels: string[], locale: string) {
@@ -73,6 +57,9 @@ function useTickSizes(labels: string[], locale: string) {
   }, [labels, locale]);
   return sizes;
 }
+
+// The gap between the plot's end and the value axis's widest label (--rp-space-2).
+const valueGap = 8;
 
 export function AreaPlot({
   label,
@@ -111,7 +98,13 @@ export function AreaPlot({
   const span = window ? window.until - window.since : timestamps.length ? timestamps[timestamps.length - 1] - timestamps[0] : 0;
   const since = window?.since;
   const until = window?.until;
-  const marks = useMemo(() => (since !== undefined && until !== undefined ? clockTicks(since, until) : undefined), [since, until]);
+  // The plot spans its samples, so the grid, the fill and the line start and end at one x; a window without samples
+  // spans the window.
+  const xDomain = useMemo<[number, number]>(
+    () => (timestamps.length ? [Math.min(...timestamps), Math.max(...timestamps)] : since !== undefined && until !== undefined ? [since, until] : [0, 0]),
+    [since, until, timestamps]
+  );
+  const marks = useMemo(() => (window ? clockTicks(xDomain[0], xDomain[1]) : undefined), [window, xDomain]);
   const withSeconds = marks ? marks.step < 60000 : span < 3 * 60 * 1000;
   // Use dates for day-scale windows and seconds for sub-minute tick spacing.
   const withDate = marks ? marks.step >= 86400000 : span > 36 * 60 * 60 * 1000;
@@ -129,23 +122,24 @@ export function AreaPlot({
     }
     return {yDomain: [lo, max], yTicks: baseline === 'auto' ? [lo, (lo + max) / 2, max] : [max / 2, max]};
   }, [series, baseline]);
+  // The axis labels the plot's two ends and, between them, round clock times or evenly spaced samples.
   const ticks = useMemo(() => {
     const last = timestamps.length - 1;
     return marks
-      ? marks.ticks
+      ? [...new Set([xDomain[0], ...marks.ticks, xDomain[1]])]
       : [...new Set((withSeconds ? [0, Math.round(last / 2), last] : [0, Math.round(last / 3), Math.round((2 * last) / 3), last]).map(i => timestamps[i]))];
-  }, [marks, withSeconds, timestamps]);
-  const domain = useMemo<[number, number]>(
-    () => (since !== undefined && until !== undefined ? [since, until] : [Math.min(...timestamps), Math.max(...timestamps)]),
-    [since, until, timestamps]
-  );
+  }, [marks, withSeconds, timestamps, xDomain]);
+  const yLabels = useMemo(() => yTicks.map(fmt), [yTicks, fmt]);
+  const ySizes = useTickSizes(yLabels, locale);
   const width = size?.width ?? 0;
   const h = size?.height ?? height;
-  const left = bare ? inset : 20;
-  const top = bare ? 2 : 8;
+  // The plot starts at the box's start edge, the card's text inset, and its top at the box's top, level with the
+  // figures beside it; the value axis labels sit right-aligned in a gutter of the plot's own at its end.
+  const left = bare ? inset : 0;
+  const top = bare ? 2 : 0;
   const bottom = h - (bare ? 2 : 30);
-  const right = width - (bare ? inset : 64);
-  const xDomain = useMemo<[number, number]>(() => [Math.min(domain[0], ...timestamps), Math.max(domain[1], ...timestamps)], [domain, timestamps]);
+  // The value axis takes the room of its widest label and the gap before it, no more.
+  const right = width - (bare ? inset : Math.ceil(Math.max(0, ...ySizes.map(size => size.width))) + valueGap);
   const x = useCallback((value: number) => linearPosition(value, xDomain, [left, right]), [xDomain, left, right]);
   const y = useCallback((value: number) => linearPosition(value, yDomain as [number, number], [bottom, top]), [yDomain, bottom, top]);
   const xs = useMemo(() => timestamps.map(x), [timestamps, x]);
@@ -172,42 +166,47 @@ export function AreaPlot({
       x: xs[selected],
       y: selectionPoint?.y ?? (top + bottom) / 2,
       width,
-      // A bare plot is too short for its tip, which stays inside the card instead, as a sparkline's does.
-      bounds: bare && ref.current ? tipBounds(ref.current) : bounds,
+      // The tip is drawn over the page, inside the viewport: a short plot's card would cut it off or cover its header.
+      ...(ref.current ? tipOverlay(ref.current) : {bounds}),
       label: localTimeFormat(locale).format(timestamps[selected]),
       lines: seriesTipLines(series, selected, fmt, t)
     });
   });
   const selection = useSelection(timestamps.length, select, clear);
   const tickLabels = useMemo(() => ticks.map(value => clock.format(value)), [ticks, clock]);
-  const yLabels = useMemo(() => yTicks.map(fmt), [yTicks, fmt]);
   const xSizes = useTickSizes(tickLabels, locale);
-  const ySizes = useTickSizes(yLabels, locale);
-  const xTicks = marks
-    ? visibleTicks(
-        ticks.map(x),
-        xSizes.map(size => size.width),
-        0,
-        width,
-        16,
-        true
-      )
-    : sampleTicks(
-        ticks.map(x),
-        xSizes.map(size => size.width),
-        8
-      );
+  // The first label starts at the plot's start and the last ends at its end.
+  const xTicks = sampleTicks(
+    ticks.map(x),
+    xSizes.map(size => size.width),
+    marks ? 16 : 8,
+    right
+  );
+  // Every label stays inside the box: the top one hangs from the plot's top edge, level with the figures beside it.
   const yTicksVisible = visibleTicks(
     yTicks.map(y),
     ySizes.map(size => size.height),
-    0,
+    top,
     h,
     5,
     false
   );
   const grid = [...new Set([...(bare ? yTicks : yTicksVisible.map(tick => yTicks[tick.index])).map(y), top, bottom])];
   return (
-    <div ref={ref} style={{height, width: '100%', flex: fill ? '1 0 auto' : undefined, position: 'relative'}} onPointerLeave={selection.onPointerLeave}>
+    <div
+      ref={ref}
+      className="rp-area-plot"
+      style={{
+        height: fill ? undefined : height,
+        minHeight: fill ? height : undefined,
+        width: '100%',
+        flex: fill ? '1 0 auto' : undefined,
+        // Filling, the box takes its height from the card, never from the plot it last drew, so it can shrink again.
+        contain: fill ? 'size' : undefined,
+        position: 'relative'
+      }}
+      onPointerLeave={selection.onPointerLeave}
+    >
       {timestamps.length > 0 && size && (
         <>
           <ChartTip tip={tip} />
@@ -216,7 +215,7 @@ export function AreaPlot({
             width={width}
             height={h}
             viewBox={`0 0 ${width} ${h}`}
-            style={{display: 'block'}}
+            style={{display: 'block', overflow: 'visible'}}
             role="application"
             aria-label={label}
             tabIndex={0}
@@ -251,9 +250,9 @@ export function AreaPlot({
             )}
             {!bare && (
               <>
-                <g>
+                <g className="rp-area-x-ticks">
                   {xTicks.map(({index, position}) => (
-                    <text key={index} x={position} y={bottom + 8} className="rp-area-tick" fill={p.subtle} textAnchor="middle">
+                    <text key={index} x={position} y={bottom + 8} className="rp-area-tick" textAnchor="middle">
                       <tspan x={position} dy="0.71em">
                         {tickLabels[index]}
                       </tspan>
@@ -262,8 +261,8 @@ export function AreaPlot({
                 </g>
                 <g className="rp-area-y-ticks">
                   {yTicksVisible.map(({index, position}) => (
-                    <text key={index} x={right + 8} y={position} className="rp-area-tick" fill={p.subtle} textAnchor="start">
-                      <tspan x={right + 8} dy="0.355em">
+                    <text key={index} x={width} y={position} className="rp-area-tick" textAnchor="end">
+                      <tspan x={width} dy="0.355em">
                         {fmt(yTicks[index])}
                       </tspan>
                     </text>

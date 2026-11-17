@@ -254,7 +254,7 @@
   background: var(--rp-overlay);
 }
 .rp-card {
-  scroll-margin-block-start: calc(var(--rp-topbar) + 16px);
+  scroll-margin-block-start: calc(var(--rp-topbar) + var(--rp-space-4));
   background: var(--rp-base);
   border: 1px solid color-mix(in srgb, var(--rp-hl-med) 70%, transparent);
   border-radius: var(--rp-r-xl);
@@ -382,7 +382,10 @@
 }
 .rp-global-controls {
   flex: none;
-  gap: var(--rp-space-2);
+  /* Apply reads the cluster's gap (--rp-space-3) from the control before it in every control card: after a segmented
+     control's track that is the gap itself, and after this quiet picker it is the picker's own inline padding, which
+     draws nothing. */
+  gap: 0;
   flex-wrap: nowrap;
 }
 :is(.rp-control-card > .rp-row, .rp-widget-row):has(> .rp-global-controls) {
@@ -404,6 +407,19 @@
 }
 .rp-row.nowrap .rp-h3 {
   min-width: 0;
+}
+/* A card's title line is one M control high whether a control shares it, the header wraps, or the title stands alone:
+   the title is centred in that line and the controls beside it align to it, so the titles of neighbouring cards share a
+   baseline and their bodies start at one offset. */
+.rp-card > .rp-h3:first-child,
+.rp-card > :is(.rp-help-row, .rp-row):first-child > .rp-h3,
+.rp-card > :is(.rp-help-row, .rp-row):first-child > :is(.rp-help-row, .rp-cluster, .rp-truncate):first-child > .rp-h3 {
+  padding-block: calc((var(--rp-control) - 1lh) / 2);
+}
+/* A truncated title sits on the heading's line without adding descender room below it, so its heading is the 20px line
+   of every other card title and shares their baseline. */
+.rp-h3 > .rp-truncate {
+  vertical-align: top;
 }
 .rp-label {
   font-size: var(--rp-text-xs);
@@ -464,9 +480,10 @@
   gap: var(--rp-space-3);
   align-items: stretch;
 }
+/* Two thirds and a third of the row, on the column lines of a row of thirds (.rp-g3) with the same gap. */
 @media (min-width: 1024px) {
   .rp-g21 {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) calc((100% - 2 * var(--rp-space-3)) / 3);
   }
 }
 @media (min-width: 1024px) and (max-width: 1399.98px) {
@@ -523,7 +540,7 @@
    The help target grows into the card's end inset, so the caption and picker keep their boxes. */
 .rp-tile-head[data-layout='responsive'] {
   flex-wrap: nowrap;
-  margin-inline-end: -8px;
+  margin-inline-end: calc(-1 * var(--rp-space-2));
 }
 .rp-tile-controls {
   display: inline-flex;
@@ -538,6 +555,8 @@
   margin-inline-start: 0;
 }
 .rp-tile-body {
+  /* The widest value, 888 MB/s, at the value type in every locale (see the tile container query below). */
+  --rp-tile-value: 98px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -621,8 +640,10 @@
   background-clip: text;
   color: transparent;
 }
+/* A sparkline starts at one column in every tile: after the room of the widest value and the gap, whatever the value
+   shown now, so tiles of one width draw sparklines of one start and width. It gives way to a wider value. */
 .rp-spark {
-  flex: 1 1 64px;
+  flex: 0 1 calc(100% - var(--rp-tile-value) - var(--rp-space-3));
   min-width: 48px;
   max-width: 120px;
 }
@@ -645,8 +666,8 @@
   overflow: hidden;
   visibility: hidden;
 }
-/* The widest value, 888 MB/s, is 98px at the value type in every locale; beside it go the 12px gap and the
-   sparkline's 64px basis: 98 + 12 + 64 = 174px. Below that the sparkline takes its own row under the value. Every
+/* The widest value, 888 MB/s, is 98px at the value type in every locale (--rp-tile-value); beside it go the 12px gap
+   and the sparkline's 64px: 98 + 12 + 64 = 174px. Below that the sparkline takes its own row under the value. Every
    narrow tile keeps that row, holding the status or nothing, so tiles in a row match before and after data. This is
    the one place the width is set: a dashboard row reads --rp-tile-stack to stack all its tiles (see packSection). */
 @container rp-tile (width < 174px) {
@@ -771,7 +792,7 @@
 .rp-cardview-title {
   flex: 1 1 auto;
   font-size: var(--rp-text-md);
-  line-height: 20px;
+  line-height: var(--rp-line-body);
   font-weight: 700;
 }
 .rp-cardview-actions {
@@ -814,7 +835,7 @@
 .rp-cardview-card .rp-kv .v {
   margin-block-start: var(--rp-space-half);
   font-size: var(--rp-text-xs);
-  line-height: 16px;
+  line-height: var(--rp-line-caption);
 }
 /* A value with a tooltip, such as a relative time, sits on the same line as a plain one. */
 .rp-cardview-card .rp-kv .v > .rp-truncate {

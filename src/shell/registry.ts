@@ -104,8 +104,8 @@ const definitions = {
       {facts: 4},
       {
         cards: [
-          [451, 498],
-          [451, 451]
+          [459, 498],
+          [459, 463]
         ],
         columns: '2fr 1fr'
       },
@@ -167,7 +167,7 @@ const definitions = {
     requires: {resources: ['events']}
   },
   logs: {
-    skeleton: [{column: [{toolbar: 3, height: [32, 84]}, {line: 'caption'}]}, {column: [{facts: 2, caption: true}, {cards: [[227, 239]]}]}, {table: 10}],
+    skeleton: [{column: [{toolbar: 3, height: [32, 84]}, {line: 'caption'}]}, {column: [{facts: 2, caption: true}, {cards: [[235, 251]]}]}, {table: 10}],
     shortcut: 'l',
     nav: {titleKey: 'nav.logs', hintKey: 'hint.logs', Icon: TextAlignLeft},
     ...lazyPage(withCatalogue('rest', () => import('../features/logs/Logs').then(m => ({default: m.Logs})))),
@@ -182,7 +182,7 @@ const definitions = {
           [286, 414],
           [490, 998],
           [549, 681],
-          [326, 530],
+          [334, 542],
           [102, 154]
         ],
         typical: [1, 2, 4]

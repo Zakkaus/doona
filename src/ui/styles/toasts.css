@@ -23,7 +23,7 @@
   max-height: 100%;
   display: flex;
   flex-direction: column-reverse;
-  gap: 8px;
+  gap: var(--rp-space-2);
   z-index: var(--rp-z-toast);
   outline: none;
 }
@@ -36,7 +36,7 @@
 }
 .rp-toasts[data-align='end'] {
   --rp-toast-from: calc(100% + 12px) 0;
-  margin-inline: auto 16px;
+  margin-inline: auto var(--rp-space-4);
 }
 [dir='rtl'] .rp-toasts[data-align='end'] {
   --rp-toast-from: calc(-100% - 12px) 0;
@@ -56,14 +56,14 @@
 .rp-toasts.expanded {
   bottom: 0;
   top: 0;
-  padding: 16px 8px;
+  padding: var(--rp-space-4) var(--rp-space-2);
 }
 /* The list is react-aria's <ol>; it and the controls are positioned after the underlay, so they paint above it. */
 .rp-toast-list {
   position: relative;
   display: flex;
   flex-direction: column-reverse;
-  gap: 8px;
+  gap: var(--rp-space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -74,14 +74,14 @@
 }
 .rp-toasts.expanded .rp-toast-list {
   overflow: auto;
-  padding: 8px;
-  margin: 0 -8px;
+  padding: var(--rp-space-2);
+  margin: 0 calc(-1 * var(--rp-space-2));
 }
 .rp-toast-controls {
   position: relative;
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--rp-space-2);
 }
 /* S2's toast. The footer row takes "show all" at the start and the actions at the end, which ends where close ends; the
    widest toast sets the width of the stack. Margins rather than column gaps space the columns, so a toast without an
@@ -101,7 +101,7 @@
   background: var(--rp-text);
   color: var(--rp-on-text);
   font-size: var(--rp-text-md);
-  line-height: 20px;
+  line-height: var(--rp-line-body);
   box-shadow: var(--rp-shadow-lg);
   flex-shrink: 0;
   transition:
@@ -123,13 +123,13 @@
   display: flex;
   align-items: center;
   height: var(--rp-control);
-  margin-inline-end: 8px;
+  margin-inline-end: var(--rp-space-2);
 }
 /* The padding makes one line as tall as a button. */
 .rp-toast .msg {
   grid-area: msg;
   min-width: 0;
-  margin-inline-end: 8px;
+  margin-inline-end: var(--rp-space-2);
   padding-block: calc((var(--rp-control) - 20px) / 2);
   overflow-wrap: anywhere;
 }
@@ -139,7 +139,7 @@
 /* A detail of several lines, as a refused edit lists them, keeps its line breaks. */
 .rp-toast .detail {
   white-space: pre-line;
-  margin-block-start: 2px;
+  margin-block-start: var(--rp-space-half);
   font-size: var(--rp-text-sm);
   line-height: 18px;
   color: color-mix(in srgb, currentColor 82%, transparent);
@@ -148,12 +148,12 @@
   grid-area: foot;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-block-start: 4px;
+  gap: var(--rp-space-2);
+  margin-block-start: var(--rp-space-1);
 }
 /* The chevron lines up with the message. */
 .rp-toast .more {
-  margin-inline-start: -8px;
+  margin-inline-start: calc(-1 * var(--rp-space-2));
   color: inherit;
 }
 .rp-toast .more > .up {
@@ -248,10 +248,10 @@
 /* Phone: 12px from the screen edges, with a 12px start. */
 @media (max-width: 599.98px) {
   .rp-toasts[data-align='end'] {
-    margin-inline: auto 12px;
+    margin-inline: auto var(--rp-space-3);
   }
   .rp-toast {
-    padding-inline-start: 12px;
+    padding-inline-start: var(--rp-space-3);
     min-width: min(336px, 100vw - 24px);
     max-width: calc(100vw - 24px);
   }

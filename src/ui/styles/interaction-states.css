@@ -15,7 +15,7 @@
 .rp-disclosure-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--rp-space-2);
 }
 .rp-disclosure-head > .rp-disclosure-trigger {
   flex: 0 1 auto;
@@ -117,7 +117,7 @@ h3.rp-label {
   background: var(--rp-text);
   color: var(--rp-on-text);
   font-size: var(--rp-text-sm);
-  padding: 4px 8px;
+  padding: var(--rp-space-1) var(--rp-space-2);
   border-radius: var(--rp-r-sm);
   /* Tooltips are portaled without a z-index; sticky table headers must not cover them. */
   z-index: var(--rp-z-tooltip);
@@ -135,8 +135,8 @@ h3.rp-label {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  padding: 12px 16px;
+  gap: var(--rp-space-1);
+  padding: var(--rp-space-3) var(--rp-space-4);
   border-radius: var(--rp-r-lg);
   border: 1px solid var(--rp-negative);
   margin: 0;
@@ -163,7 +163,7 @@ h3.rp-label {
 /* The backend's own words under the message, as a toast's detail. */
 .rp-alert-detail {
   display: block;
-  margin-block-start: 2px;
+  margin-block-start: var(--rp-space-half);
   font-size: var(--rp-text-sm);
   color: color-mix(in srgb, currentColor 82%, transparent);
 }
@@ -207,18 +207,18 @@ h3.rp-label {
   }
 }
 .rp-empty > .rp-progress-circle {
-  margin-inline-end: 8px;
+  margin-inline-end: var(--rp-space-2);
 }
 .rp-empty > .rp-btn,
 .rp-empty > .rp-tipwrap {
   display: block;
-  margin: 16px auto 0;
+  margin: var(--rp-space-4) auto 0;
   width: max-content;
 }
 /* Two actions under the message share a centred row. */
 .rp-empty > .rp-cluster {
   justify-content: center;
-  margin-top: 16px;
+  margin-top: var(--rp-space-4);
 }
 .rp-btn[data-pending] {
   cursor: progress;
@@ -301,7 +301,7 @@ h3.rp-label {
 .rp-chain {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--rp-space-1h);
   min-width: 0;
   max-width: 100%;
 }
@@ -320,6 +320,11 @@ h3.rp-label {
 .rp-tipwrap:focus-visible {
   outline: var(--rp-focus-width) solid var(--rp-focus-color);
   outline-offset: var(--rp-focus-offset);
+}
+/* A chart's plot takes focus to step through its points; a click or a tap focuses it too, and it draws a ring only
+   for keyboard focus, as S2 does. */
+svg[tabindex]:focus:not(:focus-visible) {
+  outline: none;
 }
 .rp-tab[data-focus-visible],
 .rp-seg .rp-btn[data-focus-visible] {
@@ -390,10 +395,10 @@ h3.rp-label {
   display: inline-flex;
   align-items: center;
   align-self: flex-start;
-  gap: 6px;
+  gap: var(--rp-space-1h);
   min-height: var(--rp-control);
   border-radius: var(--rp-r-md);
-  padding: 0 8px;
+  padding: 0 var(--rp-space-2);
   color: var(--rp-accent-text);
   text-decoration: none;
 }
@@ -407,10 +412,18 @@ h3.rp-label {
   vertical-align: baseline;
 }
 /* A link standing on its own in a card or an alert keeps its text on the content's edge; the padding only backs hover
-   and focus. */
+   and focus. So does a quiet action ending a line of a card, a header's link or a list row's button, at the end edge. */
 .rp-card > .rp-link,
 .rp-alert .rp-link:not([data-layout]) {
-  margin-inline-start: -8px;
+  margin-inline-start: calc(-1 * var(--rp-space-2));
+}
+.rp-card :is(.rp-row, .rp-row > .rp-cluster:last-child, .rp-limit, .rp-control-tail) > .rp-link:not([data-layout='inline']):last-child {
+  margin-inline-end: calc(-1 * var(--rp-space-2));
+  max-inline-size: calc(100% + var(--rp-space-2));
+}
+.rp-card :is(.rp-row, .rp-row > .rp-cluster:last-child, .rp-limit, .rp-control-tail) > .rp-btn.quiet:not(.icon):last-child {
+  margin-inline-end: calc(-1 * var(--rp-btn-inset));
+  max-inline-size: calc(100% + var(--rp-btn-inset));
 }
 /* A tile whose value opens what it measures behaves like a linked card: the value's link covers the card, so the whole
    tile is the target and it answers hover and press the way the connections tile does, without boxing the glyphs.
@@ -453,7 +466,7 @@ h3.rp-label {
     display: none;
   }
   .rp-main {
-    padding: 20px 16px calc(40px + var(--rp-dock));
+    padding: var(--rp-space-5) var(--rp-space-4) calc(var(--rp-space-10) + var(--rp-dock));
   }
   .rp-field {
     max-width: 100%;

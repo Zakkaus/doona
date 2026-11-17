@@ -109,8 +109,8 @@ test('chart data tooltips are reachable without pointer interaction', async ({pa
   const chart = traffic.getByRole('application');
   await chart.focus();
   await page.keyboard.press('ArrowRight');
-  await expect(traffic.locator('.rp-charttip-bounded')).toBeVisible();
-  await expect(traffic.locator('.rp-charttip-bounded li').first()).toContainText(/\d/);
+  await expect(page.locator('body > .rp-charttip-bounded')).toBeVisible();
+  await expect(page.locator('body > .rp-charttip-bounded li').first()).toContainText(/\d/);
   const donut = page.locator('[data-module=outbounds] .rp-donut');
   if (!(await donut.count())) return;
   const surface = donut.locator('svg');

@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useEffectEvent, useRef, useState, useSyncExternalStore, type PointerEvent} from 'react';
+import {createPortal} from 'react-dom';
 import {pointerPosition} from './interaction';
 import {useContentSize} from '../hooks';
 import {NodeName} from '../NodeName';
@@ -11,6 +12,8 @@ type Tip = {
   nodeName?: boolean;
   label?: string;
   bounds?: {x: number; y: number; width: number; height: number};
+  // The chart's place in the viewport, for a tip drawn over the page rather than inside its card.
+  origin?: {x: number; y: number};
 };
 
 const same = (a: Tip | null, b: Tip | null) =>
@@ -26,6 +29,8 @@ const same = (a: Tip | null, b: Tip | null) =>
     a.bounds?.y === b.bounds?.y &&
     a.bounds?.height === b.bounds?.height &&
     a.bounds?.width === b.bounds?.width &&
+    a.origin?.x === b.origin?.x &&
+    a.origin?.y === b.origin?.y &&
     a.lines.length === b.lines.length &&
     a.lines.every((line, i) => line === b.lines[i]));
 
@@ -49,15 +54,25 @@ function tipStore() {
 }
 type TipStore = ReturnType<typeof tipStore>;
 
-// The box the tip must stay inside, relative to the sparkline: the padding box of the nearest ancestor that clips,
-// which in a tile is its card, or else the viewport.
+// The box the tip must stay inside, relative to the chart: the padding box of its card or of the nearest ancestor that
+// clips, or else the viewport.
 export function tipBounds(own: HTMLElement) {
   let clip = own.parentElement;
-  while (clip && getComputedStyle(clip).overflow === 'visible') clip = clip.parentElement;
+  while (clip && !clip.classList.contains('rp-card') && getComputedStyle(clip).overflow === 'visible') clip = clip.parentElement;
   const at = own.getBoundingClientRect();
   if (!clip) return {x: -at.left, y: -at.top, width: document.documentElement.clientWidth, height: document.documentElement.clientHeight};
   const box = clip.getBoundingClientRect();
   return {x: box.left + clip.clientLeft - at.left, y: box.top + clip.clientTop - at.top, width: clip.clientWidth, height: clip.clientHeight};
+}
+
+// The viewport, relative to the chart, and the chart's place in it: a tip over the page is never cut off by the card
+// that clips the chart, and does not cover the card's header in a short plot.
+export function tipOverlay(own: HTMLElement) {
+  const at = own.getBoundingClientRect();
+  return {
+    bounds: {x: -at.left, y: -at.top, width: document.documentElement.clientWidth, height: document.documentElement.clientHeight},
+    origin: {x: at.left, y: at.top}
+  };
 }
 
 export function useChartTip<E extends HTMLElement = HTMLDivElement>() {
@@ -108,16 +123,17 @@ function BoundedTip({tip}: {tip: Tip}) {
     const open = coordinate + 10 + dimension > start + length ? coordinate - dimension - 10 : coordinate + 10;
     return Math.max(start, Math.min(open, start + length - dimension));
   };
-  const x = place(tip.x, size?.width ?? 0, bounds.x, bounds.width);
-  const y = place(tip.y, size?.height ?? 0, bounds.y, bounds.height);
-  return (
+  const x = place(tip.x, size?.width ?? 0, bounds.x, bounds.width) + (tip.origin?.x ?? 0);
+  const y = place(tip.y, size?.height ?? 0, bounds.y, bounds.height) + (tip.origin?.y ?? 0);
+  const box = (
     <div
       ref={ref}
       className="rp-charttip-bounded"
       style={{
         visibility: size && !(dismissed?.x === tip.x && dismissed?.y === tip.y) ? 'visible' : 'hidden',
         pointerEvents: 'none',
-        position: 'absolute',
+        position: tip.origin ? 'fixed' : 'absolute',
+        zIndex: tip.origin ? 'var(--rp-z-tooltip)' : undefined,
         top: 0,
         left: 0,
         transform: `translate(${x}px, ${y}px)`
@@ -134,4 +150,5 @@ function BoundedTip({tip}: {tip: Tip}) {
       </div>
     </div>
   );
+  return tip.origin ? createPortal(box, document.body) : box;
 }

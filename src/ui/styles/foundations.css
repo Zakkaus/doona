@@ -227,7 +227,7 @@
   transform: rotate(-90deg) scale(0.5);
 }
 .rp-empty {
-  padding: 24px;
+  padding: var(--rp-space-6);
   text-align: center;
   color: var(--rp-subtle);
 }
