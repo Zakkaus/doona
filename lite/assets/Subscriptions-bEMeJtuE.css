@@ -1,0 +1,1 @@
+.lite-disclosure-grid{column-gap:var(--spacing-3);grid-template-columns:minmax(0,1fr) auto;align-items:start}.lite-disclosure{display:contents}.lite-disclosure-actions{grid-area:1/2}.lite-subscription-row .lite-disclosure-actions{align-self:center}

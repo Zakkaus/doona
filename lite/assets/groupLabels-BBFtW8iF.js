@@ -1,0 +1,1 @@
+import{c as e}from"./describe-CbpZ6fA5.js";function t(t,n){return n[e(t)]}export{t};
