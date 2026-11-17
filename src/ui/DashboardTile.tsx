@@ -48,7 +48,8 @@ function useWideMark(cellOf: (node: HTMLElement) => Element | null = ownCell) {
   return [ref, wide] as const;
 }
 
-// `card`: the name dashboard.css gives the card's heights (its Skeleton's), which its preview keeps off screen.
+// `card`: the name dashboard.css gives the card's heights (its Skeleton's), which its preview keeps off screen until the
+// card first comes on screen and loads; a card seen once keeps its own height, so leaving the screen moves nothing.
 export function DashboardTile({
   tile,
   card,
@@ -64,10 +65,12 @@ export function DashboardTile({
 }) {
   const [mark, wide] = useWideMark();
   const ref = useMemo(() => mergeRefs<HTMLDivElement>(mark, targetRef), [mark, targetRef]);
+  const [seen, setSeen] = useState(visible);
+  if (visible && !seen) setSeen(true);
   return (
     <div ref={ref} className="rp-dashboard-cell" data-visible={visible} {...tileAttributes(tile)}>
       <WideCell value={wide}>
-        <HeldCard value={visible ? undefined : card}>{children}</HeldCard>
+        <HeldCard value={seen ? undefined : card}>{children}</HeldCard>
       </WideCell>
     </div>
   );
