@@ -10,16 +10,16 @@ export const overviewSkeleton: PageShape = [
   ...statusRow,
   {
     cards: [
-      [410, 294],
-      [410, 238],
-      [410, 266]
+      [418, 306],
+      [418, 250],
+      [418, 278]
     ],
     class: 'rp-g3'
   },
   {
     cards: [
       [464, 560],
-      [242, 418]
+      [250, 430]
     ],
     class: 'rp-g21 rp-overview-lower',
     typical: [0]

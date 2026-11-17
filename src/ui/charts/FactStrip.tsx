@@ -1,4 +1,4 @@
-import type {ReactNode} from 'react';
+import {useCallback, type ReactNode} from 'react';
 import {NodeName} from '../NodeName';
 import {TextTooltip} from '../Tooltip';
 import {useWaitAttr} from '../Empty';
@@ -20,12 +20,35 @@ export type ChartFact = {
 // `lead`: the first value is a name whose end tells most, as a host's domain. Wide, its tile takes two shares of the
 // row; on a phone it takes the first row alone. At any width a name still too long for its tile gives way at its
 // start, and a hover, keyboard focus or tap shows it whole. `loading`: the first values are on their way, and each is
-// drawn as a Skeleton bar in its place under its label, with a caption's bar where the fact has one.
-export function FactStrip({facts, lead, loading}: {facts: ChartFact[]; lead?: boolean; loading?: boolean}) {
+// drawn as a Skeleton bar in its place under its label, with a caption's bar where the fact has one. `fit`: the facts
+// share one row while each keeps its text whole in an equal share, and pair up otherwise (data-pairs, see
+// dashboard.css), as measured from the strip's own width and its facts' text whenever either changes.
+export function FactStrip({facts, lead, loading, fit}: {facts: ChartFact[]; lead?: boolean; loading?: boolean; fit?: boolean}) {
   const wait = useWaitAttr(!!loading);
+  const fitRef = useCallback((strip: HTMLDListElement | null) => {
+    if (!strip) return;
+    const measure = () => {
+      const columns = strip.style.gridTemplateColumns;
+      strip.style.gridTemplateColumns = `repeat(${strip.children.length}, max-content)`;
+      const widest = Math.max(0, ...[...strip.children].map(fact => fact.getBoundingClientRect().width));
+      strip.style.gridTemplateColumns = columns;
+      const gap = Number.parseFloat(getComputedStyle(strip).columnGap) || 0;
+      strip.toggleAttribute('data-pairs', strip.children.length * (widest + gap) - gap > strip.clientWidth + 0.5);
+    };
+    const resize = new ResizeObserver(measure);
+    resize.observe(strip);
+    const text = new MutationObserver(measure);
+    text.observe(strip, {subtree: true, childList: true, characterData: true});
+    void document.fonts?.ready.then(measure);
+    return () => {
+      resize.disconnect();
+      text.disconnect();
+    };
+  }, []);
   if (!facts.length) return null;
   return (
     <dl
+      ref={fit ? fitRef : undefined}
       className={'rp-strip rp-facts' + (lead ? ' rp-facts-lead' : '')}
       style={{['--facts' as string]: facts.length, ['--facts-rest' as string]: facts.length - 1}}
       data-wait={loading ? wait : undefined}

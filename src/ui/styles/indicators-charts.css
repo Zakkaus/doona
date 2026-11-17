@@ -1,12 +1,12 @@
 .rp-il {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--rp-space-1h);
   min-width: 0;
 }
 .ic {
   display: inline-flex;
-  margin-inline-end: 6px;
+  margin-inline-end: var(--rp-space-1h);
 }
 .rp-il .ic {
   margin-inline-end: 0;
@@ -14,7 +14,7 @@
 .rp-light {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--rp-space-2);
   min-width: 0;
   max-width: 100%;
 }
@@ -37,7 +37,7 @@
 }
 .rp-light.sm {
   font-size: var(--rp-text-xs);
-  line-height: 16px;
+  line-height: var(--rp-line-caption);
 }
 .rp-light.sm::before,
 .ms:is(.ok, .warn, .err)::before {
@@ -66,7 +66,7 @@
 .rp-bar {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--rp-space-1);
   min-width: 0;
   flex: 1;
 }
@@ -74,9 +74,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--rp-space-3);
   font-size: var(--rp-text-md);
-  line-height: 20px;
+  line-height: var(--rp-line-body);
 }
 .rp-bar .top .l {
   min-width: 0;
@@ -117,16 +117,16 @@
 .rp-meter {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--rp-space-1);
   min-width: 0;
   font-size: var(--rp-text-md);
-  line-height: 20px;
+  line-height: var(--rp-line-body);
 }
 .rp-meter .top {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  column-gap: 12px;
+  column-gap: var(--rp-space-3);
 }
 .rp-meter .l {
   flex: 1 1 0;
@@ -154,7 +154,7 @@
 /* S2 Meter, size S: the small field label (12px, subdued) and a 4px track. */
 .rp-meter[data-size='S'] {
   font-size: var(--rp-text-xs);
-  line-height: 16px;
+  line-height: var(--rp-line-caption);
 }
 .rp-meter[data-size='S'] .l {
   color: var(--rp-subtle);
@@ -166,7 +166,7 @@
 }
 /* A fact's meter (Kv): the S track under the fact's value, 4px below it as in Meter. */
 .rp-kv-meter .track {
-  margin-block-start: 4px;
+  margin-block-start: var(--rp-space-1);
 }
 .rp-meter.warn,
 .rp-kv-meter.warn {
@@ -180,7 +180,7 @@
 .rp-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--rp-space-2);
 }
 /* Rows of a label and a text: the labels share one column, so every text starts at the same edge and wraps under
    itself however wide its row's label is. */
@@ -188,7 +188,7 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-content: start;
-  column-gap: 12px;
+  column-gap: var(--rp-space-3);
 }
 .rp-list-labeled > .rp-row {
   display: grid;
@@ -201,7 +201,7 @@
   display: grid;
   /* Keeps two columns in the card's narrowest desktop width; longer labels wrap. */
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 148px), 1fr));
-  gap: 4px 12px;
+  gap: var(--rp-space-1) var(--rp-space-3);
   flex: 1 1 auto;
   align-content: start;
 }
@@ -209,7 +209,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--rp-space-2);
   min-width: 0;
   min-height: 40px;
 }
@@ -225,8 +225,8 @@
 .rp-limit {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding-block: 12px;
+  gap: var(--rp-space-4);
+  padding-block: var(--rp-space-3);
 }
 .rp-limit:first-child {
   padding-top: 0;
@@ -241,7 +241,7 @@
   display: flex;
   flex: 1 1 0;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--rp-space-half);
   min-width: 0;
 }
 .rp-limit > .rp-link,
@@ -254,24 +254,24 @@
 .rp-limit-snippet {
   align-self: stretch;
   margin: 0;
-  padding: 8px 12px;
+  padding: var(--rp-space-2) var(--rp-space-3);
   overflow-x: auto;
   border-radius: var(--rp-r-md);
   background: var(--rp-overlay);
 }
 .rp-legend {
   display: flex;
-  gap: 16px;
+  gap: var(--rp-space-4);
   align-items: center;
   flex-wrap: wrap;
   font-size: var(--rp-text-xs);
-  line-height: 16px;
+  line-height: var(--rp-line-caption);
   color: var(--rp-subtle);
 }
 .rp-legend .it {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--rp-space-2);
 }
 .rp-legend .sw {
   width: 10px;
@@ -286,7 +286,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: var(--rp-space-4);
   flex-wrap: wrap;
 }
 .rp-donut .box {
@@ -319,7 +319,7 @@
   max-width: min(calc(100% + 2 * var(--rp-space-1h)), 360px);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--rp-space-1);
   /* Six rows; a longer legend scrolls rather than growing the card. */
   max-height: calc(164px + 2 * var(--rp-space-1h));
   padding: var(--rp-space-1h);
@@ -329,10 +329,10 @@
 .rp-donut .r {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--rp-space-2);
   min-height: 24px;
   font-size: var(--rp-text-md);
-  line-height: 20px;
+  line-height: var(--rp-line-body);
   color: var(--rp-subtle);
 }
 .rp-donut .r .dot {

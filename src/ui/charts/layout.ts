@@ -184,6 +184,25 @@ export function visibleTicks(positions: number[], sizes: number[], start: number
   return shown.sort((a, b) => a.index - b.index);
 }
 
+// Ticks at fixed samples keep the last one, and each earlier one only when its label clears the next kept label by
+// `gap`; a narrow plot shows the first and last labels, or only the last. A label centres on its sample, moved inwards
+// where it would cross the plot's edges at 0 and `width`, so the plot starts at the card's text inset with its first
+// label whole.
+export function sampleTicks(positions: number[], widths: number[], gap: number, width: number) {
+  const centre = (index: number) => Math.min(Math.max(positions[index], (widths[index] ?? 0) / 2), width - (widths[index] ?? 0) / 2);
+  const box = (index: number) => [centre(index) - (widths[index] ?? 0) / 2, centre(index) + (widths[index] ?? 0) / 2];
+  const last = positions.length - 1;
+  const shown: Array<{index: number; position: number}> = [];
+  let end = Infinity;
+  for (let index = last; index >= 0; index--) {
+    const [start, stop] = box(index);
+    if (stop + gap > end || (index > 0 && index < last && start < box(0)[1] + gap)) continue;
+    shown.unshift({index, position: centre(index)});
+    end = start;
+  }
+  return shown;
+}
+
 export function nearestIndex(positions: number[], coordinate: number): number {
   let index = 0;
   for (let i = 1; i < positions.length; i++) if (Math.abs(positions[i] - coordinate) < Math.abs(positions[index] - coordinate)) index = i;

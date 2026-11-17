@@ -77,6 +77,8 @@ test('panel mode stages a draft until Apply and writes the chosen mode', async (
     items: [defaultWidget('mode')],
     size: {width: 480, height: 640}
   });
+  // The page's mode card holds its segmented control whole from 1440px.
+  await page.setViewportSize({width: 1440, height: 900});
   await page.goto('/#/activity');
   await panel(page).getByRole('button', {name: 'Expand widgets', exact: true}).click();
   await panel(page).getByRole('radio', {name: 'Direct', exact: true}).click();
@@ -105,7 +107,8 @@ for (const host of ['panel', 'dashboard'] as const) {
       if (host === 'panel' && width === 1280) await panel(page).getByRole('button', {name: 'Expand widgets', exact: true}).click();
       if (host === 'panel' && width === 390) await page.getByRole('button', {name: 'Show widgets', exact: true}).click();
       const widget = host === 'panel' ? page.locator('.rp-widget[aria-label="Global outbound"]') : page.locator('[data-instance="global"] .rp-card');
-      const label = widget.getByText('Global outbound', {exact: true});
+      // A dashboard card's label gives way to its icon when its third is too narrow, so its caption box is measured.
+      const label = host === 'panel' ? widget.getByText('Global outbound', {exact: true}) : widget.locator('.rp-qlabel');
       const target = widget.getByRole('button', {name: 'Global outbound', exact: true});
       const apply = widget.getByRole('button', {name: 'Apply', exact: true});
       await expect(target).toBeEnabled();
@@ -113,17 +116,12 @@ for (const host of ['panel', 'dashboard'] as const) {
       await expect(apply).toBeDisabled();
       await page.evaluate(() => document.fonts.ready);
       const before = (await widget.boundingBox())!;
-      // The picker is as wide as its widest outbound, so whether the title shares the line is settled before a draft: the
-      // dashboard card, alone in quick's first track, shares the line with the M picker and Apply at 1280px and stacks
-      // the title above them at 390px; the picker and Apply stay on one line.
-      const inline = host === 'panel' || width === 1280;
-      const section = page.locator('.rp-dash-section').filter({has: widget});
-      if (host === 'dashboard') await expect(section).toHaveAttribute('data-controls', inline ? 'inline' : 'stacked');
+      // The picker is as wide as its widest outbound, so the line is settled before a draft: the title, the M picker and
+      // Apply share one line, the dashboard card's title down to its icon in its narrow third.
       const line = async () => {
         const boxes = await Promise.all([label, target, apply].map(control => control.boundingBox()));
-        const centers = boxes.map(box => box!.y + box!.height / 2).slice(inline ? 0 : 1);
+        const centers = boxes.map(box => box!.y + box!.height / 2);
         expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(2);
-        if (!inline) expect(boxes[0]!.y + boxes[0]!.height).toBeLessThanOrEqual(boxes[1]!.y);
         expect(boxes[2]!.height).toBe(boxes[1]!.height);
         expect(boxes[2]!.x).toBeGreaterThanOrEqual(boxes[1]!.x + boxes[1]!.width);
         return boxes;
@@ -138,7 +136,6 @@ for (const host of ['panel', 'dashboard'] as const) {
       // Another outbound moves nothing: the picker keeps its width and Apply its place.
       expect(await line()).toEqual(idleBoxes);
       expect((await widget.boundingBox())!.height).toBe(before.height);
-      if (host === 'dashboard') await expect(section).toHaveAttribute('data-controls', inline ? 'inline' : 'stacked');
       await apply.click();
       await page.getByRole('alertdialog', {name: 'Apply Global mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
       await expect

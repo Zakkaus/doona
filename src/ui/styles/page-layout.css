@@ -7,7 +7,7 @@
 .rp-note {
   margin: 0;
   font-size: var(--rp-text-sm);
-  line-height: 20px;
+  line-height: var(--rp-line-body);
   color: var(--rp-subtle);
 }
 .rp-toolbar {
@@ -194,7 +194,7 @@
 .rp-kv-label {
   display: block;
   font-size: var(--rp-text-xs);
-  line-height: 16px;
+  line-height: var(--rp-line-caption);
   color: var(--rp-subtle);
   font-weight: 400;
 }
@@ -464,7 +464,7 @@
   height: auto;
   padding-block: var(--rp-space-half);
   font-size: var(--rp-text-xs);
-  line-height: 16px;
+  line-height: var(--rp-line-caption);
 }
 /* The backend's words open under the message, past the severity dot, and wrap in the row's width rather than
    widening the columns. */
@@ -510,14 +510,14 @@
 }
 .rp-kv.compact {
   grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
+  gap: var(--rp-space-2);
 }
 .rp-kv.compact > div {
   min-inline-size: 0;
 }
 .rp-kv.compact.row {
   display: grid;
-  gap: 8px;
+  gap: var(--rp-space-2);
 }
 .rp-kv.compact.row > div {
   justify-content: space-between;

@@ -231,32 +231,23 @@ test.describe('status details link', () => {
   test.use({storage: {'doona-lang': 'zh-TW'}, viewport: {width: 1440, height: 900}});
   test.beforeAll(loadCatalogues);
 
-  test('one feature off is the only link and the first row stays inline', async ({page}) => {
+  test('one feature off is the only link, on the status line', async ({page}) => {
     await page.goto('/#/activity');
     const summary = translate('zh-TW', 'act.limited', {n: 1});
     const links = tile(page, 'status').getByRole('link');
     await expect(links).toHaveCount(1);
     await expect(links).toHaveText(summary);
     await expect(links).toHaveAccessibleName(summary);
-    const quick = page.locator('[data-profile="quick"]');
-    await expect(quick).toHaveAttribute('data-controls', 'inline');
-    const lines = await quick.locator('.rp-control-card > .rp-row').evaluateAll(rows =>
-      rows.map(row => {
-        const title = row.firstElementChild!.getBoundingClientRect();
-        const controls = row.lastElementChild!.getBoundingClientRect();
-        return {
-          top: row.getBoundingClientRect().top,
-          centres: Math.abs(title.top + title.height / 2 - controls.top - controls.height / 2),
-          end: Math.abs(row.getBoundingClientRect().right - controls.right)
-        };
-      })
-    );
-    expect(lines).toHaveLength(3);
-    for (const line of lines) {
-      expect(Math.abs(line.top - lines[0].top)).toBeLessThanOrEqual(1);
-      expect(line.centres).toBeLessThanOrEqual(1);
-      expect(line.end).toBeLessThanOrEqual(1);
-    }
+    // At 1440px the status line fits its third: the light at the start and the link at the end of one line.
+    const line = await tile(page, 'status')
+      .locator('.rp-control-card > .rp-row')
+      .evaluate(row => {
+        const light = row.firstElementChild!.getBoundingClientRect();
+        const link = row.lastElementChild!.getBoundingClientRect();
+        return {centres: Math.abs(light.top + light.height / 2 - link.top - link.height / 2), end: Math.abs(row.getBoundingClientRect().right - link.right)};
+      });
+    expect(line.centres).toBeLessThanOrEqual(1);
+    expect(line.end).toBeLessThanOrEqual(1);
     await links.click();
     await expect(page).toHaveURL(/#\/overview\?card=limits$/);
   });
@@ -304,7 +295,7 @@ test.describe('status details link', () => {
   });
 });
 
-// A control card's title is never cut to an ellipsis: a row whose titles do not all fit whole stacks instead.
+// A control card's title is never cut to an ellipsis: a line too narrow for its whole label shows the icon alone.
 for (const lang of ['zh-TW', 'en'] as const)
   test.describe(`control card titles ${lang}`, () => {
     test.use({storage: {'doona-lang': lang}});
@@ -317,8 +308,8 @@ for (const lang of ['zh-TW', 'en'] as const)
         test(`stay whole from ${from} to ${to}px${editing ? ' while editing' : ''}`, async ({page}) => {
           await page.setViewportSize({width: from, height: 900});
           await page.goto('/#/activity');
-          const titles = page.locator('[data-profile="quick"] .rp-control-card > .rp-row > .rp-qlabel > .rp-truncate');
-          await expect(titles).toHaveCount(2);
+          const cards = page.locator('[data-profile="quick"] .rp-control-card');
+          await expect(cards).toHaveCount(3);
           if (editing) {
             await page.getByRole('button', {name: translate(lang, 'dashboard.edit'), exact: true}).click();
             await expect(page.locator('.rp-dashboard-body .rp-control-card')).toHaveCount(3);
@@ -327,57 +318,80 @@ for (const lang of ['zh-TW', 'en'] as const)
             await page.setViewportSize({width, height: 900});
             // A new width lays the cards out again in the next frame.
             await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(done)))));
-            const cut = await titles.evaluateAll(nodes => nodes.filter(node => node.scrollWidth > node.clientWidth).map(node => node.textContent));
+            const cut = await cards.evaluateAll(nodes =>
+              nodes
+                .map(node => node.querySelector(":scope > .rp-row:not([data-step='icon']) > .rp-qlabel > .rp-truncate"))
+                .filter(node => node !== null && node.scrollWidth > node.clientWidth)
+                .map(node => node!.textContent)
+            );
             expect(cut, `${width}px`).toEqual([]);
           }
         });
   });
 
-// Control cards in a row share one of two layouts and one height, and end at their content, at every width.
+// A control card's line never wraps. It shows its label whole while the line fits the card, then without the label's
+// icon, then the icon alone, whose tooltip and the card's name keep the words; the labels of a row share one title line
+// and the cards one height.
 for (const lang of ['en', 'zh-TW'])
   test.describe(`control cards ${lang}`, () => {
     test.use({storage: {'doona-lang': lang}});
-    test('share their layout and height in a row', async ({page}) => {
+    test('keep one line by their own width, a title line and a height in a row', async ({page}) => {
       await page.goto('/#/activity');
       await expect(page.locator('.rp-control-card')).toHaveCount(3);
-      for (const width of [390, 768, 1024, 1280, 1440, 1920]) {
+      for (const width of [390, 768, 1024, 1100, 1280, 1440, 1920]) {
         await page.setViewportSize({width, height: 900});
         const cards = () =>
           page.locator('.rp-control-card').evaluateAll(nodes =>
             nodes.map(node => {
-              // The layout the section would choose now: inline when every card's line fits while probing.
-              const section = node.closest<HTMLElement>('.rp-dash-section')!;
-              const chosen = section.dataset.controls;
-              section.dataset.controls = 'probe';
-              const fits = [...section.querySelectorAll('.rp-control-card > .rp-row')].every(row => row.scrollWidth <= row.clientWidth + 0.5);
-              section.dataset.controls = chosen;
               const card = node.getBoundingClientRect();
-              const row = node.querySelector(':scope > .rp-row')!;
-              const first = row.firstElementChild!.getBoundingClientRect();
-              const last = row.lastElementChild!.getBoundingClientRect();
+              const row = node.querySelector<HTMLElement>(':scope > .rp-row')!;
+              const step = row.dataset.step;
+              // The step the line needs: its parts whole, as wide as they are, against the room the card gives.
+              const room = row.clientWidth;
+              row.dataset.probe = '';
+              const whole = row.getBoundingClientRect().width;
+              const head = row.firstElementChild!;
+              const icon = head.firstElementChild!.getBoundingClientRect().width + parseFloat(getComputedStyle(head).columnGap);
+              delete row.dataset.probe;
+              const needed = !head.matches('.rp-qlabel') ? undefined : whole <= room + 0.5 ? 'full' : whole - icon <= room + 0.5 ? 'bare' : 'icon';
+              const middles = [...row.children].map(part => {
+                const box = part.getBoundingClientRect();
+                return box.top + box.height / 2;
+              });
+              // The label's words, or the light's, give the title line.
+              const words = node.querySelector(":scope > .rp-row:not([data-step='icon']) > .rp-qlabel > .rp-truncate, .rp-light > span");
+              const range = document.createRange();
+              if (words) range.selectNodeContents(words);
               const style = getComputedStyle(node);
               const inner = card.bottom - parseFloat(style.paddingBottom) - parseFloat(style.borderBottomWidth);
-              const mode =
-                Math.abs(first.top + first.height / 2 - (last.top + last.height / 2)) < 4 ? 'inline' : last.top >= first.bottom - 1 ? 'stacked' : 'other';
               return {
                 top: Math.round(card.top),
                 height: card.height,
-                mode,
-                settled: mode === (fits ? 'inline' : 'stacked'),
+                step,
+                settled: step === needed,
+                spread: Math.max(...middles) - Math.min(...middles),
+                title: words ? range.getBoundingClientRect().top : null,
                 empty: inner - row.getBoundingClientRect().bottom
               };
             })
           );
         // A new width lays the cards out again in the next frame, so the layout left from the previous width is waited out.
-        await expect.poll(async () => (await cards()).every(card => card.settled && Math.abs(card.empty) <= 1), `${width}px`).toBe(true);
+        await expect
+          .poll(async () => {
+            const all = await cards();
+            return all.every(card => card.settled || card.step === undefined) && all.every(card => Math.abs(card.empty) <= 1);
+          }, `${width}px`)
+          .toBe(true);
         const all = await cards();
-        for (const card of all)
+        for (const card of all) {
+          expect(card.spread, `${width}px one line`).toBeLessThanOrEqual(1);
           for (const other of all.filter(other => Math.abs(other.top - card.top) <= 1)) {
-            expect(other.mode, `${width}px layout`).toBe(card.mode);
             expect(Math.abs(other.height - card.height), `${width}px height`).toBeLessThanOrEqual(1);
+            if (card.title !== null && other.title !== null) expect(Math.abs(other.title - card.title), `${width}px title line`).toBeLessThanOrEqual(1);
           }
-        // One column keeps every card on one line, as the phone layout did.
-        if (lang === 'zh-TW' && width === 390) expect(all.map(card => card.mode)).toEqual(['inline', 'inline', 'inline']);
+        }
+        // On a phone every Chinese label shows whole.
+        if (lang === 'zh-TW' && width === 390) expect(all.map(card => card.step)).toEqual(['full', 'full', undefined]);
       }
     });
   });
@@ -660,7 +674,7 @@ test('a full-width list of four rows or more takes two columns, the first filled
   expect(Math.abs(memory - notices)).toBeLessThanOrEqual(1);
 });
 
-test('a chart two thirds of a row or wider lists its peak and average beside it', async ({page}) => {
+test('a chart two thirds of a row or wider lists its peak and average under it', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 1000});
   await seed(page, {
     version: 3,
@@ -692,11 +706,16 @@ test('a chart two thirds of a row or wider lists its peak and average beside it'
   const card = await box(tile(page, 'history').locator('section').first());
   const chart = await box(tile(page, 'history').locator('.rp-chart-stats > :nth-child(2)'));
   const strip = await box(tile(page, 'history').locator('.rp-facts'));
-  expect(chart.width).toBeLessThanOrEqual(card.width * 0.7);
-  expect(Math.abs(strip.y - chart.y)).toBeLessThanOrEqual(1);
-  expect(strip.x).toBeGreaterThanOrEqual(chart.x + chart.width);
+  // The figures take a row one gap under the plot, from the card's text inset to its end inset.
+  const inset = await tile(page, 'history')
+    .locator('section')
+    .first()
+    .evaluate(node => parseFloat(getComputedStyle(node).paddingRight) + parseFloat(getComputedStyle(node).borderRightWidth));
+  expect(Math.abs(strip.x + strip.width - (card.x + card.width - inset))).toBeLessThanOrEqual(1);
+  expect(Math.abs(strip.x - chart.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(strip.y - (chart.y + chart.height) - 12)).toBeLessThanOrEqual(1);
   await expect(tile(page, 'history').locator('.rp-facts dt').first()).toHaveText('Download peak');
-  // The narrowest widths and a phone draw no statistics and nothing overflows its card.
+  // Nothing overflows its card at the narrower widths, and a phone still lists the full-width card's figures.
   for (const width of [1280, 390]) {
     await page.setViewportSize({width, height: 1000});
     // Charts measure their box after a resize, so the check waits for them to settle.
@@ -712,13 +731,13 @@ test('a chart two thirds of a row or wider lists its peak and average beside it'
       )
       .toEqual([]);
   }
-  await expect(tile(page, 'history').locator('.rp-facts')).toBeHidden();
+  await expect(tile(page, 'history').locator('.rp-facts')).toBeVisible();
 });
 
 test('an Auto chart lists its statistics once its footprint is two thirds of its row, as the default traffic card', async ({page}) => {
   await page.goto('/#/activity');
   const history = tile(page, 'history');
-  for (const width of [1024, 1280]) {
+  for (const width of [1024, 1280, 1440]) {
     await page.setViewportSize({width, height: 1000});
     await expect(history).toHaveAttribute('data-wide', '');
     await expect(tile(page, 'outbounds')).not.toHaveAttribute('data-wide');
@@ -726,23 +745,24 @@ test('an Auto chart lists its statistics once its footprint is two thirds of its
     const strip = history.locator('.rp-facts');
     await expect(strip).toBeVisible();
     await expect(strip.locator('dt')).toHaveCount(4);
-    // The figures sit beside the chart, level with its top, each on one line and together no taller than the chart.
-    // Sections repack in the frames after a resize and move the card, so both boxes come from one settled layout.
+    // The figures take a row under the chart, as wide as it, at every width; each stays on one line. Sections repack in
+    // the frames after a resize and move the card, so both boxes come from one settled layout.
     await settleFrames(page);
     const [chart, facts] = await history.evaluate(cell =>
       [cell.querySelector('.rp-chart-stats > :nth-child(2)')!, cell.querySelector('.rp-facts')!].map(el => el.getBoundingClientRect().toJSON() as DOMRect)
     );
-    expect(Math.abs(facts.y - chart.y), String(width)).toBeLessThanOrEqual(1);
-    expect(facts.x).toBeGreaterThanOrEqual(chart.x + chart.width);
-    expect(facts.height, String(width)).toBeLessThanOrEqual(chart.height);
+    expect(facts.y, String(width)).toBeGreaterThanOrEqual(chart.y + chart.height);
+    expect(Math.abs(facts.x - chart.x), String(width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(facts.width - chart.width), String(width)).toBeLessThanOrEqual(1);
     expect(await strip.locator('dt').evaluateAll(list => list.filter(dt => dt.getClientRects().length > 1 || dt.scrollWidth > dt.clientWidth + 1).length)).toBe(
       0
     );
     await expectTextInside(history.locator('section').first());
   }
-  // A phone keeps the chart alone.
+  // A phone's card is its whole row, and lists the figures under the chart too.
   await page.setViewportSize({width: 390, height: 900});
-  await expect(history.locator('.rp-facts')).toBeHidden();
+  await expect(history).toHaveAttribute('data-wide', '');
+  await expect(history.locator('.rp-facts')).toBeVisible();
 });
 
 test('memory is a value tile like the traffic tiles, its figures beside the sparkline on wide cards', async ({page}) => {
@@ -962,7 +982,7 @@ test("a phone resizes height only, by the handle's keys", async ({page}) => {
   await page.setViewportSize({width: 390, height: 844});
   await page.goto('/#/activity');
   const cpu = tile(page, 'cpu');
-  await expect(cpu.locator('.rp-tile-body')).toBeVisible();
+  await expect(cpu.locator('[data-pack="tile"]')).toBeVisible();
   await open(page);
   await expect(cpu.getByRole('slider', {name: 'Resize width', exact: true})).toBeHidden();
   await focusHandle(page, 'cpu', 'Resize height');
@@ -1068,14 +1088,15 @@ test('a value tile reflows by size: a chosen width widens its sparkline, a tall 
   await page.goto('/#/activity');
   const part = async (id: string, selector: string) => box(tile(page, id).locator(selector).first());
   await expect(tile(page, 'connections').locator('.rp-spark svg')).toBeVisible();
-  // Standard height: the sparkline fills the line after the value, so a half has the wider one.
+  // Standard height: the sparkline fills the line from the column after the widest value's room (98px and the 12px
+  // gap), whatever the value shown, so a half has the wider one.
   for (const id of ['download', 'upload']) {
     await expect(tile(page, id)).toHaveAttribute('data-tile', 'inline');
     const body = await part(id, '.rp-tile-body');
     const spark = await part(id, '.rp-spark');
     const value = await part(id, '.rp-tile-val');
     expect(Math.abs(body.x + body.width - (spark.x + spark.width)), id).toBeLessThanOrEqual(1);
-    expect(spark.x - (value.x + value.width), id).toBeLessThanOrEqual(13);
+    expect(Math.abs(spark.x - Math.max(body.x + 110, value.x + value.width + 12)), id).toBeLessThanOrEqual(1);
   }
   const quarter = await part('download', '.rp-spark');
   const half = await part('upload', '.rp-spark');
@@ -1246,6 +1267,8 @@ const settle = async (page: Page) => {
   for (const cell of await page.locator('.rp-dash-section > .rp-dashboard-cell').all()) {
     await cell.evaluate(element => element.scrollIntoView({block: 'nearest'}));
     await expect(cell.locator('.rp-chart-wait')).toHaveCount(0);
+    // A chart draws its plot once it has read a box with a width, a frame or two after it replaces its placeholder.
+    await expect(cell.locator('.rp-area-plot:not(:has(> svg:not([width="0"])))')).toHaveCount(0);
   }
   await page.evaluate(() => window.scrollTo(0, 0));
 };
@@ -1425,20 +1448,18 @@ test('a chart set tall, by settings or by its edge, fills the card it grew', asy
       const style = getComputedStyle(node);
       const box = node.getBoundingClientRect();
       const chart = node.querySelector('.rp-legend + div')!.getBoundingClientRect();
-      // The statistics beside a wide chart share the row with it.
-      const facts = node.querySelector('.rp-chart-stats > .rp-facts');
-      const beside = facts?.getClientRects().length
-        ? facts.getBoundingClientRect().width + Number.parseFloat(getComputedStyle(node.querySelector('.rp-chart-stats')!).columnGap)
-        : 0;
+      // The statistics under a wide chart end the card.
+      const strip = node.querySelector('.rp-chart-stats > .rp-facts');
+      const under = strip?.getClientRects().length ? strip.getBoundingClientRect() : undefined;
       return {
-        width: chart.width + beside,
+        width: chart.width,
         inner:
           box.width -
           Number.parseFloat(style.paddingInlineStart) -
           Number.parseFloat(style.paddingInlineEnd) -
           2 * Number.parseFloat(style.borderInlineStartWidth),
         height: chart.height,
-        gap: box.bottom - Number.parseFloat(style.paddingBlockEnd) - Number.parseFloat(style.borderBlockEndWidth) - chart.bottom
+        gap: box.bottom - Number.parseFloat(style.paddingBlockEnd) - Number.parseFloat(style.borderBlockEndWidth) - (under ?? chart).bottom
       };
     });
   const check = async () => {
@@ -1537,8 +1558,8 @@ for (const width of [1280, 390])
     }
   });
 
-// A full row of Auto control cards first gives each card its line whole, then shares the rest by the footprints (3:2:2
-// here), so the row is one line wherever every line fits; where they do not, every card in the row stacks together.
+// The control cards take the thirds of the rows below from 1100px, each on one line: a card whose line does not fit its
+// third first drops its label's icon, then shows the icon alone.
 test.describe('control row zh-TW', () => {
   test.use({storage: {'doona-lang': 'zh-TW'}});
   const quick = (page: Page) => page.locator("[data-profile='quick']");
@@ -1556,44 +1577,66 @@ test.describe('control row zh-TW', () => {
             centres: Math.abs(title.top + title.height / 2 - controls.top - controls.height / 2),
             end: Math.abs(box.right - controls.right),
             cut: label !== null && label.scrollWidth > label.clientWidth,
-            stacked: controls.top >= title.bottom - 1
+            step: (row as HTMLElement).dataset.step
           };
         })
       );
-  const cells = (page: Page) =>
-    quick(page)
-      .locator(':scope > .rp-dashboard-cell')
-      .evaluateAll(nodes => nodes.map(node => ({id: (node as HTMLElement).dataset.instance, left: node.getBoundingClientRect().left})));
+  const cells = (page: Page, profile = 'quick') =>
+    page
+      .locator(`[data-profile='${profile}'] > .rp-dashboard-cell`)
+      .evaluateAll(nodes =>
+        nodes.map(node => ({id: (node as HTMLElement).dataset.instance, left: node.getBoundingClientRect().left, right: node.getBoundingClientRect().right}))
+      );
   for (const width of [1440, 1475])
-    test(`keeps the first row on one line at ${width} px`, async ({page}) => {
+    test(`puts the first row on the column lines of the details row at ${width} px`, async ({page}) => {
       await page.setViewportSize({width, height: 900});
       await page.goto('/#/activity');
-      await expect(quick(page)).toHaveAttribute('data-controls', 'inline');
-      await expect(quick(page)).toHaveAttribute('data-fit', '');
+      await expect(quick(page).locator('.rp-control-card')).toHaveCount(3);
+      await expect(quick(page).locator('.rp-control-card')).toHaveCount(3);
       const order = await cells(page);
       expect(order.map(cell => cell.id)).toEqual(['mode', 'global', 'status']);
-      expect(order[0].left).toBeLessThan(order[1].left);
-      expect(order[1].left).toBeLessThan(order[2].left);
+      const details = await cells(page, 'details');
+      order.forEach((cell, i) => {
+        expect(Math.abs(cell.left - details[i].left)).toBeLessThanOrEqual(1);
+        expect(Math.abs(cell.right - details[i].right)).toBeLessThanOrEqual(1);
+      });
+      // The mode card's Chinese line is 18px wider than a third holds, and fits without its icon; the global and status
+      // lines fit whole.
       const all = await lines(page);
-      expect(all).toHaveLength(3);
+      expect(all.map(line => line.step)).toEqual(['bare', 'full', undefined]);
       for (const line of all) {
-        expect(Math.abs(line.top - all[0].top)).toBeLessThanOrEqual(1);
         expect(line.centres).toBeLessThanOrEqual(1);
         expect(line.end).toBeLessThanOrEqual(1);
         expect(line.cut).toBe(false);
       }
     });
-  // At M the row still fits at 1280 px; at 1200 px, with the sidebar shown, it does not.
-  test('stacks every card of the first row together when the lines do not fit, at 1200 px', async ({page}) => {
-    await page.setViewportSize({width: 1200, height: 900});
+  // At 1280px the mode card's third holds its icon alone, the segmented control turned into its picker beside Apply.
+  test('shows a narrow card by its icon, its label the tooltip and the name, at 1280 px', async ({page}) => {
+    await page.setViewportSize({width: 1280, height: 900});
     await page.goto('/#/activity');
-    await expect(quick(page)).toHaveAttribute('data-controls', 'stacked');
-    await expect(quick(page)).not.toHaveAttribute('data-fit');
-    expect((await cells(page)).map(cell => cell.id)).toEqual(['mode', 'global', 'status']);
+    await expect(quick(page).locator('.rp-control-card')).toHaveCount(3);
+    const all = await lines(page);
+    expect(all.map(line => line.step)).toEqual(['icon', 'full', undefined]);
+    for (const line of all) {
+      expect(line.centres).toBeLessThanOrEqual(1);
+      expect(line.end).toBeLessThanOrEqual(1);
+    }
+    const card = quick(page).locator('.rp-control-card').first();
+    await expect(card).toHaveAccessibleName('出站模式');
+    await expect(card.locator('.rp-segpick')).toBeVisible();
+    await page.mouse.move(0, 0);
+    await card.locator('.rp-qicon').hover();
+    await expect(page.getByRole('tooltip')).toHaveText('出站模式');
+  });
+  test('keeps the first row on one line where every line fits, at 1024 px', async ({page}) => {
+    await page.setViewportSize({width: 1024, height: 900});
+    await page.goto('/#/activity');
+    await expect(quick(page).locator('.rp-control-card')).toHaveCount(3);
     const all = await lines(page);
     expect(all).toHaveLength(3);
     for (const line of all) {
-      expect(line.stacked).toBe(true);
+      expect(line.centres).toBeLessThanOrEqual(1);
+      expect(line.end).toBeLessThanOrEqual(1);
       expect(line.cut).toBe(false);
     }
   });

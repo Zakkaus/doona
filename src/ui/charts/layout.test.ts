@@ -3,6 +3,7 @@ import {
   donutAngles,
   linearPosition,
   visibleTicks,
+  sampleTicks,
   nearestIndex,
   heatTone,
   logDomain,
@@ -175,4 +176,13 @@ it.each([
   {name: 'a focus just below the window', focused: 80, ranges: [{start: 40, end: 81}]}
 ])('mounts the rows of a window with $name', ({focused, ranges}) => {
   expect(mountedRanges({start: 40, end: 80}, focused)).toEqual(ranges);
+});
+
+it('moves sampled tick labels inside the plot and thins them by their moved boxes', () => {
+  // Labels 40px wide at 0, 50, 100 and 200 in a 200px plot: the ends move in by half a label.
+  expect(sampleTicks([0, 50, 100, 200], [40, 40, 40, 40], 8, 200)).toEqual([
+    {index: 0, position: 20},
+    {index: 2, position: 100},
+    {index: 3, position: 180}
+  ]);
 });

@@ -34,7 +34,8 @@ async function expectFormGeometry(dialog: Locator) {
       foot,
       help: help ? box(help) : null,
       dialog: box(root),
-      contentRight: content.getBoundingClientRect().left + content.clientLeft + content.clientWidth,
+      // The end inset counts from the body's edge: a classic scrollbar's gutter comes out of the padding.
+      contentRight: content.getBoundingClientRect().right,
       inset: parseFloat(getComputedStyle(content).paddingInlineStart)
     };
   });

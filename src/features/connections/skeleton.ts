@@ -5,8 +5,8 @@ export const trafficSkeleton: PageShape = [
   {facts: 3, lead: true, caption: true},
   {
     cards: [
-      [422, 474],
-      [314, 368]
+      [430, 486],
+      [322, 380]
     ]
   }
 ];

@@ -407,26 +407,28 @@ test('activity draws all eight charts without loading a chart vendor', async ({p
   await expect(page.locator(own.join(', '))).toHaveCount(8);
   const traffic = page.getByRole('region', {name: 'Traffic', exact: true});
   const chart = traffic.getByRole('application');
+  // The tip opens over the page, outside the card that clips the chart.
+  const overlay = page.locator('body > .rp-charttip-bounded');
   await chart.focus();
-  await expect(traffic.getByRole('status')).toBeVisible();
+  await expect(overlay.getByRole('status')).toBeVisible();
   await page.keyboard.press('Escape');
   // A live update must not reopen a tip dismissed from the keyboard.
   await page.clock.runFor(5100);
-  await expect(traffic.getByRole('status')).toBeHidden();
+  await expect(overlay.getByRole('status')).toBeHidden();
   await page.keyboard.press('ArrowRight');
-  await expect(traffic.getByRole('status')).toBeVisible();
+  await expect(overlay.getByRole('status')).toBeVisible();
   await page.keyboard.press('ArrowLeft');
-  await expect(traffic.getByRole('status')).toBeVisible();
+  await expect(overlay.getByRole('status')).toBeVisible();
   // The tip changes on every arrow key, so it waits for the screen reader instead of interrupting it.
-  await expect(traffic.getByRole('status')).toHaveAttribute('aria-live', 'polite');
+  await expect(overlay.getByRole('status')).toHaveAttribute('aria-live', 'polite');
   await page.emulateMedia({reducedMotion: 'no-preference'});
-  await expect(traffic.locator('.rp-charttip-bounded')).toHaveCSS('transition-duration', '0.4s');
+  await expect(overlay).toHaveCSS('transition-duration', '0.4s');
   await page.emulateMedia({reducedMotion: 'reduce'});
-  await expect(traffic.locator('.rp-charttip-bounded')).toHaveCSS('transition-duration', '0s');
+  await expect(overlay).toHaveCSS('transition-duration', '0s');
   await page.keyboard.press('Enter');
-  await expect(traffic.getByRole('status')).toBeHidden();
+  await expect(overlay.getByRole('status')).toBeHidden();
   await page.keyboard.press('Enter');
-  await expect(traffic.getByRole('status')).toBeVisible();
+  await expect(overlay.getByRole('status')).toBeVisible();
 });
 
 for (const lang of ['zh-TW', 'zh-CN']) {
@@ -437,7 +439,7 @@ for (const lang of ['zh-TW', 'zh-CN']) {
       const memory = page.locator('[data-module=memory]');
       await memory.scrollIntoViewIfNeeded();
       await memory.getByRole('application').focus();
-      await expect(memory.locator('.rp-charttip-bounded li').first()).toContainText(/^cgroup/);
+      await expect(page.locator('body > .rp-charttip-bounded li').first()).toContainText(/^cgroup/);
     });
   });
 }

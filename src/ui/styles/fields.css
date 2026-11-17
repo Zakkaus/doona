@@ -401,7 +401,7 @@
 .rp-checkbox-set {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--rp-space-2);
   min-width: 0;
 }
 .rp-checkbox-options {
