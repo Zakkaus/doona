@@ -89,6 +89,8 @@ test('full-scope connections respect filters added before confirmation', async (
 });
 
 test('a managed outbound rule opens Activity with separate mode and target cards', async ({page}) => {
+  // From 1440px the mode card's third holds its segmented control whole; narrower, it holds the picker.
+  await page.setViewportSize({width: 1440, height: 900});
   const {api} = await mockBackend(page);
   const main = (await api.config()).sources.find(source => source.kind === 'main')!;
   await api.pollOperation(await api.replaceConfigSource(main.id, writeMode(main.content, {mode: 'direct'}), `"${main.content_sha256}"`));

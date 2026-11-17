@@ -14,8 +14,8 @@ export const cardClass = (...layout: Array<string | false | undefined>) => cx('r
 // False inside a preview whose frame already names it (a gallery item): its cards and widget sections keep their names
 // for assistive technology but draw no title.
 export const TitlesShown = createContext(true);
-// The name dashboard.css gives the heights of a card that a dashboard cell holds off screen (DashboardTile), so the
-// preview there keeps the room its Skeleton held; the cards inside it name none.
+// The name dashboard.css gives the heights of a card that a dashboard cell holds until it first comes on screen
+// (DashboardTile), so the preview there keeps the room its Skeleton held; the cards inside it name none.
 export const HeldCard = createContext<string | undefined>(undefined);
 
 type Tint = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;

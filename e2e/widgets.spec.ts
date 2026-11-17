@@ -478,6 +478,8 @@ test("the editor's drag handles stay inside their own rows", async ({page}) => {
   }
 });
 
+// At 1280px the Activity mode card holds its picker, so the panel's segmented control and the card's picker share one
+// mode and one draft.
 test.describe('mode writes beside a wide panel', () => {
   test('segmented outbound mode applies once and persists across reload', async ({page}) => {
     await save(page, {...open(), items: [{id: 'mode', form: 'text', size: 'medium'}], size: wide});
@@ -488,7 +490,7 @@ test.describe('mode writes beside a wide panel', () => {
     await widget.getByRole('button', {name: 'Apply', exact: true}).click();
     await page.getByRole('alertdialog', {name: 'Apply Direct mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
     await expect(page.locator('.rp-toast.positive', {hasText: 'reloaded: Direct'})).toBeVisible();
-    await expect(page.locator('main').getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
+    await expect(page.locator('main [data-instance="mode"] .rp-segpick')).toContainText('Direct');
     expect(backend.requests.filter(r => r.method() === 'PUT' && r.url().includes('/config/sources/'))).toHaveLength(1);
     await page.reload();
     await expect(widget.getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
@@ -514,11 +516,12 @@ test.describe('mode writes beside a wide panel', () => {
     await page.getByRole('alertdialog', {name: 'Apply Direct mode?'}).getByRole('button', {name: 'Apply', exact: true}).click();
     await request;
     await expect(widget.getByRole('radio', {name: 'Direct', exact: true})).toBeDisabled();
+    await expect(page.locator('main [data-instance="mode"] .rp-segpick').getByRole('button')).toBeDisabled();
     await expect(page.locator('[data-instance="mode"]').getByRole('button', {name: 'Apply', exact: true})).toBeDisabled();
     release();
     await expect(page.locator('.rp-toast.negative', {hasText: 'Mode storage unavailable'})).toBeVisible();
     await expect(widget.getByRole('radio', {name: 'Direct', exact: true})).toBeEnabled();
-    await expect(page.locator('main').getByRole('radio', {name: 'Direct', exact: true})).toBeChecked();
+    await expect(page.locator('main [data-instance="mode"] .rp-segpick')).toContainText('Direct');
     expect(backend.requests.filter(r => r.method() === 'PUT' && r.url().includes('/config/sources/'))).toHaveLength(1);
     expect((await backend.api.config()).sources.find(source => source.kind === 'main')!.content).not.toContain('-> direct # doona: outbound mode');
   });

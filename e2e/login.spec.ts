@@ -218,6 +218,8 @@ test('signing out with a saved token forgets it and returns to the sign-in page'
 // The outbound mode staged on Activity is a draft of the shell, so a refused read that turns the tab to the sign-in
 // page keeps its warning before the page is left.
 test('a mode draft still warns before leaving once a refused read shows the sign-in page', async ({page}) => {
+  // From 1440px the mode card's third holds its segmented control whole; narrower, it holds the picker.
+  await page.setViewportSize({width: 1440, height: 900});
   await mockBackend(page);
   expectLoadFailures(page, /\/api(\/|$)/);
   await page.addInitScript(() => {

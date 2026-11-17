@@ -150,11 +150,12 @@
   grid-column: 1 / -1;
 }
 
-/* A Skeleton card, named for its module, at the height its loaded card takes, and an off-screen card's preview at
-   least as tall (DashboardTile's `card`), so neither moves the cards below when the loaded card replaces it. The height follows the width of the
-   card's cell, which the cell's tile container (above) tells as the cards' own container queries do, and the columns
-   its section has at the viewport's width. A card holding a control, which every titled card's title line is, is taller
-   by what the control takes over 32px, which is its height on a phone (--x). A module not named here is 260px. */
+/* A Skeleton card, named for its module, at the height its loaded card takes, and the preview of a card not yet on
+   screen at least as tall (DashboardTile's `card`), so neither moves the cards below when the loaded card replaces it.
+   The height follows the width of the card's cell, which the cell's tile container (above) tells as the cards' own
+   container queries do, and the columns its section has at the viewport's width. A card holding a control, which every
+   titled card's title line is, is taller by what the control takes over 32px, which is its height on a phone (--x). A
+   module not named here is 260px. */
 [data-card] {
   --x: calc(var(--rp-control) - 32px);
 }
@@ -536,10 +537,12 @@
   }
 }
 /* A dashboard card's text, on Activity and the dashboard, takes four roles (CONTRIBUTING, Type roles), weights 400 and
-   700 only: the card title (.rp-h3, and a control card's label), a primary value, a label and meta; a value tile's
-   figure keeps the stat value's size. A value is the bold one of its line. Meta is secondary text in the palette's
-   subtle colour, which holds 4.5:1 on a card; a chart's own labels take its secondary text on a tile (charts.css). */
-.rp-dashboard-cell .rp-qlabel {
+   700 only: the card title (.rp-h3, a control card's label and the setup card's caption), a primary value, a label and
+   meta; a value tile's figure keeps the stat value's size. A value is the bold one of its line. Meta is secondary text
+   in the palette's subtle colour, which holds 4.5:1 on a card; a chart's own labels take its secondary text on a tile
+   (charts.css). */
+.rp-dashboard-cell .rp-qlabel,
+.rp-setup-card .rp-qlabel {
   font-size: var(--rp-text-lg);
   line-height: 20px;
   font-weight: 700;
