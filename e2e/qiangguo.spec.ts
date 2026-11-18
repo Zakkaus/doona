@@ -16,7 +16,8 @@ for (const [name, viewport] of [
       const bar = page.locator('.rp-top');
       // Beside the side navigation the bar is fixed to the viewport; a phone's bar is sticky.
       await expect(bar).toHaveCSS('position', viewport.width >= 1024 ? 'fixed' : 'sticky');
-      expect(await bar.evaluate(element => getComputedStyle(element).backgroundImage)).toContain('url(');
+      // The palette's sheet loads after the page, so wait for its hero rather than reading the bar once.
+      await expect.poll(() => bar.evaluate(element => getComputedStyle(element).backgroundImage)).toContain('url(');
       await page.evaluate(() => window.scrollBy(0, 300));
       await expect(bar).toHaveCSS('background-color', 'rgb(184, 20, 27)');
       expect(await bar.evaluate(element => getComputedStyle(element).backgroundImage)).not.toContain('url(');
