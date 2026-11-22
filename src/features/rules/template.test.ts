@@ -22,7 +22,7 @@ it('names the template the one routing file holds, in plain words', () => {
   const main = source('main', writeTemplate('group { proxy {} }\n', 'bypass', [], {t}), 'main');
   const view = templatesView([main, source('extra', 'node { a: "vless://x" }\n')], t);
   expect(view.current?.name).toBe('Bypass mainland China');
-  expect(view.current?.help).toContain('Connects directly for Google China services');
+  expect(view.current?.help).toContain('Connects directly for mainland-China games');
   expect(view.primary.map(choice => choice.id)).toEqual(['bypass', 'gfw', 'global']);
 });
 

@@ -18,8 +18,8 @@ routing {
   dip(geoip:private) -> direct
   # Block UDP/443
   l4proto(udp) && dport(443) -> block
-  # Google China services and mainland games
-  domain(geosite:google-cn, geosite:category-games@cn) -> direct
+  # Mainland China games
+  domain(geosite:category-games@cn) -> direct
   # Mainland China
   domain(geosite:cn) -> direct
   dip(geoip:cn) -> direct
@@ -204,8 +204,8 @@ routing {
   dip(geoip:private) -> direct
   # Block UDP/443
   l4proto(udp) && dport(443) -> block
-  # Google China services and mainland games
-  domain(geosite:google-cn, geosite:category-games@cn) -> direct
+  # Mainland China games
+  domain(geosite:category-games@cn) -> direct
   # Microsoft
   domain(geosite:microsoft) -> direct
   # Apple
@@ -286,8 +286,8 @@ routing {
   dip(geoip:private) -> direct
   # Block UDP/443
   l4proto(udp) && dport(443) -> block
-  # Google China services and mainland games
-  domain(geosite:google-cn, geosite:category-games@cn) -> direct
+  # Mainland China games
+  domain(geosite:category-games@cn) -> direct
   # Microsoft
   domain(geosite:microsoft) -> direct
   # Apple
@@ -333,8 +333,8 @@ routing {
   dip(geoip:private) -> direct
   # Block UDP/443
   l4proto(udp) && dport(443) -> block
-  # Google China services and mainland games
-  domain(geosite:google-cn, geosite:category-games@cn) -> direct
+  # Mainland China games
+  domain(geosite:category-games@cn) -> direct
   # Telegram
   domain(geosite:telegram) -> proxy
   dip(geoip:telegram) -> proxy

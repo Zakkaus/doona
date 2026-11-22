@@ -12,7 +12,7 @@ for (const width of [390, 768, 1440]) {
         const source = config.sources.find(source => source.id === 'src-main')!;
         const long = 'domain(geosite:google-cn, geosite:category-games@cn)';
         const content = source
-          .content!.replace('domain(geosite: telegram)', long)
+          .content!.replace('domain(geosite:category-games@cn)', long)
           .replace('domain(suffix: doubleclick.net)', `domain(full: ${'a'.repeat(200)}.example)`);
         await api.pollOperation(await api.replaceConfigSource(source.id, content, `"${source.content_sha256}"`));
         await page.goto('/#/rules?tab=list&view=advanced');
