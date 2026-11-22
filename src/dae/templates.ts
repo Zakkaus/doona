@@ -76,7 +76,9 @@ const local = ['# dae presets: the LAN and multicast stay off the proxy', "dip(2
 const quic = ['# Block UDP/443', 'l4proto(udp) && dport(443) -> block'];
 const preset = [...networkManager, ...local, ...quic];
 const ads = ['# Ads', 'domain(geosite:category-ads-all) -> block'];
-const chinaVendors = ['# Google China services and mainland games', 'domain(geosite:google-cn, geosite:category-games@cn) -> direct'];
+const chinaVendors = ['# Mainland China games', 'domain(geosite:category-games@cn) -> direct'];
+// Earlier templates also sent geosite:google-cn direct, which holds www.gstatic.com, unreachable from mainland China.
+const formerChinaVendors = 'domain(geosite:google-cn, geosite:category-games@cn) -> direct';
 const china = ['# Mainland China', 'domain(geosite:cn) -> direct', 'dip(geoip:cn) -> direct'];
 const telegram = (target: string) => [
   '# Telegram',
@@ -254,7 +256,9 @@ const templateEntries = (template: RuleTemplate, options: TemplateOptions) =>
 // group its `{group}` names; null for any other routing, including none. A group slot takes one proxy group, the same
 // wherever the template repeats it.
 export function detectTemplate(text: string): (TemplateOptions & {template: RuleTemplate; group: string | null}) | null {
-  const entries = routingEntries(text);
+  const former = routingEntries(`routing {\n${formerChinaVendors}\n}`)![0].join('');
+  const current = routingEntries(['routing {', ...chinaVendors, '}'].join('\n'))![0];
+  const entries = routingEntries(text)?.map(entry => (entry.join('') === former ? current : entry));
   if (!entries?.length) return null;
   for (const template of Object.keys(templates) as RuleTemplate[]) {
     for (const blockAds of [false, true]) {
