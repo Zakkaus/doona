@@ -74,8 +74,7 @@ test('a failed update keeps the old files and shows the reason in the status row
   await expect(dialog).toContainText(
     t('settings.geodataLackingHelp', {
       preset: lite,
-      codes:
-        'geosite:category-ads-all, geosite:category-games, geosite:disney, geosite:gfw, geosite:google-cn, geosite:hbo, geosite:netease, geosite:primevideo, geosite:twitch'
+      codes: 'geosite:category-ads-all, geosite:category-games, geosite:disney, geosite:gfw, geosite:hbo, geosite:netease, geosite:primevideo, geosite:twitch'
     })
   );
   await dialog.getByRole('button', {name: t('ui.cancel'), exact: true}).click();
