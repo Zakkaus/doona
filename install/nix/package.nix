@@ -9,7 +9,7 @@ let
   version = "0.1.0-rc.7";
   fonts = fetchurl {
     url = "https://github.com/Zakkaus/doona/releases/download/v${version}/doona-fonts-${version}.tar.gz";
-    hash = "sha256-YHbu57umZzGT+RMV3uAO/AI9pvB/lV2jzE7UPM+gH/E=";
+    hash = "sha256-ku/O20mEFcM2eK+MSrulBA+mHx785Dcev15t7H+UAB0=";
   };
 in
 stdenvNoCC.mkDerivation (finalAttrs: {
@@ -18,7 +18,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
 
   src = fetchurl {
     url = "https://github.com/Zakkaus/doona/releases/download/v${finalAttrs.version}/doona-${finalAttrs.version}.tar.gz";
-    hash = "sha256-jCfYFevZBqVFnFurGXcDFzivFoqAEw1H80TRr+pfNto=";
+    hash = "sha256-Xlm+9HDHCxzdMEshH/HhJ/ghbqRZk89Owh07f272MOM=";
   };
 
   dontUnpack = true;
