@@ -6,6 +6,38 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Entries live in [changes/](changes/) until release.
 
+## [0.1.0-rc.7] - 2026-11-24
+
+### Added
+
+- A connection's detail panel shows the subscription its node came from on a row under the chain, and the connection filter matches it. (#692)
+- The connection detail panel groups its fields into route, connection, traffic and source sections, the route first, each field on one line beside its label; fields a connection lacks or does not know are left out, and traffic shows each total with its rate. (#692)
+- Geodata automatic updates can run daily at a set hour, the default on honk versions with cron schedules; another cron expression shows read-only with a switch to daily. (#683)
+
+### Fixed
+
+- The routing templates no longer send `geosite:google-cn` directly. That list holds `www.gstatic.com`, which serves the YouTube TV interface icons and fonts and is unreachable from mainland China, so those icons stayed blank. Routing written by an earlier template is still recognised as that template. (#695)
+- The overview now explains on-demand flow recording and the Off mode instead of only naming them, and says how to record without a client. (#681)
+- A write refused over a restart-only setting the configuration does not state now says so, instead of reporting a change nobody made. (#681)
+- Traffic and memory charts start their grid and fill at the card's text edge and end them together, with the value labels right-aligned at the plot's end. The traffic chart draws download and upload as two stacked plots over one time axis, each with its own scale, so upload no longer lies flat under download. Each plot is about 80px tall with at most two value labels. Each series marks its average with a faint dashed line and its peak with a dot, and the tooltip is a compact table of the time over each series' current value, peak and average; the legend shows only each series' name and current value. Value axes tick at round numbers, the traffic plots from zero and memory over the range its data spans, and time labels sit at round times without crowding each other or the plot's ends. The plots take the rest of the card's height, so neither the chart card nor the card beside it leaves an empty band, and a legend that wraps takes its room from the plot instead of growing the row. The tooltip opens over the page, so the card neither cuts it off nor has its header covered. The value labels take only the width of the widest one. (#690)
+- A card below the screen keeps its loading height until it loads, so the cards under it no longer move, and the outbounds donut sits in the middle of a card its row makes taller. (#690)
+- Value tiles on the Activity page draw their sparklines from one column, so tiles of one width have sparklines of one start and width. (#690)
+- The side navigation keeps one row pitch from a section header to its first page. (#690)
+- Card titles share one title line, so titles in a row sit on one baseline whether or not a control is beside them. (#690)
+- The Activity page's first row takes the column lines of the rows below, and each card keeps its label and controls on one line at every width: a narrow card drops its label's icon, then shows the icon alone with the label as its tooltip, and a segmented control too wide even then turns into its picker. The status card's text sits on the same title line as the other labels. (#690)
+- The Apply button sits the same distance from the global outbound picker as from the mode switch. (#690)
+- The Overview page's datapath and backend cards take the column lines of the cards above them, as do the two-to-one rows on the DNS page. (#690)
+- Links and quiet buttons that end a line of a card end their text at the card's edge. (#690)
+- A table in a card starts its first column's text at the card's text inset, its frame hanging into the card's padding. (#690)
+- In a dialog whose body scrolls, fields end where the footer's buttons end when the system shows classic scrollbars. (#690)
+- A chart's plot shows a focus ring only for keyboard focus, not after a click or under a pointer. Its top value label sits inside the plot, level with the figures beside it, and its axis labels are larger; axis labels, legends and figure labels use the palette's secondary text that holds 4.5:1. (#690)
+- Activity and dashboard cards use four text styles: bold card titles, bold values, regular labels in the body size, and smaller secondary text for axis labels, times and percentages. Each ranking row shows its share apart from its traffic, and the outbound list's traffic is bold and aligned. (#690)
+- Subscriptions can be added and renamed under any name the configuration can quote, such as a Chinese name, up to 64 characters; the add dialog shows why a name is refused on its name field. (#689)
+
+### Internal
+
+- The demo backend reports honk v0.1.0-beta.6. (#691)
+
 ## [0.1.0-rc.6] - 2026-11-09
 
 ### Added
@@ -1067,7 +1099,8 @@ Entries live in [changes/](changes/) until release.
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
-[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.6...HEAD
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.7...HEAD
+[0.1.0-rc.7]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.6...v0.1.0-rc.7
 [0.1.0-rc.6]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.5...v0.1.0-rc.6
 [0.1.0-rc.5]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.4...v0.1.0-rc.5
 [0.1.0-rc.4]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.3...v0.1.0-rc.4
