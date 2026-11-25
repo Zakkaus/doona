@@ -738,7 +738,7 @@
   "group.subscriptions": "订阅",
   "group.takenName": "已有同名的组。",
   "groups.exit.experimental": "实验性",
-  "groups.exit.help": "连接先经所选成员到达此节点，再由此节点连至目的地。须为 SOCKS5、Shadowsocks、Trojan，或未使用 XHTTP 的 VMess、VLESS。无表示不设置。",
+  "groups.exit.help": "连接先经所选成员到达此节点，再由此节点连至目的地。须为 SOCKS5、Shadowsocks、Trojan，或未使用 XHTTP 的 VMess、VLESS。未选择节点时不设置出口。",
   "groups.exit.label": "出口节点",
   "hint.config": "生效的配置文件、校验与编辑",
   "hint.connections": "当前的连接，按设备分组",

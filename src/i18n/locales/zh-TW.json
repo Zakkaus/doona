@@ -738,7 +738,7 @@
   "group.subscriptions": "訂閱",
   "group.takenName": "已有同名的群組。",
   "groups.exit.experimental": "實驗性",
-  "groups.exit.help": "連線先經所選成員抵達此節點，再由此節點連至目的地。須為 SOCKS5、Shadowsocks、Trojan，或未使用 XHTTP 的 VMess、VLESS。無表示不設定。",
+  "groups.exit.help": "連線先經所選成員抵達此節點，再由此節點連至目的地。須為 SOCKS5、Shadowsocks、Trojan，或未使用 XHTTP 的 VMess、VLESS。未選擇節點時不設定出口。",
   "groups.exit.label": "出口節點",
   "hint.config": "生效的設定檔、驗證與編輯",
   "hint.connections": "目前的連線，依裝置分組",

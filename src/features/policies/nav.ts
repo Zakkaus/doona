@@ -6,8 +6,5 @@ import type {SearchTarget} from '../../shell/routes';
 // one of its fields.
 export const policiesTargets = (resources: Capabilities['resources'] | undefined): SearchTarget[] =>
   offered(resources, 'groups', {whileLoading: false}) && resources?.config.writable === true
-    ? [
-        {id: 'policies:new', titleKey: 'group.newGroup', parentKey: 'nav.policies', route: 'policies', params: {new: '1'}, aliases: ['group editor']},
-        {id: 'policies:exit', titleKey: 'groups.exit.label', parentKey: 'nav.policies', route: 'policies', params: {new: '1'}, aliases: ['exit', 'proxy chain']}
-      ]
+    ? [{id: 'policies:new', titleKey: 'group.newGroup', parentKey: 'nav.policies', route: 'policies', params: {new: '1'}, aliases: ['group editor']}]
     : [];
