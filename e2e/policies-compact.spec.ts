@@ -152,16 +152,16 @@ test('a resource-level read-only dialog explains why configuration cannot be edi
 
 test('running configuration has a heading when interruption is its only field', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
-  handlers['GET groups/office'] = async () => {
-    const group = await api.group('office');
+  handlers['GET groups/backup'] = async () => {
+    const group = await api.group('backup');
     for (const key of Object.keys(group.config)) Object.assign(group.config, {[key]: null});
     group.capabilities.mutable_config = ['interrupt_connections'];
     return group;
   };
   await page.goto('/#/policies');
-  await page.getByRole('region', {name: 'office', exact: true}).scrollIntoViewIfNeeded();
-  await page.getByRole('region', {name: 'office', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
-  const dialog = page.getByRole('dialog', {name: 'Edit group office'});
+  await page.getByRole('region', {name: 'backup', exact: true}).scrollIntoViewIfNeeded();
+  await page.getByRole('region', {name: 'backup', exact: true}).getByRole('button', {name: 'Edit group', exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: 'Edit group backup'});
   await expect(dialog.locator('.rp-kv')).toHaveCount(0);
   await expect(dialog.getByRole('heading', {name: 'Running configuration'})).toBeVisible();
   await expect(dialog.getByRole('switch', {name: 'Interrupt existing connections on switch', exact: true})).toBeVisible();
