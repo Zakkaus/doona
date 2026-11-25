@@ -10,7 +10,7 @@ import type {OutboundNames} from '../../api/selectors';
 import {cachedRows, toast, toastFailure, useLinked, type TableSort} from '../../ui/ui';
 import {namedIn, type GroupEntry} from '../../dae/groups';
 import type {MainSourceEdit} from '../../store/mainSource';
-import {nodeRows, nodeRowView} from './view';
+import {chainHopsView, nodeRows, nodeRowView, protocolText} from './view';
 import {compareNames} from '../../i18n/format';
 import {longList} from '../../ui/longList';
 import type {SearchSection} from '../../ui/SearchSelect';
@@ -50,9 +50,11 @@ type NodeTableInput = {
   // Whether the node's declaring source rules out removing it here.
   inInclude: (node: Node) => boolean;
   edit: (node: Node) => (() => void) | null;
+  // A proxy chain's hop names as its declaration lists them; null when it is not declared once.
+  chainHops: (node: Node) => string[] | null;
 };
 export function useNodeTable(input: NodeTableInput) {
-  const {names, providers, source, query, reload, joinGroup, onNewGroup, onRemove, canManage, sourceOf, edit, inInclude} = input;
+  const {names, providers, source, query, reload, joinGroup, onNewGroup, onRemove, canManage, sourceOf, edit, inInclude, all, chainHops} = input;
   const t = useT();
   const lang = useLang();
   const locale = LOCALE[lang];
@@ -84,8 +86,8 @@ export function useNodeTable(input: NodeTableInput) {
       [...new Set(nodes.map(node => node.protocol ?? ''))]
         .filter(Boolean)
         .sort(compareNames(locale))
-        .map(id => ({id, label: id})),
-    [nodes, locale]
+        .map(id => ({id, label: protocolText({protocol: id}, t)})),
+    [nodes, locale, t]
   );
   const linkedGroup =
     input.groupQuery && !groups.some(item => item.id === input.groupQuery)
@@ -135,6 +137,17 @@ export function useNodeTable(input: NodeTableInput) {
     }),
     [names, lang, sourceOf, choices, runProbe, t, entries, onNewGroup, joinGroup, canManage, inlineProviders, onRemove, inInclude, edit]
   );
+  // Apart from the rows, so a hop's health changing rebuilds only the chains' details.
+  const chains = useMemo(
+    () =>
+      new Map(
+        all.flatMap(node => {
+          const hops = node.protocol === 'chain' ? chainHops(node) : null;
+          return hops ? [[node.id, chainHopsView(hops, all, t)] as const] : [];
+        })
+      ),
+    [all, chainHops, t]
+  );
   const cache = useMemo(() => ({build, rows: new WeakMap<Node, NodeTableView['rows'][number]>()}), [build]);
   const rows = useMemo(() => cachedRows(cache.rows, members, cache.build), [cache, members]);
   const visible = useMemo(() => new Set(rows.map(row => row.id)), [rows]);
@@ -169,6 +182,7 @@ export function useNodeTable(input: NodeTableInput) {
   };
   return {
     rows,
+    chains,
     selection: {keys: selectedKeys, onChange: onSelectionChange},
     clearSelection,
     removeSelected,
@@ -242,6 +256,7 @@ export function useNodeTable(input: NodeTableInput) {
   };
 }
 export type NodeTableView = {
+  chains: ReadonlyMap<string, ReturnType<typeof chainHopsView>>;
   selection: {keys: Set<string>; onChange: (keys: Selection) => void};
   clearSelection: () => void;
   removeSelected: () => void;

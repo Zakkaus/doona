@@ -36,6 +36,7 @@ const input: Parameters<typeof useNodeTable>[0] = {
   nodes,
   all: nodes,
   sourceOf: () => 'inline',
+  chainHops: () => null,
   providers: [],
   names: new Map(),
   loading: false,

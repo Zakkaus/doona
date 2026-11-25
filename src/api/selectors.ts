@@ -45,8 +45,11 @@ const measurementRank: Record<string, number> = {
   dns_round_trip: 6
 };
 const observationRank = (h: HealthObservation) => (warmthRank[h.warmth] ?? 1) * 10 + (measurementRank[h.measurement] ?? 5);
+// A group's tcp_connect probe reports a proxy chain member as unavailable with `no_node_address`: the chain has no
+// server endpoint of its own, so the row measured nothing and is not a failure.
+export const measured = (h: Pick<HealthObservation, 'error'>) => h.error !== 'no_node_address';
 export function preferredObservation<T extends HealthObservation>(health: T[]): T | undefined {
-  const data = health.filter(h => h.transport === 'tcp' && h.purpose === 'data');
+  const data = health.filter(h => h.transport === 'tcp' && h.purpose === 'data' && measured(h));
   const best = Math.min(...data.map(observationRank));
   return foldFamilies(data.filter(h => observationRank(h) === best));
 }
@@ -71,7 +74,7 @@ const probeKind = (h: HealthObservation): ProbeKind =>
   h.purpose === 'dns' ? 'DNS' : h.transport === 'udp' ? 'UDP' : h.measurement.startsWith('http') ? 'HTTP' : 'TCP';
 export function probeKinds<T extends HealthObservation>(health: T[]) {
   const kinds = new Map<string, {kind: ProbeKind; transport: T['transport']; rows: T[]}>();
-  for (const h of health) {
+  for (const h of health.filter(measured)) {
     const kind = probeKind(h);
     const key = kind + '/' + h.transport;
     const entry = kinds.get(key);

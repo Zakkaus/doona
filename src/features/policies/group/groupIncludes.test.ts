@@ -194,7 +194,7 @@ it('turns every-node off to an empty set or the remaining selections', () => {
     expect(off).toEqual([noNodes]);
     expect(nodes.filter(compileFilters(off)).map(node => node.name)).toEqual([]);
     expect(includesEveryNode(off)).toBe(false);
-    expect(nodes.filter(compileFilters(setEveryNode(off, true))).map(node => node.name)).toEqual(['hk-01', 'hk-02', 'sg-01', 'jp-01', 'us-01']);
+    expect(nodes.filter(compileFilters(setEveryNode(off, true))).map(node => node.name)).toEqual(['hk-01', 'hk-02', 'sg-01', 'jp-01', 'us-01', 'relay']);
   }
   const off = setEveryNode(['!name(direct, block)', hk], false);
   expect(nodes.filter(compileFilters(off)).map(node => node.name)).toEqual(['hk-01', 'hk-02']);

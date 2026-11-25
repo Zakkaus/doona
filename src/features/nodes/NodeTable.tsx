@@ -33,6 +33,22 @@ import type {NodeTableView} from './useNodeTable';
 
 // Probe controls read the running node without rebuilding the table rows or columns.
 const ProbeBusy = createContext<string | null>(null);
+// A proxy chain's hops and UDP, read by its details without rebuilding the rows.
+const Chains = createContext<NodeTableView['chains']>(new Map());
+function ChainFacts({id}: {id: string}) {
+  const t = useT();
+  const chain = useContext(Chains).get(id);
+  if (!chain) return null;
+  return (
+    <>
+      <div className="rp-list">
+        <span className="rp-label">{t('nodes.proxyChain.hops')}</span>
+        <Kv items={chain.hops.map(hop => [hop.label, <span className={hop.tone}>{hop.value}</span>])} />
+      </div>
+      <Kv items={[{label: t('nodes.proxyChain.udp'), value: chain.udp, wide: true}]} />
+    </>
+  );
+}
 function useProbeDisabled(row: NodeTableView['rows'][number]) {
   return !!useContext(ProbeBusy) || !row.canProbe;
 }
@@ -176,6 +192,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
                     [t('act.latency'), row.latency]
                   ]}
                 />
+                <ChainFacts id={row.id} />
                 {/* The groups take a row of their own, so their tags wrap across the card instead of stretching
                     the facts above into a narrow column. */}
                 <div className="rp-list">
@@ -211,7 +228,7 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
     [settings, t]
   );
   return (
-    <>
+    <Chains.Provider value={m.chains}>
       {m.probeOptions && <ProbeOptionsDialog model={m.probeOptions} />}
       {m.writable && m.sourceTip && <p className="rp-note">{m.sourceTip}</p>}
       {m.scope ? (
@@ -262,6 +279,6 @@ export function NodeTable({model: m}: {model: NodeTableView}) {
           detail={detail}
         />
       </ProbeBusy.Provider>
-    </>
+    </Chains.Provider>
   );
 }

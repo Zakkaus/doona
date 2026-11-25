@@ -158,7 +158,11 @@ test('mixed argument matches edit visually and keep OR inside a negated AND row'
   expect(
     readGroupEntries((await api.config()).sources.find(source => source.kind === 'main')!.content).find(entry => entry.name === 'visual')!.filters
   ).toEqual([`!name(keyword: 'hk', regex: '^sg') && name(regex: '^[a-z]')`]);
-  expect((await api.group((await api.groups()).find(group => group.name === 'visual')!.id)).members.map(member => member.name)).toEqual(['jp-01', 'us-01']);
+  expect((await api.group((await api.groups()).find(group => group.name === 'visual')!.id)).members.map(member => member.name)).toEqual([
+    'jp-01',
+    'us-01',
+    'relay'
+  ]);
 });
 
 test('OR matches can be added, removed and combined with the existing AND row', async ({page}) => {

@@ -1,5 +1,16 @@
 import {expect, it} from 'vitest';
-import {nodeReferenced, nodeReferrers, readChainEntries, readNodeEntries, removeChainEntry, writeNodeEntry} from './nodes';
+import {
+  appendChainEntry,
+  chainHopProblem,
+  chainUdpProblem,
+  nodeReferenced,
+  nodeReferrers,
+  readChainEntries,
+  readNodeEntries,
+  removeChainEntry,
+  writeChainEntry,
+  writeNodeEntry
+} from './nodes';
 import {unquote} from './text';
 
 const text = `# keep\r\nnode {\r\n  "old" :  'socks5://127.0.0.1:1080' # node\r\n}\r\ngroup {\r\n  proxy {\r\n    filter: name('old', other) && !name(old) # filter\r\n    filter: name(keyword: old)\r\n    policy: random\r\n  }\r\n}\r\n`;
@@ -115,4 +126,84 @@ it.each([
   expect(removeChainEntry(source, chain)).toBe(removed);
   expect(() => removeChainEntry(source.replace('-> y', '-> w'), chain)).toThrow();
   expect(() => removeChainEntry(source + source, chain)).toThrow();
+});
+
+const chainSource = "node {\n    a: 'socks5://a:1'\n    via: a -> 'hk: east' # keep\n}\ngroup {\n  proxy {\n    filter: name(via)\n    final: via\n  }\n}\n";
+it.each([
+  ['the hops', {name: 'via', hops: ['a', 'b c', 'd']}, chainSource.replace("a -> 'hk: east'", "a -> 'b c' -> d")],
+  [
+    'the name, and what names it',
+    {name: 'new via', hops: ['a', 'hk: east']},
+    chainSource.replace('via:', "'new via':").replace(/via\n/g, "'new via'\n").replace('name(via)', "name('new via')")
+  ],
+  ['nothing', {name: 'via', hops: ['a', 'hk: east']}, chainSource]
+])('writes a chain with %s changed', (_, next, written) => {
+  const [chain] = readChainEntries(chainSource);
+  expect(writeChainEntry(chainSource, chain, next)).toBe(written);
+});
+
+it.each([
+  ['a stale chain', chainSource.replace("'hk: east'", 'b'), {name: 'via', hops: ['a', 'b']}],
+  ['a taken name', chainSource, {name: 'a', hops: ['a', 'b']}],
+  ['one hop', chainSource, {name: 'via', hops: ['a']}],
+  ['five hops', chainSource, {name: 'via', hops: ['a', 'b', 'c', 'd', 'e']}],
+  ['an empty hop', chainSource, {name: 'via', hops: ['a', '']}],
+  ['an unquotable hop', chainSource, {name: 'via', hops: ['a', "it's"]}]
+])('refuses to write %s', (_, source, next) => {
+  const [chain] = readChainEntries(chainSource);
+  expect(() => writeChainEntry(source, chain, next)).toThrow();
+});
+
+it.each([
+  [
+    'the last node block, indented as its entries',
+    "node {\n    a: 'socks5://a:1'\n}\nnode {\n\tb: 'socks5://b:1' # b\n}\n",
+    "node {\n    a: 'socks5://a:1'\n}\nnode {\n\tb: 'socks5://b:1' # b\n\t'new': a -> 'b c'\n}\n"
+  ],
+  ['an empty node block', 'node {\n}\n', "node {\n  'new': a -> 'b c'\n}\n"],
+  ['a new node block', 'global {\n}\n\n', "global {\n}\n\nnode {\n  'new': a -> 'b c'\n}\n"],
+  ['an empty source', '', "node {\n  'new': a -> 'b c'\n}\n"],
+  ['a CRLF file', "node {\r\n  a: 'x://h'\r\n}\r\n", "node {\r\n  a: 'x://h'\r\n  'new': a -> 'b c'\r\n}\r\n"],
+  ['a block closed after its last entry', "node {\n  a: 'x://h' }\n", "node {\n  a: 'x://h'\n  'new': a -> 'b c'\n}\n"],
+  ['a one-line block', "node { a: 'x://h' }\n", "node { a: 'x://h'\n  'new': a -> 'b c'\n}\n"]
+])('appends a chain to %s', (_, source, appended) => {
+  expect(appendChainEntry(source, {name: 'new', hops: ['a', 'b c']})).toBe(appended);
+  expect(readChainEntries(appended).at(-1)).toMatchObject({name: 'new', hops: [{name: 'a'}, {name: 'b c'}]});
+  expect(() => appendChainEntry(appended, {name: 'new', hops: ['a', 'b']})).toThrow();
+});
+
+const catalog = [
+  {name: 'ss', protocol: 'ss'},
+  {name: 'hy', protocol: 'hysteria2'},
+  {name: 'trojan', protocol: 'trojan'},
+  {name: 'vmess', protocol: 'vmess'},
+  {name: 'xhttp', protocol: 'vless', stream_transport: 'xhttp' as const},
+  {name: 'via', protocol: 'chain'},
+  {name: 'direct', protocol: 'direct'},
+  {name: 'twice', protocol: 'ss'},
+  {name: 'twice', protocol: 'ss'}
+];
+it.each([
+  ['missing', 0, 'invalid-chain-hop-reference'],
+  ['twice', 1, 'ambiguous-chain-hop-reference'],
+  ['hy', 0, null],
+  ['hy', 1, 'unsupported-chain-hop'],
+  ['xhttp', 0, null],
+  ['xhttp', 2, 'unsupported-chain-hop'],
+  ['trojan', 3, null],
+  ['vmess', 1, null],
+  ['via', 0, 'unsupported-chain-hop'],
+  ['direct', 0, 'unsupported-chain-hop']
+])('checks hop %s at position %i', (name, index, code) => {
+  expect(chainHopProblem(catalog, name, index)).toBe(code);
+});
+
+it.each([
+  [['ss', 'trojan'], null],
+  [['hy', 'trojan'], {kind: 'hop', name: 'hy'}],
+  [['ss', 'xhttp'], {kind: 'hop', name: 'xhttp'}],
+  [['trojan', 'ss'], {kind: 'exit', name: 'ss'}],
+  [['ss', 'vmess'], {kind: 'exit', name: 'vmess'}]
+])('rules out UDP through %j by protocol: %j', (hops, problem) => {
+  expect(chainUdpProblem(hops.map(name => catalog.find(node => node.name === name)!))).toEqual(problem);
 });

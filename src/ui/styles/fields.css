@@ -345,6 +345,13 @@
   cursor: pointer;
   min-width: 120px;
 }
+/* A picker with controls beside it: the trigger takes what the controls leave of the row, which does not wrap. */
+.rp-picker .rp-toolbar {
+  flex-wrap: nowrap;
+}
+.rp-picker .rp-toolbar > .rp-selectbtn {
+  flex: 1;
+}
 .rp-selectbtn[data-size='L'] {
   height: var(--rp-control-lg);
   padding-inline: var(--rp-lg-inset-field);

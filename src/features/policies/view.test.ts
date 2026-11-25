@@ -258,7 +258,9 @@ it('counts each probed member once, by the row that says most', () => {
       row('a', 'ipv6', 'unknown'),
       row('b', 'ipv6', 'unknown'),
       row('b', 'ipv4', 'unavailable'),
-      row('c', 'ipv4', 'unknown')
+      row('c', 'ipv4', 'unknown'),
+      // A chain member has no server address for a TCP connect probe; that row measured nothing.
+      {...row('d', 'ipv4', 'unavailable'), error: 'no_node_address'}
     ]
   } as unknown as Parameters<typeof probeSummary>[0]);
   expect(summary).toBe('Available: 1, unavailable: 1, unknown: 1 (1 unresolved), selection: unchanged');

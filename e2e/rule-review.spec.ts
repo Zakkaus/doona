@@ -12,9 +12,9 @@ async function unsupportedRule(page: import('@playwright/test').Page) {
 }
 
 const lists = [
-  {name: 'routing', route: '/#/rules?tab=list&view=advanced', scope: 'Routing rules', role: 'tabpanel', line: 149},
-  {name: 'DNS request', route: '/#/rules?tab=dns', scope: 'Request rules', role: 'region', line: 29},
-  {name: 'DNS response', route: '/#/rules?tab=dns', scope: 'Response rules', role: 'region', line: 36}
+  {name: 'routing', route: '/#/rules?tab=list&view=advanced', scope: 'Routing rules', role: 'tabpanel', line: 150},
+  {name: 'DNS request', route: '/#/rules?tab=dns', scope: 'Request rules', role: 'region', line: 30},
+  {name: 'DNS response', route: '/#/rules?tab=dns', scope: 'Response rules', role: 'region', line: 37}
 ] as const;
 
 for (const lang of ['en', 'zh-TW', 'zh-CN'] as const) {

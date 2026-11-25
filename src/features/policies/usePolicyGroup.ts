@@ -15,7 +15,7 @@ import type {OutboundCatalogue} from '../shared/groupText';
 import {useCheckEdit} from './useCheckEdit';
 import {toast} from '../../ui/ui';
 import {failureNotice, requestIdOf} from '../../api/error';
-import {foldFamilies} from '../../api/selectors';
+import {foldFamilies, measured} from '../../api/selectors';
 import {selectMember} from '../shared/selectMember';
 import {featureLink} from '../shared/limitHint';
 import {readFold, saveFold} from './folds';
@@ -146,7 +146,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     void control.probe(options).then(result => {
       if (result && g) {
         toast(
-          probeLevel(foldFamilies(result.results)),
+          probeLevel(foldFamilies(result.results.filter(measured))),
           t('ui.valuePair', {label: g.name, value: probeSummary(result, t, lang)}) + probeFallbackNotice(result.fallback, g.name, t)
         );
       }
