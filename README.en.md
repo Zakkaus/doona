@@ -14,7 +14,7 @@
 
 </div>
 
-doona is a static web UI for monitoring proxy traffic and managing nodes, groups, rules and configuration. It requires a running [honk](https://github.com/daeuniverse/honk) backend with the native API enabled; dae is not supported yet.
+doona is a static web UI for monitoring proxy traffic and managing nodes, groups, rules and configuration. It requires a running [honk](https://github.com/daeuniverse/honk) or [dae](https://github.com/daeuniverse/dae) (v2.1.2 or later) backend with the native API enabled. For dae, see its [native API guide](https://github.com/daeuniverse/dae/blob/main/docs/en/configuration/api.md).
 
 ![Activity dashboard with traffic charts and status cards](https://daeuniverse.org/doona/screenshots/en/activity-light.webp)
 

@@ -14,7 +14,7 @@
 
 </div>
 
-doona 是用于监控代理流量、管理节点、组、规则与配置的静态 Web 界面。使用时需要正在运行且已启用原生 API 的 [honk](https://github.com/daeuniverse/honk) 后端；目前不支持 dae。
+doona 是用于监控代理流量、管理节点、组、规则与配置的静态 Web 界面。使用时需要正在运行且已启用原生 API 的 [honk](https://github.com/daeuniverse/honk) 或 [dae](https://github.com/daeuniverse/dae)（v2.1.2 起）后端，dae 的配置方法见[原生 API 文档](https://github.com/daeuniverse/dae/blob/main/docs/zh/configuration/api.md)。
 
 ![显示流量图表与状态卡片的活动页](https://daeuniverse.org/doona/screenshots/zh-CN/activity-light.webp)
 
