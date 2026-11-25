@@ -89,10 +89,11 @@ for (const path of ['dns?tab=cache', 'dns?tab=log', 'nodes?tab=list', 'flows?tab
     await switchBack(page, path);
   });
 
-// The bar is as wide as its tabs, not the row the panels share.
+// The bar is as wide as its tabs, not the row the panels share. It is the page's bar once its tabs render: the page's
+// Skeleton draws an inert bar of its own, and one matched as the page replaces it is detached and measures zero.
 test('a tab bar keeps the width of its tabs', async ({page}) => {
   await page.goto('/#/dns?tab=stats');
-  const bar = page.locator('.rp-tabbar').first();
+  const bar = page.locator('.rp-tabbar:has([role=tab])').first();
   await expect(bar).toBeVisible();
   const [barWidth, rowWidth] = await bar.evaluate(el => [el.getBoundingClientRect().width, el.parentElement!.getBoundingClientRect().width]);
   expect(barWidth).toBeLessThan(rowWidth / 2);
