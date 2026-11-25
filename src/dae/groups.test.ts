@@ -79,6 +79,28 @@ describe('group entries', () => {
     );
   });
 
+  it.each([
+    ['adds exit after final', 'final: direct', {exit: "'jp 01'"}, "final: direct\nexit: 'jp 01'"],
+    ['adds exit after policy when there is no final', '', {exit: 'jp'}, 'exit: jp'],
+    ['replaces exit in place', 'exit: hk # keep\nfinal: direct', {exit: 'jp'}, 'exit: jp # keep\nfinal: direct'],
+    ['removes exit', 'final: direct\nexit: hk', {exit: null}, 'final: direct'],
+    ['edits only exit and leaves final alone', 'final: direct\nexit: hk', {final: undefined, exit: "'jp 01'"}, "final: direct\nexit: 'jp 01'"],
+    ['leaves exit alone when not given', 'exit: hk', {final: 'direct'}, 'final: direct\nexit: hk']
+  ])('%s', (_, fields, update, expected) => {
+    const group = (lines: string) =>
+      `group {\n  g {\n${['policy: select', ...lines.split('\n').filter(Boolean), 'check_url: x'].map(line => `    ${line}\n`).join('')}  }\n}\n`;
+    const written = writeGroupEntry(group(fields), 'g', {filters: [], policy: 'select', ...update});
+    expect(written).toBe(group(expected));
+    expect(writeGroupEntry(written, 'g', {filters: [], policy: 'select', ...update})).toBe(written);
+  });
+
+  it('reads exit as written and writes it after final in a new group', () => {
+    expect(readGroupEntries("group { g { exit: 'jp 01' } }")[0].exit).toBe("'jp 01'");
+    expect(writeGroupEntry('group {\n}\n', 'g', {filters: [], policy: 'select', final: 'direct', exit: 'jp'})).toBe(
+      'group {\n    g {\n        policy: select\n        final: direct\n        exit: jp\n    }\n}\n'
+    );
+  });
+
   it('round-trips interruption and edits it without moving comments or other fields', () => {
     const source = "group {\n  g {\n    policy: select\n    interrupt_connections: 'true' # keep\n    check_url: x\n  }\n}\n";
     const unchanged = {filters: [], policy: 'select'};
