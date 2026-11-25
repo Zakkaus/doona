@@ -580,11 +580,14 @@ const main = config.sources.find(source => source.kind === 'main')!;
 const [entry] = readNodeEntries(main.content);
 const form = {name: entry.name, value: entry.link, interval: '', agent: '', cache: null, route: ''};
 
-it.each(['filter: name(hk-01)', 'default: hk-01', 'final: hk-01'])('blocks a cross-source rename through %s but allows a link edit', reference => {
-  const other = {...main, id: 'other', kind: 'include' as const, content: `group {\n other {\n ${reference}\n policy: random\n }\n}\n`};
-  expect(nodeEditState([main, other], main, entry, [], {...form, name: 'changed'}, t)).toMatchObject({valid: false, reason: t('nodes.renameElsewhere')});
-  expect(nodeEditState([main, other], main, entry, [], {...form, value: 'socks5://127.0.0.1:1080'}, t)).toMatchObject({valid: true, reason: null});
-});
+it.each(['filter: name(hk-01)', 'default: hk-01', 'final: hk-01', 'exit: hk-01'])(
+  'blocks a cross-source rename through %s but allows a link edit',
+  reference => {
+    const other = {...main, id: 'other', kind: 'include' as const, content: `group {\n other {\n ${reference}\n policy: random\n }\n}\n`};
+    expect(nodeEditState([main, other], main, entry, [], {...form, name: 'changed'}, t)).toMatchObject({valid: false, reason: t('nodes.renameElsewhere')});
+    expect(nodeEditState([main, other], main, entry, [], {...form, value: 'socks5://127.0.0.1:1080'}, t)).toMatchObject({valid: true, reason: null});
+  }
+);
 
 it.each(['hk-01', "'hk-01'"])('blocks a cross-source DNS detour rename through %s but allows a link edit', target => {
   const other = {...main, id: 'dns', kind: 'include' as const, content: `dns {\n upstream {\n remote: 'tcp://1.1.1.1:53' -> ${target}\n }\n}\n`};
@@ -593,6 +596,12 @@ it.each(['hk-01', "'hk-01'"])('blocks a cross-source DNS detour rename through %
   expect(
     nodeEditState([main, {...other, content: other.content.replace(`-> ${target}`, '-> hk-010')}], main, entry, [], {...form, name: 'changed'}, t).valid
   ).toBe(true);
+});
+
+it('takes proxy chain names and blocks a rename that a chain in another source would miss', () => {
+  const chains = {...main, id: 'chains', kind: 'include' as const, content: 'node {\n  relay: hk-01 -> hk-02\n}\n'};
+  expect(nodeEditState([main, chains], main, entry, [], {...form, name: 'relay'}, t)).toMatchObject({valid: false, nameError: t('nodes.nameTaken')});
+  expect(nodeEditState([main, chains], main, entry, [], {...form, name: 'changed'}, t)).toMatchObject({valid: false, reason: t('nodes.renameElsewhere')});
 });
 
 it('assigns duplicate names to the name field and validates links and unchanged drafts', () => {

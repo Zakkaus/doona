@@ -16,6 +16,7 @@ const store = vi.hoisted(() => ({
   sources: [] as ConfigSource[],
   fresh: [] as ConfigSource[],
   apply: vi.fn(),
+  writable: false,
   refetchNodes: vi.fn(),
   refetchProviders: vi.fn(),
   refetchConfig: vi.fn(),
@@ -54,7 +55,7 @@ vi.mock('../../store/config', () => ({
 }));
 vi.mock('../../store/mainSource', async original => ({
   ...(await original<typeof import('../../store/mainSource')>()),
-  useMainSourceEdit: () => ({writable: false, busy: false, apply: store.apply})
+  useMainSourceEdit: () => ({writable: store.writable, busy: false, apply: store.apply})
 }));
 vi.mock('../../shell/draft', async original => ({
   ...(await original<typeof import('../../shell/draft')>()),
@@ -106,6 +107,7 @@ beforeEach(() => {
   store.providers = [];
   store.sources = [];
   store.fresh = [];
+  store.writable = false;
   store.apply.mockReset();
   store.removeNode.mockReset();
 });
@@ -387,6 +389,45 @@ it('refuses a protected-only selection and filters protected nodes from a mixed 
   expect(store.removeNode).toHaveBeenCalledExactlyOnceWith(manual.id);
   expect(store.deselect).toHaveBeenCalledExactlyOnceWith(manual.id);
   expect(close).toHaveBeenCalledOnce();
+});
+
+// honk's DELETE refuses a proxy chain, so a chain goes as text, and nothing a reference still names is removed.
+it.each([
+  ['a chain in the main source', 'relay', "node {\n  hk: 'socks5://h:1'\n  relay: hk -> hk\n}\n", 'write', null],
+  ['a chain in an include', 'relay', "node {\n  hk: 'socks5://h:1'\n}\n", 'refuse', null],
+  ['a node a chain hop names', 'hk', "node {\n  hk: 'socks5://h:1'\n  relay: hk -> hk\n}\n", 'block', 'relay'],
+  [
+    'a node a DNS upstream names',
+    'hk',
+    "node {\n  hk: 'socks5://h:1'\n}\ndns {\n  upstream {\n    remote: 'tcp://1.1.1.1:53' -> hk\n  }\n}\n",
+    'block',
+    'DNS upstream remote'
+  ],
+  ['a chain a group exit names', 'relay', 'node {\n  relay: a -> b\n}\ngroup {\n  proxy {\n    exit: relay\n  }\n}\n', 'block', 'proxy'],
+  ['an unnamed node', 'hk', "node {\n  hk: 'socks5://h:1'\n}\n", 'delete', null]
+])('removes %s only when nothing names it', async (_, name, content, outcome, referrer) => {
+  const item = {id: name, name, protocol: name === 'relay' ? 'chain' : 'socks5', provider_id: 'inline', group_ids: []} as unknown as Node;
+  store.writable = true;
+  store.nodes = [item];
+  store.providers = [{id: 'inline', kind: 'inline', name: 'inline'}] as Provider[];
+  store.sources = [
+    {id: 'main', kind: 'main', writable: true, content},
+    {id: 'include', kind: 'include', writable: true, content: outcome === 'refuse' ? 'node {\n  relay: hk -> hk\n}\n' : ''}
+  ] as ConfigSource[];
+  store.apply.mockResolvedValue({kind: 'ok'});
+  store.removeNode.mockResolvedValue(true);
+  // A batch leaves chains out, and names what still refers to a node it leaves out.
+  const line = referrer && translate('en', 'nodes.referencedBy', {name, names: referrer});
+  read().setDialog({kind: 'removeNodes', items: [item], onRemoved: store.deselect});
+  expect(read().removeNodes).toEqual(outcome === 'delete' ? [item] : []);
+  expect(read().batchErrors).toEqual(line && item.protocol !== 'chain' ? [line] : []);
+  read().setDialog({kind: 'removeNode', item});
+  expect(read().referenced?.text ?? null).toBe(line);
+  await read().submit(vi.fn());
+  expect(store.removeNode).toHaveBeenCalledTimes(outcome === 'delete' ? 1 : 0);
+  expect(store.apply).toHaveBeenCalledTimes(outcome === 'write' ? 1 : 0);
+  if (outcome === 'write') expect(store.apply.mock.calls[0][0](content)).toBe("node {\n  hk: 'socks5://h:1'\n}\n");
+  expect(read().problem?.text ?? null).toBe(outcome === 'refuse' ? translate('en', 'nodes.removeInclude') : null);
 });
 
 // Adding a node rewrites the configuration, so the groups are joined against the source read after the add.

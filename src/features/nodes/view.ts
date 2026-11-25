@@ -22,7 +22,7 @@ import {compareNames, localMinute, localTime, formatBytes, formatBytesFraction, 
 import {backendCode, backendMessage, knownCode, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
 import {isQuotable} from '../../dae/text';
-import {nodeReferenced, readNodeEntries, type NodeEntry} from '../../dae/nodes';
+import {nodeReferenced, readChainEntries, readNodeEntries, type NodeEntry} from '../../dae/nodes';
 import {
   addNodesToGroup,
   citingGroups,
@@ -138,7 +138,11 @@ export function nodeEditState(sources: ConfigSource[], source: ConfigSource, ent
   const taken =
     renamed &&
     (nodes.some(node => node.name === name) ||
-      sources.some(item => (item.kind === 'main' || item.kind === 'include') && readNodeEntries(item.content).some(entry => entry.name === name)));
+      sources.some(
+        item =>
+          (item.kind === 'main' || item.kind === 'include') &&
+          [...readNodeEntries(item.content), ...readChainEntries(item.content)].some(entry => entry.name === name)
+      ));
   const nameError = !name ? t('nodes.nameMissing') : taken ? t('nodes.nameTaken') : !isQuotable(name) ? t('config.unquotable') : null;
   const linkError = nodeLinkError(form.value, t) ?? (!form.value.trim() ? t('nodes.linkInvalid') : null);
   const reason = nameError ?? linkError ?? (blocked ? t('nodes.renameElsewhere') : null);

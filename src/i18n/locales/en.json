@@ -1019,7 +1019,7 @@
   "nodes.edit": "Edit {name}",
   "nodes.editAction": "Edit…",
   "nodes.editMissing": "This subscription is no longer in its config file",
-  "nodes.editNodeHelp": "Updates the node link in its source. Renaming also updates exact node filters, default and final in that source.",
+  "nodes.editNodeHelp": "Updates the node link in its source. Renaming also updates exact node filters, default, final, exit and proxy chain hops in that source.",
   "nodes.editNodeMissing": "This node is no longer in its source or its share link has changed.",
   "nodes.editNodeTitle": "Edit node {name}",
   "nodes.editOptions": "Other options, kept as written",
@@ -1134,6 +1134,8 @@
   "nodes.provider": "Node source",
   "nodes.providers": "Node sources",
   "nodes.referenced": "Groups that filter on {name}: {groups}. Change their filters on the Policies page first.",
+  "nodes.referencedBy": "Still used by {names}. Change those references before removing {name}.",
+  "nodes.referrerDns": "DNS upstream {name}",
   "nodes.refresh": "Update {name}",
   "nodes.refreshFailed": "Could not update {name}",
   "nodes.refreshed": {

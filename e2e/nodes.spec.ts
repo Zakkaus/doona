@@ -1042,7 +1042,8 @@ test('without a node list the page shows providers alone, with no latency tab', 
 
 test('while a cancelled removal is still pending, no other node dialog can submit', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
-  const node = (await api.nodes({limit: 1000})).nodes.find(item => item.provider_id === 'inline')!;
+  // sg-01 is named by no group, so the page offers its removal; hk-01 and jp-01 are named.
+  const node = (await api.nodes({limit: 1000})).nodes.find(item => item.name === 'sg-01')!;
   let release!: () => void;
   const gate = new Promise<void>(resolve => (release = resolve));
   handlers[`DELETE nodes/${encodeURIComponent(node.id)}`] = async () => {
@@ -1506,7 +1507,10 @@ test('a node search looks through every source and names the source of each resu
 
 test('a node write conflict names its cause, and only a delete without groups reads as a change meanwhile', async ({page}) => {
   const {api, handlers} = await mockBackend(page);
-  const [node, other] = (await api.nodes({limit: 1000})).nodes.filter(item => item.provider_id === 'inline');
+  const inline = (await api.nodes({limit: 1000})).nodes.filter(item => item.provider_id === 'inline');
+  // The page refuses a node the config names before asking the server, so the 409s are aimed at nodes no group, chain or DNS upstream names.
+  const named = inline.find(item => item.name === 'hk-01')!;
+  const [node, other] = ['sg-01', 'us-01'].map(name => inline.find(item => item.name === name)!);
   handlers[`DELETE nodes/${encodeURIComponent(node.id)}`] = async () => {
     throw new ApiError(409, 'state_conflict', 'Groups still name this node as their final outbound', null, {stage: 'state_conflict', groups: ['proxy']});
   };
@@ -1517,8 +1521,12 @@ test('a node write conflict names its cause, and only a delete without groups re
     throw new ApiError(409, 'state_conflict', 'A resource with this name already exists', null, {stage: 'state_conflict'});
   };
   await page.goto('/#/nodes?provider=inline');
-  await page.getByRole('button', {name: `Remove ${node.name}`, exact: true}).click();
+  await page.getByRole('button', {name: `Remove ${named.name}`, exact: true}).click();
   const confirmation = page.getByRole('alertdialog');
+  await expect(confirmation).toContainText('Still used by office. Change those references before removing hk-01.');
+  await expect(confirmation.getByRole('button', {name: `Remove ${named.name}`, exact: true})).toHaveCount(0);
+  await confirmation.getByRole('button', {name: 'Close', exact: true}).click();
+  await page.getByRole('button', {name: `Remove ${node.name}`, exact: true}).click();
   await confirmation.getByRole('button', {name: `Remove ${node.name}`, exact: true}).click();
   await expect(confirmation.getByRole('alert')).toContainText('Groups still name this node as their final outbound');
   await confirmation.getByRole('button', {name: 'Cancel', exact: true}).click();
