@@ -1,5 +1,6 @@
 import {expect, it} from 'vitest';
-import {nodeReferenced, readNodeEntries, writeNodeEntry} from './nodes';
+import {nodeReferenced, nodeReferrers, readChainEntries, readNodeEntries, removeChainEntry, writeNodeEntry} from './nodes';
+import {unquote} from './text';
 
 const text = `# keep\r\nnode {\r\n  "old" :  'socks5://127.0.0.1:1080' # node\r\n}\r\ngroup {\r\n  proxy {\r\n    filter: name('old', other) && !name(old) # filter\r\n    filter: name(keyword: old)\r\n    policy: random\r\n  }\r\n}\r\n`;
 it('rewrites only the changed node tokens and exact filter arguments', () => {
@@ -64,4 +65,48 @@ it.each(['xhttp', 'splithttp'])('preserves raw %s links through source reads and
   const written = writeNodeEntry(source, entry, {name: entry.name, link: updated});
   expect(written).toBe(source.replace(link, updated));
   expect(readNodeEntries(written)[0].link).toBe(updated);
+});
+
+it.each([
+  ['bare hops', 'a: b -> c # keep -> d', ['b', 'c']],
+  ['an unquoted hop with a colon and a space', "a: hk: east -> 'hop b' -> c", ['hk: east', 'hop b', 'c']],
+  ['quoted hops holding an arrow, a scheme and a hash', `a: 'x -> y' -> "socks5://z" -> 'p # q'`, ['x -> y', 'socks5://z', 'p # q']],
+  ['flush arrows', 'a: b->c', ['b', 'c']],
+  ['an empty hop', 'a: b -> -> c', ['b', '', 'c']],
+  ['a share link', 'a: socks5://h:1 -> b', null],
+  ['a quoted share link', "a: 'socks5://h:1'", null],
+  ['a value without an arrow', 'a: b', null]
+])('reads a chain from %s', (_, line, hops) => {
+  const source = `node {\n  ${line}\n}\n`;
+  const chains = readChainEntries(source);
+  if (!hops) return expect(chains).toEqual([]);
+  expect(chains).toMatchObject([{name: 'a', line: 2, hops: hops.map(name => ({name}))}]);
+  // Each hop's range covers its written text, quotes included and comment excluded.
+  expect(chains[0].hops.map(hop => unquote(source.slice(hop.from, hop.to)))).toEqual(hops);
+  expect(source.slice(chains[0].from, chains[0].to)).toBe(line.replace(/ # keep.*/, ''));
+  expect(readNodeEntries(source)).toEqual([]);
+});
+
+it.each([
+  ['a group exit', 'group {\n proxy {\n  exit: old # keep\n }\n}\n', "group {\n proxy {\n  exit: 'new name' # keep\n }\n}\n", ['proxy']],
+  ['chain hops', "node {\n  c: x -> 'old' -> old # old\n}\n", "node {\n  c: x -> 'new name' -> 'new name' # old\n}\n", ['c']],
+  ['no chain hop', 'node {\n  c: socks5://old:1 -> old\n  d: x -> older\n}\n', null, []]
+])('renames and reports a node named in %s', (_, extra, renamed, referrers) => {
+  const input = text + extra;
+  const [entry] = readNodeEntries(input);
+  expect(nodeReferrers(extra, 'old')).toEqual(referrers);
+  expect(writeNodeEntry(input, entry, {name: 'new name', link: entry.link})).toBe(
+    writeNodeEntry(text, entry, {name: 'new name', link: entry.link}) + (renamed ?? extra)
+  );
+});
+
+it.each([
+  ['its own line and comment', 'node {\n  a: x\n  c: x -> y # keep\n  b: z\n}\n', 'node {\n  a: x\n  b: z\n}\n'],
+  ['a CRLF line', 'node {\r\n  c: x -> y\r\n  b: z\r\n}\r\n', 'node {\r\n  b: z\r\n}\r\n'],
+  ['a one-line block', 'node { c: x -> y }\n', 'node {  }\n']
+])('removes a chain on %s', (_, source, removed) => {
+  const [chain] = readChainEntries(source);
+  expect(removeChainEntry(source, chain)).toBe(removed);
+  expect(() => removeChainEntry(source.replace('-> y', '-> w'), chain)).toThrow();
+  expect(() => removeChainEntry(source + source, chain)).toThrow();
 });
