@@ -536,6 +536,20 @@ describe('a failed subscription download', () => {
     expect(row.failure![0]).toContain('downloaded');
   });
 
+  it.each([
+    ['unsupported-chain-hop', [t('nodes.proxyChain.refreshRejected')]],
+    ['group-exit-route-too-long', [t('nodes.proxyChain.refreshRejected')]],
+    ['duplicate-subscription-entry', undefined],
+    [undefined, undefined]
+  ])('explains a refresh rejected for diagnostic %s', (code, failure) => {
+    const rejected = provider('a', {
+      last_error: {code: 'publication_rejected', message: 'rejected', details: {diagnostic_code: code} as unknown as Record<string, never>}
+    });
+    const row = providerRowView(rejected, undefined, 'en-US', t);
+    expect(row.failure).toEqual(failure);
+    expect(row.error).toBe(failure ? undefined : t('ui.backend.publicationRejected'));
+  });
+
   it('keeps the plain text for an engine that sends no details or no stage', () => {
     for (const details of [null, {}, {node: 'n1'}]) {
       const row = providerRowView(failed(details), undefined, 'en-US', t, names);

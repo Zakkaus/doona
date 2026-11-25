@@ -1147,6 +1147,7 @@
   "nodes.proxyChain.moveUp": "Move hop {n} up",
   "nodes.proxyChain.pickHop": "Choose a node",
   "nodes.proxyChain.protocol": "Proxy chain",
+  "nodes.proxyChain.refreshRejected": "Update rejected: a proxy chain or group exit refers to a node this subscription removed or duplicated. The previous nodes stay in use.",
   "nodes.proxyChain.removeHop": "Remove hop {n}",
   "nodes.proxyChain.udp": "UDP",
   "nodes.proxyChain.udpDepends": "Depends on node settings",

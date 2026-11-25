@@ -387,6 +387,19 @@ export function fetchFailure(item: ProviderRow, names: OutboundNames | undefined
   return [reason, via, ownWords ? t('nodes.fetchKept') : null].filter((line): line is string => line !== null);
 }
 
+// The diagnostics with which honk refuses a refresh that would break a proxy chain hop or a group exit; it keeps the previous nodes.
+const referenceCodes = new Set([
+  'invalid-chain-hop-reference',
+  'ambiguous-chain-hop-reference',
+  'unsupported-chain-hop',
+  'invalid-group-exit-target',
+  'ambiguous-group-exit-target',
+  'unsupported-group-exit-target',
+  'group-exit-route-too-long'
+]);
+const referenceRejected = (error: Provider['last_error']) =>
+  error?.code === 'publication_rejected' && referenceCodes.has((error.details as {diagnostic_code?: string} | null | undefined)?.diagnostic_code ?? '');
+
 export function providerRowView(item: ProviderRow, seconds: number | null | undefined, locale: string, t: Translator, names?: OutboundNames) {
   const kinds: Record<ProviderRow['kind'], Key> = {
     subscription: 'nodes.kind.subscription',
@@ -406,7 +419,7 @@ export function providerRowView(item: ProviderRow, seconds: number | null | unde
   // undefined: no configuration entry to write; null: an entry without an interval, which can still get one.
   const interval = item.kind === 'subscription' ? seconds : undefined;
   const name = item.displayName ?? item.name;
-  const failure = fetchFailure(item, names, t);
+  const failure = fetchFailure(item, names, t) ?? (referenceRejected(item.last_error) ? [t('nodes.proxyChain.refreshRejected')] : undefined);
   return {
     id: item.id,
     name,

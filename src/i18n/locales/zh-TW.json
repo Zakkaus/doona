@@ -994,6 +994,7 @@
   "nodes.proxyChain.moveUp": "上移跳點 {n}",
   "nodes.proxyChain.pickHop": "選擇節點",
   "nodes.proxyChain.protocol": "代理鏈",
+  "nodes.proxyChain.refreshRejected": "已拒絕更新：代理鏈或群組出口引用的節點在此訂閱中已移除或重名。仍沿用先前的節點。",
   "nodes.proxyChain.removeHop": "移除跳點 {n}",
   "nodes.proxyChain.udp": "UDP",
   "nodes.proxyChain.udpDepends": "取決於節點設定",
