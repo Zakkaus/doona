@@ -1,4 +1,4 @@
-import {expect, test} from './fixtures';
+import {expect, loadingState, test} from './fixtures';
 
 // The Qiangguo palette's top bar sits on the hero at the top of the page; pinned over a scrolled page it takes the plain
 // top of the sky, so no slice of the flag or the square rides over the content.
@@ -12,6 +12,9 @@ for (const [name, viewport] of [
     test('the Qiangguo palette keeps the top bar pinned and drops the hero from it once the page scrolls', async ({page}) => {
       await page.addInitScript(() => localStorage.setItem('doona-palette', 'qiangguo/qiangguo'));
       await page.goto('/#/overview');
+      // Scroll the page, not the startup frame: the page puts back an offset the startup frame had, and for a second
+      // takes a scroll to the top for the browser's own reset and undoes it (heldScroll.ts).
+      await expect(page.locator(`.rp-content ${loadingState}`)).toHaveCount(0);
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeGreaterThan(300);
       const bar = page.locator('.rp-top');
       // Beside the side navigation the bar is fixed to the viewport; a phone's bar is sticky.
