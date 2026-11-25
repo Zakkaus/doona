@@ -18,7 +18,10 @@ permissions:
   contents: read
 
 jobs:
+  # The schedule runs on main's head, which its push already checked, so it runs only the nightly job; without this job
+  # every lane below it is skipped. A manual dispatch still runs the full lane with the nightly one.
   changes:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 3
     outputs:
@@ -207,7 +210,7 @@ jobs:
 
   ci-ok:
     needs: [changes, check-lite, check, e2e, merge-reports]
-    if: always()
+    if: always() && github.event_name != 'schedule'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 3
     steps:
@@ -277,7 +280,8 @@ jobs:
 
   notify-nightly:
     needs: [ci-ok, nightly]
-    if: ${{ always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (needs.ci-ok.result != 'success' || needs.nightly.result != 'success') }}
+    # ci-ok is skipped on the schedule, which is not a failure.
+    if: ${{ always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (!contains(fromJSON('["success", "skipped"]'), needs.ci-ok.result) || needs.nightly.result != 'success') }}
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 3
     permissions:
