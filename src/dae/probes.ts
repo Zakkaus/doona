@@ -12,6 +12,8 @@ const protocols: Record<string, {connect: boolean; stream: boolean; udp: boolean
   hysteria2: {connect: false, stream: true, udp: true},
   tuic: {connect: false, stream: true, udp: true},
   juicity: {connect: false, stream: true, udp: true},
+  // A proxy chain has no server of its own to connect to; HTTP and DNS probes go through every hop.
+  chain: {connect: false, stream: true, udp: null},
   direct: {connect: false, stream: true, udp: true},
   block: {connect: false, stream: false, udp: false}
 };

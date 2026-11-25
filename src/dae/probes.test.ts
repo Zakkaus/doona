@@ -12,6 +12,7 @@ it.each([
   ['hysteria2', false, true, true],
   ['tuic', false, true, true],
   ['juicity', false, true, true],
+  ['chain', false, true, true],
   ['direct', false, true, true],
   ['block', false, false, false],
   ['unknown', false, false, false],

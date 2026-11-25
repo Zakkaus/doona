@@ -57,6 +57,14 @@ it.each([
       {id: 'new', name: 'new', state: 'unmeasured'}
     ],
     down: 1
+  },
+  {
+    // A group TCP connect probe finds no server address on a chain member: unmeasured, not down.
+    name: 'a chain member a group probe could not measure',
+    nodes: [node('relay', ['a'], [observation({measurement: 'tcp_connect', state: 'unavailable', latency_ms: null, error: 'no_node_address'})], 'chain')],
+    measured: [],
+    missing: [{id: 'relay', name: 'relay', state: 'unmeasured'}],
+    down: 0
   }
 ])('summarizes $name', ({nodes, measured, missing, down}) => {
   const summary = latencySummary(latencyGroups(nodes, [], 'group', locale));

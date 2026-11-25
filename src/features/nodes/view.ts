@@ -1,4 +1,3 @@
-import {isNodeLink} from '../../dae/nodes';
 import type {Capabilities, ConfigSource, HealthObservation, Node, Provider, ProviderCreate} from '../../api/model';
 import {enumLabel} from '../../i18n/enum';
 import {
@@ -13,6 +12,7 @@ import {
   type PseudoOwner
 } from '../../api/selectors';
 import type {TableSort} from '../../ui/ui';
+import type {SearchItem} from '../../ui/SearchSelect';
 import {completeSubscriptionUrl, isSubscriptionUrl, urlHost, type SubscriptionOption, type SubscriptionText} from '../../dae/subscriptions';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Key} from '../../i18n';
@@ -22,7 +22,17 @@ import {compareNames, localMinute, localTime, formatBytes, formatBytesFraction, 
 import {backendCode, backendMessage, knownCode, oneLine} from '../../i18n/backend';
 import {latencyTone} from '../../ui/ui';
 import {isQuotable} from '../../dae/text';
-import {nodeReferenced, readChainEntries, readNodeEntries, type NodeEntry} from '../../dae/nodes';
+import {
+  chainHopCandidate,
+  chainHopProblem,
+  chainUdpProblem,
+  isNodeLink,
+  nodeReferenced,
+  readChainEntries,
+  readNodeEntries,
+  type ChainEntry,
+  type NodeEntry
+} from '../../dae/nodes';
 import {
   addNodesToGroup,
   citingGroups,
@@ -47,15 +57,21 @@ const streamTransportLabels = new Map([
   ['xhttp', 'XHTTP']
 ]);
 
+// A proxy chain by its kind's name; another node by its protocol and stream transport.
+export function protocolText(node: Pick<Node, 'protocol' | 'stream_transport'>, t: Translator) {
+  if (node.protocol === 'chain') return t('nodes.proxyChain.protocol');
+  const protocol = node.protocol ?? '—';
+  const transport = node.stream_transport;
+  return transport ? t('ui.aside', {text: protocol, note: streamTransportLabels.get(transport) ?? transport}) : protocol;
+}
+
 export function nodeRowView(node: Node, names: OutboundNames, lang: Lang, t: Translator) {
   const latency = healthView(preferredHealth(node), t);
   const kinds = probeKindLines(node, t);
-  const protocol = node.protocol ?? '—';
-  const transport = node.stream_transport;
   return {
     id: node.id,
     name: node.name,
-    protocol: transport ? t('ui.aside', {text: protocol, note: streamTransportLabels.get(transport) ?? transport}) : protocol,
+    protocol: protocolText(node, t),
     latency: latency.value,
     latencyClass: latency.tone,
     groups: node.group_ids.length
@@ -89,6 +105,66 @@ export function probeKindLines(node: Pick<Node, 'health'>, t: Translator) {
       ...healthView(h, t, h.error ? backendCode(h.error, t) : undefined)
     };
   });
+}
+
+// A chain's hops from entry to exit, each with the protocol and latency of the node it names, and what decides UDP.
+export function chainHopsView(hops: readonly string[], nodes: readonly Node[], t: Translator) {
+  const found = hops.map(name => nodes.filter(node => node.name === name));
+  const lines = hops.map((name, i) => {
+    const [node, ...more] = found[i];
+    if (!node || more.length)
+      return {label: name, value: backendCode(node ? 'ambiguous-chain-hop-reference' : 'invalid-chain-hop-reference', t), tone: 'ms err'};
+    const health = healthView(preferredHealth(node), t);
+    return {
+      label: name,
+      value: health.value === '—' ? protocolText(node, t) : t('ui.aside', {text: protocolText(node, t), note: health.value}),
+      tone: health.tone
+    };
+  });
+  const resolved = found.every(matches => matches.length === 1) ? found.map(([node]) => node) : null;
+  const udp = resolved && chainUdpProblem(resolved);
+  return {
+    hops: lines,
+    udp: !resolved
+      ? '—'
+      : udp
+        ? t('ui.aside', {text: t('ui.no'), note: t(udp.kind === 'hop' ? 'nodes.proxyChain.udpHop' : 'nodes.proxyChain.udpExit', {name: udp.name})})
+        : t('nodes.proxyChain.udpDepends')
+  };
+}
+
+// The nodes a hop can name, once per name: a name several nodes share, or one a hop cannot write, is listed but disabled.
+export function chainHopChoices(nodes: readonly Node[], t: Translator): SearchItem[] {
+  const byName = new Map<string, Node[]>();
+  for (const node of nodes.filter(chainHopCandidate)) byName.set(node.name, [...(byName.get(node.name) ?? []), node]);
+  return [...byName].map(([name, [node, ...more]]) => {
+    const problem = more.length ? backendCode('ambiguous-chain-hop-reference', t) : !isQuotable(name) ? t('nodes.proxyChain.unquotable') : null;
+    return {id: name, label: name, nodeName: true, desc: problem ?? protocolText(node, t), isDisabled: !!problem};
+  });
+}
+
+export type ChainDraft = {name: string; hops: string[]};
+// The chain dialog's checks, as far as the catalog shows them; honk's own check reports the rest when it writes.
+export function chainEditState(
+  sources: ConfigSource[],
+  original: {source: ConfigSource; entry: ChainEntry} | null,
+  nodes: Node[],
+  draft: ChainDraft,
+  t: Translator
+) {
+  const name = draft.name.trim();
+  const {nameError, blocked} = nameState(sources, original?.source ?? null, original?.entry.name ?? null, name, nodes, t);
+  const hopErrors = draft.hops.map((hop, i) => {
+    const code = hop ? chainHopProblem(nodes, hop, i) : null;
+    return code && backendCode(code, t);
+  });
+  const reason =
+    nameError ??
+    hopErrors.find(Boolean) ??
+    (draft.hops.some(hop => !hop) ? t('nodes.proxyChain.hopEmpty') : null) ??
+    (blocked ? t('nodes.renameElsewhere') : null);
+  const changed = !original || name !== original.entry.name || draft.hops.join('\n') !== original.entry.hops.map(hop => hop.name).join('\n');
+  return {nameError, hopErrors, reason, valid: reason === null && changed};
 }
 
 export type ProviderRow = (Provider | (Omit<Provider, 'kind'> & {kind: 'builtin' | 'unattributed'})) & {
@@ -131,10 +207,10 @@ export function subscriptionPlace(places: Array<{source: ConfigSource; entry: Su
   };
 }
 
-export function nodeEditState(sources: ConfigSource[], source: ConfigSource, entry: NodeEntry, nodes: Node[], form: ProviderForm, t: Translator) {
-  const name = form.name.trim();
-  const renamed = name !== entry.name;
-  const blocked = renamed && sources.some(item => item.id !== source.id && nodeReferenced(item.content, entry.name));
+// A new or changed name: free among the nodes and declarations, and, when renaming, named in no other source.
+function nameState(sources: ConfigSource[], source: ConfigSource | null, from: string | null, name: string, nodes: Node[], t: Translator) {
+  const renamed = name !== from;
+  const blocked = renamed && from !== null && sources.some(item => item.id !== source?.id && nodeReferenced(item.content, from));
   const taken =
     renamed &&
     (nodes.some(node => node.name === name) ||
@@ -143,7 +219,11 @@ export function nodeEditState(sources: ConfigSource[], source: ConfigSource, ent
           (item.kind === 'main' || item.kind === 'include') &&
           [...readNodeEntries(item.content), ...readChainEntries(item.content)].some(entry => entry.name === name)
       ));
-  const nameError = !name ? t('nodes.nameMissing') : taken ? t('nodes.nameTaken') : !isQuotable(name) ? t('config.unquotable') : null;
+  return {blocked, nameError: !name ? t('nodes.nameMissing') : taken ? t('nodes.nameTaken') : !isQuotable(name) ? t('config.unquotable') : null};
+}
+
+export function nodeEditState(sources: ConfigSource[], source: ConfigSource, entry: NodeEntry, nodes: Node[], form: ProviderForm, t: Translator) {
+  const {nameError, blocked} = nameState(sources, source, entry.name, form.name.trim(), nodes, t);
   const linkError = nodeLinkError(form.value, t) ?? (!form.value.trim() ? t('nodes.linkInvalid') : null);
   const reason = nameError ?? linkError ?? (blocked ? t('nodes.renameElsewhere') : null);
   return {

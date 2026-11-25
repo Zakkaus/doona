@@ -23,7 +23,7 @@ test('nodes sort by name, latency and protocol, and filter by group and protocol
   await page.goto('/#/nodes?provider=inline');
   const table = page.locator('.rp-table').first();
   const list = rows(table);
-  await expect(list).toHaveCount(5);
+  await expect(list).toHaveCount(6);
   await expect(list.first()).toContainText('hk-01');
   await table.getByRole('columnheader', {name: /^Latency/}).click();
   await expect(list.first()).toContainText('sg-01');
@@ -35,7 +35,7 @@ test('nodes sort by name, latency and protocol, and filter by group and protocol
   await page.getByRole('button', {name: /Group$/}).click();
   await page.getByRole('option', {name: 'gaming', exact: true}).click();
   await expect(list).toHaveCount(2);
-  await expect(page.locator('.rp-toolbar').nth(1)).toContainText('2 / 5');
+  await expect(page.locator('.rp-toolbar').nth(1)).toContainText('2 / 6');
   await page.getByLabel('Search nodes').fill('jp');
   await expect(list).toHaveCount(1);
 });
@@ -52,7 +52,7 @@ test('a node list that comes back empty once is asked for again and shown', asyn
     {times: 1}
   );
   await page.goto('/#/nodes?provider=inline');
-  await expect(rows(page.locator('.rp-table').first())).toHaveCount(5);
+  await expect(rows(page.locator('.rp-table').first())).toHaveCount(6);
   expect(dropped).toBe(1);
   expect(requests.some(request => new URL(request.url()).pathname === '/api/v1/nodes')).toBe(true);
 });
@@ -61,7 +61,7 @@ test('node cell content starts at its header text, including latency and action 
   await page.setViewportSize({width: 1440, height: 900});
   await page.goto('/#/nodes?provider=inline');
   const table = page.locator('.rp-table').first();
-  await expect(rows(table)).toHaveCount(5);
+  await expect(rows(table)).toHaveCount(6);
   await page.evaluate(() => document.fonts.ready);
   for (const label of ['Protocol', 'Latency', 'Groups', 'Actions']) {
     const header = table.getByRole('columnheader', {name: new RegExp(`^${label}`)});
@@ -89,7 +89,7 @@ test('a share link becomes an inline node and can be removed again', async ({pag
   await page.goto('/#/nodes?provider=inline');
   const table = page.locator('.rp-table').first();
   const list = rows(table);
-  await expect(list).toHaveCount(5);
+  await expect(list).toHaveCount(6);
   await page.getByRole('button', {name: 'Add node', exact: true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Node link').fill('foo://nope');
@@ -99,15 +99,54 @@ test('a share link becomes an inline node and can be removed again', async ({pag
   await dialog.getByLabel('Node link').fill('vless://uuid@example.com:443?security=tls#hk-03');
   await dialog.getByRole('button', {name: 'Add', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'hk-03 added'})).toBeVisible();
-  await expect(list).toHaveCount(6);
+  await expect(list).toHaveCount(7);
   await expect(list.filter({hasText: 'hk-03'})).toContainText('vless');
   await page.getByRole('button', {name: 'Remove hk-03', exact: true}).click();
   await page.getByRole('alertdialog').getByRole('button', {name: 'Remove hk-03', exact: true}).click();
   await expect(page.locator('.rp-toast.positive', {hasText: 'hk-03 removed'})).toBeVisible();
-  await expect(list).toHaveCount(5);
+  await expect(list).toHaveCount(6);
   // The management write landed in the main source as a new generation.
   await page.locator('.rp-nav[href="#/config"]').click();
   await expect(page.locator('.rp-toolbar:visible').first()).toContainText('42');
+});
+
+test('a proxy chain is added from its hops, shown with them, edited and removed as text', async ({page}) => {
+  await page.goto('/#/nodes?provider=inline');
+  const list = rows(page.locator('.rp-table').first());
+  await expect(list.filter({hasText: 'relay'})).toContainText('Proxy chain');
+  await page.getByRole('button', {name: 'Add node', exact: true}).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('tab', {name: 'Proxy chain'}).click();
+  await dialog.getByLabel('Name').fill('via-us');
+  const pick = async (hop: string, node: string) => {
+    await dialog.getByRole('button', {name: new RegExp(`${hop}$`)}).click();
+    await page.getByRole('option', {name: new RegExp(`^${node}`)}).click();
+  };
+  await pick('Hop 1', 'hk-01');
+  await pick('Hop 2', 'us-01');
+  // AnyTLS can only be the entry, which the catalog shows before anything is written.
+  await expect(dialog.locator('.rp-field-error', {hasText: 'cannot be a proxy chain hop at this position'})).toBeVisible();
+  await expect(dialog.getByRole('button', {name: 'Add', exact: true})).toBeDisabled();
+  await dialog.getByRole('button', {name: 'Move hop 2 up'}).click();
+  await dialog.getByRole('button', {name: 'Add hop'}).click();
+  await pick('Hop 3', 'sg-01');
+  await dialog.getByRole('button', {name: 'Add', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'via-us added'})).toBeVisible();
+  const row = list.filter({hasText: 'via-us'});
+  await expect(row).toContainText('Proxy chain');
+  await row.click();
+  await expect(page.getByText('Hops, entry to exit')).toBeVisible();
+  await expect(page.getByText('No (us-01 cannot be dialed through another hop)')).toBeVisible();
+  await moreAction(row, 'Edit…', 'Node actions');
+  const edit = page.getByRole('dialog');
+  await edit.getByLabel('Name').fill('via-us-2');
+  await edit.getByRole('button', {name: 'Remove hop 3'}).click();
+  await edit.getByRole('button', {name: 'Apply', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'Saved via-us-2'})).toBeVisible();
+  await page.getByRole('button', {name: 'Remove via-us-2', exact: true}).click();
+  await page.getByRole('alertdialog').getByRole('button', {name: 'Remove via-us-2', exact: true}).click();
+  await expect(page.locator('.rp-toast.positive', {hasText: 'via-us-2 removed'})).toBeVisible();
+  await expect(list.filter({hasText: 'via-us'})).toHaveCount(0);
 });
 
 for (const transport of ['xhttp', 'splithttp'])
@@ -864,7 +903,7 @@ test('node sources list their nodes and a subscription can be refreshed', async 
   expect(await nodes.count()).toBeGreaterThan(10);
   await sources.nth(1).click();
   await expect(page).toHaveURL(/provider=inline$/);
-  await expect(nodes).toHaveCount(5);
+  await expect(nodes).toHaveCount(6);
   await page.getByRole('button', {name: 'Update harbor', exact: true}).click();
   await expect(page.locator('.rp-toast.positive')).toContainText('harbor updated, 120 nodes');
 });

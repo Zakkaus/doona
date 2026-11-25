@@ -5,6 +5,7 @@ import {nestedIn, nameText, readGroupEntries, writeGroupEntry} from '../src/dae/
 import {groupAdmits} from '../src/dae/groupFilters';
 import {policyKind} from '../src/dae/vocab';
 import {readSubscriptionEntries} from '../src/dae/subscriptions';
+import {readChainEntries} from '../src/dae/nodes';
 import {displayUrl} from './common';
 import {groupCapabilities, groupConfig} from './groupDefaults';
 import {resolveLeaf} from './control';
@@ -43,10 +44,11 @@ export function activateInventory(
   const providerIds = new Set(subscriptions.map(entry => entry.tag));
   const inline = fields('node');
   const inlineNames = new Set(inline.map(field => field.name));
+  const chains = new Set(readChainEntries(text).map(chain => chain.name));
   const nextNodes = nodes.filter(node => (node.provider_id === 'inline' ? inlineNames.has(node.name) : providerIds.has(node.provider_id!)));
   for (const field of inline) {
     const link = unquote(field.value);
-    const protocol = link.split(':')[0];
+    const protocol = chains.has(field.name) ? 'chain' : link.split(':')[0];
     const stream_transport = streamTransport(link, protocol);
     const existing = nextNodes.find(node => node.provider_id === 'inline' && node.name === field.name);
     if (existing) Object.assign(existing, {protocol, stream_transport});

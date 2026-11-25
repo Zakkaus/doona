@@ -65,7 +65,8 @@ export function nodeFixtures(count: number, faults = false): {nodes: Node[]; gro
       ...node('jp-01', faults ? null : 132, faults ? null : 139, false, 'inline', 'vless', [0.86, 0.9]),
       stream_transport: 'xhttp'
     },
-    node('us-01', 188, 201, true, 'inline', 'anytls', [0.62, 0.7])
+    node('us-01', 188, 201, true, 'inline', 'anytls', [0.62, 0.7]),
+    node('relay', 152, 160, false, 'inline', 'chain', [0.9, 1])
   ];
   // A UDP data probe besides the TCP and DNS ones on hk-01 and sg-01; the faults scenario fails sg-01's.
   nodes[0].health.push({...health('udp', 97, [1, 1]), purpose: 'data', measurement: 'quic_handshake'});

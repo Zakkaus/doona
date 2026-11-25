@@ -21,12 +21,24 @@ import {isWritableName, groupsNamingTag, readGroupEntries} from '../../dae/group
 import {isQuotable, quote} from '../../dae/text';
 import {agentProblem} from '../../dae/subscriptions';
 import {engineOf} from '../../api/engines';
-import {nodeReferrers, readChainEntries, readNodeEntries, removeChainEntry, writeNodeEntry, type NodeEntry} from '../../dae/nodes';
+import {
+  appendChainEntry,
+  nodeReferrers,
+  readChainEntries,
+  readNodeEntries,
+  removeChainEntry,
+  writeChainEntry,
+  writeNodeEntry,
+  type ChainEntry,
+  type NodeEntry
+} from '../../dae/nodes';
 import {duplicateXhttpHeaders, readXhttp, writeXhttp, type XhttpChange, type XhttpFields} from '../../dae/xhttp';
 import type {PageProps} from '../../shell/routes';
 import {replaceRoute} from '../../shell/route';
 import {
   editableSource,
+  chainEditState,
+  chainHopChoices,
   customGroup,
   joinableOwners,
   joinNodesToGroups,
@@ -71,6 +83,7 @@ type NodeDialog =
   | {kind: 'provider'}
   | {kind: 'node'}
   | {kind: 'editNode'; source: ConfigSource; entry: NodeEntry}
+  | {kind: 'editChain'; source: ConfigSource; entry: ChainEntry}
   | {kind: 'removeProvider'; item: Provider}
   | {kind: 'removeNode'; item: Node}
   | {kind: 'removeNodes'; items: Node[]; onRemoved: (id: string) => void}
@@ -86,10 +99,12 @@ export function useNodesPage({go, query}: PageProps) {
   const t = useT();
   const [dialog, setDialog] = useState<NodeDialog | null>(null);
   const [form, setForm] = useState<ProviderForm>(blank);
-  // The add dialog takes a pasted link or the fields of a node; each tab keeps its input, and the link is what is added.
-  const [addMode, setAddMode] = useState<'link' | 'manual'>('link');
+  // The add dialog takes a pasted link, the fields of a node or a proxy chain's hops; each tab keeps its input.
+  const [addMode, setAddMode] = useState<'link' | 'manual' | 'chain'>('link');
   const [draft, setDraft] = useState<NodeFields>(emptyNode);
+  const [hops, setHops] = useState<string[]>(['', '']);
   const byFields = dialog?.kind === 'node' && addMode === 'manual';
+  const byChain = dialog?.kind === 'editChain' || (dialog?.kind === 'node' && addMode === 'chain');
   const nodeValue = byFields ? manualLink(draft) : form.value;
   const [headers, setHeaders] = useState<XhttpFields['headers'] | null>(null);
   const xhttp = useMemo(() => readXhttp(nodeValue), [nodeValue]);
@@ -115,7 +130,9 @@ export function useNodesPage({go, query}: PageProps) {
     ? Object.values(changes).some(Boolean)
     : dialog?.kind === 'editNode'
       ? form.name !== dialog.entry.name || form.value !== dialog.entry.link
-      : !!(form.name || form.value) || JSON.stringify(draft) !== JSON.stringify(emptyNode(draft.protocol));
+      : dialog?.kind === 'editChain'
+        ? form.name !== dialog.entry.name || hops.join('\n') !== dialog.entry.hops.map(hop => hop.name).join('\n')
+        : !!(form.name || form.value) || hops.some(Boolean) || JSON.stringify(draft) !== JSON.stringify(emptyNode(draft.protocol));
   const guard = useDraftGuard(
     !!dialog && (edited || headerEdited),
     () => {
@@ -132,6 +149,7 @@ export function useNodesPage({go, query}: PageProps) {
       setJoinPick([]);
       setAddMode('link');
       setDraft(emptyNode());
+      setHops(next.kind === 'editChain' ? next.entry.hops.map(hop => hop.name) : ['', '']);
       setBatchProgress(null);
       setRefusedName(null);
       setRefusedLink(null);
@@ -140,6 +158,7 @@ export function useNodesPage({go, query}: PageProps) {
       if (next.kind === 'editProvider')
         setForm({...blank, name: next.entry.tag, value: next.entry.url, agent: next.entry.ua ?? '', route: next.entry.route ?? ''});
       if (next.kind === 'editNode') setForm({...blank, name: next.entry.name, value: next.entry.link});
+      if (next.kind === 'editChain') setForm({...blank, name: next.entry.name});
       setDialog(next);
     },
     [session]
@@ -171,6 +190,7 @@ export function useNodesPage({go, query}: PageProps) {
   const daeText = engineOf(version).daeText;
   const parsed =
     dialog?.kind === 'node' &&
+    !byChain &&
     parseNodeLinks(
       nodeValue,
       (nodeList ?? []).map(node => node.name),
@@ -222,14 +242,29 @@ export function useNodesPage({go, query}: PageProps) {
         .flatMap(source => readChainEntries(source.content).map(entry => ({source, entry}))),
     [sources]
   );
+  // A proxy chain is written as text: created in the main source, edited in the one source that declares it.
+  const mainSource = sources.find(item => item.kind === 'main');
+  const chainCreate = !!mainSource && editableSource(daeText, source.writable, mainSource, isComplete(mainSource));
   const nodeEdit = useCallback(
     (node: Node) => {
+      if (node.protocol === 'chain') {
+        const own = authoredChains.filter(item => item.entry.name === node.name);
+        if (own.length !== 1 || !editableSource(daeText, source.writable, own[0].source, isComplete(own[0].source))) return null;
+        return () => open({kind: 'editChain', ...own[0]});
+      }
       const own = authored.filter(item => item.entry.name === node.name);
       const inline = providers.data?.providers.some(provider => provider.id === node.provider_id && provider.kind === 'inline');
       if (!inline || own.length !== 1 || !editableSource(daeText, source.writable, own[0].source, isComplete(own[0].source))) return null;
       return () => open({kind: 'editNode', ...own[0]});
     },
-    [authored, providers.data, daeText, source.writable, isComplete, open]
+    [authored, authoredChains, providers.data, daeText, source.writable, isComplete, open]
+  );
+  const chainHops = useCallback(
+    (node: Node) => {
+      const own = authoredChains.filter(item => item.entry.name === node.name);
+      return own.length === 1 ? own[0].entry.hops.map(hop => hop.name) : null;
+    },
+    [authoredChains]
   );
   // Every source on this page is written through the one shared editor, so its busy flag covers each declaring source.
   const joinOwners = useMemo(() => joinableOwners(sources, isComplete, () => source.busy), [sources, isComplete, source.busy]);
@@ -439,6 +474,27 @@ export function useNodesPage({go, query}: PageProps) {
         }
         toast('positive', t('nodes.added', {name}), {action: viewNodes(created.id)});
         return;
+      } else if (byChain) {
+        const current = sources.find(item => item.id === (dialog.kind === 'editChain' ? dialog.source.id : mainSource?.id));
+        if (!current || !current.writable || isComplete(current) !== true) {
+          refuse(t('nodes.editNodeMissing'));
+          return;
+        }
+        const next = {name: form.name.trim(), hops};
+        const result = await apply(text => (dialog.kind === 'editChain' ? writeChainEntry(text, dialog.entry, next) : appendChainEntry(text, next)), current);
+        const problem = editProblem(result, sources, t);
+        if (problem) refuseNotice(problem);
+        if (result.kind !== 'ok') return;
+        reload();
+        const joined = dialog.kind === 'node' ? await joinPickedGroups([next.name]) : 'none';
+        if (joined !== 'failed')
+          toast(
+            'positive',
+            t(dialog.kind === 'editChain' ? 'nodes.edited' : joined === 'ok' ? 'nodes.addedJoined' : 'nodes.added', {
+              name: next.name,
+              groups: formatList(lang, joinPicked)
+            })
+          );
       } else if (dialog.kind === 'node' && batch) {
         const remaining = new Map(batch.rows.map(row => [row.id, row.link]));
         const valid = batch.rows.filter(row => !row.error);
@@ -605,8 +661,8 @@ export function useNodesPage({go, query}: PageProps) {
         ? t('nodes.addProvider')
         : dialog.kind === 'node'
           ? t('nodes.addNode')
-          : dialog.kind === 'editNode'
-            ? t('nodes.editNodeTitle', {name: dialog.entry.name})
+          : dialog.kind === 'editNode' || dialog.kind === 'editChain'
+            ? t(dialog.kind === 'editNode' ? 'nodes.editNodeTitle' : 'nodes.proxyChain.editTitle', {name: dialog.entry.name})
             : dialog.kind === 'editProvider'
               ? t('nodes.editProviderTitle', {name: dialog.entry.tag})
               : dialog.kind === 'removeNodes'
@@ -628,6 +684,8 @@ export function useNodesPage({go, query}: PageProps) {
   const checkingRemoval = removal.checking;
   const referrers = dialog?.kind === 'removeNode' ? referrersOf(dialog.item.name) : null;
   const nodeState = dialog?.kind === 'editNode' ? nodeEditState(sources, dialog.source, dialog.entry, nodeList ?? [], form, t) : null;
+  const chainState = byChain ? chainEditState(sources, dialog?.kind === 'editChain' ? dialog : null, nodeList ?? [], {name: form.name, hops}, t) : null;
+  const hopChoices = useMemo(() => chainHopChoices(nodeList ?? [], t), [nodeList, t]);
   const nodeNameError =
     nodeState?.nameError ??
     (dialog?.kind === 'node' && newName && (refusedName === newName || nodeList?.some(node => node.name === newName)) ? t('nodes.nameTaken') : null) ??
@@ -639,7 +697,7 @@ export function useNodesPage({go, query}: PageProps) {
         ? t('nodes.linkInvalid')
         : nodeLinkError(nodeValue, t, engineOf(version).nodeLinkSchemes)
       : (nodeState?.linkError ?? null);
-  const formValid = batch
+  const nodeFormValid = batch
     ? !batch.error && batch.rows.some(row => !row.error)
     : dialog?.kind === 'editNode'
       ? nodeState!.valid && !headerError
@@ -652,6 +710,7 @@ export function useNodesPage({go, query}: PageProps) {
             : dialog?.kind === 'removeNodes'
               ? removeNodes.length > 0
               : true;
+  const formValid = chainState ? chainState.valid : nodeFormValid;
   const subscription: SubscriptionDraft = {name: form.name, url: form.value, interval: form.interval, agent: form.agent, cache: form.cache, route: form.route};
   // A new subscription shows each option the backend lists, with its default preselected or as the placeholder; an
   // edit writes the options in the declaring source.
@@ -723,7 +782,8 @@ export function useNodesPage({go, query}: PageProps) {
     onRemove: removeNode,
     onRemoveSelected: removeSelectedNodes,
     inInclude: nodeInInclude,
-    edit: nodeEdit
+    edit: nodeEdit,
+    chainHops
   });
   const tabs = nodesTabs(resources);
   return {
@@ -770,6 +830,22 @@ export function useNodesPage({go, query}: PageProps) {
     addMode,
     setAddMode: (next: typeof addMode) => {
       if (submitting.current !== dialog) setAddMode(next);
+    },
+    chainCreate,
+    chain: chainState && {
+      name: form.name,
+      // A new chain's empty name waits for the footer's reason, as a pasted link's does.
+      nameError: (form.name || dialog?.kind === 'editChain' ? chainState.nameError : null) ?? undefined,
+      hops,
+      hopErrors: chainState.hopErrors,
+      reason: chainState.reason,
+      choices: hopChoices,
+      onName: (name: string) => {
+        if (submitting.current !== dialog) setForm({...form, name});
+      },
+      onHops: (next: string[]) => {
+        if (submitting.current !== dialog) setHops(next);
+      }
     },
     draft,
     nodeValue,
@@ -820,7 +896,7 @@ export function useNodesPage({go, query}: PageProps) {
         ? dialog.kind === 'removeNodes'
           ? t('nodes.deleteSelected', {n: removeNodes.length})
           : t('nodes.remove', {name: dialog.item.name})
-        : dialog?.kind === 'editProvider' || dialog?.kind === 'editNode'
+        : dialog?.kind === 'editProvider' || dialog?.kind === 'editNode' || dialog?.kind === 'editChain'
           ? t('policy.save')
           : t('nodes.add')),
     editOptions: subscriptionEdit.options,

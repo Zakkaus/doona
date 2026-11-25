@@ -47,6 +47,7 @@ node {
   'sg-01': 'trojan://demo@sg-01.example.net:443#sg-01'
   'jp-01': 'vless://00000000-0000-4000-8000-000000000001@jp-01.example.net:443?security=tls&type=xhttp&mode=packet-up&path=%2Fxhttp%2F&alpn=h2#jp-01'
   'us-01': 'anytls://demo@us-01.example.net:443#us-01'
+  relay: jp-01 -> hk-02
 }
 
 dns {

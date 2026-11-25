@@ -498,6 +498,6 @@ test('the membership summary is a short count with names in a collapsed tag list
     .locator('label')
     .filter({has: page.getByRole('switch', {name: 'All nodes', exact: true})})
     .click();
-  await expect(dialog.getByRole('status')).toHaveText('125 nodes');
+  await expect(dialog.getByRole('status')).toHaveText('126 nodes');
   await expect(dialog.getByText(/Currently selects|no filter|holds every node/)).toHaveCount(0);
 });

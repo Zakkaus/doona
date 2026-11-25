@@ -3,7 +3,7 @@ import {compareNames} from '../../i18n/format';
 import {enumLabel} from '../../i18n/enum';
 import type {Group, HealthObservation, JsonPatch, Node, ProbeResult, Provider} from '../../api/model';
 import type {Key} from '../../i18n';
-import {compareLatency, foldFamilies, healthMillis, safeHttpUrl, type MessageRef} from '../../api/selectors';
+import {compareLatency, foldFamilies, healthMillis, measured, safeHttpUrl, type MessageRef} from '../../api/selectors';
 import {groupPolicyText} from '../shared/policyText';
 import {formatList, formatNumber, type Lang, type Translator} from '../../i18n';
 import type {Help, NodeStatus, KvItem} from '../../ui/ui';
@@ -115,7 +115,7 @@ const unknownReasons = new Map<string | null, Key>([
 // of the row that decided its state.
 export function probeSummary(result: ProbeResult, t: Translator, lang: Lang): string {
   const rows = new Map<string, ProbeResult['results']>();
-  for (const item of result.results) rows.set(item.member_id, [...(rows.get(item.member_id) ?? []), item]);
+  for (const item of result.results.filter(measured)) rows.set(item.member_id, [...(rows.get(item.member_id) ?? []), item]);
   const folded = [...rows.values()].map(items => foldFamilies(items));
   const states = folded.map(row => row?.state);
   const unknown = folded.filter(row => row?.state === 'unknown').map(row => unknownReasons.get(row!.error) ?? 'policy.probeReason.other');

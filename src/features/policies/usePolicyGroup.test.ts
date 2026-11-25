@@ -56,7 +56,9 @@ beforeEach(() => {
 it.each([
   ['positive', rows('unavailable', 'healthy')],
   ['negative', rows('unavailable', 'unknown')],
-  ['neutral', rows('unknown')]
+  ['neutral', rows('unknown')],
+  // A chain member's row from a TCP connect probe measured nothing, so it does not make the probe a failure.
+  ['neutral', rows('unavailable', 'unknown').map((row, i) => (i ? row : {...row, error: 'no_node_address'}))]
 ])('reports the group probe as %s by its best member', async (level, results) => {
   state.result = {
     target: {type: 'group', group_id: group.id},

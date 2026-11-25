@@ -1,4 +1,5 @@
 import {LocalError} from '../api/error';
+import type {Node} from '../api/model';
 import {blockEntries, blockFields, isQuotable, quote, scanConfig, unquote} from './text';
 import {quoteName} from './groups';
 
@@ -117,17 +118,79 @@ export function nodeReferrers(text: string, name: string): NodeReferrer[] {
   return [...unique.values()];
 }
 
-// Deletes the chain's line, comment included, or only the entry when it shares a line with other text.
-export function removeChainEntry(text: string, original: ChainEntry): string {
+// The chain as the dialog read it, still declared once with the same hops.
+function currentChain(text: string, original: ChainEntry): ChainEntry {
   const entries = readChainEntries(text).filter(entry => entry.name === original.name);
   const hops = (entry: ChainEntry) => JSON.stringify(entry.hops.map(hop => hop.name));
   if (entries.length !== 1 || hops(entries[0]) !== hops(original)) throw new LocalError('nodes.editNodeMissing');
-  const {from, to} = entries[0];
+  return entries[0];
+}
+
+// Deletes the chain's line, comment included, or only the entry when it shares a line with other text.
+export function removeChainEntry(text: string, original: ChainEntry): string {
+  const {from, to} = currentChain(text, original);
   const start = text.lastIndexOf('\n', from - 1) + 1;
   const newline = text.indexOf('\n', to);
   const end = newline === -1 ? text.length : newline;
   if (/\S/.test(text.slice(start, from)) || !/^\s*(?:#.*)?$/.test(text.slice(to, end))) return text.slice(0, from) + text.slice(to);
   return text.slice(0, start) + text.slice(newline === -1 ? end : end + 1);
+}
+
+// honk's hop rules as far as the node catalog shows them: the protocol, and XHTTP among the stream transports. Vision,
+// Encryption, TCP multiplexing and ECH are not in the catalog, so honk's own check reports them.
+type HopNode = Pick<Node, 'name' | 'protocol' | 'stream_transport'>;
+const tunneled = new Set(['socks5', 'ss', 'shadowsocks', 'trojan', 'vmess', 'vless']);
+export const chainHopCandidate = (node: Pick<Node, 'protocol'>) => !['chain', 'direct', 'block'].includes(node.protocol ?? '');
+// Whether a node can be a hop after the entry: dialed inside the stream the hops before it opened.
+export const tunnelDialable = (node: Pick<Node, 'protocol' | 'stream_transport'>) => tunneled.has(node.protocol ?? '') && node.stream_transport !== 'xhttp';
+export type ChainHopCode = 'invalid-chain-hop-reference' | 'ambiguous-chain-hop-reference' | 'unsupported-chain-hop';
+export function chainHopProblem(nodes: readonly HopNode[], name: string, index: number): ChainHopCode | null {
+  const matches = nodes.filter(node => node.name === name);
+  if (matches.length !== 1) return matches.length ? 'ambiguous-chain-hop-reference' : 'invalid-chain-hop-reference';
+  return !chainHopCandidate(matches[0]) || (index > 0 && !tunnelDialable(matches[0])) ? 'unsupported-chain-hop' : null;
+}
+// What rules out UDP through the chain by protocol alone: a hop that cannot be tunnel-dialed, then an exit that is
+// neither Trojan nor VLESS. null when the hops' own UDP settings decide.
+export function chainUdpProblem(hops: ReadonlyArray<Pick<Node, 'name' | 'protocol' | 'stream_transport'>>) {
+  const hop = hops.find(node => !tunnelDialable(node));
+  if (hop) return {kind: 'hop' as const, name: hop.name};
+  const exit = hops.at(-1);
+  return exit && exit.protocol !== 'trojan' && exit.protocol !== 'vless' ? {kind: 'exit' as const, name: exit.name} : null;
+}
+
+type ChainUpdate = {name: string; hops: string[]};
+function chainText(text: string, next: ChainUpdate, renamedFrom: string | null) {
+  if (next.hops.length < 2 || next.hops.length > 4) throw new LocalError('nodes.proxyChain.hopCount');
+  if (!next.name || !isQuotable(next.name) || next.hops.some(hop => !hop || !isQuotable(hop))) throw new LocalError('config.unquotable');
+  if (next.name !== renamedFrom && [...readNodeEntries(text), ...readChainEntries(text)].some(entry => entry.name === next.name))
+    throw new LocalError('nodes.nameTaken');
+  return {name: quote(next.name), value: next.hops.map(quoteName).join(' -> ')};
+}
+
+// Replaces the chain's name and hops; a rename also rewrites what names the chain, as a node rename does.
+export function writeChainEntry(text: string, original: ChainEntry, next: ChainUpdate): string {
+  const entry = currentChain(text, original);
+  const {name, value} = chainText(text, next, original.name);
+  const hops = next.hops.join('\n') !== entry.hops.map(hop => hop.name).join('\n') ? {from: entry.hopsFrom, to: entry.to, text: value} : null;
+  return rewriteEntry(text, original.name, next.name, {from: entry.from, to: entry.nameTo, text: name}, hops);
+}
+
+// Adds the chain at the end of the last `node {}` block, indented as that block's entries are, or in a new block; lines
+// end as the file's do.
+export function appendChainEntry(text: string, next: ChainUpdate): string {
+  const {name, value} = chainText(text, next, null);
+  const eol = text.includes('\r\n') ? '\r\n' : '\n';
+  const block = scanConfig(text)
+    .blocks.filter(block => block.name === 'node')
+    .at(-1);
+  if (!block) return `${text.trimEnd()}${text.trim() ? eol + eol : ''}node {${eol}  ${name}: ${value}${eol}}${eol}`;
+  const indent = text.slice(block.open + 1, block.close).match(/\n([ \t]+)\S/)?.[1] ?? '  ';
+  const closeLine = text.lastIndexOf('\n', block.close - 1) + 1;
+  // A `}` after other text moves to a line of its own, and the space before it is dropped.
+  const [head, tail] = /^[ \t]*$/.test(text.slice(closeLine, block.close))
+    ? [text.slice(0, closeLine), text.slice(closeLine)]
+    : [text.slice(0, block.close).trimEnd() + eol, text.slice(block.close)];
+  return `${head}${indent}${name}: ${value}${eol}${tail}`;
 }
 
 export function writeNodeEntry(text: string, original: NodeEntry, next: {name: string; link: string}): string {
@@ -137,9 +200,14 @@ export function writeNodeEntry(text: string, original: NodeEntry, next: {name: s
   if (!next.name || !isQuotable(next.name) || !isNodeLink(next.link) || !isQuotable(next.link)) throw new LocalError('config.unquotable');
   if (next.name !== original.name && all.some(entry => entry.name === next.name)) throw new LocalError('nodes.nameTaken');
   const entry = entries[0];
-  const changes = [];
-  if (next.name !== original.name) changes.push({from: entry.from, to: entry.nameTo, text: quote(next.name)});
-  if (next.link !== original.link) changes.push({from: entry.linkFrom, to: entry.to, text: quote(next.link)});
-  if (next.name !== original.name) changes.push(...nameReferences(text, original.name).map(ref => ({...ref, text: quoteName(next.name)})));
+  const link = next.link !== original.link ? {from: entry.linkFrom, to: entry.to, text: quote(next.link)} : null;
+  return rewriteEntry(text, original.name, next.name, {from: entry.from, to: entry.nameTo, text: quote(next.name)}, link);
+}
+
+type Edit = {from: number; to: number; text: string};
+// Writes an entry's value when it changed and its name when renamed, with every reference to the old name.
+function rewriteEntry(text: string, from: string, to: string, name: Edit, value: Edit | null): string {
+  const changes = value ? [value] : [];
+  if (to !== from) changes.push(name, ...nameReferences(text, from).map(ref => ({...ref, text: quoteName(to)})));
   return changes.sort((a, b) => b.from - a.from).reduce((out, change) => out.slice(0, change.from) + change.text + out.slice(change.to), text);
 }

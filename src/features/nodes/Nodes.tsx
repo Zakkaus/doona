@@ -34,6 +34,7 @@ import {preloadable} from '../../ui/preloadable';
 const xhttpOptions = preloadable<ComponentProps<typeof XhttpOptionsType>>(() => import('./XhttpOptions').then(module => ({default: module.XhttpOptions})));
 const XhttpOptions = xhttpOptions.Component;
 const ManualFields = lazy(() => import('./ManualFields').then(module => ({default: module.ManualFields})));
+const ChainFields = lazy(() => import('./ChainFields').then(module => ({default: module.ChainFields})));
 const SubscriptionFields = lazy(() => import('./SubscriptionFields').then(module => ({default: module.SubscriptionFields})));
 const dialogForm = 'nodes-dialog-form';
 export function Nodes(props: PageProps) {
@@ -60,6 +61,8 @@ export function Nodes(props: PageProps) {
     setNodeLink,
     addMode,
     setAddMode,
+    chainCreate,
+    chain,
     draft,
     nodeValue,
     setDraftField,
@@ -136,6 +139,11 @@ export function Nodes(props: PageProps) {
     event.preventDefault();
     if (formValid && !submitting) void submit(() => setDialog(null));
   };
+  const chainFields = chain && (
+    <Suspense fallback={null}>
+      <ChainFields {...chain} isDisabled={pending} />
+    </Suspense>
+  );
   const blocked = referenced && (
     <span className="rp-label">
       {referenced.text}
@@ -216,7 +224,7 @@ export function Nodes(props: PageProps) {
         narrow
         scrollBody={dialog?.kind === 'node'}
         isOpen={dialog !== null && !removing}
-        reason={pending ? null : formReason}
+        reason={pending ? null : chain ? chain.reason : formReason}
         onOpenChange={isOpen => {
           if (!isOpen) setDialog(null);
         }}
@@ -269,15 +277,17 @@ export function Nodes(props: PageProps) {
             )}
           </Form>
         )}
-        {(dialog?.kind === 'node' || dialog?.kind === 'editNode') && (
+        {(dialog?.kind === 'node' || dialog?.kind === 'editNode' || dialog?.kind === 'editChain') && (
           <Form id={dialogForm} className="rp-list" onSubmit={send}>
             {dialog.kind === 'editNode' ? (
               linkTab
+            ) : dialog.kind === 'editChain' ? (
+              chainFields
             ) : (
               <Tabs
                 label={t('nodes.addNode')}
                 value={addMode}
-                onChange={id => setAddMode(id === 'manual' ? 'manual' : 'link')}
+                onChange={id => setAddMode(id === 'manual' || id === 'chain' ? id : 'link')}
                 items={[
                   {id: 'link', label: t('nodes.manual.link'), content: <div className="rp-list">{linkTab}</div>},
                   {
@@ -297,7 +307,8 @@ export function Nodes(props: PageProps) {
                         </Suspense>
                       </div>
                     )
-                  }
+                  },
+                  ...(chainCreate ? [{id: 'chain', label: t('nodes.proxyChain.protocol'), content: <div className="rp-list">{chainFields}</div>}] : [])
                 ]}
               />
             )}
