@@ -1,6 +1,8 @@
-import type {ConfigSource, Group, HealthObservation} from '../../api/model';
+import type {ConfigSource, Group, HealthObservation, Node} from '../../api/model';
 import {isWritableName, nestedIn, readGroupEntries, type GroupEntry} from '../../dae/groups';
+import {tunnelDialable} from '../../dae/nodes';
 import {unquote} from '../../dae/text';
+import {backendCode} from '../../i18n/backend';
 import {builtinOutboundNames} from '../../dae/vocab';
 import {formatLatency} from '../../i18n/format';
 import type {Key, Translator} from '../../i18n';
@@ -108,6 +110,19 @@ export function finalSections(name: string, catalogue: OutboundCatalogue, held: 
     {id: 'groups', title: t('policy.pickGroups'), items: groups},
     {id: 'nodes', title: t('policy.pickNodes'), items: nodes}
   ].filter(section => section.items.length);
+}
+// A group exit's choices: None, then each node name a proxy chain can tunnel through, as honk checks an exit. A name
+// several nodes share, or one the file cannot write, is listed but disabled.
+export function exitSections(nodes: readonly Node[], held: Array<string | null>, t: Translator): SearchSection[] {
+  const byName = new Map<string, Node[]>();
+  for (const node of nodes) byName.set(node.name, [...(byName.get(node.name) ?? []), node]);
+  const items = [...byName]
+    .filter(([, matches]) => matches.some(tunnelDialable))
+    .map(([name, [node, ...more]]): SearchItem => {
+      const problem = more.length ? backendCode('ambiguous-group-exit-target', t) : !isWritableName(name) ? t('nodes.proxyChain.unquotable') : null;
+      return {id: routeChoiceId(name), label: name, nodeName: true, desc: problem ?? node.protocol ?? '—', isDisabled: !!problem};
+    });
+  return [noneFirst(items, held, t), {id: 'nodes', title: t('policy.pickNodes'), items}].filter(section => section.items.length);
 }
 // The default member's choices: None, then the group's direct members with the status their tiles show.
 export function memberSections(

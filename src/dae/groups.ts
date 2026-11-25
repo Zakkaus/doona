@@ -6,9 +6,10 @@ export type GroupEntry = {
   written: string;
   filters: string[];
   policy: string | null;
-  // `default` and `final` as written, quotes included, or null when the entry sets none.
+  // `default`, `final` and `exit` as written, quotes included, or null when the entry sets none.
   default: string | null;
   final: string | null;
+  exit: string | null;
   interrupt: string | null;
   from: number;
   to: number;
@@ -30,6 +31,7 @@ export function readGroupEntries(text: string): GroupEntry[] {
           policy: last('policy'),
           default: last('default'),
           final: last('final'),
+          exit: last('exit'),
           interrupt: last('interrupt_connections'),
           from: entry.line,
           to: entry.endLine
@@ -47,7 +49,14 @@ export function groupNameProblem(name: string, taken: ReadonlySet<string>): 'inv
 }
 
 // Optional fields are written as given; undefined leaves the line alone and null removes it.
-export type GroupEntryUpdate = {filters: string[]; policy: string | null; default?: string | null; final?: string | null; interrupt?: string | null};
+export type GroupEntryUpdate = {
+  filters: string[];
+  policy: string | null;
+  default?: string | null;
+  final?: string | null;
+  exit?: string | null;
+  interrupt?: string | null;
+};
 export function writeGroupEntry(text: string, name: string, next: GroupEntryUpdate): string {
   const {blocks, tokens} = scanConfig(text);
   const sections = blocks.filter(block => block.name === 'group');
@@ -63,7 +72,7 @@ export function writeGroupEntry(text: string, name: string, next: GroupEntryUpda
       current.filters.length === next.filters.length &&
       current.filters.every((filter, i) => filter === next.filters[i]) &&
       current.policy === next.policy &&
-      (['default', 'final', 'interrupt'] as const).every(key => next[key] === undefined || next[key] === current[key])
+      (['default', 'final', 'exit', 'interrupt'] as const).every(key => next[key] === undefined || next[key] === current[key])
     )
       return text;
     const lineStart = text.lastIndexOf('\n', entry.from - 1) + 1;
@@ -90,6 +99,7 @@ export function writeGroupEntry(text: string, name: string, next: GroupEntryUpda
     ...(next.policy ? [`${indent}${indent}policy: ${next.policy}`] : []),
     ...(next.default ? [`${indent}${indent}default: ${next.default}`] : []),
     ...(next.final ? [`${indent}${indent}final: ${next.final}`] : []),
+    ...(next.exit ? [`${indent}${indent}exit: ${next.exit}`] : []),
     ...(next.interrupt ? [`${indent}${indent}interrupt_connections: ${next.interrupt}`] : []),
     `${indent}}`
   ].join('\n');
@@ -103,7 +113,7 @@ export function writeGroupEntry(text: string, name: string, next: GroupEntryUpda
 
 // Changes fields where they stand, so comments and other fields keep their place.
 // A new line goes after the last line of its own key or of a key listed before it, in the order a group is written.
-const singleKeys = ['policy', 'default', 'final', 'interrupt'] as const;
+const singleKeys = ['policy', 'default', 'final', 'exit', 'interrupt'] as const;
 const fieldName = (key: (typeof singleKeys)[number]) => (key === 'interrupt' ? 'interrupt_connections' : key);
 function rewriteFields(text: string, entry: TextBlock, fields: TextField[], inner: string, next: GroupEntryUpdate): string {
   const filters = fields.filter(field => field.name === 'filter');

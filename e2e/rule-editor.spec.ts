@@ -50,7 +50,7 @@ test('the rule list shows the dictionary in evaluation order with its source lin
   const list = rows(page);
   await expect(list).toHaveCount(21);
   await expect(list.first()).toContainText('pname(NetworkManager)');
-  await expect(list.first()).toContainText('config.dae:150');
+  await expect(list.first()).toContainText('config.dae:151');
   await expect(list.nth(7)).toContainText('domain(geosite:telegram)');
   await expect(list.last()).toContainText('fallback: proxy');
   await expect(page.getByRole('tabpanel', {name: 'Routing rules'})).toContainText('21 rules, generation 40');
@@ -62,11 +62,11 @@ test('the rule list shows the dictionary in evaluation order with its source lin
 test('a visually editable rule keeps Edit and Remove beside the link to its config file line', async ({page}) => {
   await page.goto('/#/rules?tab=list&view=advanced');
   const row = rows(page).first();
-  await expect(row).toContainText('config.dae:150');
+  await expect(row).toContainText('config.dae:151');
   await expect(row.getByRole('button', {name: 'Edit rule', exact: true})).toBeEnabled();
   await expect(row.getByRole('button', {name: 'Remove rule', exact: true})).toBeVisible();
   await row.getByRole('button', {name: 'Open config file', exact: true}).click();
-  await expect(page).toHaveURL(/#\/config\?tab=source&source=[^&]+&line=150$/);
+  await expect(page).toHaveURL(/#\/config\?tab=source&source=[^&]+&line=151$/);
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 

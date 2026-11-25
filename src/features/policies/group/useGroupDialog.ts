@@ -1,7 +1,8 @@
 import {useMemo, useRef, useState} from 'react';
 import {useLang, useT} from '../../../i18n';
 import {offered} from '../../../api/capabilities';
-import {useCapabilities, useNodes, useProviders} from '../../../store';
+import {useCapabilities, useNodes, useProviders, useVersion} from '../../../store';
+import {engineOf} from '../../../api/engines';
 import {useConfig} from '../../../store/config';
 import {readSubscriptionEntries} from '../../../dae/subscriptions';
 import {
@@ -42,6 +43,7 @@ import type {SearchSection} from '../../../ui/SearchSelect';
 import type {CheckboxChoice} from '../../../ui/CheckboxSet';
 import {
   editBlocked,
+  exitSections,
   finalSections,
   finalExcluded,
   groupConfigLabels,
@@ -144,6 +146,8 @@ export type GroupDialogView = {
     sections: SearchSection[];
     change: (id: string) => void;
   }>;
+  // The group's exit node picker, offered only on honk.
+  exit: {label: string; description: string; searchLabel: string; value: string; sections: SearchSection[]; change: (id: string) => void} | null;
   show: (filters?: string[]) => void;
   // Opens the dialog read-only, on the group's configuration alone.
   view: () => void;
@@ -175,6 +179,7 @@ type Draft = {
   filters: GroupFilterDraft[];
   default: string | null;
   final: string | null;
+  exit: string | null;
   interrupt: string | null;
 };
 type Input =
@@ -205,6 +210,8 @@ export function useGroupDialog(input: Input): GroupDialogView {
   const [viewing, setViewing] = useState(false);
   const busy = source.busy;
   const resources = useCapabilities().data?.resources;
+  // `exit` is honk syntax, so only honk's text gets the field.
+  const exitShown = engineOf(useVersion().data).daeText;
   const allNodes = useNodes(!!draft && offered(resources, 'nodes', {whileLoading: false}));
   const providers = useProviders(!!draft && offered(resources, 'providers', {whileLoading: false}));
   const config = useConfig(!!draft && offered(resources, 'config', {whileLoading: false}));
@@ -231,6 +238,8 @@ export function useGroupDialog(input: Input): GroupDialogView {
       ? ['default_member_id', 'final_outbound']
       : ['final_outbound']
     : routeFields(context.g, draft?.policy ?? null);
+  // The entry's keys the save writes as names.
+  const nameKeys = [...routes.map(id => routeKeys[id]), ...(exitShown ? (['exit'] as const) : [])];
   const members = draft && manualPolicy(draft.policy) ? draftMembers(filters, nodes, t) : creating ? [] : context.members;
   const groupName = creating ? (draft?.name.trim() ?? '') : (draft?.name ?? '');
   const excluded = finalExcluded(groupName, context.outbounds.links);
@@ -248,7 +257,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
       draft.policy !== (creating ? newGroupPolicies[0].id : entry?.policy) ||
       invalid ||
       JSON.stringify(filters) !== JSON.stringify(creating ? [] : entry?.filters) ||
-      routes.some(id => draft[routeKeys[id]] !== routeValue(entry?.[routeKeys[id]] ?? null)));
+      nameKeys.some(key => draft[key] !== routeValue(entry?.[key] ?? null)));
   const [discarding, setDiscarding] = useState(false);
   const guard = useDraftGuard(
     dirty,
@@ -274,17 +283,16 @@ export function useGroupDialog(input: Input): GroupDialogView {
     if (nameProblem || invalid) return;
     const filters = groupFilterTexts(draft.filters).filter(f => f.trim());
     // A retry merges into the group as read again.
-    const mine = {filters, policy: draft.policy, interrupt: draft.interrupt, default: draft.default, final: draft.final};
-    const keys = routes.map(id => routeKeys[id]);
-    const retry = draft.refused && draft.opened ? mergeGroupRetry(mine, draft.opened, entry, keys) : null;
+    const mine = {filters, policy: draft.policy, interrupt: draft.interrupt, default: draft.default, final: draft.final, exit: draft.exit};
+    const retry = draft.refused && draft.opened ? mergeGroupRetry(mine, draft.opened, entry, nameKeys) : null;
     if (retry?.kind === 'gone') {
       refuse(t('policy.editReopen'));
       return;
     }
-    const written = {default: entry?.default ?? null, final: entry?.final ?? null};
+    const written = {default: entry?.default ?? null, final: entry?.final ?? null, exit: entry?.exit ?? null};
     if (
       !groupEditSafe(filters, draft.policy, entry) ||
-      !routes.every(id => routeWritable(draft[routeKeys[id]], written[routeKeys[id]])) ||
+      !nameKeys.every(key => routeWritable(draft[key], written[key])) ||
       (creating && draft.final !== null && excluded.has(draft.final))
     ) {
       refuse(t('policy.editUnsafe'));
@@ -292,7 +300,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
     }
     const group = creating ? draft.name.trim() : draft.name;
     const update: GroupEntryUpdate = {filters, policy: draft.policy, ...(!creating ? {interrupt: draft.interrupt} : {})};
-    for (const id of routes) Object.assign(update, {[routeKeys[id]]: nameText(draft[routeKeys[id]], written[routeKeys[id]])});
+    for (const key of nameKeys) Object.assign(update, {[key]: nameText(draft[key], written[key])});
     if (retry?.kind === 'conflict') {
       refuse(t('policy.editReopen'));
       return;
@@ -467,6 +475,17 @@ export function useGroupDialog(input: Input): GroupDialogView {
           };
         })
       : [],
+    exit:
+      draft && exitShown
+        ? {
+            label: t('ui.aside', {text: t('groups.exit.label'), note: t('groups.exit.experimental')}),
+            description: t('groups.exit.help'),
+            searchLabel: t('nodes.search'),
+            value: routeChoiceId(draft.exit),
+            sections: exitSections(nodes, [routeValue(entry?.exit ?? null), draft.exit], t),
+            change: choice => edit(prev => ({...prev, exit: routeChoiceValue(choice)}))
+          }
+        : null,
     show: (filters = []) => {
       session.next();
       setHistory([]);
@@ -482,6 +501,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
           filters: filters.map(filter => groupFilterDraft(filter)),
           default: null,
           final: null,
+          exit: null,
           interrupt: null
         });
       else if (declared && !blocked)
@@ -497,6 +517,7 @@ export function useGroupDialog(input: Input): GroupDialogView {
           ).map(filter => groupFilterDraft(filter)),
           default: routeValue(declared.entry.default),
           final: routeValue(declared.entry.final),
+          exit: routeValue(declared.entry.exit),
           interrupt: declared.entry.interrupt
         });
     },

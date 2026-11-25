@@ -125,6 +125,17 @@ export function GroupDialog({model: m, details}: {model: GroupDialogView; detail
                   onChange={field.change}
                 />
               ))}
+              {m.exit && (
+                <SearchSelect
+                  label={m.exit.label}
+                  searchLabel={m.exit.searchLabel}
+                  sections={m.exit.sections}
+                  value={m.exit.value}
+                  description={m.exit.description}
+                  isDisabled={m.busy}
+                  onChange={m.exit.change}
+                />
+              )}
             </DialogSection>
             {!m.name && details && <Details details={details} />}
           </DialogForm>

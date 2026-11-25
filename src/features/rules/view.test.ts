@@ -73,10 +73,10 @@ it('offers edits only at writable sources and preserves source locations when pa
   const api = createMockApi();
   const [rules, config, flows, groups] = await Promise.all([api.rules(), api.config(), api.flows(), api.groups()]);
   const first = rules.rules[0];
-  expect(first.source).toMatchObject({source_id: 'src-main', line: 150, column: 3});
+  expect(first.source).toMatchObject({source_id: 'src-main', line: 151, column: 3});
   const view = dictionaryView(rules.rules, rules.generation_id, flows, config.sources, groups, t, 'en');
-  expect(view.rows[0].position).toBe('config.dae:150');
-  expect(view.rows[0].sourceQuery).toBe('tab=source&source=src-main&line=150');
+  expect(view.rows[0].position).toBe('config.dae:151');
+  expect(view.rows[0].sourceQuery).toBe('tab=source&source=src-main&line=151');
   expect(view.positions[0].id).toBe('end');
   expect(view.rows.at(-1)?.number).toBe('—');
   expect(view.rows.at(-1)?.removable).toBe(false);
@@ -243,7 +243,7 @@ it('does not infer a source from its display name when the ID is unknown', async
   const explicit = {...rule, rule_id: 'explicit', source: {...rule.source!, file: 'config.dae', source_id: 'b'}};
   const view = dictionaryView([unknown, explicit], undefined, undefined, sources, [], t, 'en');
   expect(view.rows[0]).toMatchObject({sourceQuery: null, removable: false});
-  expect(view.rows[1]).toMatchObject({sourceQuery: 'tab=source&source=b&line=150', removable: true});
+  expect(view.rows[1]).toMatchObject({sourceQuery: 'tab=source&source=b&line=151', removable: true});
 });
 
 it('tips why a rule cannot be added: no writable place first, then a change still being applied', () => {

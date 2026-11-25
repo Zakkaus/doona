@@ -1,5 +1,6 @@
 import {expect, it, vi} from 'vitest';
 import {ApiError} from '../../../api/error';
+import type {Node} from '../../../api/model';
 import {newGroupCondition, type GroupConditionKind, type GroupConditionRow} from '../../../dae/groupConditions';
 import {addAlternative, changeTerm, conditionTerms, kindChoices, removeAlternative} from './groupTerms';
 
@@ -63,8 +64,14 @@ import {hookHarness} from '../../../store/testHelpers';
 import {useGroupDialog} from './useGroupDialog';
 import {translate, type Translator} from '../../../i18n';
 vi.mock('react', async original => ({...(await original<typeof import('react')>()), ...hookHarness.hooks}));
-vi.mock('../../../store', () => ({useCapabilities: () => ({data: undefined}), useNodes: () => ({data: []}), useProviders: () => ({data: undefined})}));
+vi.mock('../../../store', () => ({
+  useCapabilities: () => ({data: undefined}),
+  useNodes: () => ({data: undefined}),
+  useProviders: () => ({data: undefined}),
+  useVersion: () => ({data: version.data})
+}));
 const config = vi.hoisted(() => ({data: undefined as {sources: unknown[]} | undefined}));
+const version = vi.hoisted(() => ({data: undefined as {engine: {name: string}} | undefined}));
 vi.mock('../../../store/config', () => ({useConfig: () => ({data: config.data})}));
 vi.mock('../../../shell/draft', () => ({useDraftGuard: () => ({clear: vi.fn()}), useDialogSession: () => ({next: vi.fn(), start: () => () => true})}));
 vi.mock('../../../i18n', async original => ({
@@ -139,4 +146,35 @@ it.each([
     lines: ['config.dae line 12: Unsupported value: filter: bad term']
   });
   config.data = undefined;
+});
+
+it('offers a group exit only on honk, among the nodes a chain can tunnel through, and writes it', () => {
+  hookHarness.reset();
+  const apply = vi.fn().mockResolvedValue({kind: 'ok'});
+  const node = (name: string, protocol: string, stream_transport?: string) => ({name, protocol, stream_transport}) as Node;
+  const nodes = [node('jp 01', 'trojan'), node('hk', 'vless', 'xhttp'), node('hy', 'hysteria2'), node('sg', 'ss'), node('sg', 'vmess')];
+  const read = () =>
+    hookHarness.render(() =>
+      useGroupDialog({
+        mode: 'create',
+        source: {main: null, writable: true, busy: false, apply},
+        taken: new Set(),
+        outbounds: {groups: [], nodes: [], links: new Map()},
+        nodes
+      })
+    );
+  read().show();
+  expect(read().exit).toBeNull();
+  version.data = {engine: {name: 'honk'}};
+  const exit = read().exit!;
+  expect(exit.sections.flatMap(section => section.items.map(item => [item.label, !!item.isDisabled]))).toEqual([
+    ['None', false],
+    ['jp 01', false],
+    ['sg', true]
+  ]);
+  exit.change(exit.sections[1].items[0].id);
+  read().name!.change('work');
+  read().save(vi.fn());
+  expect(apply.mock.calls[0][0]('')).toContain("exit: 'jp 01'");
+  version.data = undefined;
 });

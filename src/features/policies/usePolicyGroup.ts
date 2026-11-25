@@ -11,7 +11,7 @@ import type {MainSourceEdit} from '../../store/mainSource';
 import {memberHealth} from './health';
 import {actionErrorText, groupActionsReason, memberViews, policyCardView, selectionSummary, probeSummary, untestedHelp} from './view';
 import {useGroupDialog, type PolicyDeclaration} from './group/useGroupDialog';
-import type {OutboundCatalogue} from '../shared/groupText';
+import {routeValue, type OutboundCatalogue} from '../shared/groupText';
 import {useCheckEdit} from './useCheckEdit';
 import {toast} from '../../ui/ui';
 import {failureNotice, requestIdOf} from '../../api/error';
@@ -119,6 +119,8 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     if (input.editRequested && declared.editable && !declared.open) openRequested();
   }, [input.editRequested, declared.editable, declared.open]);
   const filters = useMemo(() => (declaration.owner && declaration.owner !== 'ambiguous' ? declaration.owner.entry.filters : []), [declaration.owner]);
+  // The API leaves `exit` out of a group's configuration, so it is read from the declaration.
+  const exit = declaration.owner && declaration.owner !== 'ambiguous' ? routeValue(declaration.owner.entry.exit) : null;
   const otherFilters = useMemo(() => filters.filter(filter => !recogniseInclude(filter)), [filters]);
   const named = useMemo(() => selectedIncludeLabels(filters, input.nodes ?? [], input.providers ?? [], lang), [filters, input.nodes, input.providers, lang]);
   const includes = {
@@ -206,7 +208,7 @@ export function usePolicyGroup(input: PolicyGroupInput) {
     // the backend reports it. The interrupt switch edits the draft when present, otherwise the live group.
     details: card
       ? {
-          fields: card.fields,
+          fields: exit ? [...card.fields, {label: t('groups.exit.label'), value: exit, nodeName: true}] : card.fields,
           heading: edit.editing ? t('policy.liveConfig') : null,
           reason: edit.editing ? null : (edit.tip ?? null),
           interrupt: card.interruptable

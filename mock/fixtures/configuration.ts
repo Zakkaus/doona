@@ -87,6 +87,7 @@ export const configMain =
   office {
     policy: fixed(0)
     default: hk-01
+    exit: hk-02
   }
   backup {
     filter: subtag(harbor)
