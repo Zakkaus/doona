@@ -193,7 +193,7 @@ export function shellView(
         [t('ov.f.engine'), engineText + build],
         [t('ov.f.api'), apiText],
         [t('about.contract'), contractText],
-        [t('about.license'), 'GPL-3.0-only']
+        [t('about.license'), import.meta.env.VITE_DOONA_LICENSE]
       ],
       repositories: [
         {href: import.meta.env.VITE_DOONA_REPO, label: 'doona'},

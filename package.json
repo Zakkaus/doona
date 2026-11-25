@@ -14,7 +14,7 @@
     "node": "^22.13.0 || ^24.0.0 || >=26.0.0"
   },
   "type": "module",
-  "license": "GPL-3.0-only",
+  "license": "AGPL-3.0-only",
   "packageManager": "pnpm@11.15.1",
   "scripts": {
     "dev": "vite",

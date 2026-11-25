@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Copyright (C) 2026 Zakkaus
 
@@ -14,6 +14,10 @@ PKG_SOURCE_URL:=https://github.com/Zakkaus/doona/releases/download/v$(PKG_REAL_V
 PKG_HASH:=5e59bef470c70b1cdd304b211ff1e127f8216ea45993cf4ec21d3b7f6ef630e3
 
 PKG_LICENSE:=GPL-3.0-only 0BSD Apache-2.0 BSD-3-Clause ISC MIT CC-BY-3.0 CC-BY-4.0 CC-BY-SA-4.0 CC0-1.0 LicenseRef-GitHub-Logos
+# The pinned rc.7 archive predates the licence change.
+ifneq ($(PKG_REAL_VERSION),0.1.0-rc.7)
+  PKG_LICENSE:=AGPL-3.0-only $(PKG_LICENSE)
+endif
 PKG_LICENSE_FILES:=web/LICENSE
 PKG_MAINTAINER:=Zakkaus <zakk@gentoozh.org>
 

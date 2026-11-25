@@ -146,4 +146,7 @@ Report interface problems and ask questions in [doona issues](https://github.com
 
 ## License and credits
 
-[GPL-3.0-only](LICENSE). [Noto Sans TC and SC](docs/fonts.md), bundled from Fontsource npm packages, are copyright Adobe and licensed under the [Open Font License](LICENSES/OFL-1.1.txt); [NOTICE](NOTICE) credits the Adobe Spectrum icons (Apache-2.0).
+doona is licensed under [AGPL-3.0-only](LICENSE).
+If you provide a modified version to users, including over a network, you must offer them its corresponding source code.
+
+[Noto Sans TC and SC](docs/fonts.md), bundled from Fontsource npm packages, are copyright Adobe and licensed under the [Open Font License](LICENSES/OFL-1.1.txt); [NOTICE](NOTICE) credits the Adobe Spectrum icons (Apache-2.0).

@@ -3,7 +3,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
-import {version, repository, config} from './package.json';
+import {version, license, repository, config} from './package.json';
 import react from '@vitejs/plugin-react';
 import optimizeLocales from '@react-aria/optimize-locales-plugin';
 import {DEFAULT_PALETTE, palettes} from './src/shell/palettes';
@@ -63,6 +63,7 @@ export default defineConfig({
   base: './',
   define: {
     'import.meta.env.VITE_DOONA_VERSION': JSON.stringify(version),
+    'import.meta.env.VITE_DOONA_LICENSE': JSON.stringify(license),
     // The links the about box and the sidebar open: doona's own repository, and the organisation whose engine
     // (honk today, dae later) the backend names in its version; neither is written in a component.
     'import.meta.env.VITE_DOONA_REPO': JSON.stringify(repository.url.replace(/\.git$/, '')),

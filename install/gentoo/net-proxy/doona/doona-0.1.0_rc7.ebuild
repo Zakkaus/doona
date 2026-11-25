@@ -19,6 +19,10 @@ S="${WORKDIR}"
 # The built files bundle npm packages and palette images under these licenses. Gentoo has no entry for the
 # GitHub mark's logo terms, which LICENSES/LicenseRef-GitHub-Logos.txt holds.
 LICENSE="GPL-3 0BSD Apache-2.0 BSD CC-BY-3.0 CC-BY-4.0 CC-BY-SA-4.0 CC0-1.0 ISC MIT fonts? ( OFL-1.1 )"
+# The pinned rc.7 archive predates the licence change.
+if [[ ${PV} != 0.1.0_rc7 ]]; then
+	LICENSE="AGPL-3 ${LICENSE}"
+fi
 SLOT="0"
 KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~loong ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86"
 IUSE="+fonts"

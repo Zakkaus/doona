@@ -35,6 +35,10 @@ container and `tools/package-openwrt.sh` runs the OpenWrt 25.12 SDK. Either scri
 the usage line at the top of each gives the `docker run` command.
 The Gentoo template keeps the existing `metadata.xml`; no version-specific metadata change is needed.
 
+The Alpine, Gentoo, Nix and OpenWrt recipes retain the licence metadata for the pinned GPL-3.0-only rc.7 archives.
+When pointed at a newer release, they declare AGPL-3.0-only for the combined work and retain the GPL-3.0-only
+contribution licence.
+
 ## Version spellings
 
 The recipes use tag `v0.1.0-rc.7`. Release assets keep the upstream version without the tag's `v`;
@@ -85,9 +89,9 @@ as its own commit before the package.
 
 The release workflow runs `tools/package.sh --git-version` to produce the program and fonts archives in the table.
 The program archive has `index.html`, assets, `LICENSE`, `LICENSES/`, `NOTICE`, `README.md` and
-`THIRD-PARTY-NOTICES.txt` at its root. `LICENSES/` holds the Apache-2.0, OFL-1.1 and GitHub logo texts; `NOTICE` links
-the Creative Commons licences; `THIRD-PARTY-NOTICES.txt` carries the licence texts of the npm packages compiled into the
-build, printing each distinct text once under the packages and copyright lines it covers. The archive has no
+`THIRD-PARTY-NOTICES.txt` at its root. `LICENSES/` holds the Apache-2.0, OFL-1.1, GPL-3.0-only contribution and GitHub logo texts;
+`NOTICE` links the Creative Commons licences. `THIRD-PARTY-NOTICES.txt` carries the licence texts of the npm packages
+compiled into the build, printing each distinct text once under the packages and copyright lines it covers. The archive has no
 `CHANGELOG.md`: the deb, rpm, pacman and ipk packages take it from the repository, and the recipes that build from the
 archive alone leave it out. The separate font
 archive has a `fonts/` directory containing the Vite-bundled [Fontsource subsets](../docs/fonts.md), `OFL.txt` and `README`. OpenWrt and Alpine unpack these into

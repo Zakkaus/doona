@@ -6,10 +6,10 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 
 export const ROOT = fileURLToPath(new URL('..', import.meta.url));
 export const NOTICES = 'THIRD-PARTY-NOTICES.txt';
-// Licence texts the program archive ships, besides GPL-3.0-only in LICENSE. OFL-1.1 also travels in the font archive
+// Licence texts the program archive ships alongside doona's own LICENSE. OFL-1.1 also travels in the font archive
 // as fonts/OFL.txt. NOTICE cites the Creative Commons licences of the palette images and flag artwork by URI, which
 // the licences allow, and CC0-1.0 requires no notice; their texts and GPL-2.0-only stay in the repository for REUSE.
-export const PROGRAM_LICENSES = ['OFL-1.1', 'Apache-2.0', 'LicenseRef-GitHub-Logos'];
+export const PROGRAM_LICENSES = ['OFL-1.1', 'Apache-2.0', 'GPL-3.0-only', 'LicenseRef-GitHub-Logos'];
 
 // Build tools that write code of their own into dist/. Include only the shipped helpers' licence texts,
 // not the tools' build-only dependency closure.
