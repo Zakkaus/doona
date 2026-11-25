@@ -981,6 +981,7 @@
   "nodes.provider": "节点来源",
   "nodes.providers": "节点来源",
   "nodes.referenced": "按 {name} 筛选节点的组：{groups}。请先在策略页修改这些筛选条件。",
+  "nodes.referencedBy": "{names} 仍在使用 {name}。请先修改这些引用，再移除。",
   "nodes.refresh": "更新 {name}",
   "nodes.refreshFailed": "无法更新 {name}",
   "nodes.refreshed": "{name} 已更新，{n} 个节点",

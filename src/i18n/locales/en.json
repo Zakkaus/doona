@@ -1134,6 +1134,7 @@
   "nodes.provider": "Node source",
   "nodes.providers": "Node sources",
   "nodes.referenced": "Groups that filter on {name}: {groups}. Change their filters on the Policies page first.",
+  "nodes.referencedBy": "Still used by {names}. Change those references before removing {name}.",
   "nodes.refresh": "Update {name}",
   "nodes.refreshFailed": "Could not update {name}",
   "nodes.refreshed": {

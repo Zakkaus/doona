@@ -138,10 +138,15 @@ export function Nodes(props: PageProps) {
   };
   const blocked = referenced && (
     <span className="rp-label">
-      {t('nodes.referenced', {groups: referenced.groups, name: referenced.name})}{' '}
-      <Link appearance="link" href={referenced.href}>
-        {t('nodes.openPolicies')}
-      </Link>
+      {referenced.text}
+      {referenced.href && (
+        <>
+          {' '}
+          <Link appearance="link" href={referenced.href}>
+            {t('nodes.openPolicies')}
+          </Link>
+        </>
+      )}
     </span>
   );
   // The pasted-link fields: also what the edit dialog shows, with the node's name above the link.
