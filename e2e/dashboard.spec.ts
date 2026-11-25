@@ -1,4 +1,4 @@
-import {test, expect, box, expectTextInside, fulfillStream, loadCatalogues, mockBackend, settle as settleNetwork, settleFrames} from './fixtures';
+import {test, expect, box, expectTextInside, fulfillStream, loadCatalogues, loadingState, mockBackend, settle as settleNetwork, settleFrames} from './fixtures';
 import type {Locator, Page} from '@playwright/test';
 import {translate} from '../src/i18n';
 const open = (page: Page) => page.getByRole('button', {name: 'Edit dashboard', exact: true}).click();
@@ -178,7 +178,10 @@ test('packs short cards beside a tall one, ends columns level and lines columns 
     if (localStorage.getItem('doona-dashboard') === null) localStorage.setItem('doona-dashboard', value);
   }, JSON.stringify(saved));
   await page.goto('/#/activity');
-  await expect(tile(page, 'policyGroups').locator('.rp-card')).toBeVisible();
+  // A card whose content has not loaded is only its title, and the packing keeps the column level either way, so the
+  // settled poll below cannot tell; wait for every card's readings before measuring.
+  for (const {id} of extensions) await expect(tile(page, id).locator('.rp-module-content')).toBeAttached();
+  await expect(page.locator(`.rp-dashboard-cell ${loadingState}`)).toHaveCount(0);
   const boxes = () =>
     page.locator('.rp-dashboard-cell').evaluateAll(cells =>
       Object.fromEntries(
