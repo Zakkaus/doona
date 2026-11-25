@@ -16,6 +16,34 @@ path = [
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "doona contributors"
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# These files retain contributions under their original licence in the combined work (section 13).
+[[annotations]]
+path = [
+  "e2e/nodes.spec.ts",
+  "src/dae/nodes.test.ts",
+  "src/dae/nodes.ts",
+  "src/dae/xhttp.test.ts",
+  "src/dae/xhttp.ts",
+  "src/features/nodes/Nodes.tsx",
+  "src/features/nodes/XhttpOptions.tsx",
+  "src/features/nodes/useNodesPage.ts",
+  "src/features/nodes/view.test.ts",
+  "src/features/nodes/view.ts",
+  "src/i18n/locales/en.json",
+  "src/i18n/locales/zh-CN.json",
+  "src/i18n/locales/zh-TW.json",
+  "src/store/config.test.ts",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "eries"
+SPDX-License-Identifier = "GPL-3.0-only"
+
+[[annotations]]
+path = ["e2e/profiles.spec.ts", "e2e/settings.spec.ts", "src/api/profiles.test.ts", "src/api/profiles.ts"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "qiuzi"
 SPDX-License-Identifier = "GPL-3.0-only"
 
 [[annotations]]
@@ -36,7 +64,7 @@ SPDX-License-Identifier = "LicenseRef-GitHub-Logos"
 path = ["src/ui/icons/MoreVertical.tsx", "src/ui/icons/MoreHorizontal.tsx", "src/ui/icons/Settings.tsx"]
 precedence = "override"
 SPDX-FileCopyrightText = "doona contributors"
-SPDX-License-Identifier = "GPL-3.0-only"
+SPDX-License-Identifier = "AGPL-3.0-only"
 
 [[annotations]]
 path = [".github/CODE_OF_CONDUCT.md"]
@@ -106,7 +134,7 @@ SPDX-License-Identifier = "CC-BY-4.0"
 path = ["patches/react-aria@3.52.1.patch"]
 precedence = "override"
 SPDX-FileCopyrightText = ["2020 Adobe. All rights reserved.", "doona contributors"]
-SPDX-License-Identifier = "Apache-2.0 AND GPL-3.0-only"
+SPDX-License-Identifier = "Apache-2.0 AND AGPL-3.0-only"
 
 [[annotations]]
 path = ["src/fonts.css", "src/fonts-tc.css", "src/fonts-sc.css"]

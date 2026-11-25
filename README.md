@@ -146,4 +146,7 @@ lite 的獨立相依套件安裝與建置指令見[開發](https://daeuniverse.o
 
 ## 授權與致謝
 
-[GPL-3.0-only](LICENSE)。[Noto Sans TC 與 SC](docs/fonts.md) 由 Fontsource npm 套件提供，版權歸 Adobe 所有，採用 [Open Font License](LICENSES/OFL-1.1.txt)。[NOTICE](NOTICE) 註明 Adobe Spectrum 圖示（Apache-2.0）。
+doona 採用 [AGPL-3.0-only](LICENSE) 授權。
+若向使用者提供修改版（包括透過網路提供），就必須向這些使用者提供取得對應原始碼的途徑。
+
+[Noto Sans TC 與 SC](docs/fonts.md) 由 Fontsource npm 套件提供，版權歸 Adobe 所有，採用 [Open Font License](LICENSES/OFL-1.1.txt)。[NOTICE](NOTICE) 註明 Adobe Spectrum 圖示（Apache-2.0）。

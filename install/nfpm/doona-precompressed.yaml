@@ -13,7 +13,7 @@ priority: optional
 maintainer: Zakkaus <zakk@gentoozh.org>
 vendor: Zakkaus
 homepage: https://github.com/Zakkaus/doona
-license: GPL-3.0-only AND 0BSD AND Apache-2.0 AND BSD-3-Clause AND ISC AND MIT AND CC-BY-3.0 AND CC-BY-4.0 AND CC-BY-SA-4.0 AND CC0-1.0 AND LicenseRef-GitHub-Logos
+license: AGPL-3.0-only AND GPL-3.0-only AND 0BSD AND Apache-2.0 AND BSD-3-Clause AND ISC AND MIT AND CC-BY-3.0 AND CC-BY-4.0 AND CC-BY-SA-4.0 AND CC0-1.0 AND LicenseRef-GitHub-Logos
 description: |
   Precompressed assets for doona
   Brotli and gzip copies of doona's text assets, so the engine or a web server can send compressed responses.

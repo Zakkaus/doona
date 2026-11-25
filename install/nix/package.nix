@@ -40,9 +40,12 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     description = "Web UI for the daeuniverse engines";
     homepage = "https://github.com/Zakkaus/doona";
     # lib.licenses has no entry for the GitHub mark's logo terms, which LICENSES/LicenseRef-GitHub-Logos.txt holds.
+    # The pinned rc.7 archive predates the licence change.
     license =
       with lib.licenses;
-      [ gpl3Only bsd0 asl20 bsd3 isc mit cc-by-30 cc-by-40 cc-by-sa-40 cc0 ] ++ lib.optional withFonts ofl;
+      lib.optional (version != "0.1.0-rc.7") agpl3Only
+      ++ [ gpl3Only bsd0 asl20 bsd3 isc mit cc-by-30 cc-by-40 cc-by-sa-40 cc0 ]
+      ++ lib.optional withFonts ofl;
     platforms = lib.platforms.linux;
     # Needs a maintainers/maintainer-list.nix entry in its own commit before submission.
     maintainers = with lib.maintainers; [ zakkaus ];

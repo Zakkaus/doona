@@ -9,6 +9,10 @@ pkgdesc="Web UI for the daeuniverse engines"
 url="https://github.com/Zakkaus/doona"
 arch="noarch"
 license="GPL-3.0-only AND 0BSD AND Apache-2.0 AND BSD-3-Clause AND ISC AND MIT AND CC-BY-3.0 AND CC-BY-4.0 AND CC-BY-SA-4.0 AND CC0-1.0 AND LicenseRef-GitHub-Logos"
+# The pinned rc.7 archive predates the licence change.
+if [ "$pkgver" != 0.1.0_rc7 ]; then
+	license="AGPL-3.0-only AND $license"
+fi
 subpackages="$pkgname-doc $pkgname-fonts:_fonts $pkgname-precompressed:_precompressed"
 source="$url/releases/download/v$_pkgver/$pkgname-$_pkgver.tar.gz
 	$url/releases/download/v$_pkgver/$pkgname-fonts-$_pkgver.tar.gz
