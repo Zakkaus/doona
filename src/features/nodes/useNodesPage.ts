@@ -270,7 +270,28 @@ export function useNodesPage({go, query}: PageProps) {
   useLayoutEffect(() => {
     currentRemovable.current = removableNodes;
   }, [removableNodes]);
-  const removeNodes = dialog?.kind === 'removeNodes' ? dialog.items.flatMap(item => removableNodes.get(item.id) ?? []) : [];
+  // A node or chain that a group, chain or DNS upstream still names would leave that reference dangling.
+  const referrersOf = useCallback(
+    (name: string) => {
+      const labels = sources
+        .flatMap(item => nodeReferrers(item.content, name))
+        .map(by => (by.kind === 'dns' ? t('nodes.referrerDns', {name: by.name}) : by.name));
+      return labels.length ? formatList(lang, [...new Set(labels)]) : null;
+    },
+    [sources, t, lang]
+  );
+  const removeBatch = useMemo(() => {
+    const nodes: Node[] = [];
+    const skipped: Array<{item: Node; line: string}> = [];
+    for (const item of dialog?.kind === 'removeNodes' ? dialog.items : []) {
+      const node = removableNodes.get(item.id);
+      const names = node && referrersOf(node.name);
+      if (names) skipped.push({item, line: t('nodes.referencedBy', {name: item.name, names})});
+      else if (node) nodes.push(node);
+    }
+    return {nodes, skipped};
+  }, [dialog, removableNodes, referrersOf, t]);
+  const removeNodes = removeBatch.nodes;
   const entries = useMemo(() => uniqueEntries(declared), [declared]);
   const {list} = useMemo(() => providerRows(providers.data?.providers ?? [], nodeList ?? [], entries, t), [providers.data, nodeList, entries, t]);
   const params = useMemo(() => new URLSearchParams(query), [query]);
@@ -529,15 +550,17 @@ export function useNodesPage({go, query}: PageProps) {
           removingBatch.current = false;
           reload();
         }
-        // The dialog lists failures while it is open; a toast carries them once it was closed.
-        const lines = [...(removed.length ? [t('nodes.removed', {name: formatList(lang, removed)})] : []), ...(isCurrent() ? [] : errors)];
-        if (lines.length) toast(errors.length ? 'warning' : 'positive', lines.join('\n'));
+        // The dialog lists failures and referenced nodes while it is open; a toast carries them once it was closed.
+        const closing = !isCurrent() || !remaining.size;
+        const skipped = closing ? removeBatch.skipped.map(({line}) => line) : [];
+        const lines = [...(removed.length ? [t('nodes.removed', {name: formatList(lang, removed)})] : []), ...skipped, ...(isCurrent() ? [] : errors)];
+        if (lines.length) toast(errors.length || skipped.length ? 'warning' : 'positive', lines.join('\n'));
         if (isCurrent()) {
           setBatchErrors(errors);
           if (!remaining.size) {
             guard.clear();
             close();
-          } else setDialog({...dialog, items: [...remaining.values()]});
+          } else setDialog({...dialog, items: [...remaining.values(), ...removeBatch.skipped.map(({item}) => item)]});
         }
         return;
       } else if (dialog.kind === 'removeProvider') {
@@ -545,11 +568,11 @@ export function useNodesPage({go, query}: PageProps) {
         if (!(await manage.removeProvider(dialog.item.id))) return;
         toast('positive', t('nodes.removed', {name: dialog.item.name}));
       } else {
-        if (referrers.length) return;
+        if (referrers) return;
         if (dialog.item.protocol === 'chain') {
           const chain = removableChains.get(dialog.item.id);
           if (!chain) {
-            refuse(t('nodes.editNodeMissing'));
+            refuse(t(nodeInInclude(dialog.item) ? 'nodes.removeInclude' : 'nodes.editNodeMissing'));
             return;
           }
           const result = await apply(text => removeChainEntry(text, chain.entry), chain.source);
@@ -603,8 +626,7 @@ export function useNodesPage({go, query}: PageProps) {
       ? [...new Set(sources.flatMap(item => groupsNamingTag(item.content, blockedTag)))]
       : removal.blockers;
   const checkingRemoval = removal.checking;
-  // A node or chain that a group, chain or DNS upstream still names would leave that reference dangling.
-  const referrers = dialog?.kind === 'removeNode' ? [...new Set(sources.flatMap(item => nodeReferrers(item.content, dialog.item.name)))] : [];
+  const referrers = dialog?.kind === 'removeNode' ? referrersOf(dialog.item.name) : null;
   const nodeState = dialog?.kind === 'editNode' ? nodeEditState(sources, dialog.source, dialog.entry, nodeList ?? [], form, t) : null;
   const nodeNameError =
     nodeState?.nameError ??
@@ -729,7 +751,7 @@ export function useNodesPage({go, query}: PageProps) {
     problem,
     form,
     batch,
-    batchErrors,
+    batchErrors: dialog?.kind === 'removeNodes' ? [...removeBatch.skipped.map(({line}) => line), ...batchErrors] : batchErrors,
     joinChoices,
     joinPicked,
     setJoinPicked: (next: string[]) => {
@@ -806,8 +828,8 @@ export function useNodesPage({go, query}: PageProps) {
     referenced:
       blockers.length && blockedTag !== null
         ? {text: t('nodes.referenced', {groups: formatList(lang, blockers), name: blockedTag}), href: href('policies')}
-        : referrers.length && dialog?.kind === 'removeNode'
-          ? {text: t('nodes.referencedBy', {name: dialog.item.name, names: formatList(lang, referrers)}), href: null}
+        : referrers && dialog?.kind === 'removeNode'
+          ? {text: t('nodes.referencedBy', {name: dialog.item.name, names: referrers}), href: null}
           : null,
     checkingRemoval,
     renameFrom: dialog?.kind === 'editProvider' ? dialog.entry.tag : '',

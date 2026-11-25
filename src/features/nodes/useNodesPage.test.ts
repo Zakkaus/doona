@@ -396,6 +396,13 @@ it.each([
   ['a chain in the main source', 'relay', "node {\n  hk: 'socks5://h:1'\n  relay: hk -> hk\n}\n", 'write', null],
   ['a chain in an include', 'relay', "node {\n  hk: 'socks5://h:1'\n}\n", 'refuse', null],
   ['a node a chain hop names', 'hk', "node {\n  hk: 'socks5://h:1'\n  relay: hk -> hk\n}\n", 'block', 'relay'],
+  [
+    'a node a DNS upstream names',
+    'hk',
+    "node {\n  hk: 'socks5://h:1'\n}\ndns {\n  upstream {\n    remote: 'tcp://1.1.1.1:53' -> hk\n  }\n}\n",
+    'block',
+    'DNS upstream remote'
+  ],
   ['a chain a group exit names', 'relay', 'node {\n  relay: a -> b\n}\ngroup {\n  proxy {\n    exit: relay\n  }\n}\n', 'block', 'proxy'],
   ['an unnamed node', 'hk', "node {\n  hk: 'socks5://h:1'\n}\n", 'delete', null]
 ])('removes %s only when nothing names it', async (_, name, content, outcome, referrer) => {
@@ -409,15 +416,18 @@ it.each([
   ] as ConfigSource[];
   store.apply.mockResolvedValue({kind: 'ok'});
   store.removeNode.mockResolvedValue(true);
+  // A batch leaves chains out, and names what still refers to a node it leaves out.
+  const line = referrer && translate('en', 'nodes.referencedBy', {name, names: referrer});
   read().setDialog({kind: 'removeNodes', items: [item], onRemoved: store.deselect});
-  expect(read().removeNodes).toEqual(item.protocol === 'chain' ? [] : [item]);
+  expect(read().removeNodes).toEqual(outcome === 'delete' ? [item] : []);
+  expect(read().batchErrors).toEqual(line && item.protocol !== 'chain' ? [line] : []);
   read().setDialog({kind: 'removeNode', item});
-  expect(read().referenced?.text ?? null).toBe(referrer && translate('en', 'nodes.referencedBy', {name, names: referrer}));
+  expect(read().referenced?.text ?? null).toBe(line);
   await read().submit(vi.fn());
   expect(store.removeNode).toHaveBeenCalledTimes(outcome === 'delete' ? 1 : 0);
   expect(store.apply).toHaveBeenCalledTimes(outcome === 'write' ? 1 : 0);
   if (outcome === 'write') expect(store.apply.mock.calls[0][0](content)).toBe("node {\n  hk: 'socks5://h:1'\n}\n");
-  expect(read().problem?.text ?? null).toBe(outcome === 'refuse' ? translate('en', 'nodes.editNodeMissing') : null);
+  expect(read().problem?.text ?? null).toBe(outcome === 'refuse' ? translate('en', 'nodes.removeInclude') : null);
 });
 
 // Adding a node rewrites the configuration, so the groups are joined against the source read after the add.

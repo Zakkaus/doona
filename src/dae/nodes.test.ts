@@ -88,8 +88,14 @@ it.each([
 });
 
 it.each([
-  ['a group exit', 'group {\n proxy {\n  exit: old # keep\n }\n}\n', "group {\n proxy {\n  exit: 'new name' # keep\n }\n}\n", ['proxy']],
-  ['chain hops', "node {\n  c: x -> 'old' -> old # old\n}\n", "node {\n  c: x -> 'new name' -> 'new name' # old\n}\n", ['c']],
+  ['a group exit', 'group {\n proxy {\n  exit: old # keep\n }\n}\n', "group {\n proxy {\n  exit: 'new name' # keep\n }\n}\n", [{kind: 'group', name: 'proxy'}]],
+  ['chain hops', "node {\n  c: x -> 'old' -> old # old\n}\n", "node {\n  c: x -> 'new name' -> 'new name' # old\n}\n", [{kind: 'chain', name: 'c'}]],
+  [
+    'a DNS upstream',
+    "dns {\n upstream {\n  remote: 'tcp://1.1.1.1:53' -> old\n }\n}\n",
+    "dns {\n upstream {\n  remote: 'tcp://1.1.1.1:53' -> 'new name'\n }\n}\n",
+    [{kind: 'dns', name: 'remote'}]
+  ],
   ['no chain hop', 'node {\n  c: socks5://old:1 -> old\n  d: x -> older\n}\n', null, []]
 ])('renames and reports a node named in %s', (_, extra, renamed, referrers) => {
   const input = text + extra;

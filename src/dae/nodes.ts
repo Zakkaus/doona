@@ -63,8 +63,13 @@ export function readChainEntries(text: string): ChainEntry[] {
     );
 }
 
+export type NodeReferrer = {kind: 'group' | 'chain' | 'dns'; name: string};
+
+type Reference = {from: number; to: number; by: NodeReferrer};
+const reference = (from: number, to: number, kind: NodeReferrer['kind'], name: string): Reference => ({from, to, by: {kind, name}});
+
 // Each place that names a node, with what names it: a group, a proxy chain or a DNS upstream.
-function nameReferences(text: string, name: string) {
+function nameReferences(text: string, name: string): Reference[] {
   const {blocks, tokens} = scanConfig(text);
   const groups = blocks
     .filter(block => block.name === 'group')
@@ -72,16 +77,16 @@ function nameReferences(text: string, name: string) {
       block.children.flatMap(group =>
         blockFields(text, group, tokens).flatMap(field => {
           if (field.name === 'default' || field.name === 'final' || field.name === 'exit')
-            return unquote(field.value) === name ? [{from: field.valueTo - field.value.length, to: field.valueTo, by: group.name}] : [];
+            return unquote(field.value) === name ? [reference(field.valueTo - field.value.length, field.valueTo, 'group', group.name)] : [];
           if (field.name !== 'filter') return [];
           const parts = tokens.filter(token => token.from >= field.valueFrom && token.to <= field.valueTo);
-          const refs: Array<{from: number; to: number; by: string}> = [];
+          const refs: Reference[] = [];
           const raw = (index: number) => (parts[index] ? text.slice(parts[index].from, parts[index].to) : '');
           for (let i = 0; i < parts.length - 2; i++) {
             if (!/^(?:&&)?!?name$/.test(raw(i)) || raw(i + 1) !== '(') continue;
             for (let j = i + 2; j < parts.length && raw(j) !== ')'; j++) {
               if ((raw(j - 1) === '(' || raw(j - 1) === ',') && (raw(j + 1) === ',' || raw(j + 1) === ')') && unquote(raw(j)) === name)
-                refs.push({from: parts[j].from, to: parts[j].to, by: group.name});
+                refs.push(reference(parts[j].from, parts[j].to, 'group', group.name));
             }
           }
           return refs;
@@ -97,17 +102,20 @@ function nameReferences(text: string, name: string) {
         const target = parts.at(-1);
         const arrow = parts.at(-2);
         return target && arrow && text.slice(arrow.from, arrow.to) === '->' && unquote(text.slice(target.from, target.to)) === name
-          ? [{from: target.from, to: target.to, by: field.name}]
+          ? [reference(target.from, target.to, 'dns', field.name)]
           : [];
       })
     );
   const chains = readChainEntries(text).flatMap(chain =>
-    chain.hops.filter(hop => hop.name === name).map(hop => ({from: hop.from, to: hop.to, by: chain.name}))
+    chain.hops.filter(hop => hop.name === name).map(hop => reference(hop.from, hop.to, 'chain', chain.name))
   );
   return [...groups, ...dns, ...chains];
 }
 export const nodeReferenced = (text: string, name: string) => nameReferences(text, name).length > 0;
-export const nodeReferrers = (text: string, name: string) => [...new Set(nameReferences(text, name).map(ref => ref.by))];
+export function nodeReferrers(text: string, name: string): NodeReferrer[] {
+  const unique = new Map(nameReferences(text, name).map(ref => [`${ref.by.kind}:${ref.by.name}`, ref.by]));
+  return [...unique.values()];
+}
 
 // Deletes the chain's line, comment included, or only the entry when it shares a line with other text.
 export function removeChainEntry(text: string, original: ChainEntry): string {
