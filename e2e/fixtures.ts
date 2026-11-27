@@ -99,6 +99,13 @@ export const test = base.extend<{storage: Record<string, string>; signedIn: stri
       await page.addInitScript(session => {
         if (localStorage.getItem('doona-session') === null) localStorage.setItem('doona-session', session);
       }, demoSession(signedIn));
+    // A reload that cancels a chunk of the idle warm-up fails in WebKit with an internal error, so every reload first waits
+    // for a running warm-up to finish. A page that has not started it, skipped it or is not the app reloads at once.
+    const reload = page.reload.bind(page);
+    page.reload = async options => {
+      await page.waitForFunction(() => document.documentElement.dataset.warm !== 'running');
+      return reload(options);
+    };
     await use(page);
     expect(controls, 'Live observation suite sent control requests').toEqual([]);
     expect(errors, 'Browser errors').toEqual([]);
