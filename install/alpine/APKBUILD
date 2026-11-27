@@ -1,18 +1,14 @@
 # Contributor: Zakkaus <zakk@gentoozh.org>
 # Maintainer: Zakkaus <zakk@gentoozh.org>
 pkgname=doona
-pkgver=0.1.0_rc7
+pkgver=0.1.0_rc8
 pkgrel=0
 _pkgver=${pkgver/_beta/-beta.}
 _pkgver=${_pkgver/_rc/-rc.}
 pkgdesc="Web UI for the daeuniverse engines"
 url="https://github.com/Zakkaus/doona"
 arch="noarch"
-license="GPL-3.0-only AND 0BSD AND Apache-2.0 AND BSD-3-Clause AND ISC AND MIT AND CC-BY-3.0 AND CC-BY-4.0 AND CC-BY-SA-4.0 AND CC0-1.0 AND LicenseRef-GitHub-Logos"
-# The pinned rc.7 archive predates the licence change.
-if [ "$pkgver" != 0.1.0_rc7 ]; then
-	license="AGPL-3.0-only AND $license"
-fi
+license="AGPL-3.0-only AND GPL-3.0-only AND 0BSD AND Apache-2.0 AND BSD-3-Clause AND ISC AND MIT AND CC-BY-3.0 AND CC-BY-4.0 AND CC-BY-SA-4.0 AND CC0-1.0 AND LicenseRef-GitHub-Logos"
 subpackages="$pkgname-doc $pkgname-fonts:_fonts $pkgname-precompressed:_precompressed"
 source="$url/releases/download/v$_pkgver/$pkgname-$_pkgver.tar.gz
 	$url/releases/download/v$_pkgver/$pkgname-fonts-$_pkgver.tar.gz
@@ -55,7 +51,7 @@ _precompressed() {
 }
 
 sha512sums="
-88a3b39f29ba68ba0f606a7ff27cd69b85aeecec36181d1c0c728d015f7da56e41996d409913e08c906630dd15f1eb2e0d5cd03e775edf4734cceecd0c87c84d  doona-0.1.0-rc.7.tar.gz
-bf77f9e774aadd03fa24a1088323d40cea79042ddb5a6e261ec1a6f8e39b17aed1e0856c653a606d18d5bdcca5ecc51b6f3de9b6e4d5c30cd69db446d443b40e  doona-fonts-0.1.0-rc.7.tar.gz
-2a9650f2a1f5240d9d74535412bc65a0afcdc500ff7ed49849acfe688bf3e0ab1307592eb89442987db7dcb88d3dc32bca34974cc23abdb01978c419ccb7faca  doona-precompressed-0.1.0-rc.7.tar.gz
+88a3b39f29ba68ba0f606a7ff27cd69b85aeecec36181d1c0c728d015f7da56e41996d409913e08c906630dd15f1eb2e0d5cd03e775edf4734cceecd0c87c84d  doona-0.1.0-rc.8.tar.gz
+bf77f9e774aadd03fa24a1088323d40cea79042ddb5a6e261ec1a6f8e39b17aed1e0856c653a606d18d5bdcca5ecc51b6f3de9b6e4d5c30cd69db446d443b40e  doona-fonts-0.1.0-rc.8.tar.gz
+2a9650f2a1f5240d9d74535412bc65a0afcdc500ff7ed49849acfe688bf3e0ab1307592eb89442987db7dcb88d3dc32bca34974cc23abdb01978c419ccb7faca  doona-precompressed-0.1.0-rc.8.tar.gz
 "
