@@ -1,0 +1,1 @@
+var e={searchHeight:`var(--xnm1e1r)`,settingsHeight:`var(--x38weoq)`,__varGroupHash__:`xs8s6ku`},t={wide:`(min-width: 1280px)`,orchestrate:`(max-width: 1023px)`,phone:`(max-width: 767px)`,settings:`(max-width: 640px)`};export{e as n,t};

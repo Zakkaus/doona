@@ -1,0 +1,1 @@
+import{c as e}from"./describe-Hf_K80wi.js";function t(t,n){return n[e(t)]}export{t};
