@@ -170,18 +170,21 @@ test('the backend indicator is a styled control, not a bare button', async ({pag
 test('editor completion preserves policy keys and quoted-brace context', async ({page}) => {
   await page.goto('/#/config?tab=source');
   const editor = page.locator('.cm-content[contenteditable="true"]');
+  // Typing may already have opened the list; Ctrl+Space queries it again, and until the new result arrives the list stays
+  // on screen disabled and ignores a click. Pick from the list once it is live.
+  const option = (name: string) => page.locator('.cm-tooltip-autocomplete:not(.cm-tooltip-autocomplete-disabled)').getByRole('option', {name, exact: true});
   await editor.click();
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.insertText('group { proxy {\n  policy: min');
   await page.keyboard.press('Control+Space');
-  await page.getByRole('option', {name: 'min_avg10', exact: true}).click();
+  await option('min_avg10').click();
   await expect(editor).toContainText('policy: min_avg10');
   await expect(editor).not.toContainText('policy: policy:');
   await editor.click();
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.insertText("global {\n  log_file: '/tmp/}'\n  log_l");
   await page.keyboard.press('Control+Space');
-  await page.getByRole('option', {name: 'log_level', exact: true}).click();
+  await option('log_level').click();
   await expect(editor).toContainText('log_level:');
 });
 
