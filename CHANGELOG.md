@@ -6,6 +6,29 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 Entries live in [changes/](changes/) until release.
 
+## [0.1.0-rc.8] - 2026-11-27
+
+### Added
+
+- The group editor has an experimental Exit node field on honk. It offers the nodes a proxy chain can tunnel through, and writes the group's `exit` to the configuration. A group's details show its exit. (#703)
+- A subscription whose refresh honk rejected because a proxy chain hop or group exit would name a removed or duplicated node says so beside its status, and that the previous nodes stay in use. (#703)
+- honk's group exit diagnostics read in the page language where a configuration write is refused. (#703)
+- The Add node dialog has a Proxy chain mode that picks 2 to 4 existing nodes from entry to exit, checks each hop's position against its protocol, and writes the chain to the main configuration file. A chain's Edit action opens the same fields, and a rename updates the groups that name it. (#702)
+- Node details list a proxy chain's hops with their protocol and latency, flag a hop that names no node or several, and say whether UDP is ruled out by protocol or depends on node settings. (#702)
+- Proxy chains show as "Proxy chain" in the node list and can be tested by HTTP and DNS. A group TCP connect test no longer counts a chain member as a failure. (#702)
+- honk's proxy chain diagnostics read in the page language where a configuration write is refused. (#702)
+
+### Changed
+
+- License doona under AGPL-3.0-only and require modified versions offered to users to provide corresponding source code, including when offered over a network. (#699)
+
+### Fixed
+
+- Renaming a node also renames the proxy chain hops and group `exit` fields that name it. (#701)
+- Removing a proxy chain deletes its line from the main configuration, which honk's node API cannot do. (#701)
+- Removing a node or proxy chain that a group, proxy chain or DNS upstream still names is refused, and the dialog lists those names. (#701)
+- A node cannot be renamed to the name of a proxy chain. (#701)
+
 ## [0.1.0-rc.7] - 2026-11-24
 
 ### Added
@@ -1099,7 +1122,8 @@ Entries live in [changes/](changes/) until release.
 
 - Keep table columns and action cells visible and prevent cards and controls from overflowing.
 
-[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.7...HEAD
+[Unreleased]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.8...HEAD
+[0.1.0-rc.8]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.7...v0.1.0-rc.8
 [0.1.0-rc.7]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.6...v0.1.0-rc.7
 [0.1.0-rc.6]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.5...v0.1.0-rc.6
 [0.1.0-rc.5]: https://github.com/Zakkaus/doona/compare/v0.1.0-rc.4...v0.1.0-rc.5
