@@ -159,11 +159,6 @@ function PolicyDetail(props: PolicyGroupInput) {
       ]}
     />
   );
-  const pin = g?.pinned && (
-    <Light small tone="neutral">
-      {t('policy.overridden')}
-    </Light>
-  );
   const grid = g && <NodeGrid nodes={m.members} selected={g.selected} cur={g.selected} marks={g.marks} isDisabled={m.busy} onSelect={m.select} />;
   return (
     <>
@@ -210,6 +205,11 @@ function PolicyDetail(props: PolicyGroupInput) {
                     </Light>
                   </HelpRow>
                 )}
+                {g.pinned && (
+                  <Light small tone="neutral">
+                    {t('policy.overridden')}
+                  </Light>
+                )}
               </span>
               <Button quiet icon small label={t('policy.edit')} isDisabled={!m.edit.editable || m.edit.disabled} onPress={() => m.edit.show()}>
                 <Edit />
@@ -228,8 +228,8 @@ function PolicyDetail(props: PolicyGroupInput) {
               />
             </div>
           </ActionHelp>
-          {/* Members and what the group includes fold under a one-line summary of the current one; a pinned member keeps
-              its light beside the summary while they are folded. */}
+          {/* Members and what the group includes fold under a one-line summary of the current one; a pinned member shows
+              its light with the health lights on the title row, so the summary keeps its line to itself. */}
           <Disclosure
             flush
             title={
@@ -249,7 +249,6 @@ function PolicyDetail(props: PolicyGroupInput) {
                 </span>
               )
             }
-            aside={pin}
             isExpanded={m.expanded}
             onExpandedChange={m.setExpanded}
           >
