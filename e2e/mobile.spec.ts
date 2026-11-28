@@ -7,6 +7,41 @@ test.use({viewport: {width: 390, height: 844}});
 
 const bar = (page: Page) => page.getByRole('navigation', {name: 'Sections'});
 
+test.describe('pinned policy on a narrow phone', () => {
+  test.use({viewport: {width: 320, height: 740}, hasTouch: true, storage: {'doona-lang': 'zh-CN', 'doona-scheme': 'dark'}});
+
+  test('keeps a long current node and its status clear of each other', async ({page}) => {
+    test.skip(isLive, 'Requires a mock node with a long name');
+    const {api, handlers} = await mockBackend(page);
+    const name = `Relay-IPv4-${'W'.repeat(30)} [测试线路]`;
+    handlers['GET groups/gaming'] = async () => {
+      const group = await api.group('gaming');
+      return {...group, members: group.members.map(member => (member.id === 'jp-01' ? {...member, name} : member))};
+    };
+    await page.goto('/#/policies?group=gaming');
+    const card = page.getByRole('region', {name: 'gaming', exact: true});
+    const summary = card.getByRole('button', {name: /^当前/});
+    await card.getByRole('button', {name: /^Relay-IPv4-/}).tap();
+    const status = card.getByText('已手动固定', {exact: true});
+    await expect(status).toBeVisible();
+    await expect(summary).toContainText(name);
+    await summary.tap();
+    await expect(summary).toHaveAttribute('aria-expanded', 'false');
+
+    const narrow = await box(summary);
+    expect((await box(status)).y).toBeGreaterThanOrEqual(narrow.y + narrow.height);
+    const node = summary.locator('.rp-node-name').filter({hasText: name});
+    expect(await node.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+    expect(narrow.x + narrow.width).toBeLessThanOrEqual(320);
+
+    await page.setViewportSize({width: 1440, height: 900});
+    const wide = await box(summary);
+    const beside = await box(status);
+    expect(beside.x).toBeGreaterThanOrEqual(wide.x + wide.width);
+    expect(beside.y).toBeLessThan(wide.y + wide.height);
+  });
+});
+
 test('each hub opens its first page, then the page last seen in it', async ({page}) => {
   await page.goto('/#/activity');
   await expect(bar(page).getByRole('link', {name: 'Activity'})).toHaveAttribute('aria-current', 'page');

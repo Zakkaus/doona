@@ -159,11 +159,6 @@ function PolicyDetail(props: PolicyGroupInput) {
       ]}
     />
   );
-  const pin = g?.pinned && (
-    <Light small tone="neutral">
-      {t('policy.overridden')}
-    </Light>
-  );
   const grid = g && <NodeGrid nodes={m.members} selected={g.selected} cur={g.selected} marks={g.marks} isDisabled={m.busy} onSelect={m.select} />;
   return (
     <>
@@ -228,8 +223,7 @@ function PolicyDetail(props: PolicyGroupInput) {
               />
             </div>
           </ActionHelp>
-          {/* Members and what the group includes fold under a one-line summary of the current one; a pinned member keeps
-              its light beside the summary while they are folded. */}
+          {/* The current member and its pin status stay visible when the group is folded. */}
           <Disclosure
             flush
             title={
@@ -249,7 +243,7 @@ function PolicyDetail(props: PolicyGroupInput) {
                 </span>
               )
             }
-            aside={pin}
+            aside={g.pinned && <Badge>{t('policy.overridden')}</Badge>}
             isExpanded={m.expanded}
             onExpandedChange={m.setExpanded}
           >
